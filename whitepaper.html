@@ -31,14 +31,23 @@
     --groove: #160f08;
     --panel: #171008;
     --line: rgba(232, 223, 200, 0.12);
+    --fs-body: 16px;
+    --fs-body-sm: 15px;
+    --fs-label: 12px;
+    --fs-meta: 11px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     background: var(--black);
     color: var(--off-white);
     font-family: 'DM Sans', sans-serif;
     font-weight: 300;
+    font-size: var(--fs-body);
     line-height: 1.6;
   }
   body::before {
@@ -68,7 +77,7 @@
   .nav-logo {
     text-decoration: none;
     font-family: 'DM Mono', monospace;
-    font-size: 13px;
+    font-size: 12px;
     letter-spacing: .16em;
     text-transform: uppercase;
     color: var(--warm-mid);
@@ -84,7 +93,7 @@
   .nav-links a {
     text-decoration: none;
     font-family: 'DM Mono', monospace;
-    font-size: 11px;
+    font-size: var(--fs-meta);
     color: var(--warm-mid);
     text-transform: uppercase;
     letter-spacing: .12em;
@@ -112,7 +121,7 @@
     color: var(--accent);
     letter-spacing: .18em;
     text-transform: uppercase;
-    font-size: 11px;
+    font-size: var(--fs-label);
     margin-bottom: 16px;
   }
   h1 {
@@ -126,7 +135,8 @@
   .hero-sub {
     max-width: 700px;
     color: var(--warm-mid);
-    font-size: 16px;
+    font-size: 17px;
+    line-height: 1.55;
   }
 
   main {
@@ -150,14 +160,14 @@
   }
   .panel-header h2 {
     font-family: 'DM Mono', monospace;
-    font-size: 11px;
+    font-size: var(--fs-meta);
     text-transform: uppercase;
     letter-spacing: .16em;
     color: var(--accent);
   }
   .badge {
     font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-size: var(--fs-meta);
     letter-spacing: .1em;
     color: var(--warm-mid);
     border: 1px solid rgba(168, 144, 112, 0.22);
@@ -166,7 +176,7 @@
   .panel-content { padding: 18px 16px 20px; }
   .panel-content h3 {
     font-family: 'Playfair Display', serif;
-    font-size: 26px;
+    font-size: clamp(24px, 2.8vw, 30px);
     font-weight: 400;
     margin-bottom: 10px;
   }
@@ -174,7 +184,7 @@
     font-family: 'DM Mono', monospace;
     color: var(--cream);
     font-weight: 400;
-    font-size: 12px;
+    font-size: var(--fs-label);
     text-transform: uppercase;
     letter-spacing: .12em;
     margin: 18px 0 8px;
@@ -182,13 +192,19 @@
   .panel-content p {
     color: rgba(242,236,224,.92);
     margin: 0 0 10px;
+    font-size: var(--fs-body);
+    line-height: 1.65;
   }
   .panel-content ul, .panel-content ol {
     margin: 8px 0 10px 18px;
     display: grid;
     gap: 6px;
   }
-  .panel-content li { color: rgba(242,236,224,.92); }
+  .panel-content li {
+    color: rgba(242,236,224,.92);
+    font-size: var(--fs-body-sm);
+    line-height: 1.55;
+  }
   .panel-content code {
     font-family: 'DM Mono', monospace;
     background: rgba(232,223,200,.06);
@@ -219,7 +235,7 @@
   }
   .decision .title {
     font-family: 'DM Mono', monospace;
-    font-size: 11px;
+    font-size: var(--fs-meta);
     letter-spacing: .12em;
     text-transform: uppercase;
     color: var(--accent);
@@ -263,10 +279,12 @@
     margin: 0 auto;
   }
   .footer a { color: var(--off-white); }
+  .footer, .footer a { font-size: 14px; line-height: 1.5; }
 
   @media (max-width: 900px) {
     .grid-2 { grid-template-columns: 1fr; }
     .nav-links { gap: 12px; }
+    .hero-sub { font-size: 16px; }
     .panel-content p, .panel-content li { font-size: 15px; }
   }
   @media (max-width: 700px) {
@@ -300,7 +318,8 @@
       background: rgba(23,16,8,0.65);
       border-radius: 999px;
       white-space: nowrap;
-      letter-spacing: .08em;
+      letter-spacing: .06em;
+      font-size: 11px;
     }
     .nav-cta {
       border-color: rgba(139,94,60,0.45);
@@ -308,9 +327,9 @@
     }
     .hero { padding-top: 36px; padding-bottom: 28px; }
     .hero, main, .footer { padding-left: 16px; padding-right: 16px; }
-    .eyebrow { font-size: 10px; letter-spacing: .14em; margin-bottom: 10px; }
+    .eyebrow { font-size: 11px; letter-spacing: .10em; margin-bottom: 10px; }
     h1 { font-size: clamp(32px, 11vw, 44px); line-height: 1; }
-    .hero-sub { font-size: 15px; line-height: 1.5; }
+    .hero-sub { font-size: 16px; line-height: 1.55; }
     main { gap: 12px; padding-top: 16px; }
     .panel-header {
       padding: 10px 12px;
@@ -318,11 +337,13 @@
       flex-direction: column;
       gap: 6px;
     }
-    .panel-header h2 { font-size: 10px; letter-spacing: .12em; }
-    .badge { font-size: 9px; }
+    .panel-header h2 { font-size: 11px; letter-spacing: .10em; }
+    .badge { font-size: 10px; }
     .panel-content { padding: 14px 12px 16px; }
     .panel-content h3 { font-size: 21px; line-height: 1.15; }
-    .panel-content h4 { font-size: 11px; letter-spacing: .10em; }
+    .panel-content h4 { font-size: 12px; letter-spacing: .08em; }
+    .panel-content p { font-size: 16px; line-height: 1.6; }
+    .panel-content li { font-size: 15px; line-height: 1.5; }
     .panel-content ul, .panel-content ol { margin-left: 16px; gap: 5px; }
     .callout { padding: 10px; }
     .mermaid-wrap { padding: 6px; }
@@ -333,7 +354,7 @@
       gap: 6px;
       padding-top: 14px;
       padding-bottom: 24px;
-      font-size: 13px;
+      font-size: 14px;
     }
   }
 
