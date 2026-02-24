@@ -92,10 +92,7 @@
   .hero-wrap {
     max-width: 1100px;
     margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1.2fr .8fr;
-    gap: 24px;
-    align-items: end;
+    display: block;
   }
   .eyebrow {
     font-family: 'DM Mono', monospace;
@@ -117,33 +114,6 @@
     max-width: 700px;
     color: var(--warm-mid);
     font-size: 16px;
-  }
-  .hero-card {
-    border: 1px solid var(--line);
-    background: rgba(23, 16, 8, 0.72);
-    padding: 16px;
-  }
-  .hero-card h2 {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .14em;
-    color: var(--accent);
-    margin-bottom: 10px;
-  }
-  .hero-card ul {
-    list-style: none;
-    display: grid;
-    gap: 10px;
-  }
-  .hero-card li {
-    border-top: 1px solid var(--line);
-    padding-top: 10px;
-    font-size: 14px;
-  }
-  .hero-card strong {
-    color: var(--off-white);
-    font-weight: 500;
   }
 
   main {
@@ -277,7 +247,6 @@
   .footer a { color: var(--off-white); }
 
   @media (max-width: 900px) {
-    .hero-wrap { grid-template-columns: 1fr; }
     .grid-2 { grid-template-columns: 1fr; }
     .nav-links { gap: 12px; }
   }
@@ -312,17 +281,10 @@
       <p class="hero-sub">
         An LLM-native discovery layer built on the most comprehensive structured music catalog available. Dig turns public Discogs catalog data into something humans and agents can search, reason over, and build with.
       </p>
+      <p class="hero-sub" style="margin-top:10px;">
+        This document describes the product thesis, the AI retrieval architecture, the data normalization approach, and a risk-first implementation plan for a 1-2 person build.
+      </p>
     </div>
-    <aside class="hero-card">
-      <h2>Current build stance</h2>
-      <ul>
-        <li><strong>Architecture:</strong> Modular monolith (1-2 person friendly)</li>
-        <li><strong>Search v1:</strong> Postgres FTS + <code>pg_trgm</code> first</li>
-        <li><strong>Ingest:</strong> Raw payload staging in <code>ingest.raw_entities</code></li>
-        <li><strong>Auth v1:</strong> Editorial-only (no public accounts)</li>
-        <li><strong>LLM strategy:</strong> API/MCP only, no model proxying</li>
-      </ul>
-    </aside>
   </div>
 </section>
 
@@ -613,30 +575,6 @@ flowchart LR
     </div>
   </section>
 
-  <section class="panel" id="appendix">
-    <div class="panel-header">
-      <h2>8. Technical Appendix (Condensed)</h2>
-      <span class="badge">Shareable draft</span>
-    </div>
-    <div class="panel-content">
-      <h4>Recommended stack (v1)</h4>
-      <pre>Frontend: Next.js (mobile-first web app)
-Backend API: TypeScript (Fastify or NestJS)
-MCP Server: TypeScript (same repo, shared domain modules)
-Database: PostgreSQL
-Search: PostgreSQL FTS + pg_trgm (OpenSearch later if needed)
-Cache/Jobs: Redis
-Hosting: Vercel (frontend) + small API/worker host (Railway/Fly/Render/ECS)
-Observability: structured logs + metrics + traces</pre>
-      <h4>Open technical questions to settle before build</h4>
-      <ul>
-        <li>REST only at launch, or GraphQL later?</li>
-        <li>Will MVP include any auth beyond editorial login?</li>
-        <li>How aggressive should the first matching/export spike be?</li>
-        <li>Should MCP be public at launch or partner-gated with keys?</li>
-      </ul>
-    </div>
-  </section>
 </main>
 
 <div class="footer">
