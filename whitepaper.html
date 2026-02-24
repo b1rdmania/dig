@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dig - Technical White Paper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0d0a07;
+    --off-white: #f2ece0;
+    --cream: #e8dfc8;
+    --warm-mid: #a89070;
+    --accent: #8b5e3c;
+    --accent-light: #a8703f;
+    --groove: #160f08;
+    --panel: #171008;
+    --line: rgba(232, 223, 200, 0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--black);
+    color: var(--off-white);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.25;
+    z-index: 9999;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+  a { color: var(--off-white); }
+
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(13,10,7,0.88);
+    backdrop-filter: blur(10px);
+  }
+  .nav-logo {
+    text-decoration: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--warm-mid);
+  }
+  .nav-logo span { color: var(--accent); }
+  .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .nav-links a {
+    text-decoration: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--warm-mid);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+  }
+  .nav-links a:hover { color: var(--off-white); }
+  .nav-cta {
+    border: 1px solid rgba(168, 144, 112, 0.32);
+    padding: 10px 12px;
+  }
+
+  .hero {
+    padding: 72px 24px 48px;
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(circle at 85% 15%, rgba(139,94,60,0.16), transparent 40%),
+      radial-gradient(circle at 15% 20%, rgba(200,160,96,0.08), transparent 35%);
+  }
+  .hero-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 24px;
+    align-items: end;
+  }
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    font-size: 11px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(42px, 7vw, 72px);
+    line-height: .95;
+    font-weight: 400;
+    margin-bottom: 14px;
+  }
+  h1 em { font-style: italic; color: var(--accent); }
+  .hero-sub {
+    max-width: 700px;
+    color: var(--warm-mid);
+    font-size: 16px;
+  }
+  .hero-card {
+    border: 1px solid var(--line);
+    background: rgba(23, 16, 8, 0.72);
+    padding: 16px;
+  }
+  .hero-card h2 {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .hero-card ul {
+    list-style: none;
+    display: grid;
+    gap: 10px;
+  }
+  .hero-card li {
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+    font-size: 14px;
+  }
+  .hero-card strong {
+    color: var(--off-white);
+    font-weight: 500;
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 64px;
+    display: grid;
+    gap: 18px;
+  }
+  .panel {
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(23,16,8,.72), rgba(15,11,8,.72));
+  }
+  .panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .panel-header h2 {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .16em;
+    color: var(--accent);
+  }
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .1em;
+    color: var(--warm-mid);
+    border: 1px solid rgba(168, 144, 112, 0.22);
+    padding: 4px 7px;
+  }
+  .panel-content { padding: 18px 16px 20px; }
+  .panel-content h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    margin-bottom: 10px;
+  }
+  .panel-content h4 {
+    font-family: 'DM Mono', monospace;
+    color: var(--cream);
+    font-weight: 400;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    margin: 18px 0 8px;
+  }
+  .panel-content p {
+    color: rgba(242,236,224,.92);
+    margin: 0 0 10px;
+  }
+  .panel-content ul, .panel-content ol {
+    margin: 8px 0 10px 18px;
+    display: grid;
+    gap: 6px;
+  }
+  .panel-content li { color: rgba(242,236,224,.92); }
+  .panel-content code {
+    font-family: 'DM Mono', monospace;
+    background: rgba(232,223,200,.06);
+    border: 1px solid rgba(232,223,200,.12);
+    padding: 1px 5px;
+    color: var(--cream);
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .callout {
+    border: 1px solid rgba(139,94,60,.35);
+    background: rgba(139,94,60,.08);
+    padding: 12px;
+    margin: 8px 0 12px;
+  }
+  .callout strong { color: var(--cream); font-weight: 500; }
+
+  .decision-list {
+    display: grid;
+    gap: 10px;
+  }
+  .decision {
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+  .decision .title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .mermaid-wrap {
+    border: 1px solid var(--line);
+    background: rgba(12, 10, 8, 0.65);
+    padding: 10px;
+    overflow: auto;
+  }
+  .mermaid { min-width: 760px; }
+
+  pre {
+    margin: 0;
+    padding: 14px;
+    background: rgba(8, 7, 6, 0.7);
+    border: 1px solid var(--line);
+    overflow: auto;
+    color: var(--cream);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+
+  .footer {
+    border-top: 1px solid var(--line);
+    padding: 20px 24px 40px;
+    color: var(--warm-mid);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .footer a { color: var(--off-white); }
+
+  @media (max-width: 900px) {
+    .hero-wrap { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .nav-links { gap: 12px; }
+  }
+  @media (max-width: 700px) {
+    nav { padding: 14px 16px; }
+    .nav-links { display: none; }
+    .hero, main, .footer { padding-left: 16px; padding-right: 16px; }
+    .panel-content h3 { font-size: 22px; }
+    .mermaid { min-width: 640px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="./index.html">Dig<span>.</span>baby</a>
+  <ul class="nav-links">
+    <li><a href="#thesis">Thesis</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#data">Data</a></li>
+    <li><a href="#mcp">MCP/API</a></li>
+    <li><a href="#plan">Implementation</a></li>
+    <li><a class="nav-cta" href="./index.html">Back to MVP</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <div class="hero-wrap">
+    <div>
+      <p class="eyebrow">Technical White Paper / Draft</p>
+      <h1>Dig as an <em>AI-first</em> music discovery layer</h1>
+      <p class="hero-sub">
+        An LLM-native discovery layer built on the most comprehensive structured music catalog available. Dig turns public Discogs catalog data into something humans and agents can search, reason over, and build with.
+      </p>
+    </div>
+    <aside class="hero-card">
+      <h2>Current build stance</h2>
+      <ul>
+        <li><strong>Architecture:</strong> Modular monolith (1-2 person friendly)</li>
+        <li><strong>Search v1:</strong> Postgres FTS + <code>pg_trgm</code> first</li>
+        <li><strong>Ingest:</strong> Raw payload staging in <code>ingest.raw_entities</code></li>
+        <li><strong>Auth v1:</strong> Editorial-only (no public accounts)</li>
+        <li><strong>LLM strategy:</strong> API/MCP only, no model proxying</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<main>
+  <section class="panel" id="thesis">
+    <div class="panel-header">
+      <h2>1. Thesis & Product Shape</h2>
+      <span class="badge">Scope-first</span>
+    </div>
+    <div class="panel-content">
+      <h3>An AI layer over the deepest music catalog dataset.</h3>
+      <p>
+        Dig should be positioned as an <strong>AI-first, LLM-native music discovery layer</strong> built on public Discogs catalog data. The product value is not just a better UI, but a programmable intelligence layer: structured facts, explainable discovery, and curation-ready tools for humans and agents.
+      </p>
+      <div class="callout">
+        <strong>Core wedge:</strong> the AI discovery layer on top of collector-grade metadata, with API/MCP access, explainable graph retrieval, and curated crates. Avoid payments, KYC, tax, and marketplace compliance in v1.
+      </div>
+      <div class="grid-2">
+        <div>
+          <h4>This is</h4>
+          <ul>
+            <li>Deep music search</li>
+            <li>An AI/LLM discovery layer over music metadata</li>
+            <li>Curation tooling for DJs / radio / labels</li>
+            <li>A programmable music metadata layer</li>
+            <li>A bridge to streaming via matching/export</li>
+          </ul>
+        </div>
+        <div>
+          <h4>This is not</h4>
+          <ul>
+            <li>A marketplace rebuild</li>
+            <li>A streaming service</li>
+            <li>An AI that guesses or hallucinates</li>
+            <li>A dependency on Discogs write-back</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="decisions">
+    <div class="panel-header">
+      <h2>2. Technical Decisions (Revised)</h2>
+      <span class="badge">Defensible defaults</span>
+    </div>
+    <div class="panel-content">
+      <div class="decision-list">
+        <div class="decision">
+          <div class="title">Modular Monolith First</div>
+          <p>Single deployable with clean domain boundaries. Fast to ship, low ops burden, easy to refactor after the schema and ingestion rules stabilize.</p>
+        </div>
+        <div class="decision">
+          <div class="title">Postgres Search Before OpenSearch</div>
+          <p>Start with <code>tsvector</code> + <code>pg_trgm</code> and measure. Defer a dedicated search cluster until relevance/latency/product complexity requires it.</p>
+        </div>
+        <div class="decision">
+          <div class="title">Raw Payload Staging Is Non-Negotiable</div>
+          <p>Store parsed Discogs entities in <code>ingest.raw_entities</code> before normalization. This protects re-derivation when importer logic and schema evolve.</p>
+        </div>
+        <div class="decision">
+          <div class="title">Editorial-Only Auth in v1</div>
+          <p>No public user accounts initially. This keeps the product and legal surface small while supporting catalog, curation, and MCP/API features.</p>
+        </div>
+        <div class="decision">
+          <div class="title">No LLM Proxying in v1</div>
+          <p>Expose API + MCP and let users/partners bring their own model runtime. Dig focuses on deterministic graph/search retrieval, not inference hosting.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="architecture">
+    <div class="panel-header">
+      <h2>3. Architecture</h2>
+      <span class="badge">Mermaid</span>
+    </div>
+    <div class="panel-content">
+      <h3>AI retrieval layer with a human UI on top</h3>
+      <p>Dig is built as a shared retrieval core for both humans and LLMs: a mobile-first web app for browsing, plus an MCP/API layer that exposes structured catalog and curation tools for agent workflows.</p>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+flowchart TB
+  subgraph Clients["Clients"]
+    Web["Mobile-First Web App"]
+    APIUsers["Apps / Partners"]
+    Agent["LLM Agent Runtime"]
+  end
+
+  subgraph Surface["Product Surfaces"]
+    REST["REST API"]
+    MCP["MCP Server"]
+    Admin["Editorial / Admin UI"]
+  end
+
+  subgraph Core["Modular Monolith (Shared Domain Modules)"]
+    Catalog["Catalog Module"]
+    Search["Search Module (Postgres FTS + pg_trgm)"]
+    Curation["Curation Module"]
+    Media["Media Links Module"]
+    Jobs["Jobs / Workers"]
+    Match["Matching / Export (Later)"]
+  end
+
+  subgraph Data["Data"]
+    PG["Postgres (canonical + search docs)"]
+    Redis["Redis (jobs/cache)"]
+  end
+
+  subgraph Sources["Sources"]
+    Dumps["Discogs XML Dumps"]
+    Ext["Spotify / Apple / YouTube APIs"]
+  end
+
+  Web --> REST
+  APIUsers --> REST
+  Agent --> MCP
+  Admin --> REST
+  MCP --> REST
+
+  REST --> Catalog
+  REST --> Search
+  REST --> Curation
+  REST --> Media
+  REST --> Match
+
+  Catalog --> PG
+  Search --> PG
+  Curation --> PG
+  Media --> PG
+  Match --> PG
+  Jobs --> PG
+  Jobs --> Redis
+
+  Dumps --> Jobs
+  Ext --> Match
+  Ext --> Media
+        </div>
+      </div>
+      <h4>Why this architecture fits an LLM-native product</h4>
+      <ul>
+        <li>One retrieval core powers both the UI and agents, which keeps behavior consistent and explainable.</li>
+        <li>One codebase keeps iteration speed high while the data model and tool surface are still evolving.</li>
+        <li>Search can start in Postgres and graduate later without changing the API/MCP contracts.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" id="data">
+    <div class="panel-header">
+      <h2>4. Data & Normalization Strategy</h2>
+      <span class="badge">Load-bearing</span>
+    </div>
+    <div class="panel-content">
+      <h3>Raw-first ingestion with a normalization dictionary</h3>
+      <p>
+        Before importer implementation, profile real dump samples and lock normalization rules in a living data dictionary. This prevents importer churn and schema thrash.
+      </p>
+      <div class="callout">
+        <strong>Pre-code requirement:</strong> write the <em>Normalization Dictionary v1</em> from real dump samples, not assumptions. The three areas most likely to ripple through the schema are ANV handling, track position parsing, and credits/role encoding.
+      </div>
+      <div class="mermaid-wrap">
+        <div class="mermaid">
+flowchart LR
+  A["Discogs XML Dump"] --> B["Batch Record (dump_batches)"]
+  B --> C["XML Stream Parse"]
+  C --> D["Raw Staging (raw_entities)"]
+  D --> E["Normalize / Validate"]
+  E --> F["Canonical Catalog Tables"]
+  F --> G["Search Documents (Postgres FTS)"]
+  F --> H["Curation + Media Links"]
+  F --> I["Matching / Export (later)"]
+        </div>
+      </div>
+      <h4>Normalization principles (v1)</h4>
+      <ul>
+        <li>Preserve raw source strings for messy fields (<code>credits.role</code>, identifiers, track positions).</li>
+        <li>Parse conservatively and keep helper columns nullable (e.g. <code>released_year</code>, <code>duration_seconds</code>).</li>
+        <li>Store ANV at relationship level, not as a global artist alias by default.</li>
+        <li>Treat master/release linkage as backfillable (do not block release imports on import order).</li>
+      </ul>
+      <h4>Schema shape already prepared</h4>
+      <ul>
+        <li><code>ingest.dump_batches</code> + <code>ingest.raw_entities</code> for provenance and replayability</li>
+        <li><code>catalog.*</code> tables for normalized entities and relationships</li>
+        <li><code>catalog.search_documents</code> as a DB-side search substrate</li>
+        <li><code>media.*</code>, <code>curation.*</code>, <code>integration.*</code> for later stages</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" id="mcp">
+    <div class="panel-header">
+      <h2>5. Agent Interface (API + MCP)</h2>
+      <span class="badge">Agent-first layer</span>
+    </div>
+    <div class="panel-content">
+      <h3>LLM-native interface, deterministic retrieval underneath</h3>
+      <p>
+        Dig should expose structured retrieval and crate-building primitives via REST and MCP. LLMs can orchestrate the workflow, but the underlying retrieval layer should remain deterministic, inspectable, and explainable.
+      </p>
+      <div class="grid-2">
+        <div>
+          <h4>Core retrieval API (REST)</h4>
+          <ul>
+            <li><code>GET /search</code></li>
+            <li><code>GET /artists/:id</code></li>
+            <li><code>GET /labels/:id</code></li>
+            <li><code>GET /masters/:id</code></li>
+            <li><code>GET /releases/:id</code></li>
+            <li><code>GET /releases/:id/media-links</code></li>
+            <li><code>GET /curators/:slug</code></li>
+            <li><code>GET /lists/:slug</code></li>
+          </ul>
+        </div>
+        <div>
+          <h4>LLM-facing MCP tools</h4>
+          <ul>
+            <li><code>search_catalog</code></li>
+            <li><code>get_release</code> / <code>get_master_release</code></li>
+            <li><code>get_artist</code> / <code>get_label</code></li>
+            <li><code>get_related_releases</code></li>
+            <li><code>get_media_links</code></li>
+            <li><code>create_crate_draft</code> (read-only suggestion mode)</li>
+            <li><code>explain_relationships</code></li>
+          </ul>
+        </div>
+      </div>
+      <h4>Agent interface design rules</h4>
+      <ul>
+        <li>Return provenance and confidence fields whenever results are inferred or matched.</li>
+        <li>No hidden side effects by default: tools should read, rank, explain, or draft unless explicitly authorized to write.</li>
+        <li>Keep MCP backed by the same retrieval/domain services as REST so humans and agents get the same facts.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" id="economics">
+    <div class="panel-header">
+      <h2>6. Cost & Monetization (Technical View)</h2>
+      <span class="badge">Pragmatic</span>
+    </div>
+    <div class="panel-content">
+      <h3>Keep costs low by making retrieval deterministic</h3>
+      <p>
+        The main infrastructure costs are Postgres, background jobs, and API hosting. Costs only spike early if Dig becomes an LLM proxy. The current strategy explicitly avoids that.
+      </p>
+      <h4>Cost control principles</h4>
+      <ul>
+        <li>Use Postgres FTS before running a dedicated search cluster.</li>
+        <li>Let users bring their own model runtime for agent orchestration.</li>
+        <li>Cache common searches and async heavy jobs (imports, link checks, exports).</li>
+        <li>Defer streaming export matching until core catalog + curation are proven.</li>
+      </ul>
+      <h4>Monetization paths (compatible with architecture)</h4>
+      <ul>
+        <li><strong>B2B API / Agent API:</strong> tiered access to search, graph, curation data</li>
+        <li><strong>Pro curator tools:</strong> private crates, collaboration, export utilities</li>
+        <li><strong>Media/editorial partners:</strong> branded curation pages and embeds</li>
+        <li><strong>Consumer premium (later):</strong> advanced filters, saved lists, agent credits</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" id="plan">
+    <div class="panel-header">
+      <h2>7. Implementation Plan (1-2 People)</h2>
+      <span class="badge">Risk-first</span>
+    </div>
+    <div class="panel-content">
+      <h3>Do the hard thinking before code, then ship in milestones</h3>
+      <ol>
+        <li><strong>Pre-M0: Data profiling + normalization dictionary</strong><br>Sample real Discogs dump records and validate normalization decisions for ANV, track positions, credits, identifiers, master/release linkage.</li>
+        <li><strong>M1: Ingestion foundation</strong><br>Schema migrations, <code>dump_batches</code>, <code>raw_entities</code>, parser pipeline, canonical upserts, QA counts.</li>
+        <li><strong>M2: Search + read API</strong><br>Postgres FTS + <code>pg_trgm</code>, search endpoint, entity endpoints, index tuning, basic mobile read UI.</li>
+        <li><strong>M3: Curation + media links + editorial tooling</strong><br>Curators/lists, media links + provenance + validation job, admin/editorial flow.</li>
+        <li><strong>M4: MCP layer</strong><br>Deterministic MCP tools backed by shared domain services, API keys / rate limits if needed.</li>
+        <li><strong>M5: Matching/export beta (optional)</strong><br>External catalog candidate store, confidence scoring, export jobs, review UI.</li>
+        <li><strong>M6: Search cluster decision gate</strong><br>Only evaluate OpenSearch if metrics and product requirements justify it.</li>
+      </ol>
+      <h4>Non-goals to protect the build</h4>
+      <ul>
+        <li>No marketplace/compliance stack in v1</li>
+        <li>No public user accounts in v1</li>
+        <li>No LLM proxy billing / passthrough complexity</li>
+        <li>No dependency on Discogs writeback APIs for core functionality</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" id="appendix">
+    <div class="panel-header">
+      <h2>8. Technical Appendix (Condensed)</h2>
+      <span class="badge">Shareable draft</span>
+    </div>
+    <div class="panel-content">
+      <h4>Recommended stack (v1)</h4>
+      <pre>Frontend: Next.js (mobile-first web app)
+Backend API: TypeScript (Fastify or NestJS)
+MCP Server: TypeScript (same repo, shared domain modules)
+Database: PostgreSQL
+Search: PostgreSQL FTS + pg_trgm (OpenSearch later if needed)
+Cache/Jobs: Redis
+Hosting: Vercel (frontend) + small API/worker host (Railway/Fly/Render/ECS)
+Observability: structured logs + metrics + traces</pre>
+      <h4>Open technical questions to settle before build</h4>
+      <ul>
+        <li>REST only at launch, or GraphQL later?</li>
+        <li>Will MVP include any auth beyond editorial login?</li>
+        <li>How aggressive should the first matching/export spike be?</li>
+        <li>Should MCP be public at launch or partner-gated with keys?</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<div class="footer">
+  <div>Dig technical white paper draft. Built for feedback, not final copy.</div>
+  <div><a href="./index.html">Back to dig.baby MVP</a></div>
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "dark", securityLevel: "loose" });
+</script>
+
+</body>
+</html>

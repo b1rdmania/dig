@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dig</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --black: #0d0a07;
+    --off-white: #f2ece0;
+    --cream: #e8dfc8;
+    --warm-mid: #a89070;
+    --accent: #8b5e3c;
+    --accent-light: #a8703f;
+    --groove: #160f08;
+    --label-yellow: #c8a060;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--black);
+    color: var(--off-white);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  /* ── Grain overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ── Nav ── */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    mix-blend-mode: normal;
+  }
+
+  nav::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(10,10,10,0.9) 0%, transparent 100%);
+    z-index: -1;
+  }
+
+  .nav-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--warm-mid);
+  }
+
+  .nav-logo span {
+    color: var(--accent);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--warm-mid);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover {
+    color: var(--off-white);
+  }
+
+  /* ── Hero ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 40px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-vinyl {
+    position: absolute;
+    top: 50%;
+    right: -120px;
+    transform: translateY(-50%);
+    width: 720px;
+    height: 720px;
+    border-radius: 50%;
+    background: 
+      radial-gradient(circle at 50% 50%, #1a1410 0%, #1a1410 8%, transparent 8.5%),
+      radial-gradient(circle at 50% 50%, #2a2018 0%, #2a2018 14%, transparent 14.5%),
+      radial-gradient(circle at 50% 50%, transparent 14%, #1a1410 14%, #1a1410 14.5%, transparent 14.5%),
+      repeating-radial-gradient(circle at 50% 50%, 
+        #0a0704 0px, #0a0704 1px,
+        #1a1410 1px, #1a1410 2px,
+        #141008 2px, #141008 3px,
+        #1a1410 3px, #1a1410 5px,
+        #0f0c07 5px, #0f0c07 6px,
+        #1a1410 6px, #1a1410 8px
+      );
+    box-shadow: 
+      inset 0 0 40px rgba(0,0,0,0.9),
+      inset 0 0 120px rgba(0,0,0,0.6),
+      0 0 80px rgba(0,0,0,0.8),
+      -60px 0 120px rgba(0,0,0,0.95);
+    animation: spin 25s linear infinite;
+    opacity: 1;
+  }
+
+  /* Sheen layer */
+  .hero-vinyl::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(255,255,255,0.03) 20deg,
+      transparent 40deg,
+      rgba(255,255,255,0.02) 80deg,
+      transparent 100deg,
+      rgba(255,255,255,0.04) 160deg,
+      transparent 180deg,
+      rgba(255,255,255,0.02) 240deg,
+      transparent 260deg,
+      rgba(255,255,255,0.03) 320deg,
+      transparent 360deg
+    );
+    border-radius: 50%;
+  }
+
+  .hero-vinyl::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: 
+      radial-gradient(circle at 48% 42%, rgba(255,255,255,0.08) 0%, transparent 50%),
+      radial-gradient(circle, #8b5e3c 0%, #5a3820 35%, #2a1a0a 65%, #160f08 100%);
+    box-shadow: 
+      0 0 40px rgba(139,94,60,0.2),
+      inset 0 2px 4px rgba(255,255,255,0.1);
+  }
+
+  @keyframes spin {
+    from { transform: translateY(-50%) rotate(0deg); }
+    to { transform: translateY(-50%) rotate(360deg); }
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 24px;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(56px, 9vw, 120px);
+    line-height: 0.92;
+    font-weight: 400;
+    max-width: 700px;
+    animation: fadeUp 0.8s ease 0.1s both;
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-subtitle {
+    margin-top: 32px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--warm-mid);
+    max-width: 480px;
+    font-weight: 300;
+    animation: fadeUp 0.8s ease 0.2s both;
+  }
+
+  .hero-cta {
+    margin-top: 48px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    animation: fadeUp 0.8s ease 0.3s both;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    padding: 14px 28px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    display: inline-block;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-light);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--warm-mid);
+    padding: 14px 28px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid rgba(184,176,160,0.3);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    display: inline-block;
+  }
+
+  .btn-ghost:hover {
+    color: var(--off-white);
+    border-color: var(--warm-mid);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Marquee ── */
+  .marquee-wrap {
+    background: var(--accent);
+    padding: 12px 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .marquee-inner {
+    display: inline-block;
+    animation: marquee 30s linear infinite;
+  }
+
+  .marquee-inner span {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: white;
+    padding: 0 32px;
+  }
+
+  .marquee-inner span::before {
+    content: '●';
+    margin-right: 32px;
+    opacity: 0.6;
+  }
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* ── Sections ── */
+  section {
+    padding: 100px 40px;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 48px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    display: block;
+    height: 1px;
+    width: 60px;
+    background: var(--accent);
+    opacity: 0.5;
+  }
+
+  /* ── Problem ── */
+  .problem {
+    background: var(--groove);
+    border-top: 1px solid rgba(184,176,160,0.08);
+  }
+
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+    max-width: 1100px;
+  }
+
+  .problem-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .problem-heading em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .pain-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .pain-list li {
+    display: flex;
+    gap: 16px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--warm-mid);
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(184,176,160,0.1);
+  }
+
+  .pain-list li:last-child {
+    border-bottom: none;
+  }
+
+  .pain-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    opacity: 0.7;
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── What it is ── */
+  .what {
+    background: var(--black);
+  }
+
+  .what-editorial {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+    max-width: 1100px;
+  }
+
+  .what-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 3.5vw, 44px);
+    font-weight: 400;
+    line-height: 1.1;
+    margin-bottom: 24px;
+  }
+
+  .what-heading em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .what-intro {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--warm-mid);
+  }
+
+  .what-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .what-block {
+    display: flex;
+    gap: 24px;
+    padding: 28px 0;
+    border-bottom: 1px solid rgba(168,144,112,0.12);
+  }
+
+  .what-block:first-child {
+    padding-top: 0;
+  }
+
+  .what-block:last-child {
+    border-bottom: none;
+  }
+
+  .what-block-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    opacity: 0.6;
+    padding-top: 3px;
+    flex-shrink: 0;
+  }
+
+  .what-block h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+
+  .what-block p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--warm-mid);
+  }
+
+  /* ── Agent queries ── */
+  .agent {
+    background: var(--groove);
+  }
+
+  .agent-intro {
+    max-width: 560px;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--warm-mid);
+    margin-bottom: 56px;
+  }
+
+  .query-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 860px;
+  }
+
+  .query-item {
+    background: rgba(255,255,255,0.03);
+    padding: 24px 28px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    cursor: default;
+    transition: background 0.2s;
+  }
+
+  .query-item:hover {
+    background: rgba(139,94,60,0.08);
+  }
+
+  .query-prompt {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    opacity: 0.7;
+    padding-top: 3px;
+    flex-shrink: 0;
+  }
+
+  .query-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: var(--off-white);
+    line-height: 1.5;
+  }
+
+  /* ── Not this ── */
+  .not-this {
+    background: var(--black);
+    border-top: 1px solid rgba(184,176,160,0.08);
+  }
+
+  .not-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    max-width: 900px;
+  }
+
+  .not-col h3 {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(184,176,160,0.15);
+  }
+
+  .not-col.is-not h3 { color: rgba(184,176,160,0.4); }
+  .not-col.is h3 { color: var(--accent); }
+
+  .not-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .not-col ul li {
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--warm-mid);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .not-col.is-not ul li { opacity: 0.45; }
+
+  .not-col ul li::before {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding-top: 1px;
+    flex-shrink: 0;
+  }
+
+  .not-col.is-not ul li::before { content: '✕'; color: rgba(184,176,160,0.4); }
+  .not-col.is ul li::before { content: '→'; color: var(--accent); }
+
+  /* ── Who ── */
+  .who {
+    background: var(--groove);
+  }
+
+  .who-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+  }
+
+  .who-card {
+    padding: 32px 24px;
+    background: rgba(255,255,255,0.03);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .who-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s;
+  }
+
+  .who-card:hover::before {
+    transform: scaleX(1);
+  }
+
+  .who-role {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-style: italic;
+    margin-bottom: 10px;
+  }
+
+  .who-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--warm-mid);
+  }
+
+  /* ── Early access / form ── */
+  .access {
+    background: var(--off-white);
+    color: var(--black);
+  }
+
+  .access .section-label {
+    color: var(--accent);
+  }
+
+  .access .section-label::after {
+    background: var(--accent);
+  }
+
+  .access-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 400;
+    line-height: 1.05;
+    max-width: 600px;
+    margin-bottom: 16px;
+  }
+
+  .access-heading em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .access-sub {
+    font-size: 16px;
+    color: rgba(10,10,10,0.55);
+    margin-bottom: 52px;
+    max-width: 440px;
+    line-height: 1.6;
+  }
+
+  .form-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 32px;
+  }
+
+  .tab {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    background: rgba(10,10,10,0.08);
+    border: none;
+    cursor: pointer;
+    color: rgba(10,10,10,0.45);
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .tab:hover:not(.active) {
+    background: rgba(10,10,10,0.12);
+    color: rgba(10,10,10,0.7);
+  }
+
+  .form-row {
+    display: flex;
+    gap: 12px;
+    max-width: 560px;
+    margin-bottom: 12px;
+  }
+
+  .form-input {
+    flex: 1;
+    padding: 14px 16px;
+    background: white;
+    border: 1px solid rgba(10,10,10,0.15);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--black);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-input:focus {
+    border-color: var(--accent);
+  }
+
+  .form-input::placeholder {
+    color: rgba(10,10,10,0.3);
+  }
+
+  .form-note {
+    font-size: 12px;
+    color: rgba(10,10,10,0.4);
+    font-family: 'DM Mono', monospace;
+    margin-top: 8px;
+  }
+
+  .btn-submit {
+    background: var(--accent);
+    color: white;
+    padding: 14px 28px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-submit:hover {
+    background: var(--accent-light);
+  }
+
+  /* ── Footer ── */
+  footer {
+    background: var(--black);
+    padding: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(184,176,160,0.08);
+  }
+
+  .footer-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--warm-mid);
+  }
+
+  .footer-logo span { color: var(--accent); }
+
+  .footer-note {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(184,176,160,0.3);
+    letter-spacing: 0.1em;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px; }
+    .nav-links { display: none; }
+    section { padding: 72px 20px; }
+    .hero { padding: 0 20px 60px; }
+    .hero-vinyl { width: 480px; height: 480px; right: -180px; opacity: 0.5; }
+    .problem-grid { grid-template-columns: 1fr; gap: 40px; }
+    .what-editorial { grid-template-columns: 1fr; gap: 40px; }
+    .not-grid { grid-template-columns: 1fr; gap: 40px; }
+    .who-grid { grid-template-columns: 1fr 1fr; }
+    .form-row { flex-direction: column; }
+    footer { flex-direction: column; gap: 12px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-logo">Dig</div>
+  <ul class="nav-links">
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#what">Platform</a></li>
+    <li><a href="#agent">Agent Layer</a></li>
+    <li><a href="./whitepaper.html">Tech Paper</a></li>
+    <li><a href="#access">Early Access</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-vinyl"></div>
+  <p class="hero-eyebrow">Music search. Finally.</p>
+  <h1 class="hero-title">Find<br>what you<br><em>know exists.</em></h1>
+  <p class="hero-subtitle">Deep music search for people who care. Every artist, label, release, pressing, credit. Fast. On your phone.</p>
+  <div class="hero-cta">
+    <a href="#access" class="btn-primary">Get early access</a>
+    <a href="#what" class="btn-ghost">What is this →</a>
+    <a href="./whitepaper.html" class="btn-ghost">Tech white paper ↗</a>
+  </div>
+</section>
+
+<!-- Marquee -->
+<div class="marquee-wrap" aria-hidden="true">
+  <div class="marquee-inner">
+    <span>Search that actually works</span>
+    <span>Collector-grade metadata</span>
+    <span>Mobile-first</span>
+    <span>Agent-native MCP layer</span>
+    <span>Curated crates</span>
+    <span>Provenance-aware discovery</span>
+    <span>Export to Spotify & Apple Music</span>
+    <span>Open catalog data</span>
+    <span>Built for DJs & selectors</span>
+    <span>Search that actually works</span>
+    <span>Collector-grade metadata</span>
+    <span>Mobile-first</span>
+    <span>Agent-native MCP layer</span>
+    <span>Curated crates</span>
+    <span>Provenance-aware discovery</span>
+    <span>Export to Spotify & Apple Music</span>
+    <span>Open catalog data</span>
+    <span>Built for DJs & selectors</span>
+  </div>
+</div>
+
+<!-- Problem -->
+<section class="problem" id="problem">
+  <div class="section-label">The problem</div>
+  <div class="problem-grid">
+    <div>
+      <h2 class="problem-heading">Music search is<br><em>broken.</em></h2>
+    </div>
+    <ul class="pain-list">
+      <li>
+        <span class="pain-num">01</span>
+        <span>Discogs has the data. The search is slow, the mobile UX is painful, and discovery is an afterthought.</span>
+      </li>
+      <li>
+        <span class="pain-num">02</span>
+        <span>Streaming is fast but shallow. No versions. No credits. No context. Wrong pressing, no way to know.</span>
+      </li>
+      <li>
+        <span class="pain-num">03</span>
+        <span>Your curation lives in notes apps, social posts, and playlists that don't talk to each other.</span>
+      </li>
+      <li>
+        <span class="pain-num">04</span>
+        <span>AI tools make up catalog data. Ask about a record and they'll guess. Dig doesn't guess.</span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- What it is -->
+<section class="what" id="what">
+  <div class="section-label">The platform</div>
+  <div class="what-editorial">
+    <div class="what-lead">
+      <h2 class="what-heading">Everything you need to find a record.<br><em>Nothing you don't.</em></h2>
+      <p class="what-intro">Dig is built on the full public music catalog — every artist, label, release, pressing, format, and credit. Structured, searchable, fast. On your phone.</p>
+    </div>
+    <div class="what-body">
+      <div class="what-block">
+        <span class="what-block-num">01</span>
+        <div>
+          <h3>Search that goes deep</h3>
+          <p>Find by artist, label, release, format, year, country, credit. Filter combinations that Discogs makes painful. Results tell you why they came up.</p>
+        </div>
+      </div>
+      <div class="what-block">
+        <span class="what-block-num">02</span>
+        <div>
+          <h3>Crates</h3>
+          <p>Build record lists with context. Add notes, share them, keep them private. DJs, radio hosts, labels — publish what you know in a form people can actually use.</p>
+        </div>
+      </div>
+      <div class="what-block">
+        <span class="what-block-num">03</span>
+        <div>
+          <h3>Stream it</h3>
+          <p>Match any record or crate to Spotify or Apple Music. We show confidence scores. You decide what's close enough.</p>
+        </div>
+      </div>
+      <div class="what-block">
+        <span class="what-block-num">04</span>
+        <div>
+          <h3>For agents too</h3>
+          <p>API and MCP layer for developers and LLM workflows. Structured music data that doesn't hallucinate. Ask it anything, get back facts.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Agent queries -->
+<section class="agent" id="agent">
+  <div class="section-label">Agent layer</div>
+  <p class="agent-intro">Ask Dig what you'd ask a music obsessive who's read every sleeve note and remembers every credit.</p>
+  <div class="query-list">
+    <div class="query-item">
+      <span class="query-prompt">&gt;_</span>
+      <span class="query-text">"Find 1988–1994 UK techno releases with dub/reggae influence and female vocal credits."</span>
+    </div>
+    <div class="query-item">
+      <span class="query-prompt">&gt;_</span>
+      <span class="query-text">"Build a 20-record crate for a late-night NTS-style set. Prioritise labels Warp, Rephlex, and Ninja Tune. Exclude compilations."</span>
+    </div>
+    <div class="query-item">
+      <span class="query-prompt">&gt;_</span>
+      <span class="query-text">"Explain why these five records are connected — show label lineage, shared engineers, and style overlap."</span>
+    </div>
+    <div class="query-item">
+      <span class="query-prompt">&gt;_</span>
+      <span class="query-text">"Export the closest streamable equivalents of this curated 12-record list to Spotify, with confidence scores."</span>
+    </div>
+    <div class="query-item">
+      <span class="query-prompt">&gt;_</span>
+      <span class="query-text">"What else did the producer of this 1992 release work on? Show releases where they had engineering credit."</span>
+    </div>
+  </div>
+</section>
+
+<!-- Not this -->
+<section class="not-this" id="notthis">
+  <div class="section-label">Scope</div>
+  <div class="not-grid">
+    <div class="not-col is-not">
+      <h3>This is not</h3>
+      <ul>
+        <li>A Discogs clone</li>
+        <li>A streaming service</li>
+        <li>A marketplace</li>
+        <li>An AI that guesses</li>
+        <li>A social network</li>
+      </ul>
+    </div>
+    <div class="not-col is">
+      <h3>This is</h3>
+      <ul>
+        <li>Deep music search</li>
+        <li>A curation tool</li>
+        <li>An API for music data</li>
+        <li>A bridge to streaming</li>
+        <li>A programmable music layer</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Who -->
+<section class="who" id="who">
+  <div class="section-label">Who it's for</div>
+  <div class="who-grid">
+    <div class="who-card">
+      <div class="who-role">DJs & selectors</div>
+      <p class="who-desc">Build crates. Add context. Share them. Export to a playlist when you need to.</p>
+    </div>
+    <div class="who-card">
+      <div class="who-role">Collectors</div>
+      <p class="who-desc">Search versions, pressings, formats, credits. Fast. No marketplace in the way.</p>
+    </div>
+    <div class="who-card">
+      <div class="who-role">Radio & editorial</div>
+      <p class="who-desc">Publish what you know as something people can find, link to, and use.</p>
+    </div>
+    <div class="who-card">
+      <div class="who-role">Developers & agents</div>
+      <p class="who-desc">API and MCP access to real music data. Build on facts, not hallucinations.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Early Access -->
+<section class="access" id="access">
+  <div class="section-label">Early access</div>
+  <h2 class="access-heading">Start<br><em>digging.</em></h2>
+  <p class="access-sub">A small group of DJs, curators, radio people, and developers will get in first. Tell us who you are.</p>
+
+  <div class="form-tabs">
+    <button class="tab active" onclick="setTab(this, 'curator')">Curator / DJ</button>
+    <button class="tab" onclick="setTab(this, 'developer')">Developer</button>
+    <button class="tab" onclick="setTab(this, 'partner')">Label / Radio</button>
+  </div>
+
+  <div id="form-curator">
+    <div class="form-row">
+      <input class="form-input" type="text" placeholder="Your name">
+      <input class="form-input" type="email" placeholder="Email address">
+    </div>
+    <div class="form-row">
+      <input class="form-input" type="text" placeholder="Your mix / radio show / social (optional)" style="flex: 2">
+      <button class="btn-submit">Request access →</button>
+    </div>
+    <p class="form-note">No spam. We'll reach out when access opens.</p>
+  </div>
+
+  <div id="form-developer" style="display:none">
+    <div class="form-row">
+      <input class="form-input" type="text" placeholder="Your name">
+      <input class="form-input" type="email" placeholder="Email address">
+    </div>
+    <div class="form-row">
+      <input class="form-input" type="text" placeholder="What are you building? (optional)" style="flex: 2">
+      <button class="btn-submit">Request API access →</button>
+    </div>
+    <p class="form-note">API and MCP docs go to developers first.</p>
+  </div>
+
+  <div id="form-partner" style="display:none">
+    <div class="form-row">
+      <input class="form-input" type="text" placeholder="Your name">
+      <input class="form-input" type="email" placeholder="Email address">
+    </div>
+    <div class="form-row">
+      <input class="form-input" type="text" placeholder="Your collective / label / station" style="flex: 2">
+      <button class="btn-submit">Get in touch →</button>
+    </div>
+    <p class="form-note">A few editorial partners. That's it for now.</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-logo">Dig</div>
+  <div class="footer-note">Early stage. Building in public. dig.baby · <a href="./whitepaper.html" style="color:inherit;">Technical white paper</a></div>
+</footer>
+
+<script>
+  function setTab(btn, tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    ['curator','developer','partner'].forEach(t => {
+      document.getElementById('form-' + t).style.display = t === tab ? 'block' : 'none';
+    });
+  }
+
+  // Subtle scroll fade-in for sections
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.what-block, .pain-list li, .query-item, .who-card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(16px)';
+    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    observer.observe(el);
+  });
+</script>
+
+</body>
+</html>
