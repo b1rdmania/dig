@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="DIG Technical White Paper">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d0a07"/>
+      <stop offset="100%" stop-color="#160f08"/>
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" stitchTiles="stitch"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.06"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" filter="url(#grain)" opacity="0.35"/>
+
+  <rect x="70" y="70" width="1060" height="490" rx="14" fill="rgba(255,255,255,0.02)" stroke="#2f2115"/>
+  <rect x="70" y="70" width="1060" height="58" rx="14" fill="#171008"/>
+  <rect x="70" y="112" width="1060" height="1" fill="#2f2115"/>
+  <circle cx="103" cy="99" r="6" fill="#8b5e3c"/>
+  <circle cx="125" cy="99" r="6" fill="#a89070" opacity="0.75"/>
+  <circle cx="147" cy="99" r="6" fill="#c8a060" opacity="0.55"/>
+
+  <text x="72" y="176" fill="#c8a060" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" letter-spacing="2.2">
+    DIG / TECHNICAL WHITE PAPER
+  </text>
+  <text x="72" y="250" fill="#f2ece0" font-family="Georgia, 'Times New Roman', serif" font-size="56">
+    Architecture, data strategy, MCP/API,
+  </text>
+  <text x="72" y="314" fill="#f2ece0" font-family="Georgia, 'Times New Roman', serif" font-size="56">
+    and a risk-first implementation plan.
+  </text>
+
+  <text x="72" y="388" fill="#a89070" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="26">
+    Modular monolith • Postgres FTS first • Raw payload staging • LLM-native retrieval layer
+  </text>
+
+  <g transform="translate(72 446)">
+    <rect width="240" height="44" rx="8" fill="#1b140e" stroke="#3d2b1a"/>
+    <text x="16" y="29" fill="#f2ece0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" letter-spacing="1.6">dig.baby/whitepaper</text>
+  </g>
+
+  <g opacity="0.9">
+    <rect x="790" y="160" width="286" height="54" rx="8" fill="#171008" stroke="#2f2115"/>
+    <text x="815" y="193" fill="#8b5e3c" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" letter-spacing="1.5">01 ARCHITECTURE</text>
+    <rect x="790" y="230" width="286" height="54" rx="8" fill="#171008" stroke="#2f2115"/>
+    <text x="815" y="263" fill="#8b5e3c" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" letter-spacing="1.5">02 DATA STRATEGY</text>
+    <rect x="790" y="300" width="286" height="54" rx="8" fill="#171008" stroke="#2f2115"/>
+    <text x="815" y="333" fill="#8b5e3c" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" letter-spacing="1.5">03 API + MCP</text>
+    <rect x="790" y="370" width="286" height="54" rx="8" fill="#171008" stroke="#2f2115"/>
+    <text x="815" y="403" fill="#8b5e3c" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" letter-spacing="1.5">04 IMPLEMENTATION PLAN</text>
+  </g>
+</svg>
+

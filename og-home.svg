@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="DIG - AI-first music discovery">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d0a07"/>
+      <stop offset="60%" stop-color="#120d08"/>
+      <stop offset="100%" stop-color="#160f08"/>
+    </linearGradient>
+    <radialGradient id="vinyl" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2b2118"/>
+      <stop offset="42%" stop-color="#1a1410"/>
+      <stop offset="100%" stop-color="#0a0704"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.08"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" filter="url(#grain)" opacity="0.35"/>
+
+  <circle cx="980" cy="318" r="250" fill="url(#vinyl)" opacity="0.95"/>
+  <circle cx="980" cy="318" r="178" fill="none" stroke="#201810" stroke-width="24" opacity="0.8"/>
+  <circle cx="980" cy="318" r="105" fill="#171008" stroke="#2b2118" stroke-width="8"/>
+  <circle cx="980" cy="318" r="54" fill="#8b5e3c" opacity="0.95"/>
+  <circle cx="980" cy="318" r="8" fill="#f2ece0"/>
+
+  <rect x="72" y="84" width="220" height="32" rx="16" fill="#1b140e" stroke="#3d2b1a"/>
+  <text x="92" y="105" fill="#c8a060" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" letter-spacing="2.4">AI-FIRST MUSIC DISCOVERY</text>
+
+  <text x="72" y="210" fill="#f2ece0" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-weight="400">DIG</text>
+  <text x="72" y="286" fill="#f2ece0" font-family="Georgia, 'Times New Roman', serif" font-size="60" font-weight="400">Find what you know exists.</text>
+
+  <text x="72" y="352" fill="#a89070" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="28">
+    Every artist, label, release, pressing, credit.
+  </text>
+  <text x="72" y="390" fill="#a89070" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="28">
+    Fast. On your phone. For humans and agents.
+  </text>
+
+  <g transform="translate(72 474)">
+    <rect width="360" height="58" rx="10" fill="#8b5e3c"/>
+    <text x="20" y="36" fill="#ffffff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" letter-spacing="1.8">DIG.BABY</text>
+    <text x="150" y="36" fill="#f2ece0" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="16">Deep search • crates • MCP/API</text>
+  </g>
+</svg>
+
