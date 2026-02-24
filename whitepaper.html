@@ -19,7 +19,7 @@
 <meta name="twitter:description" content="LLM-native music discovery layer over public Discogs catalog data. Architecture, ingestion strategy, and implementation plan.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --black: #0d0a07;
@@ -29,14 +29,10 @@
     --accent: #8b5e3c;
     --accent-light: #a8703f;
     --groove: #160f08;
-    --panel: #171008;
-    --line: rgba(232, 223, 200, 0.12);
-    --fs-body: 16px;
-    --fs-body-sm: 15px;
-    --fs-label: 12px;
-    --fs-meta: 11px;
+    --label-yellow: #c8a060;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
@@ -47,474 +43,828 @@
     color: var(--off-white);
     font-family: 'DM Sans', sans-serif;
     font-weight: 300;
-    font-size: var(--fs-body);
-    line-height: 1.6;
+    overflow-x: hidden;
   }
+
   body::before {
     content: '';
     position: fixed;
     inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
     pointer-events: none;
-    opacity: 0.25;
     z-index: 9999;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+    opacity: 0.35;
   }
-  a { color: var(--off-white); }
 
   nav {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 100;
+    padding: 20px 40px;
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--line);
-    background: rgba(13,10,7,0.88);
-    backdrop-filter: blur(10px);
+    align-items: center;
+  }
+  nav::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(10,10,10,0.92) 0%, transparent 100%);
+    z-index: -1;
   }
   .nav-logo {
-    text-decoration: none;
     font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    letter-spacing: .16em;
+    font-size: 13px;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--warm-mid);
+    text-decoration: none;
   }
   .nav-logo span { color: var(--accent); }
   .nav-links {
-    list-style: none;
     display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    align-items: center;
+    gap: 28px;
+    list-style: none;
   }
   .nav-links a {
-    text-decoration: none;
     font-family: 'DM Mono', monospace;
-    font-size: var(--fs-meta);
-    color: var(--warm-mid);
+    font-size: 11px;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    letter-spacing: .12em;
+    color: var(--warm-mid);
+    text-decoration: none;
+    transition: color 0.2s;
   }
   .nav-links a:hover { color: var(--off-white); }
-  .nav-cta {
-    border: 1px solid rgba(168, 144, 112, 0.32);
-    padding: 10px 12px;
-  }
 
   .hero {
-    padding: 72px 24px 48px;
-    border-bottom: 1px solid var(--line);
+    min-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 40px 72px;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(184,176,160,0.08);
+  }
+  .hero-vinyl {
+    position: absolute;
+    top: 50%;
+    right: -140px;
+    transform: translateY(-50%);
+    width: 720px;
+    height: 720px;
+    border-radius: 50%;
     background:
-      radial-gradient(circle at 85% 15%, rgba(139,94,60,0.16), transparent 40%),
-      radial-gradient(circle at 15% 20%, rgba(200,160,96,0.08), transparent 35%);
+      radial-gradient(circle at 50% 50%, #1a1410 0%, #1a1410 8%, transparent 8.5%),
+      radial-gradient(circle at 50% 50%, #2a2018 0%, #2a2018 14%, transparent 14.5%),
+      radial-gradient(circle at 50% 50%, transparent 14%, #1a1410 14%, #1a1410 14.5%, transparent 14.5%),
+      repeating-radial-gradient(circle at 50% 50%,
+        #0a0704 0px, #0a0704 1px,
+        #1a1410 1px, #1a1410 2px,
+        #141008 2px, #141008 3px,
+        #1a1410 3px, #1a1410 5px,
+        #0f0c07 5px, #0f0c07 6px,
+        #1a1410 6px, #1a1410 8px
+      );
+    box-shadow:
+      inset 0 0 40px rgba(0,0,0,0.9),
+      inset 0 0 120px rgba(0,0,0,0.6),
+      0 0 80px rgba(0,0,0,0.8),
+      -60px 0 120px rgba(0,0,0,0.95);
+    animation: spin 34s linear infinite;
+    opacity: 1;
   }
-  .hero-wrap {
-    max-width: 1100px;
-    margin: 0 auto;
-    display: block;
+  .hero-vinyl::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(255,255,255,0.03) 20deg,
+      transparent 40deg,
+      rgba(255,255,255,0.02) 80deg,
+      transparent 100deg,
+      rgba(255,255,255,0.04) 160deg,
+      transparent 180deg,
+      rgba(255,255,255,0.02) 240deg,
+      transparent 260deg,
+      rgba(255,255,255,0.03) 320deg,
+      transparent 360deg
+    );
   }
-  .eyebrow {
+  .hero-vinyl::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 48% 42%, rgba(255,255,255,0.08) 0%, transparent 50%),
+      radial-gradient(circle, #8b5e3c 0%, #5a3820 35%, #2a1a0a 65%, #160f08 100%);
+    box-shadow: 0 0 40px rgba(139,94,60,0.2), inset 0 2px 4px rgba(255,255,255,0.1);
+  }
+  @keyframes spin {
+    from { transform: translateY(-50%) rotate(0deg); }
+    to { transform: translateY(-50%) rotate(360deg); }
+  }
+  .hero-eyebrow {
     font-family: 'DM Mono', monospace;
-    color: var(--accent);
-    letter-spacing: .18em;
+    font-size: 11px;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    font-size: var(--fs-label);
-    margin-bottom: 16px;
+    color: var(--accent);
+    margin-bottom: 24px;
   }
-  h1 {
+  .hero-title {
     font-family: 'Playfair Display', serif;
-    font-size: clamp(42px, 7vw, 72px);
-    line-height: .95;
+    font-size: clamp(44px, 7vw, 90px);
+    line-height: 0.94;
     font-weight: 400;
-    margin-bottom: 14px;
+    max-width: 900px;
   }
-  h1 em { font-style: italic; color: var(--accent); }
-  .hero-sub {
-    max-width: 700px;
-    color: var(--warm-mid);
+  .hero-title em { font-style: italic; color: var(--accent); }
+  .hero-subtitle {
+    margin-top: 28px;
     font-size: 17px;
-    line-height: 1.55;
+    line-height: 1.65;
+    color: var(--warm-mid);
+    max-width: 720px;
+  }
+  .hero-cta {
+    margin-top: 40px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    padding: 14px 28px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: var(--accent-light); transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--warm-mid);
+    padding: 14px 28px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid rgba(184,176,160,0.3);
+    transition: color 0.2s, border-color 0.2s;
+    display: inline-block;
+  }
+  .btn-ghost:hover { color: var(--off-white); border-color: var(--warm-mid); }
+
+  .marquee-wrap {
+    background: var(--accent);
+    padding: 12px 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .marquee-inner { display: inline-block; animation: marquee 36s linear infinite; }
+  .marquee-inner span {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: white;
+    padding: 0 32px;
+  }
+  .marquee-inner span::before {
+    content: '●';
+    margin-right: 32px;
+    opacity: 0.6;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
   }
 
-  main {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 28px 24px 64px;
-    display: grid;
-    gap: 18px;
-  }
-  .panel {
-    border: 1px solid var(--line);
-    background: linear-gradient(180deg, rgba(23,16,8,.72), rgba(15,11,8,.72));
-  }
-  .panel-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--line);
+  section { padding: 100px 40px; }
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 48px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
     gap: 12px;
   }
-  .panel-header h2 {
-    font-family: 'DM Mono', monospace;
-    font-size: var(--fs-meta);
-    text-transform: uppercase;
-    letter-spacing: .16em;
-    color: var(--accent);
+  .section-label::after {
+    content: '';
+    display: block;
+    height: 1px;
+    width: 60px;
+    background: var(--accent);
+    opacity: 0.5;
   }
-  .badge {
-    font-family: 'DM Mono', monospace;
-    font-size: var(--fs-meta);
-    letter-spacing: .1em;
-    color: var(--warm-mid);
-    border: 1px solid rgba(168, 144, 112, 0.22);
-    padding: 4px 7px;
-  }
-  .panel-content { padding: 18px 16px 20px; }
-  .panel-content h3 {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(24px, 2.8vw, 30px);
-    font-weight: 400;
-    margin-bottom: 10px;
-  }
-  .panel-content h4 {
-    font-family: 'DM Mono', monospace;
-    color: var(--cream);
-    font-weight: 400;
-    font-size: var(--fs-label);
-    text-transform: uppercase;
-    letter-spacing: .12em;
-    margin: 18px 0 8px;
-  }
-  .panel-content p {
-    color: rgba(242,236,224,.92);
-    margin: 0 0 10px;
-    font-size: var(--fs-body);
-    line-height: 1.65;
-  }
-  .panel-content ul, .panel-content ol {
-    margin: 8px 0 10px 18px;
-    display: grid;
-    gap: 6px;
-  }
-  .panel-content li {
-    color: rgba(242,236,224,.92);
-    font-size: var(--fs-body-sm);
-    line-height: 1.55;
-  }
-  .panel-content code {
-    font-family: 'DM Mono', monospace;
-    background: rgba(232,223,200,.06);
-    border: 1px solid rgba(232,223,200,.12);
-    padding: 1px 5px;
-    color: var(--cream);
-  }
-  .grid-2 {
+
+  .problem, .agent, .paper-alt, .paper-final { background: var(--groove); border-top: 1px solid rgba(184,176,160,0.08); }
+  .what, .not-this, .paper-dark { background: var(--black); }
+
+  .problem-grid, .what-editorial, .not-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px;
+    gap: 72px;
+    align-items: start;
+    max-width: 1100px;
   }
-  .callout {
-    border: 1px solid rgba(139,94,60,.35);
-    background: rgba(139,94,60,.08);
-    padding: 12px;
-    margin: 8px 0 12px;
+  .problem-heading, .what-heading, .paper-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(30px, 4vw, 50px);
+    font-weight: 400;
+    line-height: 1.08;
   }
-  .callout strong { color: var(--cream); font-weight: 500; }
+  .problem-heading em, .what-heading em, .paper-heading em { font-style: italic; color: var(--accent); }
 
-  .decision-list {
+  .pain-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .pain-list li {
+    display: flex;
+    gap: 16px;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--warm-mid);
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(184,176,160,0.1);
+  }
+  .pain-list li:last-child { border-bottom: none; }
+  .pain-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    opacity: 0.75;
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .what-heading { font-size: clamp(28px, 3.5vw, 44px); margin-bottom: 24px; }
+  .what-intro { font-size: 16px; line-height: 1.7; color: var(--warm-mid); }
+  .what-body { display: flex; flex-direction: column; }
+  .what-block {
+    display: flex;
+    gap: 24px;
+    padding: 26px 0;
+    border-bottom: 1px solid rgba(168,144,112,0.12);
+  }
+  .what-block:first-child { padding-top: 0; }
+  .what-block:last-child { border-bottom: none; }
+  .what-block-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    opacity: 0.65;
+    padding-top: 3px;
+    flex-shrink: 0;
+  }
+  .what-block h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+  .what-block p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--warm-mid);
+  }
+
+  .agent-intro {
+    max-width: 640px;
+    font-size: 18px;
+    line-height: 1.65;
+    color: var(--warm-mid);
+    margin-bottom: 44px;
+  }
+  .query-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 960px;
+  }
+  .query-item {
+    background: rgba(255,255,255,0.03);
+    padding: 22px 24px;
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    transition: background 0.2s;
+  }
+  .query-item:hover { background: rgba(139,94,60,0.08); }
+  .query-prompt {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    opacity: 0.75;
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+  .query-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--off-white);
+    line-height: 1.55;
+  }
+  .query-text strong { color: var(--cream); font-weight: 500; }
+
+  .not-grid { max-width: 980px; }
+  .not-col h3 {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(184,176,160,0.15);
+  }
+  .not-col.is-not h3 { color: rgba(184,176,160,0.4); }
+  .not-col.is h3 { color: var(--accent); }
+  .not-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .not-col ul li {
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--warm-mid);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .not-col.is-not ul li { opacity: 0.5; }
+  .not-col ul li::before {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding-top: 1px;
+    flex-shrink: 0;
+  }
+  .not-col.is-not ul li::before { content: '✕'; color: rgba(184,176,160,0.4); }
+  .not-col.is ul li::before { content: '→'; color: var(--accent); }
+
+  .who-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+  }
+  .who-card {
+    padding: 30px 22px;
+    background: rgba(255,255,255,0.03);
+    position: relative;
+    overflow: hidden;
+  }
+  .who-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .who-card:hover::before { transform: scaleX(1); }
+  .who-role {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-style: italic;
+    margin-bottom: 10px;
+  }
+  .who-desc {
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--warm-mid);
+  }
+
+  .paper-copy {
+    max-width: 860px;
+    color: var(--warm-mid);
+    font-size: 16px;
+    line-height: 1.75;
+  }
+  .paper-copy p + p { margin-top: 14px; }
+
+  .diagram-shell {
+    margin-top: 26px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(168,144,112,0.12);
+    padding: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .diagram-shell .mermaid { min-width: 760px; }
+
+  .spec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    max-width: 1100px;
+  }
+  .spec-col {
+    background: rgba(255,255,255,0.03);
+    padding: 28px 24px;
+  }
+  .spec-col h3 {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .spec-col ul {
+    list-style: none;
     display: grid;
     gap: 10px;
   }
-  .decision {
-    border-top: 1px solid var(--line);
+  .spec-col li {
+    color: var(--warm-mid);
+    font-size: 14px;
+    line-height: 1.55;
     padding-top: 10px;
+    border-top: 1px solid rgba(184,176,160,0.08);
   }
-  .decision .title {
+  .spec-col li strong { color: var(--off-white); font-weight: 400; }
+  .spec-col code, .paper-code code {
     font-family: 'DM Mono', monospace;
-    font-size: var(--fs-meta);
-    letter-spacing: .12em;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(184,176,160,0.1);
+    padding: 1px 5px;
+    color: var(--cream);
+  }
+
+  .paper-code {
+    margin-top: 28px;
+    max-width: 980px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(168,144,112,0.12);
+    padding: 18px;
+  }
+  .paper-code h3 {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--accent);
-    margin-bottom: 4px;
+    margin-bottom: 10px;
   }
-
-  .mermaid-wrap {
-    border: 1px solid var(--line);
-    background: rgba(12, 10, 8, 0.65);
-    padding: 10px;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .mermaid { min-width: 760px; }
-  .mermaid svg {
-    max-width: none;
-    height: auto;
-  }
-
-  pre {
-    margin: 0;
-    padding: 14px;
-    background: rgba(8, 7, 6, 0.7);
-    border: 1px solid var(--line);
-    overflow: auto;
+  .paper-code pre {
+    margin-top: 10px;
+    white-space: pre-wrap;
     color: var(--cream);
     font-family: 'DM Mono', monospace;
     font-size: 12px;
-    line-height: 1.45;
-    white-space: pre-wrap;
+    line-height: 1.5;
   }
 
-  .footer {
-    border-top: 1px solid var(--line);
-    padding: 20px 24px 40px;
+  .timeline {
+    max-width: 980px;
+    display: grid;
+    gap: 2px;
+  }
+  .timeline-item {
+    background: rgba(255,255,255,0.03);
+    padding: 22px 24px;
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  .timeline-step {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    text-transform: uppercase;
+    padding-top: 2px;
+  }
+  .timeline-item h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 400;
+    margin-bottom: 6px;
+  }
+  .timeline-item p {
     color: var(--warm-mid);
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .access {
+    background: var(--off-white);
+    color: var(--black);
+  }
+  .access .section-label { color: var(--accent); }
+  .access .section-label::after { background: var(--accent); }
+  .access-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(34px, 5vw, 62px);
+    font-weight: 400;
+    line-height: 1.05;
+    margin-bottom: 18px;
+    max-width: 700px;
+  }
+  .access-heading em { font-style: italic; color: var(--accent); }
+  .access-sub {
+    font-size: 16px;
+    color: rgba(10,10,10,0.58);
+    margin-bottom: 36px;
+    max-width: 600px;
+    line-height: 1.7;
+  }
+  .form-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    background: rgba(10,10,10,0.08);
+    border: none;
+    color: rgba(10,10,10,0.5);
+  }
+  .tab.active { background: var(--accent); color: white; }
+  .who-card--light {
+    background: rgba(10,10,10,0.03);
+  }
+  .who-card--light .who-role { color: var(--black); }
+  .who-card--light .who-desc { color: rgba(10,10,10,0.62); }
+
+  footer {
+    background: var(--black);
+    padding: 40px;
     display: flex;
     justify-content: space-between;
-    gap: 12px;
-    max-width: 1100px;
-    margin: 0 auto;
+    align-items: center;
+    border-top: 1px solid rgba(184,176,160,0.08);
   }
-  .footer a { color: var(--off-white); }
-  .footer, .footer a { font-size: 14px; line-height: 1.5; }
+  .footer-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--warm-mid);
+  }
+  .footer-logo span { color: var(--accent); }
+  .footer-note {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(184,176,160,0.35);
+    letter-spacing: 0.08em;
+  }
+  .footer-note a { color: inherit; }
 
   @media (max-width: 900px) {
-    .grid-2 { grid-template-columns: 1fr; }
-    .nav-links { gap: 12px; }
-    .hero-sub { font-size: 16px; }
-    .panel-content p, .panel-content li { font-size: 15px; }
+    .who-grid { grid-template-columns: 1fr 1fr; }
+    .spec-grid { grid-template-columns: 1fr; }
   }
-  @media (max-width: 700px) {
+
+  @media (max-width: 768px) {
     html { scroll-behavior: auto; }
     body::before { display: none; }
-    nav {
-      position: static;
-      padding: 12px 16px;
-      gap: 10px;
-      align-items: flex-start;
-      flex-direction: column;
-      backdrop-filter: none;
-    }
-    .nav-links {
-      display: flex;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      width: 100%;
-      gap: 8px;
-      padding-bottom: 2px;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .nav-links::-webkit-scrollbar { display: none; }
-    .nav-links li { flex: 0 0 auto; }
-    .nav-links a {
-      display: inline-flex;
-      align-items: center;
-      padding: 9px 10px;
-      border: 1px solid rgba(232, 223, 200, 0.12);
-      background: rgba(23,16,8,0.65);
-      border-radius: 999px;
-      white-space: nowrap;
-      letter-spacing: .06em;
-      font-size: 11px;
-    }
-    .nav-cta {
-      border-color: rgba(139,94,60,0.45);
-      background: rgba(139,94,60,0.10);
-    }
-    .hero { padding-top: 36px; padding-bottom: 28px; }
-    .hero, main, .footer { padding-left: 16px; padding-right: 16px; }
-    .eyebrow { font-size: 11px; letter-spacing: .10em; margin-bottom: 10px; }
-    h1 { font-size: clamp(32px, 11vw, 44px); line-height: 1; }
-    .hero-sub { font-size: 16px; line-height: 1.55; }
-    main { gap: 12px; padding-top: 16px; }
-    .panel-header {
-      padding: 10px 12px;
-      align-items: flex-start;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .panel-header h2 { font-size: 11px; letter-spacing: .10em; }
-    .badge { font-size: 10px; }
-    .panel-content { padding: 14px 12px 16px; }
-    .panel-content h3 { font-size: 21px; line-height: 1.15; }
-    .panel-content h4 { font-size: 12px; letter-spacing: .08em; }
-    .panel-content p { font-size: 16px; line-height: 1.6; }
-    .panel-content li { font-size: 15px; line-height: 1.5; }
-    .panel-content ul, .panel-content ol { margin-left: 16px; gap: 5px; }
-    .callout { padding: 10px; }
-    .mermaid-wrap { padding: 6px; }
-    .mermaid { min-width: 720px; }
-    pre { font-size: 11px; line-height: 1.4; padding: 10px; }
-    .footer {
-      flex-direction: column;
-      gap: 6px;
-      padding-top: 14px;
-      padding-bottom: 24px;
-      font-size: 14px;
-    }
+    nav { padding: 16px 20px; }
+    .nav-links { display: none; }
+    section { padding: 72px 20px; }
+    .hero { min-height: auto; padding: 108px 20px 60px; }
+    .hero-vinyl { width: 480px; height: 480px; right: -190px; opacity: 0.48; }
+    .hero-title { font-size: clamp(34px, 12vw, 54px); }
+    .hero-subtitle { font-size: 16px; line-height: 1.6; max-width: 100%; }
+    .problem-grid, .what-editorial, .not-grid { grid-template-columns: 1fr; gap: 36px; }
+    .who-grid { grid-template-columns: 1fr; }
+    .query-item { padding: 18px 16px; }
+    .query-text { font-size: 12px; }
+    .timeline-item { grid-template-columns: 1fr; gap: 8px; padding: 18px 16px; }
+    .timeline-step { font-size: 10px; }
+    .timeline-item h3 { font-size: 18px; }
+    .timeline-item p { font-size: 14px; }
+    .paper-code { padding: 14px 12px; }
+    .paper-code pre { font-size: 11px; }
+    .diagram-shell { padding: 8px; }
+    .diagram-shell .mermaid { min-width: 680px; }
+    footer { flex-direction: column; gap: 12px; text-align: center; padding: 28px 20px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     body::before { display: none; }
+    .hero-vinyl, .marquee-inner { animation: none !important; }
   }
 </style>
 </head>
 <body>
 
 <nav>
-  <a class="nav-logo" href="./index.html">Dig<span>.</span>baby</a>
+  <a class="nav-logo" href="./">Dig<span>.</span>baby</a>
   <ul class="nav-links">
     <li><a href="#thesis">Thesis</a></li>
     <li><a href="#architecture">Architecture</a></li>
     <li><a href="#data">Data</a></li>
-    <li><a href="#mcp">MCP/API</a></li>
-    <li><a href="#plan">Implementation</a></li>
-    <li><a class="nav-cta" href="./index.html">Back to MVP</a></li>
+    <li><a href="#agent">Agent Layer</a></li>
+    <li><a href="#plan">Plan</a></li>
+    <li><a href="./">MVP</a></li>
   </ul>
 </nav>
 
 <section class="hero">
-  <div class="hero-wrap">
+  <div class="hero-vinyl" aria-hidden="true"></div>
+  <p class="hero-eyebrow">Technical white paper / draft</p>
+  <h1 class="hero-title">The <em>AI layer</em> over the deepest music catalog data</h1>
+  <p class="hero-subtitle">Dig turns public Discogs catalog data into an LLM-native discovery layer: searchable, explainable, programmable, and built for curated music workflows.</p>
+  <div class="hero-cta">
+    <a href="#thesis" class="btn-primary">Read thesis</a>
+    <a href="#plan" class="btn-ghost">Implementation plan →</a>
+    <a href="./" class="btn-ghost">Back to home</a>
+  </div>
+</section>
+
+<div class="marquee-wrap" aria-hidden="true">
+  <div class="marquee-inner">
+    <span>LLM-native discovery</span>
+    <span>Discogs-scale catalog depth</span>
+    <span>Explainable graph retrieval</span>
+    <span>MCP + API interfaces</span>
+    <span>Curated crates</span>
+    <span>No marketplace complexity in v1</span>
+    <span>Postgres FTS first</span>
+    <span>Raw payload staging</span>
+    <span>Normalization dictionary before importer</span>
+    <span>LLM-native discovery</span>
+    <span>Discogs-scale catalog depth</span>
+    <span>Explainable graph retrieval</span>
+    <span>MCP + API interfaces</span>
+    <span>Curated crates</span>
+    <span>No marketplace complexity in v1</span>
+    <span>Postgres FTS first</span>
+    <span>Raw payload staging</span>
+    <span>Normalization dictionary before importer</span>
+  </div>
+</div>
+
+<section class="problem" id="thesis">
+  <div class="section-label">Thesis</div>
+  <div class="problem-grid">
     <div>
-      <p class="eyebrow">Technical White Paper / Draft</p>
-      <h1>Dig as an <em>AI-first</em> music discovery layer</h1>
-      <p class="hero-sub">
-        An LLM-native discovery layer built on the most comprehensive structured music catalog available. Dig turns public Discogs catalog data into something humans and agents can search, reason over, and build with.
-      </p>
-      <p class="hero-sub" style="margin-top:10px;">
-        This document describes the product thesis, the AI retrieval architecture, the data normalization approach, and a risk-first implementation plan for a 1-2 person build.
-      </p>
+      <h2 class="problem-heading">Not another music app.<br><em>An AI retrieval layer.</em></h2>
+    </div>
+    <ul class="pain-list">
+      <li><span class="pain-num">01</span><span><strong style="color:var(--off-white);font-weight:400;">Positioning:</strong> Dig is an AI-first, LLM-native discovery layer built on public Discogs catalog data.</span></li>
+      <li><span class="pain-num">02</span><span><strong style="color:var(--off-white);font-weight:400;">Value:</strong> structured facts, explainable discovery, and curation-ready tools for humans and agents.</span></li>
+      <li><span class="pain-num">03</span><span><strong style="color:var(--off-white);font-weight:400;">Non-goals:</strong> no marketplace, no streaming service, no hallucinating AI wrapper.</span></li>
+      <li><span class="pain-num">04</span><span><strong style="color:var(--off-white);font-weight:400;">Wedge:</strong> collector-grade metadata + API/MCP + curated crates + deterministic retrieval.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="what" id="positioning">
+  <div class="section-label">Product shape</div>
+  <div class="what-editorial">
+    <div>
+      <h2 class="what-heading">A music knowledge layer for <em>humans and LLMs</em></h2>
+      <p class="what-intro">The core move is to stop thinking “better Discogs UI” and start thinking “AI discovery layer on top of the deepest structured catalog data set available.” The UI matters, but the durable asset is the retrieval graph and tooling.</p>
+    </div>
+    <div class="what-body">
+      <div class="what-block">
+        <span class="what-block-num">01</span>
+        <div>
+          <h3>Deep metadata retrieval</h3>
+          <p>Release, master, artist, label, credits, formats, identifiers, and relationships exposed as structured queries instead of brittle scraping or fuzzy guesses.</p>
+        </div>
+      </div>
+      <div class="what-block">
+        <span class="what-block-num">02</span>
+        <div>
+          <h3>Explainable discovery</h3>
+          <p>Results should be traceable: why a record matched, which credit linked it, which label lineage mattered, and where confidence drops.</p>
+        </div>
+      </div>
+      <div class="what-block">
+        <span class="what-block-num">03</span>
+        <div>
+          <h3>Curation workflows</h3>
+          <p>Crates and editorial collections are the human-facing output. The retrieval layer powers them; the interface makes them usable and shareable.</p>
+        </div>
+      </div>
+      <div class="what-block">
+        <span class="what-block-num">04</span>
+        <div>
+          <h3>Programmable interfaces</h3>
+          <p>REST + MCP are first-class surfaces, not bolted-on docs. The same facts power the web app and agent workflows.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<main>
-  <section class="panel" id="thesis">
-    <div class="panel-header">
-      <h2>1. Thesis & Product Shape</h2>
-      <span class="badge">Scope-first</span>
-    </div>
-    <div class="panel-content">
-      <h3>An AI layer over the deepest music catalog dataset.</h3>
-      <p>
-        Dig should be positioned as an <strong>AI-first, LLM-native music discovery layer</strong> built on public Discogs catalog data. The product value is not just a better UI, but a programmable intelligence layer: structured facts, explainable discovery, and curation-ready tools for humans and agents.
-      </p>
-      <div class="callout">
-        <strong>Core wedge:</strong> the AI discovery layer on top of collector-grade metadata, with API/MCP access, explainable graph retrieval, and curated crates. Avoid payments, KYC, tax, and marketplace compliance in v1.
-      </div>
-      <div class="grid-2">
-        <div>
-          <h4>This is</h4>
-          <ul>
-            <li>Deep music search</li>
-            <li>An AI/LLM discovery layer over music metadata</li>
-            <li>Curation tooling for DJs / radio / labels</li>
-            <li>A programmable music metadata layer</li>
-            <li>A bridge to streaming via matching/export</li>
-          </ul>
-        </div>
-        <div>
-          <h4>This is not</h4>
-          <ul>
-            <li>A marketplace rebuild</li>
-            <li>A streaming service</li>
-            <li>An AI that guesses or hallucinates</li>
-            <li>A dependency on Discogs write-back</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>
+<section class="agent" id="agent">
+  <div class="section-label">Agent layer</div>
+  <p class="agent-intro">LLM-native on the outside. Deterministic retrieval underneath. Agents orchestrate the workflow; Dig returns facts, relationships, and confidence, not vibes.</p>
+  <div class="query-list">
+    <div class="query-item"><span class="query-prompt">&gt;_</span><span class="query-text"><strong>search_catalog</strong> “Find 1988–1994 UK techno releases with dub/reggae influence and female vocal credits.”</span></div>
+    <div class="query-item"><span class="query-prompt">&gt;_</span><span class="query-text"><strong>create_crate_draft</strong> “Build a 20-record late-night radio crate. Prioritise Warp, Rephlex, Ninja Tune. Exclude compilations.”</span></div>
+    <div class="query-item"><span class="query-prompt">&gt;_</span><span class="query-text"><strong>explain_relationships</strong> “Show label lineage, shared engineers, and style overlap connecting these five records.”</span></div>
+    <div class="query-item"><span class="query-prompt">&gt;_</span><span class="query-text"><strong>find_export_candidates</strong> “Map this curated list to Spotify with confidence scores and unresolved tracks flagged.”</span></div>
+  </div>
+</section>
 
-  <section class="panel" id="decisions">
-    <div class="panel-header">
-      <h2>2. Technical Decisions (Revised)</h2>
-      <span class="badge">Defensible defaults</span>
+<section class="not-this" id="scope">
+  <div class="section-label">Scope</div>
+  <div class="not-grid">
+    <div class="not-col is-not">
+      <h3>Not this</h3>
+      <ul>
+        <li>Discogs marketplace rebuild</li>
+        <li>Streaming app</li>
+        <li>Generic AI recommender wrapper</li>
+        <li>Discogs write-back dependency</li>
+        <li>LLM proxy business in v1</li>
+      </ul>
     </div>
-    <div class="panel-content">
-      <div class="decision-list">
-        <div class="decision">
-          <div class="title">Modular Monolith First</div>
-          <p>Single deployable with clean domain boundaries. Fast to ship, low ops burden, easy to refactor after the schema and ingestion rules stabilize.</p>
-        </div>
-        <div class="decision">
-          <div class="title">Postgres Search Before OpenSearch</div>
-          <p>Start with <code>tsvector</code> + <code>pg_trgm</code> and measure. Defer a dedicated search cluster until relevance/latency/product complexity requires it.</p>
-        </div>
-        <div class="decision">
-          <div class="title">Raw Payload Staging Is Non-Negotiable</div>
-          <p>Store parsed Discogs entities in <code>ingest.raw_entities</code> before normalization. This protects re-derivation when importer logic and schema evolve.</p>
-        </div>
-        <div class="decision">
-          <div class="title">Editorial-Only Auth in v1</div>
-          <p>No public user accounts initially. This keeps the product and legal surface small while supporting catalog, curation, and MCP/API features.</p>
-        </div>
-        <div class="decision">
-          <div class="title">No LLM Proxying in v1</div>
-          <p>Expose API + MCP and let users/partners bring their own model runtime. Dig focuses on deterministic graph/search retrieval, not inference hosting.</p>
-        </div>
-      </div>
+    <div class="not-col is">
+      <h3>This is</h3>
+      <ul>
+        <li>AI discovery layer over music metadata</li>
+        <li>Mobile-first retrieval UI</li>
+        <li>MCP + API for agents and developers</li>
+        <li>Curation and editorial tooling</li>
+        <li>Bridge to streaming via matching/export</li>
+      </ul>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section class="panel" id="architecture">
-    <div class="panel-header">
-      <h2>3. Architecture</h2>
-      <span class="badge">Mermaid</span>
-    </div>
-    <div class="panel-content">
-      <h3>AI retrieval layer with a human UI on top</h3>
-      <p>Dig is built as a shared retrieval core for both humans and LLMs: a mobile-first web app for browsing, plus an MCP/API layer that exposes structured catalog and curation tools for agent workflows.</p>
-      <div class="mermaid-wrap">
-        <div class="mermaid">
+<section class="paper-alt" id="architecture">
+  <div class="section-label">Architecture</div>
+  <h2 class="paper-heading">One retrieval core. <em>Two interfaces.</em></h2>
+  <div class="paper-copy" style="margin-top:18px;">
+    <p>Dig should ship as a modular monolith for a 1–2 person team. The same domain modules power a mobile-first web app and an MCP/API layer, which keeps agent answers aligned with what users see in the UI.</p>
+  </div>
+  <div class="diagram-shell">
+    <div class="mermaid">
 flowchart TB
   subgraph Clients["Clients"]
     Web["Mobile-First Web App"]
-    APIUsers["Apps / Partners"]
-    Agent["LLM Agent Runtime"]
+    Apps["Apps / Partners"]
+    LLM["LLM Agent Runtime"]
   end
 
-  subgraph Surface["Product Surfaces"]
+  subgraph Surface["Interfaces"]
     REST["REST API"]
     MCP["MCP Server"]
-    Admin["Editorial / Admin UI"]
+    Admin["Editorial/Admin"]
   end
 
-  subgraph Core["Modular Monolith (Shared Domain Modules)"]
-    Catalog["Catalog Module"]
-    Search["Search Module (Postgres FTS + pg_trgm)"]
-    Curation["Curation Module"]
-    Media["Media Links Module"]
-    Jobs["Jobs / Workers"]
-    Match["Matching / Export (Later)"]
+  subgraph Core["Modular Monolith"]
+    Catalog["Catalog"]
+    Search["Search (Postgres FTS + pg_trgm)"]
+    Curation["Curation"]
+    Media["Media Links"]
+    Jobs["Ingest / Workers"]
+    Match["Matching / Export (later)"]
   end
 
   subgraph Data["Data"]
-    PG["Postgres (canonical + search docs)"]
-    Redis["Redis (jobs/cache)"]
-  end
-
-  subgraph Sources["Sources"]
-    Dumps["Discogs XML Dumps"]
-    Ext["Spotify / Apple / YouTube APIs"]
+    PG["Postgres"]
+    Redis["Redis"]
   end
 
   Web --> REST
-  APIUsers --> REST
-  Agent --> MCP
-  Admin --> REST
+  Apps --> REST
+  LLM --> MCP
   MCP --> REST
+  Admin --> REST
 
   REST --> Catalog
   REST --> Search
   REST --> Curation
   REST --> Media
   REST --> Match
+  REST --> Jobs
 
   Catalog --> PG
   Search --> PG
@@ -523,173 +873,223 @@ flowchart TB
   Match --> PG
   Jobs --> PG
   Jobs --> Redis
+    </div>
+  </div>
+</section>
 
-  Dumps --> Jobs
-  Ext --> Match
-  Ext --> Media
+<section class="paper-dark" id="data">
+  <div class="section-label">Data strategy</div>
+  <div class="what-editorial">
+    <div>
+      <h2 class="what-heading">Normalization decisions before importer code.<br><em>No exceptions.</em></h2>
+      <p class="what-intro">The risky part of this project is not the landing page or the API framework. It is the normalization logic for Discogs dumps. The importer should be driven by a profiling-backed normalization dictionary, not by assumptions.</p>
+    </div>
+    <div class="what-body">
+      <div class="what-block">
+        <span class="what-block-num">01</span>
+        <div>
+          <h3>Raw payload staging is non-negotiable</h3>
+          <p>Store parsed entities in <code>ingest.raw_entities</code> before normalization so canonical tables can be re-derived as the schema evolves.</p>
         </div>
       </div>
-      <h4>Why this architecture fits an LLM-native product</h4>
-      <ul>
-        <li>One retrieval core powers both the UI and agents, which keeps behavior consistent and explainable.</li>
-        <li>One codebase keeps iteration speed high while the data model and tool surface are still evolving.</li>
-        <li>Search can start in Postgres and graduate later without changing the API/MCP contracts.</li>
-      </ul>
-    </div>
-  </section>
-
-  <section class="panel" id="data">
-    <div class="panel-header">
-      <h2>4. Data & Normalization Strategy</h2>
-      <span class="badge">Load-bearing</span>
-    </div>
-    <div class="panel-content">
-      <h3>Raw-first ingestion with a normalization dictionary</h3>
-      <p>
-        Before importer implementation, profile real dump samples and lock normalization rules in a living data dictionary. This prevents importer churn and schema thrash.
-      </p>
-      <div class="callout">
-        <strong>Pre-code requirement:</strong> write the <em>Normalization Dictionary v1</em> from real dump samples, not assumptions. The three areas most likely to ripple through the schema are ANV handling, track position parsing, and credits/role encoding.
+      <div class="what-block">
+        <span class="what-block-num">02</span>
+        <div>
+          <h3>Messy fields stay raw in v1</h3>
+          <p>Preserve raw credit role strings, identifier values, and track positions. Parse conservatively, add normalized helpers later.</p>
+        </div>
       </div>
-      <div class="mermaid-wrap">
-        <div class="mermaid">
+      <div class="what-block">
+        <span class="what-block-num">03</span>
+        <div>
+          <h3>Load-bearing edge cases</h3>
+          <p>ANV handling, track position encoding, credits nesting, and master/release linkage should all be profiled before importer logic is locked.</p>
+        </div>
+      </div>
+      <div class="what-block">
+        <span class="what-block-num">04</span>
+        <div>
+          <h3>Search starts in Postgres</h3>
+          <p>Use <code>tsvector</code> + <code>pg_trgm</code> first. Upgrade to OpenSearch only when measured relevance/latency needs justify the ops overhead.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="diagram-shell">
+    <div class="mermaid">
 flowchart LR
-  A["Discogs XML Dump"] --> B["Batch Record (dump_batches)"]
+  A["Discogs XML Dumps"] --> B["dump_batches"]
   B --> C["XML Stream Parse"]
-  C --> D["Raw Staging (raw_entities)"]
+  C --> D["raw_entities (JSON payloads)"]
   D --> E["Normalize / Validate"]
-  E --> F["Canonical Catalog Tables"]
-  F --> G["Search Documents (Postgres FTS)"]
-  F --> H["Curation + Media Links"]
-  F --> I["Matching / Export (later)"]
-        </div>
+  E --> F["catalog.* canonical tables"]
+  F --> G["search_documents (Postgres FTS)"]
+  F --> H["curation + media links"]
+  F --> I["matching/export (later)"]
+    </div>
+  </div>
+</section>
+
+<section class="who" id="mcp">
+  <div class="section-label">API + MCP</div>
+  <div class="who-grid">
+    <div class="who-card">
+      <div class="who-role">Deterministic tools</div>
+      <p class="who-desc">LLMs orchestrate, Dig retrieves. Tool outputs should be structured, reproducible, and explainable.</p>
+    </div>
+    <div class="who-card">
+      <div class="who-role">Shared domain logic</div>
+      <p class="who-desc">MCP and REST should call the same retrieval services so the UI and agent answers stay aligned.</p>
+    </div>
+    <div class="who-card">
+      <div class="who-role">Provenance + confidence</div>
+      <p class="who-desc">Return why a record matched, where link data came from, and where the system is uncertain.</p>
+    </div>
+    <div class="who-card">
+      <div class="who-role">No hidden writes</div>
+      <p class="who-desc">Agent tools should read, rank, explain, or draft by default. Writes require explicit intent.</p>
+    </div>
+  </div>
+
+  <div class="spec-grid" style="margin-top:28px;">
+    <div class="spec-col">
+      <h3>Core retrieval API (REST)</h3>
+      <ul>
+        <li><strong>GET</strong> <code>/search</code> (catalog entities + filters)</li>
+        <li><strong>GET</strong> <code>/artists/:id</code></li>
+        <li><strong>GET</strong> <code>/labels/:id</code></li>
+        <li><strong>GET</strong> <code>/masters/:id</code></li>
+        <li><strong>GET</strong> <code>/releases/:id</code></li>
+        <li><strong>GET</strong> <code>/releases/:id/media-links</code></li>
+        <li><strong>GET</strong> <code>/curators/:slug</code>, <code>/lists/:slug</code></li>
+      </ul>
+    </div>
+    <div class="spec-col">
+      <h3>LLM-facing MCP tools</h3>
+      <ul>
+        <li><code>search_catalog</code></li>
+        <li><code>get_release</code>, <code>get_master_release</code></li>
+        <li><code>get_artist</code>, <code>get_label</code></li>
+        <li><code>get_related_releases</code></li>
+        <li><code>get_media_links</code></li>
+        <li><code>create_crate_draft</code></li>
+        <li><code>explain_relationships</code></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="paper-final" id="plan">
+  <div class="section-label">Implementation plan</div>
+  <h2 class="paper-heading">Risk-first build plan for a <em>1–2 person team</em></h2>
+  <p class="agent-intro" style="margin-top:18px; margin-bottom: 30px; max-width: 760px;">The project gets expensive and chaotic when teams start with infrastructure ambition instead of data decisions. This sequence keeps the build grounded and reversible.</p>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-step">Pre-M0</div>
+      <div>
+        <h3>Profile real Discogs dump samples</h3>
+        <p>Write the normalization dictionary from real records, not assumptions. Validate ANV handling, track positions, credits nesting, identifiers, and master/release linkage before importer code.</p>
       </div>
-      <h4>Normalization principles (v1)</h4>
-      <ul>
-        <li>Preserve raw source strings for messy fields (<code>credits.role</code>, identifiers, track positions).</li>
-        <li>Parse conservatively and keep helper columns nullable (e.g. <code>released_year</code>, <code>duration_seconds</code>).</li>
-        <li>Store ANV at relationship level, not as a global artist alias by default.</li>
-        <li>Treat master/release linkage as backfillable (do not block release imports on import order).</li>
-      </ul>
-      <h4>Schema shape already prepared</h4>
-      <ul>
-        <li><code>ingest.dump_batches</code> + <code>ingest.raw_entities</code> for provenance and replayability</li>
-        <li><code>catalog.*</code> tables for normalized entities and relationships</li>
-        <li><code>catalog.search_documents</code> as a DB-side search substrate</li>
-        <li><code>media.*</code>, <code>curation.*</code>, <code>integration.*</code> for later stages</li>
-      </ul>
     </div>
-  </section>
-
-  <section class="panel" id="mcp">
-    <div class="panel-header">
-      <h2>5. Agent Interface (API + MCP)</h2>
-      <span class="badge">Agent-first layer</span>
-    </div>
-    <div class="panel-content">
-      <h3>LLM-native interface, deterministic retrieval underneath</h3>
-      <p>
-        Dig should expose structured retrieval and crate-building primitives via REST and MCP. LLMs can orchestrate the workflow, but the underlying retrieval layer should remain deterministic, inspectable, and explainable.
-      </p>
-      <div class="grid-2">
-        <div>
-          <h4>Core retrieval API (REST)</h4>
-          <ul>
-            <li><code>GET /search</code></li>
-            <li><code>GET /artists/:id</code></li>
-            <li><code>GET /labels/:id</code></li>
-            <li><code>GET /masters/:id</code></li>
-            <li><code>GET /releases/:id</code></li>
-            <li><code>GET /releases/:id/media-links</code></li>
-            <li><code>GET /curators/:slug</code></li>
-            <li><code>GET /lists/:slug</code></li>
-          </ul>
-        </div>
-        <div>
-          <h4>LLM-facing MCP tools</h4>
-          <ul>
-            <li><code>search_catalog</code></li>
-            <li><code>get_release</code> / <code>get_master_release</code></li>
-            <li><code>get_artist</code> / <code>get_label</code></li>
-            <li><code>get_related_releases</code></li>
-            <li><code>get_media_links</code></li>
-            <li><code>create_crate_draft</code> (read-only suggestion mode)</li>
-            <li><code>explain_relationships</code></li>
-          </ul>
-        </div>
+    <div class="timeline-item">
+      <div class="timeline-step">M1</div>
+      <div>
+        <h3>Ingestion foundation</h3>
+        <p>Schema migrations, <code>dump_batches</code>, <code>raw_entities</code>, parser pipeline, canonical upserts, and QA/reconciliation reports.</p>
       </div>
-      <h4>Agent interface design rules</h4>
-      <ul>
-        <li>Return provenance and confidence fields whenever results are inferred or matched.</li>
-        <li>No hidden side effects by default: tools should read, rank, explain, or draft unless explicitly authorized to write.</li>
-        <li>Keep MCP backed by the same retrieval/domain services as REST so humans and agents get the same facts.</li>
-      </ul>
     </div>
-  </section>
+    <div class="timeline-item">
+      <div class="timeline-step">M2</div>
+      <div>
+        <h3>Search + read API</h3>
+        <p>Postgres FTS + <code>pg_trgm</code>, core entity endpoints, query profiling/indexes, and a mobile-first retrieval UI.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-step">M3</div>
+      <div>
+        <h3>Curation + media links + editorial tooling</h3>
+        <p>Curators, crates, link provenance, validation jobs, and the first useful human-facing output loops.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-step">M4</div>
+      <div>
+        <h3>MCP layer</h3>
+        <p>Agent tools backed by the same domain services as the REST API. Deterministic retrieval, explicit side effects, and confidence/provenance in responses.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-step">M5</div>
+      <div>
+        <h3>Matching / export beta (optional)</h3>
+        <p>External catalog candidate store, confidence scoring, export jobs, and a review path for ambiguous matches.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-step">M6</div>
+      <div>
+        <h3>Search cluster decision gate</h3>
+        <p>Only move to OpenSearch/Elasticsearch when measured relevance or latency makes the migration worth the overhead.</p>
+      </div>
+    </div>
+  </div>
 
-  <section class="panel" id="economics">
-    <div class="panel-header">
-      <h2>6. Cost & Monetization (Technical View)</h2>
-      <span class="badge">Pragmatic</span>
-    </div>
-    <div class="panel-content">
-      <h3>Keep costs low by making retrieval deterministic</h3>
-      <p>
-        The main infrastructure costs are Postgres, background jobs, and API hosting. Costs only spike early if Dig becomes an LLM proxy. The current strategy explicitly avoids that.
-      </p>
-      <h4>Cost control principles</h4>
-      <ul>
-        <li>Use Postgres FTS before running a dedicated search cluster.</li>
-        <li>Let users bring their own model runtime for agent orchestration.</li>
-        <li>Cache common searches and async heavy jobs (imports, link checks, exports).</li>
-        <li>Defer streaming export matching until core catalog + curation are proven.</li>
-      </ul>
-      <h4>Monetization paths (compatible with architecture)</h4>
-      <ul>
-        <li><strong>B2B API / Agent API:</strong> tiered access to search, graph, curation data</li>
-        <li><strong>Pro curator tools:</strong> private crates, collaboration, export utilities</li>
-        <li><strong>Media/editorial partners:</strong> branded curation pages and embeds</li>
-        <li><strong>Consumer premium (later):</strong> advanced filters, saved lists, agent credits</li>
-      </ul>
-    </div>
-  </section>
+  <div class="paper-code">
+    <h3>Current build defaults (the useful ones)</h3>
+    <pre>Architecture: modular monolith
+Search v1: Postgres FTS + pg_trgm
+Ingest: raw payload staging in ingest.raw_entities
+Auth v1: editorial-only
+LLM strategy: no proxying; expose MCP/API and let users bring models
+Non-goals: marketplace, compliance stack, Discogs write-back dependency</pre>
+  </div>
+</section>
 
-  <section class="panel" id="plan">
-    <div class="panel-header">
-      <h2>7. Implementation Plan (1-2 People)</h2>
-      <span class="badge">Risk-first</span>
+<section class="access" id="feedback">
+  <div class="section-label">Feedback</div>
+  <h2 class="access-heading">This is a working paper.<br><em>Tear it apart.</em></h2>
+  <p class="access-sub">The most useful feedback right now is on the thesis, scope boundaries, and implementation order — especially whether the data and MCP decisions feel tight enough for a small team build.</p>
+  <div class="who-grid">
+    <div class="who-card who-card--light">
+      <div class="who-role">Product</div>
+      <p class="who-desc">Is the AI-layer positioning clear enough, or does it still read like a better Discogs UI?</p>
     </div>
-    <div class="panel-content">
-      <h3>Do the hard thinking before code, then ship in milestones</h3>
-      <ol>
-        <li><strong>Pre-M0: Data profiling + normalization dictionary</strong><br>Sample real Discogs dump records and validate normalization decisions for ANV, track positions, credits, identifiers, master/release linkage.</li>
-        <li><strong>M1: Ingestion foundation</strong><br>Schema migrations, <code>dump_batches</code>, <code>raw_entities</code>, parser pipeline, canonical upserts, QA counts.</li>
-        <li><strong>M2: Search + read API</strong><br>Postgres FTS + <code>pg_trgm</code>, search endpoint, entity endpoints, index tuning, basic mobile read UI.</li>
-        <li><strong>M3: Curation + media links + editorial tooling</strong><br>Curators/lists, media links + provenance + validation job, admin/editorial flow.</li>
-        <li><strong>M4: MCP layer</strong><br>Deterministic MCP tools backed by shared domain services, API keys / rate limits if needed.</li>
-        <li><strong>M5: Matching/export beta (optional)</strong><br>External catalog candidate store, confidence scoring, export jobs, review UI.</li>
-        <li><strong>M6: Search cluster decision gate</strong><br>Only evaluate OpenSearch if metrics and product requirements justify it.</li>
-      </ol>
-      <h4>Non-goals to protect the build</h4>
-      <ul>
-        <li>No marketplace/compliance stack in v1</li>
-        <li>No public user accounts in v1</li>
-        <li>No LLM proxy billing / passthrough complexity</li>
-        <li>No dependency on Discogs writeback APIs for core functionality</li>
-      </ul>
+    <div class="who-card who-card--light">
+      <div class="who-role">Data</div>
+      <p class="who-desc">Are the normalization risks and raw-first staging approach called out clearly enough before implementation starts?</p>
     </div>
-  </section>
+    <div class="who-card who-card--light">
+      <div class="who-role">Technical</div>
+      <p class="who-desc">Does the modular monolith + Postgres search-first plan feel credible for a 1–2 person team?</p>
+    </div>
+    <div class="who-card who-card--light">
+      <div class="who-role">Commercial</div>
+      <p class="who-desc">Does the API/MCP + curation path sound monetizable before any marketplace/compliance overhead?</p>
+    </div>
+  </div>
+  <div class="hero-cta" style="margin-top:34px;">
+    <a href="./" class="btn-primary">Back to dig.baby</a>
+    <a href="mailto:?subject=Dig%20Technical%20White%20Paper&body=https%3A%2F%2Fdig.baby%2Fwhitepaper" class="btn-ghost">Share white paper ↗</a>
+  </div>
+</section>
 
-</main>
-
-<div class="footer">
-  <div>Dig technical white paper draft. Built for feedback, not final copy.</div>
-  <div><a href="./index.html">Back to dig.baby MVP</a></div>
-</div>
+<footer>
+  <div class="footer-logo">Dig</div>
+  <div class="footer-note">Technical white paper draft · dig.baby · <a href="./">home</a></div>
+</footer>
 
 <script type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-  mermaid.initialize({ startOnLoad: true, theme: "dark", securityLevel: "loose" });
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+</script>
+<script>
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll('.hero-vinyl, .marquee-inner').forEach(el => {
+      if (el) el.style.animation = 'none';
+    });
+  }
 </script>
 
 </body>
