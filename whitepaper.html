@@ -231,8 +231,13 @@
     background: rgba(12, 10, 8, 0.65);
     padding: 10px;
     overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .mermaid { min-width: 760px; }
+  .mermaid svg {
+    max-width: none;
+    height: auto;
+  }
 
   pre {
     margin: 0;
@@ -262,13 +267,79 @@
   @media (max-width: 900px) {
     .grid-2 { grid-template-columns: 1fr; }
     .nav-links { gap: 12px; }
+    .panel-content p, .panel-content li { font-size: 15px; }
   }
   @media (max-width: 700px) {
-    nav { padding: 14px 16px; }
-    .nav-links { display: none; }
+    html { scroll-behavior: auto; }
+    body::before { display: none; }
+    nav {
+      position: static;
+      padding: 12px 16px;
+      gap: 10px;
+      align-items: flex-start;
+      flex-direction: column;
+      backdrop-filter: none;
+    }
+    .nav-links {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      width: 100%;
+      gap: 8px;
+      padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .nav-links::-webkit-scrollbar { display: none; }
+    .nav-links li { flex: 0 0 auto; }
+    .nav-links a {
+      display: inline-flex;
+      align-items: center;
+      padding: 9px 10px;
+      border: 1px solid rgba(232, 223, 200, 0.12);
+      background: rgba(23,16,8,0.65);
+      border-radius: 999px;
+      white-space: nowrap;
+      letter-spacing: .08em;
+    }
+    .nav-cta {
+      border-color: rgba(139,94,60,0.45);
+      background: rgba(139,94,60,0.10);
+    }
+    .hero { padding-top: 36px; padding-bottom: 28px; }
     .hero, main, .footer { padding-left: 16px; padding-right: 16px; }
-    .panel-content h3 { font-size: 22px; }
-    .mermaid { min-width: 640px; }
+    .eyebrow { font-size: 10px; letter-spacing: .14em; margin-bottom: 10px; }
+    h1 { font-size: clamp(32px, 11vw, 44px); line-height: 1; }
+    .hero-sub { font-size: 15px; line-height: 1.5; }
+    main { gap: 12px; padding-top: 16px; }
+    .panel-header {
+      padding: 10px 12px;
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .panel-header h2 { font-size: 10px; letter-spacing: .12em; }
+    .badge { font-size: 9px; }
+    .panel-content { padding: 14px 12px 16px; }
+    .panel-content h3 { font-size: 21px; line-height: 1.15; }
+    .panel-content h4 { font-size: 11px; letter-spacing: .10em; }
+    .panel-content ul, .panel-content ol { margin-left: 16px; gap: 5px; }
+    .callout { padding: 10px; }
+    .mermaid-wrap { padding: 6px; }
+    .mermaid { min-width: 720px; }
+    pre { font-size: 11px; line-height: 1.4; padding: 10px; }
+    .footer {
+      flex-direction: column;
+      gap: 6px;
+      padding-top: 14px;
+      padding-bottom: 24px;
+      font-size: 13px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    body::before { display: none; }
   }
 </style>
 </head>
