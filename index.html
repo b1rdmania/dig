@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dig</title>
+<meta name="description" content="AI-first music discovery layer built on public Discogs catalog data. Deep search, curated crates, and agent-native API/MCP workflows.">
+<meta name="theme-color" content="#0d0a07">
+<meta name="color-scheme" content="dark">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="canonical" href="https://dig-baby-pfr9q4ksa-boom-test-c54cde04.vercel.app/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Dig — AI-First Music Discovery">
+<meta property="og:description" content="An AI discovery layer over the deepest public music catalog data. Built for DJs, collectors, developers, and agents.">
+<meta property="og:url" content="https://dig-baby-pfr9q4ksa-boom-test-c54cde04.vercel.app/">
+<meta property="og:site_name" content="Dig">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Dig — AI-First Music Discovery">
+<meta name="twitter:description" content="Deep music search, curated crates, and agent-native API/MCP workflows on top of public Discogs catalog data.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -784,7 +797,7 @@
     <li><a href="#problem">Problem</a></li>
     <li><a href="#what">Platform</a></li>
     <li><a href="#agent">Agent Layer</a></li>
-    <li><a href="./whitepaper.html">Tech Paper</a></li>
+    <li><a href="./whitepaper">Tech Paper</a></li>
     <li><a href="#access">Early Access</a></li>
   </ul>
 </nav>
@@ -798,7 +811,7 @@
   <div class="hero-cta">
     <a href="#access" class="btn-primary">Get early access</a>
     <a href="#what" class="btn-ghost">What is this →</a>
-    <a href="./whitepaper.html" class="btn-ghost">Tech white paper ↗</a>
+    <a href="./whitepaper" class="btn-ghost">Tech white paper ↗</a>
   </div>
 </section>
 
@@ -1025,7 +1038,7 @@
 <!-- Footer -->
 <footer>
   <div class="footer-logo">Dig</div>
-  <div class="footer-note">Early stage. Building in public. dig.baby · <a href="./whitepaper.html" style="color:inherit;">Technical white paper</a></div>
+  <div class="footer-note">Early stage. Building in public. dig.baby · <a href="./whitepaper" style="color:inherit;">Technical white paper</a></div>
 </footer>
 
 <script>
@@ -1038,21 +1051,24 @@
   }
 
   // Subtle scroll fade-in for sections
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.opacity = '1';
-        entry.target.style.transform = 'translateY(0)';
-      }
-    });
-  }, { threshold: 0.1 });
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!prefersReducedMotion && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, { threshold: 0.1 });
 
-  document.querySelectorAll('.what-block, .pain-list li, .query-item, .who-card').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(16px)';
-    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-    observer.observe(el);
-  });
+    document.querySelectorAll('.what-block, .pain-list li, .query-item, .who-card').forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(16px)';
+      el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      observer.observe(el);
+    });
+  }
 </script>
 
 </body>
