@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://dig-baby-pfr9q4ksa-boom-test-c54cde04.vercel.app/sitemap.xml
-
+Sitemap: https://dig.baby/sitemap.xml
