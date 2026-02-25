@@ -89,7 +89,12 @@ async function extractFixtures(
             // Check it's actually our element (not e.g. <labels>)
             const cAfter = buffer[nextOpenIdx + openTag.length];
             if (cAfter === ">" || cAfter === " " || cAfter === "/") {
-              depth++;
+              // Don't increment depth for self-closing tags like <label ... />
+              const closingBracket = buffer.indexOf(">", nextOpenIdx + openTag.length);
+              const isSelfClosing = closingBracket !== -1 && buffer[closingBracket - 1] === "/";
+              if (!isSelfClosing) {
+                depth++;
+              }
             }
             searchFrom = nextOpenIdx + openTag.length;
           } else {
