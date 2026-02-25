@@ -1,16 +1,21 @@
 /**
  * Streaming SAX parser for Discogs XML dumps.
  *
- * Discogs dumps are multi-GB gzipped XML files. Loading the whole document
- * into memory would be impractical, so we use a SAX-style event-driven parser
- * (saxes) that processes the byte stream incrementally — constant memory
- * regardless of file size.
+ * Discogs dumps are multi-GB gzipped XML files. This parser uses saxes
+ * (SAX-style event-driven) to process the byte stream incrementally —
+ * constant memory regardless of file size. Each top-level entity is
+ * fully built as a JSON tree before being emitted to the callback.
  *
- * Expected call site (from cli.ts):
+ * The output is a nested JSON structure that preserves:
+ * - Element attributes (as @attr object)
+ * - Text content (as #text string)
+ * - Nested child elements (as arrays of objects)
+ * - Repeated same-name elements collected into arrays
  *
+ * Usage:
  *   const stream = createReadStream(file).pipe(createGunzip());
  *   await parseXmlDump("artists", stream, async (entity) => {
- *     // TODO: insert entity into raw_entities via @dig/db
+ *     await db.insertInto("ingest.raw_entities").values({...}).execute();
  *   });
  */
 
@@ -20,29 +25,35 @@ import type { Readable } from "node:stream";
 export type EntityType = "artists" | "labels" | "masters" | "releases";
 
 /**
- * A raw entity record as it comes out of the XML — a flat bag of string
- * attributes and text content collected during SAX traversal.
- *
- * TODO: replace with a proper typed shape from @dig/domain once entity
- * schemas are defined.
+ * A parsed XML node. Children with the same tag name are grouped into arrays.
+ * Attributes are stored under @attr. Text content under #text.
+ */
+export interface XmlNode {
+  /** Element attributes (e.g. { id: "123", name: "Svek" }) */
+  "@attr"?: Record<string, string>;
+  /** Text content of the element */
+  "#text"?: string;
+  /** Child elements, keyed by tag name → array of nodes */
+  [key: string]: XmlNode[] | Record<string, string> | string | undefined;
+}
+
+/**
+ * A raw entity as it comes out of the parser — the full XML subtree
+ * converted to a JSON structure.
  */
 export interface RawEntity {
   type: EntityType;
-  /** The top-level element's attributes (e.g. id="123") */
-  attributes: Record<string, string>;
-  /** Accumulated child-element text keyed by element name */
-  fields: Record<string, string>;
+  /** The complete entity as a nested JSON tree */
+  data: XmlNode;
 }
 
 /**
  * Called once per top-level entity as it is fully parsed.
- * May be async — the parser awaits each callback before continuing.
  */
 export type EntityCallback = (entity: RawEntity) => Promise<void> | void;
 
 /**
  * Top-level element name per entity type.
- * These are the repeating container elements in each Discogs dump.
  */
 const ROOT_ELEMENT: Record<EntityType, string> = {
   artists: "artist",
@@ -51,87 +62,118 @@ const ROOT_ELEMENT: Record<EntityType, string> = {
   releases: "release",
 };
 
+/** Internal node used during SAX tree building */
+interface BuildNode {
+  name: string;
+  attributes: Record<string, string>;
+  text: string;
+  children: BuildNode[];
+}
+
+/**
+ * Convert internal build node to output XmlNode format.
+ * - Leaf nodes with no children: just text (or @attr + #text if attributes exist)
+ * - Branch nodes: children grouped by tag name into arrays
+ */
+function buildNodeToXml(node: BuildNode): XmlNode {
+  const hasAttrs = Object.keys(node.attributes).length > 0;
+  const result: XmlNode = {};
+
+  if (hasAttrs) {
+    result["@attr"] = node.attributes;
+  }
+
+  const text = node.text.trim();
+  if (text) {
+    result["#text"] = text;
+  }
+
+  if (node.children.length === 0) {
+    return result;
+  }
+
+  // Group children by tag name
+  for (const child of node.children) {
+    const key = child.name;
+    const childNode = buildNodeToXml(child);
+    const existing = result[key];
+    if (Array.isArray(existing)) {
+      existing.push(childNode);
+    } else {
+      result[key] = [childNode];
+    }
+  }
+
+  return result;
+}
+
 /**
  * Parse a Discogs XML dump from a readable stream.
  *
- * @param type     - Which dump type is being parsed (drives element name selection)
- * @param stream   - Decompressed byte stream (caller is responsible for gunzip)
- * @param onEntity - Callback invoked for each fully-parsed top-level entity
+ * @param type     - Which dump type is being parsed
+ * @param stream   - Decompressed byte stream (caller handles gunzip)
+ * @param onEntity - Callback invoked for each fully-parsed entity
+ * @returns Promise that resolves when the stream is fully consumed
  */
 export async function parseXmlDump(
   type: EntityType,
   stream: Readable,
   onEntity: EntityCallback
-): Promise<void> {
+): Promise<{ entityCount: number }> {
   const rootElement = ROOT_ELEMENT[type];
   const parser = new SaxesParser();
 
-  // Parsing state
+  // Tree building state
   let insideEntity = false;
-  let currentEntity: RawEntity | null = null;
-  let currentField: string | null = null;
-  let depth = 0; // depth relative to the root entity element
+  const nodeStack: BuildNode[] = [];
 
   // Progress counters
   let entityCount = 0;
+  let errorCount = 0;
   let lastLogAt = 0;
   const LOG_INTERVAL = 10_000;
 
-  // Accumulate text across multiple `text` events for the same element
-  let textBuffer = "";
-
   return new Promise((resolve, reject) => {
-    // --- SAX event handlers -------------------------------------------------
-
     parser.on("opentag", (node) => {
       if (!insideEntity) {
-        // Watch for the top-level repeating element (e.g. <artist>)
         if (node.name === rootElement) {
           insideEntity = true;
-          depth = 0;
-          currentEntity = {
-            type,
-            // Coerce saxes attribute map to plain Record<string, string>
+          // Push the root entity node onto the stack
+          nodeStack.length = 0;
+          nodeStack.push({
+            name: node.name,
             attributes: Object.fromEntries(
               Object.entries(node.attributes).map(([k, v]) => [k, String(v)])
             ),
-            fields: {},
-          };
+            text: "",
+            children: [],
+          });
         }
         return;
       }
 
-      depth++;
-      textBuffer = "";
-
-      // Only capture direct children of the root element.
-      // Nested grandchildren are ignored for now.
-      // TODO: handle nested structures (e.g. <images>, <aliases>, <tracks>)
-      if (depth === 1) {
-        currentField = node.name;
-      }
+      // Push a new child node
+      nodeStack.push({
+        name: node.name,
+        attributes: Object.fromEntries(
+          Object.entries(node.attributes).map(([k, v]) => [k, String(v)])
+        ),
+        text: "",
+        children: [],
+      });
     });
 
     parser.on("text", (text) => {
-      if (insideEntity && depth === 1) {
-        textBuffer += text;
-      }
+      if (!insideEntity || nodeStack.length === 0) return;
+      // Append text to the current (top-of-stack) node
+      nodeStack[nodeStack.length - 1].text += text;
     });
 
     parser.on("closetag", (tag) => {
       if (!insideEntity) return;
 
-      if (depth === 1 && currentField !== null && currentEntity !== null) {
-        // Store the accumulated text for this direct-child field
-        // TODO: for repeated elements (e.g. multiple <name> tags), collect
-        //       into an array rather than overwriting.
-        currentEntity.fields[currentField] = textBuffer.trim();
-        currentField = null;
-        textBuffer = "";
-      }
-
-      if (tag.name === rootElement && depth === 0) {
-        // We just closed the top-level entity element
+      if (tag.name === rootElement && nodeStack.length === 1) {
+        // Closed the root entity element
         insideEntity = false;
         entityCount++;
 
@@ -140,33 +182,29 @@ export async function parseXmlDump(
           lastLogAt = entityCount;
         }
 
-        // TODO: pass currentEntity to @dig/db for raw_entities insertion.
-        //       Example:
-        //         await db
-        //           .insertInto("raw_entities")
-        //           .values({
-        //             entity_type: currentEntity.type,
-        //             external_id:  currentEntity.attributes["id"] ?? null,
-        //             payload:      JSON.stringify(currentEntity.fields),
-        //           })
-        //           .execute();
-        //
-        // For now we hand off to the caller's callback.
-        const entity = currentEntity!;
-        currentEntity = null;
+        const rootNode = nodeStack[0];
+        nodeStack.length = 0;
 
-        // Invoke the callback. If it returns a Promise we must await it, but
-        // saxes is synchronous — so we rely on the caller to batch/buffer if
-        // throughput matters, rather than blocking the event loop here.
-        // A future version can use a queue (e.g. p-queue) to bound concurrency.
-        void onEntity(entity);
+        try {
+          const data = buildNodeToXml(rootNode);
+          void onEntity({ type, data });
+        } catch (err) {
+          errorCount++;
+          if (errorCount <= 10) {
+            console.error(`[ingest] error converting entity #${entityCount}:`, err);
+          }
+        }
         return;
       }
 
-      depth--;
+      // Pop the current node and attach it as a child of its parent
+      if (nodeStack.length > 1) {
+        const completed = nodeStack.pop()!;
+        nodeStack[nodeStack.length - 1].children.push(completed);
+      }
     });
 
-    // --- Stream plumbing ----------------------------------------------------
+    // --- Stream plumbing ---
 
     stream.on("data", (chunk: Buffer) => {
       try {
@@ -180,9 +218,10 @@ export async function parseXmlDump(
       try {
         parser.close();
         console.log(
-          `[ingest] done — total ${entityCount.toLocaleString()} ${type}`
+          `[ingest] done — total ${entityCount.toLocaleString()} ${type}` +
+          (errorCount > 0 ? ` (${errorCount} errors)` : "")
         );
-        resolve();
+        resolve({ entityCount });
       } catch (err) {
         reject(err);
       }

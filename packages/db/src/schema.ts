@@ -46,11 +46,312 @@ export interface RawEntitiesTable {
   created_at: Generated<Date>;
 }
 
+// --- Catalog: Core entities ---
+
+export interface CatalogArtistsTable {
+  id: Generated<number>;
+  discogs_id: number;
+  name: string;
+  real_name: string | null;
+  profile: string | null;
+  data_quality: string;
+  batch_id: string;
+  search_vector: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface CatalogLabelsTable {
+  id: Generated<number>;
+  discogs_id: number;
+  name: string;
+  profile: string | null;
+  contact_info: string | null;
+  data_quality: string;
+  parent_label_discogs_id: number | null;
+  batch_id: string;
+  search_vector: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface CatalogMastersTable {
+  id: Generated<number>;
+  discogs_id: number;
+  title: string;
+  main_release_discogs_id: number | null;
+  year: number | null;
+  data_quality: string;
+  batch_id: string;
+  search_vector: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface CatalogReleasesTable {
+  id: Generated<number>;
+  discogs_id: number;
+  status: string;
+  title: string;
+  country: string | null;
+  released_raw: string | null;
+  release_year: number | null;
+  release_month: number | null;
+  release_day: number | null;
+  notes: string | null;
+  data_quality: string;
+  master_discogs_id: number | null;
+  is_main_release: boolean | null;
+  batch_id: string;
+  search_vector: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+// --- Catalog: Artist child tables ---
+
+export interface ArtistUrlsTable {
+  id: Generated<number>;
+  artist_discogs_id: number;
+  url: string;
+  batch_id: string;
+}
+
+export interface ArtistNameVariationsTable {
+  id: Generated<number>;
+  artist_discogs_id: number;
+  name: string;
+  batch_id: string;
+}
+
+export interface ArtistAliasesTable {
+  id: Generated<number>;
+  artist_discogs_id: number;
+  alias_name: string;
+  alias_discogs_id: number | null;
+  batch_id: string;
+}
+
+export interface ArtistGroupsTable {
+  id: Generated<number>;
+  artist_discogs_id: number;
+  group_name: string;
+  group_discogs_id: number | null;
+  batch_id: string;
+}
+
+export interface ArtistMembersTable {
+  id: Generated<number>;
+  artist_discogs_id: number;
+  member_name: string;
+  member_discogs_id: number | null;
+  batch_id: string;
+}
+
+// --- Catalog: Label child tables ---
+
+export interface LabelUrlsTable {
+  id: Generated<number>;
+  label_discogs_id: number;
+  url: string;
+  batch_id: string;
+}
+
+// --- Catalog: Master child tables ---
+
+export interface MasterArtistsTable {
+  id: Generated<number>;
+  master_discogs_id: number;
+  artist_discogs_id: number;
+  artist_name: string;
+  anv: string | null;
+  join_relation: string | null;
+  position: number;
+  batch_id: string;
+}
+
+export interface MasterGenresTable {
+  id: Generated<number>;
+  master_discogs_id: number;
+  genre: string;
+  batch_id: string;
+}
+
+export interface MasterStylesTable {
+  id: Generated<number>;
+  master_discogs_id: number;
+  style: string;
+  batch_id: string;
+}
+
+export interface MasterVideosTable {
+  id: Generated<number>;
+  master_discogs_id: number;
+  url: string;
+  duration_seconds: number | null;
+  title: string | null;
+  description: string | null;
+  batch_id: string;
+}
+
+// --- Catalog: Release child tables ---
+
+export interface ReleaseArtistsTable {
+  id: Generated<number>;
+  release_discogs_id: number;
+  artist_discogs_id: number;
+  artist_name: string;
+  anv: string | null;
+  join_relation: string | null;
+  role: string | null;
+  position: number;
+  batch_id: string;
+}
+
+export interface ReleaseCreditsTable {
+  id: Generated<number>;
+  release_discogs_id: number;
+  artist_discogs_id: number;
+  artist_name: string;
+  anv: string | null;
+  role: string | null;
+  batch_id: string;
+}
+
+export interface ReleaseLabelsTable {
+  id: Generated<number>;
+  release_discogs_id: number;
+  label_discogs_id: number;
+  label_name: string;
+  catno: string | null;
+  batch_id: string;
+}
+
+export interface ReleaseFormatsTable {
+  id: Generated<number>;
+  release_discogs_id: number;
+  name: string;
+  qty: number | null;
+  text: string | null;
+  descriptions: string[] | null;
+  position: number;
+  batch_id: string;
+}
+
+export interface ReleaseGenresTable {
+  id: Generated<number>;
+  release_discogs_id: number;
+  genre: string;
+  batch_id: string;
+}
+
+export interface ReleaseStylesTable {
+  id: Generated<number>;
+  release_discogs_id: number;
+  style: string;
+  batch_id: string;
+}
+
+export interface ReleaseIdentifiersTable {
+  id: Generated<number>;
+  release_discogs_id: number;
+  type: string;
+  value: string;
+  description: string | null;
+  batch_id: string;
+}
+
+export interface ReleaseCompaniesTable {
+  id: Generated<number>;
+  release_discogs_id: number;
+  company_discogs_id: number;
+  company_name: string;
+  catno: string | null;
+  entity_type: string | null;
+  entity_type_name: string | null;
+  batch_id: string;
+}
+
+export interface ReleaseVideosTable {
+  id: Generated<number>;
+  release_discogs_id: number;
+  url: string;
+  duration_seconds: number | null;
+  title: string | null;
+  description: string | null;
+  batch_id: string;
+}
+
+// --- Catalog: Track tables ---
+
+export interface TracksTable {
+  id: Generated<number>;
+  release_discogs_id: number;
+  position_raw: string | null;
+  disc_number: number | null;
+  track_number: string | null;
+  title: string | null;
+  duration_raw: string | null;
+  duration_seconds: number | null;
+  position: number;
+  batch_id: string;
+}
+
+export interface TrackCreditsTable {
+  id: Generated<number>;
+  track_id: number;
+  artist_discogs_id: number;
+  artist_name: string;
+  anv: string | null;
+  role: string | null;
+  batch_id: string;
+}
+
 // --- Database interface ---
 
 export interface Database {
+  // Auth
   "auth.users": UsersTable;
   "auth.api_keys": ApiKeysTable;
+
+  // Ingest
   "ingest.dump_batches": DumpBatchesTable;
   "ingest.raw_entities": RawEntitiesTable;
+
+  // Catalog: core entities
+  "catalog.artists": CatalogArtistsTable;
+  "catalog.labels": CatalogLabelsTable;
+  "catalog.masters": CatalogMastersTable;
+  "catalog.releases": CatalogReleasesTable;
+
+  // Catalog: artist children
+  "catalog.artist_urls": ArtistUrlsTable;
+  "catalog.artist_name_variations": ArtistNameVariationsTable;
+  "catalog.artist_aliases": ArtistAliasesTable;
+  "catalog.artist_groups": ArtistGroupsTable;
+  "catalog.artist_members": ArtistMembersTable;
+
+  // Catalog: label children
+  "catalog.label_urls": LabelUrlsTable;
+
+  // Catalog: master children
+  "catalog.master_artists": MasterArtistsTable;
+  "catalog.master_genres": MasterGenresTable;
+  "catalog.master_styles": MasterStylesTable;
+  "catalog.master_videos": MasterVideosTable;
+
+  // Catalog: release children
+  "catalog.release_artists": ReleaseArtistsTable;
+  "catalog.release_credits": ReleaseCreditsTable;
+  "catalog.release_labels": ReleaseLabelsTable;
+  "catalog.release_formats": ReleaseFormatsTable;
+  "catalog.release_genres": ReleaseGenresTable;
+  "catalog.release_styles": ReleaseStylesTable;
+  "catalog.release_identifiers": ReleaseIdentifiersTable;
+  "catalog.release_companies": ReleaseCompaniesTable;
+  "catalog.release_videos": ReleaseVideosTable;
+
+  // Catalog: tracks
+  "catalog.tracks": TracksTable;
+  "catalog.track_credits": TrackCreditsTable;
 }
