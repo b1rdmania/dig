@@ -213,7 +213,8 @@ Eliminate schema/import ambiguity before writing importer logic.
 - `profile_artists.ts`
 - `profile_labels.ts`
 - `profile_masters.ts`
-- **Must run against full dataset**, not just samples
+- **Artists, labels, masters**: must run against full dataset
+- **Releases**: representative sample (≥500k) sufficient for Gate A; full-dataset profiling validated during Phase 1 import
 - Outputs: total counts, field presence rates, cardinality, edge-case examples, size estimates
 
 #### 5.2 Full dataset sizing
@@ -294,7 +295,7 @@ Define numeric pass/fail criteria before importer code starts:
 - [ ] Schema and normalization dictionary stable enough to code importer
 - [ ] Image strategy chosen with legal posture
 - [ ] QA thresholds defined with numbers
-- [ ] Dataset sizing validated against full dumps
+- [ ] Dataset sizing validated (full for artists/labels/masters; ≥500k sample for releases, full validated in Phase 1)
 - [ ] Auth schema designed
 - [ ] Testing scaffold with parser fixtures
 - [ ] Freshness policy documented
@@ -391,6 +392,7 @@ Repeatable import pipeline from Discogs dumps into raw + canonical tables.
 ### Done Criteria
 
 - End-to-end import completes on full dataset
+- Full releases profiling validated against actual import counts (closes deferred Gate A item)
 - Required entities queryable
 - QA metrics meet Phase 0B thresholds
 - No silent drops of required fields
