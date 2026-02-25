@@ -104,6 +104,9 @@
     transition: color 0.2s;
   }
   .nav-links a:hover { color: var(--off-white); }
+  .nav-links a.active {
+    color: var(--off-white);
+  }
 
   .hero-cta {
     margin-top: 40px;
@@ -567,12 +570,11 @@
 <nav>
   <a class="nav-logo" href="./">DIG</a>
   <ul class="nav-links">
-    <li><a href="#what-dig-is">What Dig is</a></li>
-    <li><a href="#why-agents">Why agents</a></li>
-    <li><a href="#why-data">Why data</a></li>
-    <li><a href="#why-buildable">Why buildable</a></li>
-    <li><a href="#appendix">Appendix</a></li>
-    <li><a href="./">MVP</a></li>
+    <li><a href="./#problem">Problem</a></li>
+    <li><a href="./#what">Platform</a></li>
+    <li><a href="./#agent">Agent Layer</a></li>
+    <li><a href="./whitepaper" class="active">Tech Paper</a></li>
+    <li><a href="./#access">Early Access</a></li>
   </ul>
 </nav>
 
