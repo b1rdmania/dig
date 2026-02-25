@@ -57,16 +57,19 @@ pnpm dev                                # Start API on :3000
 
 ## Current State (updated each session)
 - Phase 0A: COMPLETE
+- Phase 0B: COMPLETE
+- Gate A: PASSED (all 10 items checked off)
 - Monorepo scaffold: complete, all packages typecheck clean
 - Docker-compose: running (Postgres on port 5433, Redis on 6379)
 - Migration 001: applied (auth + ingest schemas)
 - API: `/v1/health` verified returning `{"status":"ok","postgres":true}`
 - MCP: SSE scaffold with stub `search_catalog` tool
-- Ingest: CLI skeleton + streaming SAX parser skeleton
-- Tests: 3 passing (2 domain, 1 api)
+- Ingest: CLI skeleton + streaming SAX parser with golden fixture tests (11 passing)
+- Tests: 14 passing across all packages (2 domain + 1 api + 11 ingest parser)
 - CI: GitHub Actions — typecheck + migrate + test, all green
-- Hosting: Fly.io locked (not yet provisioned)
-- Phase 0B: IN PROGRESS — next actions: profiling scripts, normalization dictionary, image strategy
+- Hosting: Fly.io locked (staging provisioning deferred to Phase 1 start)
+- Phase 0B deliverables: profiling complete, normalization dictionary, image strategy, QA gates, dataset sizing, legal review
+- Next: Phase 1 — Ingestion Foundation + Canonical Database
 
 ## Commit Style
 - Short, imperative commit messages

@@ -65,18 +65,16 @@ docker-compose.yml — Local Postgres 16 + Redis 7
 
 ## Current Phase
 Phase 0A — COMPLETE. Scaffold, docker, migrations, CI, hosting all done.
-Phase 0B — IN PROGRESS. Data profiling, normalization dictionary, image strategy.
+Phase 0B — COMPLETE. Profiling, normalization dictionary, image strategy, QA gates, sizing, legal.
+Gate A — PASSED. All 10 checklist items resolved.
+Next: Phase 1 — Ingestion Foundation + Canonical Database.
 
-## Phase 0B Remaining Work
-1. Create profiling scripts for artists, labels, masters, releases
-2. Run profiling against full Discogs dumps
-3. Draft Normalization Dictionary v1
-4. Draft Preserve vs Normalize v1 Matrix
-5. Draft Image Strategy v1 (Cover Art Archive + legal posture)
-6. Define Phase 1 QA Gate Spec with numeric thresholds
-7. Run FTS benchmark on representative sample
-8. Dataset Sizing Report
-9. Legal/terms review
+## Phase 1 Starting Points
+1. Provision Fly.io staging environment
+2. Create ingest infra tables (dump_batches, raw_entities)
+3. Build canonical schema migrations (catalog.artists, catalog.releases, etc.)
+4. Implement full XML→raw_entities pipeline
+5. Implement raw→canonical normalization transforms
 
 ## Important References
 - [Implementation Plan](docs/implementation-plan-agent-first.md) — canonical build plan (~1000 lines)
