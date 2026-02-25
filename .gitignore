@@ -1,1 +1,10 @@
 .vercel
+.DS_Store
+
+# Discogs dump files (local profiling/import only)
+discogs_*.xml.gz
+discogs_*.xml.gz.part
+discogs_*_CHECKSUM.txt
+
+# Local data scratch
+data/

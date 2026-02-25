@@ -15,6 +15,7 @@ Agent-first, data-first implementation plan for `Dig` (`1–2 person team`)
 
 ### Architecture
 - Architecture: `modular monolith`
+- Repository structure: `monorepo` (apps + packages in one repo)
 - Runtime: `TypeScript + Node.js`
 - API framework: `Fastify`
 - MCP: `TypeScript SDK`, remote `SSE transport` (optional stdio wrapper later)
@@ -56,6 +57,7 @@ Agent-first, data-first implementation plan for `Dig` (`1–2 person team`)
 - `XML parser library` (fast-xml-parser / sax-js / custom stream — benchmark needed)
 - `DB access layer` (Kysely / Drizzle / raw pg — decide before schema work)
 - `Migration tooling` (node-pg-migrate / Drizzle migrations / dbmate)
+- `Frontend stack` for Phase 4 (Next.js vs plain React + Vite; choose in Phase 0A to avoid API contract drift)
 
 ## 3. Current Dataset Findings (from local dump profiling)
 
@@ -99,8 +101,9 @@ Lock the system-level decisions that the data plan depends on. No code runs on v
 
 #### 4.1 Application stack setup
 
-- Initialize TypeScript project (monorepo or single package — decide)
+- Initialize TypeScript **monorepo** (lock this now)
 - Fastify scaffold with `/v1/` prefix
+- Frontend scaffold decision + bootstrap (Phase 4 app shell only; no UI work yet)
 - DB access layer selection + setup
 - Migration tooling selection + first migration (empty schema)
 - Redis connection + basic health check
@@ -215,6 +218,7 @@ Eliminate schema/import ambiguity before writing importer logic.
 From profiling output:
 - Actual row counts per entity type (validate estimates in §3)
 - Estimated disk size: data, indexes, raw JSON payloads, FTS indexes
+- **Raw payload storage sizing**: estimate `ingest.raw_entities` footprint separately (JSONB size, compression assumptions, retention policy impact)
 - FTS index size estimate for releases + artists
 - Benchmark: representative search queries against sample dataset (target: `< 200ms p95`)
 
@@ -360,6 +364,14 @@ Repeatable import pipeline from Discogs dumps into raw + canonical tables.
 - Re-derive canonical from raw payloads
 - New monthly batch supersedes previous (old batch retained, not deleted)
 
+#### 7.6A Rollback / recovery strategy
+
+- Import runs are staged by `batch_id`; a batch is not promoted to "active" until QA passes
+- Keep previous successful batch marked as `active_fallback`
+- If import QA fails or canonical validation fails, do **not** promote new batch
+- If post-promotion issues are discovered, flip active batch pointer back to previous batch (metadata-level rollback) and re-run downstream index rebuild
+- Document rollback runbook (commands + verification checks)
+
 #### 7.7 FTS index build
 
 - `tsvector` columns populated during canonical upsert
@@ -386,6 +398,7 @@ Repeatable import pipeline from Discogs dumps into raw + canonical tables.
 ### Estimated time
 
 - `2–4 weeks`
+- Includes rollback path implementation + runbook validation on at least one simulated failed import
 
 ---
 
