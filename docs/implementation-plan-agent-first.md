@@ -291,7 +291,7 @@ Define numeric pass/fail criteria before importer code starts:
 ## 6. Phase Gate A (after Phase 0A + 0B)
 
 - [x] TypeScript project scaffold working end-to-end
-- [x] Infrastructure provisioned (local dev: Docker Postgres + Redis; CI: GitHub Actions; staging: deferred to Phase 1 start)
+- [x] Local/CI infrastructure provisioned (local dev: Docker Postgres + Redis; CI: GitHub Actions). Staging is deferred to Phase 1 start.
 - [x] Schema and normalization dictionary stable enough to code importer (see normalization-dictionary-v1.md)
 - [x] Image strategy chosen with legal posture (see image-strategy-v1.md, LEGAL.md)
 - [x] QA thresholds defined with numbers (see qa-gate-spec-phase1.md)
@@ -299,7 +299,7 @@ Define numeric pass/fail criteria before importer code starts:
 - [x] Auth schema designed (migration 001 creates auth.users + auth.api_keys)
 - [x] Testing scaffold with parser fixtures (20 golden XML fixtures, 11 parser tests)
 - [x] Freshness policy documented (monthly dump cadence, see implementation plan §4)
-- [x] Legal review completed (see docs/LEGAL.md — human sign-off still required)
+- [x] Legal review draft completed (see docs/LEGAL.md). Human sign-off still required before publication.
 
 **If any of these are unresolved, do not proceed to Phase 1.**
 
