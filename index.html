@@ -486,65 +486,24 @@
   }
 
   /* ── Manifesto ── */
-  .manifesto-shell {
-    display: grid;
-    grid-template-columns: 1.15fr 0.85fr;
-    gap: 28px;
-    align-items: start;
+  .manifesto-simple {
     max-width: 1100px;
   }
 
-  .manifesto-copy {
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border: 1px solid rgba(168,144,112,0.12);
-    padding: 28px 28px 26px;
-  }
-
-  .manifesto-copy .what-heading {
-    margin-bottom: 18px;
-  }
-
-  .manifesto-copy .what-intro + .what-intro {
+  .manifesto-simple .what-intro + .what-intro {
     margin-top: 14px;
   }
 
-  .manifesto-quote {
-    background: rgba(139,94,60,0.08);
-    border: 1px solid rgba(139,94,60,0.2);
-    padding: 22px 20px;
-    position: sticky;
-    top: 96px;
-  }
-
-  .manifesto-quote::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, var(--accent), transparent 70%);
-    opacity: 0.8;
-  }
-
-  .manifesto-quote-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    opacity: 0.9;
-    margin-bottom: 14px;
-  }
-
-  .manifesto-quote-text {
+  .manifesto-closing {
+    margin-top: 34px;
+    max-width: 980px;
     font-family: 'Playfair Display', serif;
-    font-size: clamp(22px, 2vw, 28px);
-    line-height: 1.22;
+    font-size: clamp(24px, 3vw, 34px);
+    line-height: 1.2;
     color: var(--off-white);
   }
 
-  .manifesto-quote-text em {
+  .manifesto-closing em {
     font-style: italic;
     color: var(--cream);
   }
@@ -852,10 +811,7 @@
     .hero-vinyl { width: 480px; height: 480px; right: -180px; opacity: 0.5; }
     .problem-grid { grid-template-columns: 1fr; gap: 40px; }
     .what-editorial { grid-template-columns: 1fr; gap: 40px; }
-    .manifesto-shell { grid-template-columns: 1fr; gap: 16px; }
-    .manifesto-copy { padding: 22px 18px; }
-    .manifesto-quote { position: static; top: auto; padding: 18px 16px; }
-    .manifesto-quote-text { font-size: 22px; }
+    .manifesto-closing { margin-top: 24px; font-size: 24px; }
     .not-grid { grid-template-columns: 1fr; gap: 40px; }
     .who-grid { grid-template-columns: 1fr 1fr; }
     .form-row { flex-direction: column; }
@@ -890,16 +846,9 @@
 <!-- Manifesto -->
 <section class="what" id="manifesto">
   <div class="section-label">Manifesto</div>
-  <div class="manifesto-shell">
-    <div class="manifesto-copy">
-      <h2 class="what-heading">The music data layer AI agents don't have yet.<br><em>And the search tool humans actually wanted.</em></h2>
-      <p class="what-intro">There's no reliable music data layer for AI agents anywhere on the internet. Every AI asked about music guesses. Dig fixes that - fully open, no keys, built on the deepest music catalog that exists.</p>
-      <p class="what-intro" style="margin-top: 14px;">And because we're building on that same data, humans finally get the search tool Discogs should have built ten years ago. Deep search, proper mobile UX, crates from people with real taste, and every record connected to where you can stream it, buy it, or pay the artist direct.</p>
-    </div>
-    <div class="manifesto-quote">
-      <div class="manifesto-quote-label">Positioning</div>
-      <div class="manifesto-quote-text"><em>The music tool agents reach for. And the one humans actually wanted.</em></div>
-    </div>
+  <div class="manifesto-simple">
+    <p class="what-intro">There's no reliable music data layer for AI agents anywhere on the internet. Every AI asked about music guesses. Dig fixes that - fully open, no keys, built on the deepest music catalog that exists. And because we're building on that same data, humans finally get the search tool Discogs should have built ten years ago. Deep search, proper mobile UX, crates from people with real taste, and every record connected to where you can stream it, buy it, or pay the artist direct.</p>
+    <p class="manifesto-closing"><em>The music tool agents reach for. And the one humans actually wanted.</em></p>
   </div>
 </section>
 
