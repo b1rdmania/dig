@@ -492,13 +492,17 @@
   }
 
   .manifesto-simple {
-    max-width: 860px;
+    max-width: 720px;
   }
 
   .manifesto-simple .what-intro {
-    font-size: clamp(20px, 2.1vw, 22px);
-    line-height: 1.65;
+    font-size: 18px;
+    line-height: 1.7;
     color: var(--warm-mid);
+  }
+
+  .manifesto-simple .what-intro + .what-intro {
+    margin-top: 18px;
   }
 
   .manifesto-closing {
@@ -823,7 +827,8 @@
     .what-editorial { grid-template-columns: 1fr; gap: 40px; }
     #manifesto { padding-top: 88px; padding-bottom: 88px; }
     .manifesto-simple { max-width: 100%; }
-    .manifesto-simple .what-intro { font-size: 18px; line-height: 1.6; }
+    .manifesto-simple .what-intro { font-size: 17px; line-height: 1.65; }
+    .manifesto-simple .what-intro + .what-intro { margin-top: 14px; }
     .manifesto-closing { margin-top: 36px; padding-top: 20px; font-size: 24px; max-width: 100%; }
     .not-grid { grid-template-columns: 1fr; gap: 40px; }
     .who-grid { grid-template-columns: 1fr 1fr; }
