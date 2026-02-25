@@ -1,0 +1,26 @@
+{
+  "name": "@dig/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo ok",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dig/db": "workspace:*",
+    "@dig/domain": "workspace:*",
+    "fastify": "^5.2.1",
+    "@fastify/rate-limit": "^10.2.0",
+    "ioredis": "^5.4.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

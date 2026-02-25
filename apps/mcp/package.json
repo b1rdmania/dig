@@ -1,0 +1,28 @@
+{
+  "name": "@dig/mcp",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo ok",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@dig/db": "workspace:*",
+    "@dig/domain": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.10.1",
+    "express": "^4.21.2",
+    "ioredis": "^5.4.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

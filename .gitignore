@@ -8,3 +8,24 @@ discogs_*_CHECKSUM.txt
 
 # Local data scratch
 data/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+
+# Turborepo
+.turbo
+
+# Coverage / test output
+coverage/
+
+# Logs
+*.log

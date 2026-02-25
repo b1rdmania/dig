@@ -1,0 +1,25 @@
+{
+  "name": "@dig/ingest",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/cli.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo ok",
+    "test": "vitest run --passWithNoTests",
+    "ingest": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@dig/db": "workspace:*",
+    "@dig/domain": "workspace:*",
+    "saxes": "^6.0.0",
+    "ioredis": "^5.4.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
