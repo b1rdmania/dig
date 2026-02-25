@@ -63,7 +63,7 @@ Agent-first, data-first implementation plan for `Dig` (`1–2 person team`)
 - `Phase 2 traversal scope` (how much credit/company graph in v1)
 - `Public alpha rate limits` (exact numbers per IP, per key)
 
-## 3. Current Dataset Findings (from full dump profiling — Feb 2026)
+## 3. Current Dataset Findings (Feb 2026 dump — full profiling for artists/labels/masters, 500k sample for releases)
 
 - `artists` (9.9M): rich graph data (`aliases` 49%, `groups` 23%, `members` 23%, `namevariations` 48%, `urls` 21%, `profile` 23%, `realname` 7%)
 - `labels` (2.3M): parent/sublabel graph (11% have parent) + profiles (32%) + urls (8.6%)
@@ -90,7 +90,7 @@ Agent-first, data-first implementation plan for `Dig` (`1–2 person team`)
 | identifiers | ~57M | ~50M+ | Match |
 | companies | ~30M+ | pressing plants, distributors, etc. |
 
-Estimated DB size: `200–400 GB` (data + indexes + raw payloads + FTS indexes). Needs validation in Phase 0 profiling.
+Estimated DB size: `110–125 GB` (validated — see [Dataset Sizing Report](dataset-sizing-report.md)). Raw payloads ~61 GB uncompressed, ~20–35 GB after TOAST. A 256 GB Postgres instance provides comfortable headroom.
 
 ---
 

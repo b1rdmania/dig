@@ -1,6 +1,6 @@
 # Dataset Sizing Report
 
-Based on full profiling of Discogs February 2026 dump.
+Based on profiling of Discogs February 2026 dump: full runs for artists, labels, and masters; 500k-entity sample for releases (extrapolated to ~18M).
 
 ## Entity Counts
 
@@ -17,15 +17,15 @@ Masters count is significantly higher than planned estimate. All others are in t
 
 | Entity | Avg JSON Size | Total Payload |
 |--------|--------------|---------------|
-| Artists | 155 bytes | 1.5 GB |
-| Labels | 147 bytes | 328 MB |
+| Artists | 188 bytes | 1.8 GB |
+| Labels | 154 bytes | 343 MB |
 | Masters | 1,084 bytes | 2.6 GB |
-| Releases | 2,895 bytes | ~50 GB |
-| **Total** | — | **~55 GB** |
+| Releases | 3,281 bytes | ~56 GB |
+| **Total** | — | **~61 GB** |
 
-Note: These are JSON-serialized sizes from the profiler. Actual JSONB storage in Postgres with TOAST compression will be smaller (typically 2–4x compression on text-heavy JSON).
+Note: These are JSON-serialized sizes from the profiler (includes element attributes on leaf nodes). Actual JSONB storage in Postgres with TOAST compression will be smaller (typically 2–4x compression on text-heavy JSON).
 
-**Estimated raw_entities table size**: ~20–30 GB after TOAST compression.
+**Estimated raw_entities table size**: ~20–35 GB after TOAST compression.
 
 ## Canonical Table Sizing Estimates
 
@@ -80,28 +80,28 @@ Based on field presence rates from profiling:
 
 | Component | Size |
 |-----------|------|
-| Raw payloads (ingest.raw_entities) | 20–30 GB |
+| Raw payloads (ingest.raw_entities) | 20–35 GB |
 | Canonical tables (catalog.*) | ~50 GB |
 | Indexes | ~30 GB |
 | WAL / overhead | ~10 GB |
-| **Total** | **110–120 GB** |
+| **Total** | **110–125 GB** |
 
 This is well within the 200–400 GB planning estimate from the implementation plan. A 256 GB Postgres instance provides comfortable headroom.
 
 ## Memory Requirements
 
-Profiler ran at 124–155 MB RSS across all entity types, confirming the SAX streaming approach is memory-bounded. The import pipeline should operate with <512 MB per worker.
+Profiler ran at 111–290 MB RSS across all entity types, confirming the SAX streaming approach is memory-bounded. The import pipeline should operate with <512 MB per worker.
 
 ## Profiling Durations
 
 | Entity | Duration | Entities/sec |
 |--------|----------|-------------|
-| Labels | 24.7s | 94,700/s |
-| Artists | 118.0s | 84,050/s |
-| Masters | 115.6s | 21,800/s |
-| Releases (500k) | 93.2s | 5,365/s |
+| Labels | 25.5s | 91,700/s |
+| Artists | 155.5s | 63,800/s |
+| Masters | 154.8s | 16,300/s |
+| Releases (500k) | 122.2s | 4,090/s |
 
-Releases are significantly slower due to deeper nesting and larger entity size. Full release import at this rate: ~56 minutes for parsing alone (not including DB writes). With batched DB inserts, estimate **4–8 hours** for full release import, well under the 24-hour target.
+Releases are significantly slower due to deeper nesting and larger entity size. Full release import at this rate: ~73 minutes for parsing alone (not including DB writes). With batched DB inserts, estimate **4–8 hours** for full release import, well under the 24-hour target.
 
 ## Key Findings
 

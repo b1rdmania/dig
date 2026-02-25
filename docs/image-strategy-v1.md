@@ -49,15 +49,15 @@ const PROXY_SAFE_LICENSES = [
 
 ### API Response
 
-Every release response includes an `images` field:
+Every release response includes an `images` field. v1 returns CAA URLs directly (passthrough, not proxied):
 
 ```json
 {
   "images": {
-    "front_small": "https://api.dig.baby/v1/images/release/249504/front-250",
-    "front_large": "https://api.dig.baby/v1/images/release/249504/front-500",
+    "front_small": "https://archive.org/download/mbid-76df3287.../mbid-76df3287..._thumb250.jpg",
+    "front_large": "https://archive.org/download/mbid-76df3287.../mbid-76df3287..._thumb500.jpg",
     "source": "coverartarchive",
-    "license": "CC0",
+    "license": "https://creativecommons.org/publicdomain/zero/1.0/",
     "available": true
   }
 }
@@ -69,7 +69,6 @@ When no image is available:
   "images": {
     "front_small": null,
     "front_large": null,
-    "placeholder": "https://api.dig.baby/v1/images/placeholder/vinyl",
     "source": null,
     "available": false
   }

@@ -204,6 +204,9 @@ class ProfileCollector {
     // Estimate JSON size
     this.totalSize += JSON.stringify(this.treeToJson(tree)).length;
 
+    // Track which paths are seen in this entity (for per-entity presence dedup)
+    const seenPaths = new Set<string>();
+
     // Collect field stats from direct children
     const childCounts = new Map<string, number>();
     for (const child of tree.children) {
@@ -211,22 +214,35 @@ class ProfileCollector {
       childCounts.set(name, (childCounts.get(name) ?? 0) + 1);
       this.recordField(name, child);
 
-      // Also record nested paths (one level deeper)
+      // Also record nested paths (one level deeper), counting per entity
       for (const grandchild of child.children) {
         const nestedPath = `${name}/${grandchild.name}`;
+        seenPaths.add(nestedPath);
+        const nestedCount = childCounts.get(nestedPath) ?? 0;
+        childCounts.set(nestedPath, nestedCount + 1);
         this.recordField(nestedPath, grandchild);
       }
     }
 
-    // Update min/max occurrences and presence
-    const allFieldNames = new Set([...this.fieldStats.keys()]);
-    for (const name of allFieldNames) {
-      // Only process direct children (not nested paths) for occurrence tracking
+    // Update presence and min/max occurrences for direct children
+    for (const [name, stats] of this.fieldStats) {
       if (!name.includes("/")) {
-        const stats = this.fieldStats.get(name)!;
         const count = childCounts.get(name) ?? 0;
         if (count > 0) {
           stats.presence++;
+          stats.minOccurrences = Math.min(stats.minOccurrences, count);
+          stats.maxOccurrences = Math.max(stats.maxOccurrences, count);
+        }
+      }
+    }
+
+    // Update presence and min/max occurrences for nested paths (once per entity)
+    for (const nestedPath of seenPaths) {
+      const stats = this.fieldStats.get(nestedPath);
+      if (stats) {
+        stats.presence++;
+        const count = childCounts.get(nestedPath) ?? 0;
+        if (count > 0) {
           stats.minOccurrences = Math.min(stats.minOccurrences, count);
           stats.maxOccurrences = Math.max(stats.maxOccurrences, count);
         }
@@ -266,21 +282,24 @@ class ProfileCollector {
         stats.sampleValues.push(val);
       }
     }
-
-    // Presence for nested paths
-    if (path.includes("/")) {
-      stats.presence++;
-      stats.minOccurrences = 1;
-      stats.maxOccurrences = Math.max(stats.maxOccurrences, 1);
-    }
   }
 
   private treeToJson(node: XmlNode): unknown {
+    const hasAttrs = Object.keys(node.attributes).length > 0;
+
     if (node.children.length === 0) {
+      // Leaf node: if it has attributes, return object with attrs + text
+      if (hasAttrs) {
+        const leaf: Record<string, unknown> = { "@attr": node.attributes };
+        const text = node.text.trim();
+        if (text) leaf["#text"] = text;
+        return leaf;
+      }
       return node.text.trim() || null;
     }
+
     const obj: Record<string, unknown> = {};
-    if (Object.keys(node.attributes).length > 0) {
+    if (hasAttrs) {
       obj["@attr"] = node.attributes;
     }
     for (const child of node.children) {
