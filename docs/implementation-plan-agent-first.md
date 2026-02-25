@@ -807,6 +807,40 @@ From Phase 1 onward:
 - Alert on rate limit exhaustion patterns
 - Disk space monitoring (Postgres + images)
 
+### 16.6 Compatibility & Evolution Policy
+
+Future-proofing depends on stable contracts and controlled schema evolution.
+
+#### API / MCP contract policy
+
+- Public API is versioned from day one: `/v1/...`
+- MCP tool names and response schemas are treated as versioned contracts
+- Additive changes are preferred (new optional fields over breaking changes)
+- Breaking changes require:
+  - new API version (`/v2`)
+  - MCP tool version suffix or new tool name
+  - migration notes in docs
+- Responses must keep provenance/confidence fields stable in meaning across patch releases
+
+#### Canonical schema evolution policy
+
+- Canonical schema may evolve as normalization improves, but:
+  - raw payloads remain the source of re-derivation
+  - migrations are required for schema changes
+  - normalization rule changes must be documented in `Normalization Dictionary`
+- Ambiguous fields should preserve both:
+  - raw value
+  - normalized helper value (when introduced)
+- Schema changes that alter retrieval semantics require:
+  - QA rerun on representative sample
+  - retrieval contract regression check
+
+#### Import batch compatibility policy
+
+- Imports are batch-versioned (`batch_id`) and promotable only after QA pass
+- New import logic must support re-running prior dumps during debugging
+- Rollback path must remain operational after schema changes (tested during Phase 1 hardening)
+
 ---
 
 ## 17. Phase Gates (Summary)
