@@ -578,154 +578,133 @@
   </ul>
 </nav>
 
-<section class="what" id="thesis">
-  <div class="section-label">The thesis</div>
-  <div class="paper-copy" style="max-width: 960px;">
-    <p>Discogs built the world's deepest public music catalog. Every artist, label, release, pressing, format, credit - decades of obsessive human knowledge, structured and queryable. But it's a marketplace first. The API docs haven't changed since 2011. No agent-ready layer exists on top of it.</p>
-    <p>Dig builds that layer. REST API and MCP server over a normalised canonical database, fully open, no keys. Then a human search product on top of the same retrieval core. Then editorial - curated crates from people who actually know, context that feeds back into what agents can do.</p>
-    <p>Infrastructure first. Product second. Editorial compounds it over time.</p>
-  </div>
-</section>
-
-<section class="agent" id="build-order">
-  <div class="section-label">Why the build order matters</div>
-  <div class="paper-copy" style="max-width: 980px;">
-    <p>The retrieval core is the product. Everything else - the REST API, the MCP tools, the human UI, the crates - is a different interface on top of the same thing. Build that once, build it correctly, and everything downstream gets cheaper and easier to trust.</p>
-    <p>Agent layer comes before human UI deliberately. Agents give you immediate utility with far less surface area to build and maintain. The human search product arrives later but uses identical endpoints - so UI and agent outputs are always aligned, and you never end up with two products running divergent logic.</p>
-    <p>The moat is data quality and retrieval correctness. Not front-end polish.</p>
-  </div>
-</section>
-
-<section class="what" id="agent-first">
-  <div class="section-label">What &quot;agent-first&quot; actually means</div>
+<section class="what" id="what-dig-is">
+  <div class="section-label">What Dig is</div>
   <div class="what-editorial">
     <div class="what-lead">
-      <h2 class="what-heading">Not an LLM product.<br><em>Not a chatbot.</em></h2>
-      <p class="what-intro">It means deterministic retrieval infrastructure that agents can rely on before any polished UI exists.</p>
+      <h2 class="what-heading">The retrieval core for music search.<br><em>Humans and agents hit the same answer.</em></h2>
+      <p class="what-intro">Built on the Discogs public catalog - monthly XML dumps, CC0 licensed, full catalog depth. Every artist, label, release, pressing, format, credit, identifier, and the relationships between all of them. Normalised, indexed, served through a REST API and a fully open MCP server.</p>
     </div>
     <div class="what-body">
       <div class="what-block">
         <span class="what-block-num">01</span>
         <div>
-          <h3>Deterministic retrieval API</h3>
-          <p>Stable JSON responses over the canonical catalog, not prompt tricks.</p>
+          <h3>Open by default</h3>
+          <p>No keys. No signup. Any agent, any workflow. Point at it.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">02</span>
         <div>
-          <h3>MCP tools with stable contracts</h3>
-          <p>Predictable tools for common agent workflows, versioned and documented.</p>
+          <h3>Deterministic MCP</h3>
+          <p>The MCP tools are deterministic. Every response includes provenance - why a record matched, where the data came from, where confidence drops. Agents get structured facts, not vibes.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">03</span>
         <div>
-          <h3>Provenance and confidence in every response</h3>
-          <p>Where data came from, why a result matched, and where confidence drops.</p>
+          <h3>Shared retrieval core</h3>
+          <p>The same retrieval services power the human-facing web app, so what users see and what agents get is always the same answer.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">04</span>
         <div>
-          <h3>Zero-friction access + docs</h3>
-          <p>REST for any agent, any workflow, just call it. MCP for developers building serious music tooling, one config, then it works. Docs and examples from day one.</p>
+          <h3>Retrieval, not generation</h3>
+          <p>Dig doesn't generate, recommend, or invent. It retrieves. The AI sits on top. Dig is what the AI uses when it can't afford to guess.</p>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="paper-final" id="build">
-  <div class="section-label">The build</div>
-  <div class="timeline">
-    <div class="timeline-item">
-      <div class="timeline-step">Phase 0</div>
-      <div>
-        <h3>Data decisions</h3>
-        <p>Nothing else starts until this is done. Profile real Discogs dump samples. Write the normalisation dictionary - ANV handling, track position encoding, credits nesting, master/release linkage. Lock schema v1. Define provenance fields and response shape conventions. Deliverable: Normalisation Dictionary v1. Schema v1 signed off.</p>
-      </div>
+<section class="agent" id="why-agents">
+  <div class="section-label">Why agents will reach for it</div>
+  <p class="agent-intro">The open MCP layer is a deliberate choice. Dig doesn't gate access because the goal isn't to monetise queries - it's to become the default tool agents reach for.</p>
+  <div class="query-list" style="max-width: 1100px;">
+    <div class="query-item">
+      <span class="query-prompt">01</span>
+      <span class="query-text">Right now there is no canonical music data layer for LLM workflows. When Dig exists and is open, the agent calls Dig, gets structured facts, returns a good answer. Every time.</span>
     </div>
-    <div class="timeline-item">
-      <div class="timeline-step">Phase 1</div>
-      <div>
-        <h3>Ingestion and canonical database</h3>
-        <p>Dump batch tracking. XML parser into <code>ingest.raw_entities</code>. Canonical upserts - artists, labels, masters, releases, tracks, credits. QA reports covering counts, broken references, malformed values. Raw payload staging is non-negotiable. Deliverable: Repeatable import run on sample dataset. Canonical DB populated and queryable.</p>
-      </div>
+    <div class="query-item">
+      <span class="query-prompt">02</span>
+      <span class="query-text">That's how infrastructure gets adopted. You make it reliable, you make it open, and the ecosystem routes to it because it's the best answer to the tool call.</span>
     </div>
-    <div class="timeline-item">
-      <div class="timeline-step">Phase 2</div>
-      <div>
-        <h3>Retrieval core</h3>
-        <p>Postgres FTS and <code>pg_trgm</code> for search. Entity lookup services. Relationship traversal - artist to releases, label to catalog, credits to works. Provenance and confidence fields on every response. Rate limiting and logging. Stable JSON contracts. Deliverable: Internal retrieval service layer. Stable contracts ready for API surface.</p>
-      </div>
+    <div class="query-item">
+      <span class="query-prompt">03</span>
+      <span class="query-text">Developers building music agents find it, it works, they keep using it. The MCP layer is distribution that compounds without effort.</span>
     </div>
-    <div class="timeline-item">
-      <div class="timeline-step">Phase 3</div>
-      <div>
-        <h3>REST API and MCP public alpha</h3>
-        <p>REST endpoints - <code>/search</code>, <code>/releases/:id</code>, <code>/artists/:id</code>, <code>/labels/:id</code>, <code>/masters/:id</code>, <code>/releases/:id/media-links</code>. MCP tools - <code>search_catalog</code>, <code>get_release</code>, <code>get_artist</code>, <code>get_label</code>, <code>get_related_releases</code>, <code>explain_relationships</code>, <code>create_crate_draft</code>. Docs and examples for Claude, ChatGPT, and standard LLM tooling. Deliverable: Agent-usable public alpha. Zero-friction REST endpoint and open MCP server.</p>
-      </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-step">Phase 4</div>
-      <div>
-        <h3>Human search UI</h3>
-        <p>Mobile-first search. Result pages for artists, labels, releases, masters. Cross-linked navigation - click anything, follow the thread. Performance tuning and caching. Same REST responses as the agent layer so nothing diverges. Deliverable: Usable human product on top of proven retrieval core.</p>
-      </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-step">Phase 5</div>
-      <div>
-        <h3>Curation, crates, editorial</h3>
-        <p>Curator profiles. Crate and list pages. Editorial notes with provenance. Linkouts to Spotify, Apple Music, Bandcamp, Discogs. Approved contributors only - selectors, label heads, engineers with something real to say. Context that feeds back into what agents know. Deliverable: Differentiated human layer. Agent context that compounds over time.</p>
-      </div>
+    <div class="query-item">
+      <span class="query-prompt">04</span>
+      <span class="query-text">The human product - search, record pages, crates - sits on top of the same retrieval core. It gives Dig a face. It's where curators and DJs live. But the durable asset is the retrieval graph and the trust that agents place in it.</span>
     </div>
   </div>
 </section>
 
-<section class="problem" id="risks">
-  <div class="section-label">Risks worth naming</div>
-  <ul class="pain-list" style="max-width: 980px;">
-    <li><span class="pain-num">01</span><span><strong>Data quality</strong> - everything inherits whatever the normalisation gets wrong. This is why Phase 0 is non-negotiable.</span></li>
-    <li><span class="pain-num">02</span><span><strong>API abuse</strong> - fully open means rate limiting from day one, per IP, generous enough for legitimate use, tight enough to stop a runaway agent taking down the database.</span></li>
-    <li><span class="pain-num">03</span><span><strong>Platform terms</strong> - Discogs CC0 dumps are clean. Spotify and Apple Music linkouts are referral, not data extraction. Bandcamp same. Stay on the right side of each.</span></li>
-    <li><span class="pain-num">04</span><span><strong>Retrieval correctness</strong> - a wrong answer delivered confidently is worse than no answer. Provenance and confidence fields are not optional.</span></li>
-  </ul>
-</section>
-
-<section class="what" id="success">
-  <div class="section-label">Success metrics</div>
-  <div class="who-grid">
-    <div class="who-card"><div class="who-role">Agent calls</div><p class="who-desc">Agent calls per day.</p></div>
-    <div class="who-card"><div class="who-role">Retrieval accuracy</div><p class="who-desc">Retrieval accuracy on known queries.</p></div>
-    <div class="who-card"><div class="who-role">Search success</div><p class="who-desc">Searches that end in a record page, not a dead end.</p></div>
-    <div class="who-card"><div class="who-role">Crate saves</div><p class="who-desc">Saved crates and repeated use.</p></div>
-    <div class="who-card"><div class="who-role">Linkout clicks</div><p class="who-desc">Outbound clicks to listening and purchase destinations.</p></div>
-    <div class="who-card"><div class="who-role">Editorial supply</div><p class="who-desc">Editorial contributions from approved contributors.</p></div>
+<section class="problem" id="why-data">
+  <div class="section-label">Why the data is the hard part</div>
+  <div class="problem-grid">
+    <div>
+      <h2 class="problem-heading">Getting the data is easy.<br><em>Normalising it correctly is the work.</em></h2>
+    </div>
+    <ul class="pain-list">
+      <li>
+        <span class="pain-num">01</span>
+        <span>The Discogs dumps are deep. Getting them is easy. Normalising them correctly is where projects like this fail.</span>
+      </li>
+      <li>
+        <span class="pain-num">02</span>
+        <span>The XML has decades of accumulated edge cases - inconsistent credit role encoding, multiple track position formats, artist name variations, a master/release relationship more complex than it looks. Get the normalisation wrong and every downstream system inherits the errors. Search, matching, agent queries - all of it breaks quietly.</span>
+      </li>
+      <li>
+        <span class="pain-num">03</span>
+        <span>Dig treats normalisation as a design phase, not an implementation detail. Real dump samples are profiled before a line of importer code is written. A normalisation dictionary documents every decision. Raw payloads are staged before normalisation so canonical tables can be re-derived as the schema evolves.</span>
+      </li>
+      <li>
+        <span class="pain-num">04</span>
+        <span>Not glamorous work. The work that makes everything else trustworthy.</span>
+      </li>
+    </ul>
   </div>
 </section>
 
-<section class="access" id="defaults">
-  <div class="section-label">Non-goals</div>
-  <div class="paper-copy" style="max-width: 980px; margin-bottom: 30px; color: rgba(10,10,10,0.65);">
-    <p>Marketplace. Compliance stack. Discogs write-back dependency. Open public editing. LLM proxying - Dig serves data, users bring their own models.</p>
-  </div>
-  <div class="section-label">Defaults</div>
-  <div class="paper-code" style="margin-top:0; background: rgba(10,10,10,0.02); border-color: rgba(10,10,10,0.12);">
-    <pre>Architecture — Modular monolith
-Search v1 — Postgres FTS + pg_trgm
-Ingest — Raw payload staging in ingest.raw_entities
-Auth v1 — Editorial-only
-LLM strategy — No proxying. REST API and MCP, users bring models
-Search cluster — OpenSearch only when measured need justifies it</pre>
+<section class="what" id="why-buildable">
+  <div class="section-label">Why it's buildable</div>
+  <div class="what-editorial">
+    <div class="what-lead">
+      <h2 class="what-heading">Small-team architecture on purpose.<br><em>Cheap until usage forces it to grow.</em></h2>
+      <p class="what-intro">Deliberately simple stack for a small team. Modular monolith. Postgres as canonical source of truth. Full text search with <code>pg_trgm</code> to start - no search cluster until the metrics justify one. Redis for jobs and caching. One codebase powering the web app, the API, and the MCP server from the same domain services.</p>
+    </div>
+    <div class="what-body">
+      <div class="what-block">
+        <span class="what-block-num">01</span>
+        <div>
+          <h3>No LLM inference in the retrieval path</h3>
+          <p>The MCP layer serves structured database queries, not LLM inference. No expensive compute behind every agent call.</p>
+        </div>
+      </div>
+      <div class="what-block">
+        <span class="what-block-num">02</span>
+        <div>
+          <h3>Open data + open interface</h3>
+          <p>The data is open. The interface is open. The cost is manageable.</p>
+        </div>
+      </div>
+      <div class="what-block">
+        <span class="what-block-num">03</span>
+        <div>
+          <h3>Distribution is already there</h3>
+          <p>The relationships to bring it to the right people are already there.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
 <section class="paper-final" id="appendix">
   <div class="section-label">Technical appendix</div>
   <div class="paper-copy">
-    <p>Architecture, ingestion pipeline, and API/MCP interface details sit below.</p>
+    <p>Architecture, ingestion pipeline, and API/MCP interface details are below. This is the technical layer the product and agent workflows both sit on top of.</p>
   </div>
 
   <div class="paper-code">
@@ -829,6 +808,18 @@ flowchart LR
         <li><code>explain_relationships</code></li>
       </ul>
     </div>
+  </div>
+</section>
+
+<section class="access" id="defaults">
+  <div class="section-label">Defaults</div>
+  <div class="paper-code" style="margin-top:0; background: rgba(10,10,10,0.02); border-color: rgba(10,10,10,0.12);">
+    <pre>Architecture — Modular monolith
+Search v1 — Postgres FTS + pg_trgm
+Ingest — Raw payload staging in ingest.raw_entities
+Auth v1 — Editorial-only
+LLM strategy — No proxying. Expose MCP/API, users bring models
+Non-goals — Marketplace, compliance stack, Discogs write-back</pre>
   </div>
 </section>
 
