@@ -486,21 +486,31 @@
   }
 
   /* ── Manifesto ── */
-  .manifesto-simple {
-    max-width: 1100px;
+  #manifesto {
+    padding-top: 132px;
+    padding-bottom: 132px;
   }
 
-  .manifesto-simple .what-intro + .what-intro {
-    margin-top: 14px;
+  .manifesto-simple {
+    max-width: 860px;
+  }
+
+  .manifesto-simple .what-intro {
+    font-size: clamp(20px, 2.1vw, 22px);
+    line-height: 1.65;
+    color: var(--warm-mid);
   }
 
   .manifesto-closing {
-    margin-top: 34px;
-    max-width: 980px;
+    margin-top: 60px;
+    max-width: 860px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(168,144,112,0.18);
     font-family: 'Playfair Display', serif;
     font-size: clamp(24px, 3vw, 34px);
     line-height: 1.2;
     color: var(--off-white);
+    text-wrap: balance;
   }
 
   .manifesto-closing em {
@@ -811,7 +821,10 @@
     .hero-vinyl { width: 480px; height: 480px; right: -180px; opacity: 0.5; }
     .problem-grid { grid-template-columns: 1fr; gap: 40px; }
     .what-editorial { grid-template-columns: 1fr; gap: 40px; }
-    .manifesto-closing { margin-top: 24px; font-size: 24px; }
+    #manifesto { padding-top: 88px; padding-bottom: 88px; }
+    .manifesto-simple { max-width: 100%; }
+    .manifesto-simple .what-intro { font-size: 18px; line-height: 1.6; }
+    .manifesto-closing { margin-top: 36px; padding-top: 20px; font-size: 24px; max-width: 100%; }
     .not-grid { grid-template-columns: 1fr; gap: 40px; }
     .who-grid { grid-template-columns: 1fr 1fr; }
     .form-row { flex-direction: column; }
