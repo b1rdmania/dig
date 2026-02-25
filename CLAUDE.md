@@ -14,11 +14,14 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - API: Fastify
 - MCP: TypeScript MCP SDK (@modelcontextprotocol/sdk), remote SSE transport via Express
 - DB: Postgres + PgBouncer, accessed via Kysely
-- Cache/queues: Redis (ioredis)
+- Cache/queues: Redis (ioredis) — Upstash in production
 - Search: Postgres FTS + pg_trgm
 - XML parsing: saxes (SAX streaming, memory-bounded)
 - Test: Vitest
 - Package manager: pnpm (v10.27+)
+- Hosting: Fly.io (API + MCP + workers), Fly Postgres, Upstash Redis
+- Frontend (Phase 4): Next.js on Vercel
+- Images: Cover Art Archive first + fallback placeholders
 
 ## Key Commands
 - `pnpm dev` — start API server (from root)
@@ -61,13 +64,19 @@ docker-compose.yml — Local Postgres 16 + Redis 7
 ```
 
 ## Current Phase
-Phase 0A (System Foundations) — scaffold complete, needs: docker up + migration + CI.
-Phase 0B starts in parallel — data profiling, normalization dictionary, image strategy.
+Phase 0A — COMPLETE. Scaffold, docker, migrations, CI, hosting all done.
+Phase 0B — IN PROGRESS. Data profiling, normalization dictionary, image strategy.
 
-## Phase 0A Remaining Work
-1. Start docker-compose, run migration, verify `/v1/health` returns ok
-2. Add GitHub Actions CI (lint + typecheck + test)
-3. Choose hosting provider
+## Phase 0B Remaining Work
+1. Create profiling scripts for artists, labels, masters, releases
+2. Run profiling against full Discogs dumps
+3. Draft Normalization Dictionary v1
+4. Draft Preserve vs Normalize v1 Matrix
+5. Draft Image Strategy v1 (Cover Art Archive + legal posture)
+6. Define Phase 1 QA Gate Spec with numeric thresholds
+7. Run FTS benchmark on representative sample
+8. Dataset Sizing Report
+9. Legal/terms review
 
 ## Important References
 - [Implementation Plan](docs/implementation-plan-agent-first.md) — canonical build plan (~1000 lines)

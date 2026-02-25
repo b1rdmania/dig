@@ -56,15 +56,17 @@ pnpm dev                                # Start API on :3000
 ```
 
 ## Current State (updated each session)
+- Phase 0A: COMPLETE
 - Monorepo scaffold: complete, all packages typecheck clean
-- Docker-compose: written, not yet started
-- Migration 001: written (auth + ingest schemas), not yet run
-- API: `/v1/health` endpoint wired to domain health check
+- Docker-compose: running (Postgres on port 5433, Redis on 6379)
+- Migration 001: applied (auth + ingest schemas)
+- API: `/v1/health` verified returning `{"status":"ok","postgres":true}`
 - MCP: SSE scaffold with stub `search_catalog` tool
 - Ingest: CLI skeleton + streaming SAX parser skeleton
-- Tests: 1 passing smoke test
-- CI: not yet set up
-- Next action: `docker compose up -d` → migrate → verify health endpoint
+- Tests: 3 passing (2 domain, 1 api)
+- CI: GitHub Actions — typecheck + migrate + test, all green
+- Hosting: Fly.io locked (not yet provisioned)
+- Phase 0B: IN PROGRESS — next actions: profiling scripts, normalization dictionary, image strategy
 
 ## Commit Style
 - Short, imperative commit messages

@@ -31,11 +31,12 @@ Agent-first, data-first implementation plan for `Dig` (`1–2 person team`)
 - Auth for editorial (Phase 5): `session-based`, `roles/permissions designed in Phase 0`
 - API versioning: `/v1/...` from day one
 
-### Hosting (v1)
-- API + workers: `single container host` (Fly.io / Railway / Render — pick one, stick to it)
-- Postgres: `managed instance` (provider-native or Neon/Supabase)
-- Redis: `managed instance` (provider-native or Upstash)
-- Static site: `Vercel` (existing)
+### Hosting (v1) — locked
+- API + MCP + workers: `Fly.io`
+- Postgres: `Fly Postgres` (or Neon if Fly Postgres proves painful)
+- Redis: `Upstash` (managed, serverless)
+- Static site / frontend: `Vercel` (existing)
+- Frontend framework (Phase 4): `Next.js`
 - Environments: `local` → `staging` → `production`
 
 ### Non-goals (v1)
@@ -48,43 +49,45 @@ Agent-first, data-first implementation plan for `Dig` (`1–2 person team`)
 
 ## 2. Open Decisions (must be resolved in Phase 0)
 
-- `Image source strategy` (dumps vs API vs Cover Art Archive vs other)
+### Resolved
+- ~~`Hosting provider`~~ → **Fly.io** (API/MCP/workers), **Fly Postgres** or Neon, **Upstash** Redis
+- ~~`DB access layer`~~ → **Kysely** + node-postgres
+- ~~`Migration tooling`~~ → **Kysely FileMigrationProvider**
+- ~~`XML parser library`~~ → **saxes** (SAX streaming, memory-bounded) — benchmark still needed to validate
+- ~~`Frontend stack`~~ → **Next.js** on Vercel (Phase 4)
+- ~~`Image source strategy`~~ → **Cover Art Archive first** + fallback placeholders. Discogs/other image sources kept as explicit future decision.
+
+### Still open
 - `Image serving policy` (direct URL / proxy / cache)
 - `Phase 1 QA thresholds` (numeric pass/fail criteria)
 - `Phase 2 traversal scope` (how much credit/company graph in v1)
 - `Public alpha rate limits` (exact numbers per IP, per key)
-- `Hosting provider` (final selection from shortlist above)
-- `XML parser library` (fast-xml-parser / sax-js / custom stream — benchmark needed)
-- `DB access layer` (Kysely / Drizzle / raw pg — decide before schema work)
-- `Migration tooling` (node-pg-migrate / Drizzle migrations / dbmate)
-- `Frontend stack` for Phase 4 (Next.js vs plain React + Vite; choose in Phase 0A to avoid API contract drift)
 
-## 3. Current Dataset Findings (from local dump profiling)
+## 3. Current Dataset Findings (from full dump profiling — Feb 2026)
 
-- `artists`: rich graph data (`aliases`, `groups`, `members`, `namevariations`, `urls`)
-- `labels`: parent/sublabel graph + profiles/urls
-- `masters`: `main_release`, genres/styles/year/title, `videos`
-- `releases`: strong metadata richness:
-  - artists, labels, extraartists, formats, genres/styles, country, released, notes
-  - master_id, tracklist
-  - identifiers
-  - videos
-  - companies
-  - track-level extraartists (present in many records)
-- `images`: no `<images>` seen in samples of first `50,000` releases
-  - treat "images from dumps" as unproven / likely unavailable
+- `artists` (9.9M): rich graph data (`aliases` 49%, `groups` 23%, `members` 23%, `namevariations` 48%, `urls` 21%, `profile` 23%, `realname` 7%)
+- `labels` (2.3M): parent/sublabel graph (11% have parent) + profiles (32%) + urls (8.6%)
+- `masters` (2.5M): `main_release` 100%, genres/styles/year/title, `videos` (56%, avg 2.4 per master)
+- `releases` (~18M, 500k sampled): strong metadata richness:
+  - artists 100%, labels 100%, formats 100%, genres 100%, styles 97.6%
+  - country 99.5%, released 97.7%, notes 70.2%
+  - master_id 100%, tracklist 100% (avg 6.5 tracks)
+  - extraartists 73.8% (avg 3.9 credits per release)
+  - identifiers 69.5%, companies 62%, videos 61%
+  - **series** 6.6% (not in original plan — defer to v2)
+- `images`: **confirmed absent** across 500k releases — zero `<images>` elements found
 
-### Estimated dataset scale
+### Actual dataset scale (profiled Feb 2026 dump)
 
-| Entity | Estimated rows | Notes |
-|--------|---------------|-------|
-| releases | ~18M | richest entity, most joins |
-| artists | ~8M | includes ANVs, aliases |
-| labels | ~2M | includes sublabels |
-| masters | ~1.5M | links to releases |
-| tracks | ~100M+ | per-release tracklists |
-| credits | ~200M+ | release + track extraartists |
-| identifiers | ~50M+ | barcodes, catalog numbers, matrix |
+| Entity | Actual count | Original estimate | Notes |
+|--------|-------------|-------------------|-------|
+| artists | 9,917,545 | ~8M | +24% higher than estimated |
+| labels | 2,339,067 | ~2M | +17% |
+| masters | 2,520,704 | ~1.5M | +68% — significantly higher |
+| releases | ~18M | ~18M | Match (extrapolated from 500k sample) |
+| tracks | ~120M | ~100M+ | ~6.5 per release |
+| credits | ~70M (release) + ~50M (track) | ~200M+ | Lower than estimated |
+| identifiers | ~57M | ~50M+ | Match |
 | companies | ~30M+ | pressing plants, distributors, etc. |
 
 Estimated DB size: `200–400 GB` (data + indexes + raw payloads + FTS indexes). Needs validation in Phase 0 profiling.
