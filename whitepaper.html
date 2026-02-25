@@ -546,8 +546,14 @@
     .paper-code { padding: 14px 12px; }
     .paper-code pre { font-size: 11px; }
     .diagram-shell { padding: 8px; }
-    .diagram-shell .mermaid { min-width: 680px; }
-    footer { flex-direction: column; gap: 12px; text-align: center; padding: 28px 20px; }
+    .diagram-shell { margin-top: 18px; }
+    .diagram-shell .mermaid { min-width: 620px; }
+    .spec-col { padding: 20px 16px; }
+    .paper-copy { font-size: 15px; line-height: 1.7; }
+    .what-intro { font-size: 15px; line-height: 1.65; }
+    .what-block p { font-size: 13px; line-height: 1.6; }
+    .agent-intro { font-size: 16px; line-height: 1.6; margin-bottom: 28px; }
+  footer { flex-direction: column; gap: 12px; text-align: center; padding: 28px 20px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -561,19 +567,28 @@
 <nav>
   <a class="nav-logo" href="./">DIG</a>
   <ul class="nav-links">
+    <li><a href="#intro">Intro</a></li>
     <li><a href="#architecture">Architecture</a></li>
     <li><a href="#data">Data</a></li>
     <li><a href="#mcp">API + MCP</a></li>
     <li><a href="#plan">Plan</a></li>
+    <li><a href="#defaults">Defaults</a></li>
     <li><a href="./">MVP</a></li>
   </ul>
 </nav>
 
+<section class="paper-dark" id="intro">
+  <div class="section-label">Intro</div>
+  <div class="paper-copy">
+    <p>Dig is a music search platform built on public Discogs catalog data. Structured, accurate, explainable music data - for humans and agents - from one retrieval core.</p>
+  </div>
+</section>
+
 <section class="paper-alt" id="architecture">
   <div class="section-label">Architecture</div>
-  <h2 class="paper-heading">One retrieval core. <em>Two interfaces.</em></h2>
+  <h2 class="paper-heading">One codebase. <em>One retrieval core.</em></h2>
   <div class="paper-copy" style="margin-top:18px;">
-    <p>Dig should ship as a modular monolith for a 1–2 person team. The same domain modules power a mobile-first web app and an MCP/API layer, which keeps agent answers aligned with what users see in the UI.</p>
+    <p>One codebase. The web app, the MCP server, and the editorial admin all call the same domain services. Agent answers and UI results are always aligned because they come from the same place.</p>
   </div>
   <div class="diagram-shell">
     <div class="mermaid">
@@ -627,41 +642,46 @@ flowchart TB
     </div>
   </div>
 </section>
+<section class="paper-alt" style="padding-top:0;">
+  <div class="paper-copy">
+    <p>Modular monolith. 1-2 person team. No microservices until the domain model is stable enough to justify them.</p>
+  </div>
+</section>
 
 <section class="paper-dark" id="data">
   <div class="section-label">Data strategy</div>
   <div class="what-editorial">
     <div>
-      <h2 class="what-heading">Normalization decisions before importer code.<br><em>No exceptions.</em></h2>
-      <p class="what-intro">The risky part of this project is not the landing page or the API framework. It is the normalization logic for Discogs dumps. The importer should be driven by a profiling-backed normalization dictionary, not by assumptions.</p>
+      <h2 class="what-heading">Normalisation decisions before importer code.<br><em>No exceptions.</em></h2>
+      <p class="what-intro">Discogs XML dumps are the foundation - CC0 licensed, full catalog, no API dependency. The risk isn't getting the data. It's normalising it correctly. The importer is driven by a profiling-backed normalisation dictionary written against real dump samples, not assumptions.</p>
     </div>
     <div class="what-body">
       <div class="what-block">
         <span class="what-block-num">01</span>
         <div>
           <h3>Raw payload staging is non-negotiable</h3>
-          <p>Store parsed entities in <code>ingest.raw_entities</code> before normalization so canonical tables can be re-derived as the schema evolves.</p>
+          <p>Store parsed entities in <code>ingest.raw_entities</code> before normalisation. Canonical tables can be re-derived as the schema evolves. Skip this and you're rewriting the importer from scratch every time something changes.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">02</span>
         <div>
           <h3>Messy fields stay raw in v1</h3>
-          <p>Preserve raw credit role strings, identifier values, and track positions. Parse conservatively, add normalized helpers later.</p>
+          <p>Preserve raw credit role strings, identifier values, and track positions. Parse conservatively. Add normalised helpers later.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">03</span>
         <div>
           <h3>Load-bearing edge cases</h3>
-          <p>ANV handling, track position encoding, credits nesting, and master/release linkage should all be profiled before importer logic is locked.</p>
+          <p>ANV handling, track position encoding, credits nesting, and master/release linkage are all profiled before importer logic is locked.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">04</span>
         <div>
           <h3>Search starts in Postgres</h3>
-          <p>Use <code>tsvector</code> + <code>pg_trgm</code> first. Upgrade to OpenSearch only when measured relevance/latency needs justify the ops overhead.</p>
+          <p><code>tsvector</code> + <code>pg_trgm</code> first. OpenSearch only when measured relevance or latency makes the migration worth it.</p>
         </div>
       </div>
     </div>
@@ -683,14 +703,16 @@ flowchart LR
 
 <section class="who" id="mcp">
   <div class="section-label">API + MCP</div>
+  <p class="agent-intro" style="max-width: 880px;">LLMs orchestrate. Dig retrieves. Every tool output is structured, reproducible, and explainable.</p>
+  <p class="agent-intro" style="margin-top: -22px; max-width: 880px;">MCP and REST call the same retrieval services. No hidden writes - agent tools read, rank, and explain by default.</p>
   <div class="who-grid">
     <div class="who-card">
       <div class="who-role">Deterministic tools</div>
-      <p class="who-desc">LLMs orchestrate, Dig retrieves. Tool outputs should be structured, reproducible, and explainable.</p>
+      <p class="who-desc">Structured tool responses designed for repeatable retrieval, not vibes or hidden prompts.</p>
     </div>
     <div class="who-card">
       <div class="who-role">Shared domain logic</div>
-      <p class="who-desc">MCP and REST should call the same retrieval services so the UI and agent answers stay aligned.</p>
+      <p class="who-desc">MCP and REST call the same domain services so the UI and agent answers stay aligned.</p>
     </div>
     <div class="who-card">
       <div class="who-role">Provenance + confidence</div>
@@ -698,7 +720,7 @@ flowchart LR
     </div>
     <div class="who-card">
       <div class="who-role">No hidden writes</div>
-      <p class="who-desc">Agent tools should read, rank, explain, or draft by default. Writes require explicit intent.</p>
+      <p class="who-desc">Agent tools read, rank, and explain by default. Writes require explicit intent.</p>
     </div>
   </div>
 
@@ -731,103 +753,76 @@ flowchart LR
 </section>
 
 <section class="paper-final" id="plan">
-  <div class="section-label">Implementation plan</div>
-  <h2 class="paper-heading">Risk-first build plan for a <em>1–2 person team</em></h2>
-  <p class="agent-intro" style="margin-top:18px; margin-bottom: 30px; max-width: 760px;">The project gets expensive and chaotic when teams start with infrastructure ambition instead of data decisions. This sequence keeps the build grounded and reversible.</p>
+  <div class="section-label">Build plan</div>
+  <h2 class="paper-heading">Risk-first. <em>Data decisions before infrastructure ambition.</em></h2>
 
   <div class="timeline">
     <div class="timeline-item">
       <div class="timeline-step">Pre-M0</div>
       <div>
         <h3>Profile real Discogs dump samples</h3>
-        <p>Write the normalization dictionary from real records, not assumptions. Validate ANV handling, track positions, credits nesting, identifiers, and master/release linkage before importer code.</p>
+        <p>Profile real Discogs dump samples. Write the normalisation dictionary. Lock the schema before the importer is written.</p>
       </div>
     </div>
     <div class="timeline-item">
       <div class="timeline-step">M1</div>
       <div>
         <h3>Ingestion foundation</h3>
-        <p>Schema migrations, <code>dump_batches</code>, <code>raw_entities</code>, parser pipeline, canonical upserts, and QA/reconciliation reports.</p>
+        <p>Schema migrations, raw_entities staging, parser pipeline, canonical upserts, QA reports.</p>
       </div>
     </div>
     <div class="timeline-item">
       <div class="timeline-step">M2</div>
       <div>
         <h3>Search + read API</h3>
-        <p>Postgres FTS + <code>pg_trgm</code>, core entity endpoints, query profiling/indexes, and a mobile-first retrieval UI.</p>
+        <p>Postgres FTS, core entity endpoints, mobile-first UI prototype.</p>
       </div>
     </div>
     <div class="timeline-item">
       <div class="timeline-step">M3</div>
       <div>
-        <h3>Curation + media links + editorial tooling</h3>
-        <p>Curators, crates, link provenance, validation jobs, and the first useful human-facing output loops.</p>
+        <h3>Curation + media links</h3>
+        <p>Curators, crates, link provenance, editorial tooling.</p>
       </div>
     </div>
     <div class="timeline-item">
       <div class="timeline-step">M4</div>
       <div>
         <h3>MCP layer</h3>
-        <p>Agent tools backed by the same domain services as the REST API. Deterministic retrieval, explicit side effects, and confidence/provenance in responses.</p>
+        <p>Agent tools on the same domain services as the REST API. Provenance and confidence in every response.</p>
       </div>
     </div>
     <div class="timeline-item">
       <div class="timeline-step">M5</div>
       <div>
-        <h3>Matching / export beta (optional)</h3>
-        <p>External catalog candidate store, confidence scoring, export jobs, and a review path for ambiguous matches.</p>
+        <h3>Matching + export</h3>
+        <p>Track matching to Spotify and Apple Music, confidence scoring, export jobs.</p>
       </div>
     </div>
     <div class="timeline-item">
       <div class="timeline-step">M6</div>
       <div>
         <h3>Search cluster decision gate</h3>
-        <p>Only move to OpenSearch/Elasticsearch when measured relevance or latency makes the migration worth the overhead.</p>
+        <p>OpenSearch only if the metrics justify it.</p>
       </div>
     </div>
   </div>
-
-  <div class="paper-code">
-    <h3>Current build defaults (the useful ones)</h3>
-    <pre>Architecture: modular monolith
-Search v1: Postgres FTS + pg_trgm
-Ingest: raw payload staging in ingest.raw_entities
-Auth v1: editorial-only
-LLM strategy: no proxying; expose MCP/API and let users bring models
-Non-goals: marketplace, compliance stack, Discogs write-back dependency</pre>
-  </div>
 </section>
 
-<section class="access" id="feedback">
-  <div class="section-label">Feedback</div>
-  <h2 class="access-heading">This is a working paper.<br><em>Tear it apart.</em></h2>
-  <p class="access-sub">The most useful feedback right now is on the thesis, scope boundaries, and implementation order — especially whether the data and MCP decisions feel tight enough for a small team build.</p>
-  <div class="who-grid">
-    <div class="who-card who-card--light">
-      <div class="who-role">Product</div>
-      <p class="who-desc">Is the AI-layer positioning clear enough, or does it still read like a better Discogs UI?</p>
-    </div>
-    <div class="who-card who-card--light">
-      <div class="who-role">Data</div>
-      <p class="who-desc">Are the normalization risks and raw-first staging approach called out clearly enough before implementation starts?</p>
-    </div>
-    <div class="who-card who-card--light">
-      <div class="who-role">Technical</div>
-      <p class="who-desc">Does the modular monolith + Postgres search-first plan feel credible for a 1–2 person team?</p>
-    </div>
-    <div class="who-card who-card--light">
-      <div class="who-role">Commercial</div>
-      <p class="who-desc">Does the API/MCP + curation path sound monetizable before any marketplace/compliance overhead?</p>
-    </div>
-  </div>
-  <div class="hero-cta" style="margin-top:34px;">
-    <a href="./" class="btn-primary">Back to dig.baby</a>
-    <a href="mailto:?subject=Dig%20Technical%20White%20Paper&body=https%3A%2F%2Fdig.baby%2Fwhitepaper" class="btn-ghost">Share white paper ↗</a>
+<section class="access" id="defaults">
+  <div class="section-label">Defaults</div>
+  <div class="paper-code" style="margin-top:0; background: rgba(10,10,10,0.02); border-color: rgba(10,10,10,0.12);">
+    <pre>Architecture — Modular monolith
+Search v1 — Postgres FTS + pg_trgm
+Ingest — Raw payload staging in ingest.raw_entities
+Auth v1 — Editorial-only
+LLM strategy — No proxying. Expose MCP/API, users bring models
+Non-goals — Marketplace, compliance stack, Discogs write-back</pre>
   </div>
 </section>
 
 <footer>
-  <div class="footer-logo">Dig</div>
+  <div class="footer-logo">DIG</div>
   <div class="footer-note">Technical white paper draft · dig.baby · <a href="./">home</a></div>
 </footer>
 
