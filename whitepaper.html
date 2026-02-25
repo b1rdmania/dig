@@ -567,28 +567,62 @@
 <nav>
   <a class="nav-logo" href="./">DIG</a>
   <ul class="nav-links">
-    <li><a href="#intro">Intro</a></li>
-    <li><a href="#architecture">Architecture</a></li>
-    <li><a href="#data">Data</a></li>
-    <li><a href="#mcp">API + MCP</a></li>
-    <li><a href="#plan">Plan</a></li>
-    <li><a href="#defaults">Defaults</a></li>
+    <li><a href="#what-dig-is">What Dig is</a></li>
+    <li><a href="#why-agents">Why agents</a></li>
+    <li><a href="#why-data">Why data</a></li>
+    <li><a href="#why-buildable">Why buildable</a></li>
+    <li><a href="#appendix">Appendix</a></li>
     <li><a href="./">MVP</a></li>
   </ul>
 </nav>
 
-<section class="paper-dark" id="intro">
-  <div class="section-label">Intro</div>
+<section class="paper-dark" id="what-dig-is">
+  <div class="section-label">What Dig is</div>
   <div class="paper-copy">
-    <p>Dig is a music search platform built on public Discogs catalog data. Structured, accurate, explainable music data - for humans and agents - from one retrieval core.</p>
+    <p>Built on the Discogs public catalog - monthly XML dumps, CC0 licensed, full catalog depth. Every artist, label, release, pressing, format, credit, identifier, and the relationships between all of them. Normalised, indexed, served through a REST API and a fully open MCP server.</p>
+    <p>No keys. No signup. Any agent, any workflow. Point at it.</p>
+    <p>The MCP tools are deterministic. Every response includes provenance - why a record matched, where the data came from, where confidence drops. Agents get structured facts, not vibes. The same retrieval services power the human-facing web app, so what users see and what agents get is always the same answer.</p>
+    <p>Dig doesn't generate, recommend, or invent. It retrieves. The AI sits on top. Dig is what the AI uses when it can't afford to guess.</p>
   </div>
 </section>
 
-<section class="paper-alt" id="architecture">
-  <div class="section-label">Architecture</div>
-  <h2 class="paper-heading">One codebase. <em>One retrieval core.</em></h2>
-  <div class="paper-copy" style="margin-top:18px;">
-    <p>One codebase. The web app, the MCP server, and the editorial admin all call the same domain services. Agent answers and UI results are always aligned because they come from the same place.</p>
+<section class="paper-alt" id="why-agents">
+  <div class="section-label">Why agents will reach for it</div>
+  <div class="paper-copy">
+    <p>The open MCP layer is a deliberate choice. Dig doesn't gate access because the goal isn't to monetise queries - it's to become the default tool agents reach for.</p>
+    <p>Right now there is no canonical music data layer for LLM workflows. When Dig exists and is open, the agent calls Dig, gets structured facts, returns a good answer. Every time.</p>
+    <p>That's how infrastructure gets adopted. You make it reliable, you make it open, and the ecosystem routes to it because it's the best answer to the tool call. Developers building music agents find it, it works, they keep using it. The MCP layer is distribution that compounds without effort.</p>
+    <p>The human product - search, record pages, crates - sits on top of the same retrieval core. It gives Dig a face. It's where curators and DJs live. But the durable asset is the retrieval graph and the trust that agents place in it.</p>
+  </div>
+</section>
+
+<section class="paper-dark" id="why-data">
+  <div class="section-label">Why the data is the hard part</div>
+  <div class="paper-copy">
+    <p>The Discogs dumps are deep. Getting them is easy. Normalising them correctly is where projects like this fail.</p>
+    <p>The XML has decades of accumulated edge cases - inconsistent credit role encoding, multiple track position formats, artist name variations, a master/release relationship more complex than it looks. Get the normalisation wrong and every downstream system inherits the errors. Search, matching, agent queries - all of it breaks quietly.</p>
+    <p>Dig treats normalisation as a design phase, not an implementation detail. Real dump samples are profiled before a line of importer code is written. A normalisation dictionary documents every decision. Raw payloads are staged before normalisation so canonical tables can be re-derived as the schema evolves.</p>
+    <p>Not glamorous work. The work that makes everything else trustworthy.</p>
+  </div>
+</section>
+
+<section class="paper-alt" id="why-buildable">
+  <div class="section-label">Why it's buildable</div>
+  <div class="paper-copy">
+    <p>Deliberately simple stack for a small team. Modular monolith. Postgres as canonical source of truth. Full text search with <code>pg_trgm</code> to start - no search cluster until the metrics justify one. Redis for jobs and caching. One codebase powering the web app, the API, and the MCP server from the same domain services.</p>
+    <p>The MCP layer serves structured database queries, not LLM inference. No expensive compute behind every agent call. The architecture stays cheap until usage forces it to grow.</p>
+    <p>The data is open. The interface is open. The cost is manageable. The relationships to bring it to the right people are already there.</p>
+  </div>
+</section>
+
+<section class="paper-final" id="appendix">
+  <div class="section-label">Technical appendix</div>
+  <div class="paper-copy">
+    <p>Architecture, ingestion pipeline, and API/MCP interface details are below. This is the technical layer the product and agent workflows both sit on top of.</p>
+  </div>
+
+  <div class="paper-code">
+    <h3>Architecture diagram</h3>
   </div>
   <div class="diagram-shell">
     <div class="mermaid">
@@ -641,50 +675,9 @@ flowchart TB
   Jobs --> Redis
     </div>
   </div>
-</section>
-<section class="paper-alt" style="padding-top:0;">
-  <div class="paper-copy">
-    <p>Modular monolith. 1-2 person team. No microservices until the domain model is stable enough to justify them.</p>
-  </div>
-</section>
-
-<section class="paper-dark" id="data">
-  <div class="section-label">Data strategy</div>
-  <div class="what-editorial">
-    <div>
-      <h2 class="what-heading">Normalisation decisions before importer code.<br><em>No exceptions.</em></h2>
-      <p class="what-intro">Discogs XML dumps are the foundation - CC0 licensed, full catalog, no API dependency. The risk isn't getting the data. It's normalising it correctly. The importer is driven by a profiling-backed normalisation dictionary written against real dump samples, not assumptions.</p>
-    </div>
-    <div class="what-body">
-      <div class="what-block">
-        <span class="what-block-num">01</span>
-        <div>
-          <h3>Raw payload staging is non-negotiable</h3>
-          <p>Store parsed entities in <code>ingest.raw_entities</code> before normalisation. Canonical tables can be re-derived as the schema evolves. Skip this and you're rewriting the importer from scratch every time something changes.</p>
-        </div>
-      </div>
-      <div class="what-block">
-        <span class="what-block-num">02</span>
-        <div>
-          <h3>Messy fields stay raw in v1</h3>
-          <p>Preserve raw credit role strings, identifier values, and track positions. Parse conservatively. Add normalised helpers later.</p>
-        </div>
-      </div>
-      <div class="what-block">
-        <span class="what-block-num">03</span>
-        <div>
-          <h3>Load-bearing edge cases</h3>
-          <p>ANV handling, track position encoding, credits nesting, and master/release linkage are all profiled before importer logic is locked.</p>
-        </div>
-      </div>
-      <div class="what-block">
-        <span class="what-block-num">04</span>
-        <div>
-          <h3>Search starts in Postgres</h3>
-          <p><code>tsvector</code> + <code>pg_trgm</code> first. OpenSearch only when measured relevance or latency makes the migration worth it.</p>
-        </div>
-      </div>
-    </div>
+  
+  <div class="paper-code">
+    <h3>Pipeline diagram</h3>
   </div>
   <div class="diagram-shell">
     <div class="mermaid">
@@ -699,31 +692,11 @@ flowchart LR
   F --> I["matching/export (later)"]
     </div>
   </div>
-</section>
 
-<section class="who" id="mcp">
-  <div class="section-label">API + MCP</div>
-  <p class="agent-intro" style="max-width: 880px;">LLMs orchestrate. Dig retrieves. Every tool output is structured, reproducible, and explainable.</p>
-  <p class="agent-intro" style="margin-top: -22px; max-width: 880px;">MCP and REST call the same retrieval services. No hidden writes - agent tools read, rank, and explain by default.</p>
-  <div class="who-grid">
-    <div class="who-card">
-      <div class="who-role">Deterministic tools</div>
-      <p class="who-desc">Structured tool responses designed for repeatable retrieval, not vibes or hidden prompts.</p>
-    </div>
-    <div class="who-card">
-      <div class="who-role">Shared domain logic</div>
-      <p class="who-desc">MCP and REST call the same domain services so the UI and agent answers stay aligned.</p>
-    </div>
-    <div class="who-card">
-      <div class="who-role">Provenance + confidence</div>
-      <p class="who-desc">Return why a record matched, where link data came from, and where the system is uncertain.</p>
-    </div>
-    <div class="who-card">
-      <div class="who-role">No hidden writes</div>
-      <p class="who-desc">Agent tools read, rank, and explain by default. Writes require explicit intent.</p>
-    </div>
+  <div class="paper-code">
+    <h3>API + MCP</h3>
+    <p style="margin-top: 8px; color: var(--warm-mid); font-size: 14px; line-height: 1.6;">LLMs orchestrate. Dig retrieves. Every tool output is structured, reproducible, and explainable. MCP and REST call the same retrieval services. No hidden writes - agent tools read, rank, and explain by default.</p>
   </div>
-
   <div class="spec-grid" style="margin-top:28px;">
     <div class="spec-col">
       <h3>Core retrieval API (REST)</h3>
@@ -748,63 +721,6 @@ flowchart LR
         <li><code>create_crate_draft</code></li>
         <li><code>explain_relationships</code></li>
       </ul>
-    </div>
-  </div>
-</section>
-
-<section class="paper-final" id="plan">
-  <div class="section-label">Build plan</div>
-  <h2 class="paper-heading">Risk-first. <em>Data decisions before infrastructure ambition.</em></h2>
-
-  <div class="timeline">
-    <div class="timeline-item">
-      <div class="timeline-step">Pre-M0</div>
-      <div>
-        <h3>Profile real Discogs dump samples</h3>
-        <p>Profile real Discogs dump samples. Write the normalisation dictionary. Lock the schema before the importer is written.</p>
-      </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-step">M1</div>
-      <div>
-        <h3>Ingestion foundation</h3>
-        <p>Schema migrations, raw_entities staging, parser pipeline, canonical upserts, QA reports.</p>
-      </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-step">M2</div>
-      <div>
-        <h3>Search + read API</h3>
-        <p>Postgres FTS, core entity endpoints, mobile-first UI prototype.</p>
-      </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-step">M3</div>
-      <div>
-        <h3>Curation + media links</h3>
-        <p>Curators, crates, link provenance, editorial tooling.</p>
-      </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-step">M4</div>
-      <div>
-        <h3>MCP layer</h3>
-        <p>Agent tools on the same domain services as the REST API. Provenance and confidence in every response.</p>
-      </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-step">M5</div>
-      <div>
-        <h3>Matching + export</h3>
-        <p>Track matching to Spotify and Apple Music, confidence scoring, export jobs.</p>
-      </div>
-    </div>
-    <div class="timeline-item">
-      <div class="timeline-step">M6</div>
-      <div>
-        <h3>Search cluster decision gate</h3>
-        <p>OpenSearch only if the metrics justify it.</p>
-      </div>
     </div>
   </div>
 </section>
