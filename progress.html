@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dig Build Progress</title>
+<meta name="description" content="Implementation progress tracker for Dig: ingest, transforms, gates, and roadmap status.">
+<meta name="theme-color" content="#0d0a07">
+<meta name="color-scheme" content="dark">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="canonical" href="https://dig.baby/progress">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Dig Build Progress">
+<meta property="og:description" content="Implementation progress tracker for Dig: ingest, transforms, gates, and roadmap status.">
+<meta property="og:url" content="https://dig.baby/progress">
+<meta property="og:image" content="https://dig.baby/splashv3.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Dig Build Progress">
+<meta name="twitter:description" content="Implementation progress tracker for Dig: ingest, transforms, gates, and roadmap status.">
+<meta name="twitter:image" content="https://dig.baby/splashv3.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0d0a07;
+    --off-white: #f2ece0;
+    --cream: #e8dfc8;
+    --warm-mid: #a89070;
+    --accent: #8b5e3c;
+    --accent-light: #a8703f;
+    --groove: #160f08;
+    --line: rgba(168, 144, 112, 0.18);
+    --ok: #9ccf92;
+    --warn: #d9ba7b;
+    --info: #8cb4d9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
+  body {
+    background: var(--black);
+    color: var(--off-white);
+    font-family: "DM Sans", sans-serif;
+    font-weight: 300;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    z-index: 2;
+  }
+
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 32px;
+    background: linear-gradient(to bottom, rgba(13,10,7,0.95), rgba(13,10,7,0.6));
+    border-bottom: 1px solid rgba(168, 144, 112, 0.08);
+    backdrop-filter: blur(8px);
+  }
+  .nav-logo, .nav-links a {
+    font-family: "DM Mono", monospace;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+  .nav-logo { color: var(--warm-mid); font-size: 13px; }
+  .nav-links { display: flex; gap: 22px; list-style: none; }
+  .nav-links a { color: var(--warm-mid); font-size: 11px; }
+  .nav-links a.active, .nav-links a:hover { color: var(--off-white); }
+
+  main {
+    position: relative;
+    z-index: 1;
+    padding: 34px 32px 80px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 24px;
+    align-items: stretch;
+    margin-bottom: 28px;
+  }
+  .hero-card, .hero-side {
+    background: linear-gradient(180deg, rgba(22,15,8,0.95), rgba(13,10,7,0.96));
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+  }
+  .eyebrow {
+    font-family: "DM Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent-light);
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-family: "Playfair Display", serif;
+    font-weight: 400;
+    font-size: clamp(34px, 4.2vw, 62px);
+    line-height: 0.96;
+    margin-bottom: 14px;
+  }
+  .lede {
+    max-width: 56ch;
+    color: var(--warm-mid);
+    font-size: 17px;
+    line-height: 1.55;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .meta {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    background: rgba(255,255,255,0.01);
+  }
+  .meta .k {
+    font-family: "DM Mono", monospace;
+    color: var(--warm-mid);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .meta .v { font-size: 14px; color: var(--off-white); }
+
+  .side-list {
+    display: grid;
+    gap: 10px;
+  }
+  .phase-pill {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    background: rgba(255,255,255,0.01);
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--info);
+    box-shadow: 0 0 0 4px rgba(140,180,217,0.12);
+  }
+  .dot.done { background: var(--ok); box-shadow: 0 0 0 4px rgba(156,207,146,0.12); }
+  .dot.warn { background: var(--warn); box-shadow: 0 0 0 4px rgba(217,186,123,0.12); }
+  .phase-pill .label {
+    font-size: 13px;
+    color: var(--cream);
+  }
+  .phase-pill .state {
+    font-family: "DM Mono", monospace;
+    color: var(--warm-mid);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .section {
+    margin-top: 22px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    background: rgba(10,8,6,0.9);
+  }
+  .section-head {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+  .section-head h2 {
+    font-family: "Playfair Display", serif;
+    font-weight: 400;
+    font-size: 28px;
+  }
+  .section-head .sub {
+    color: var(--warm-mid);
+    font-size: 13px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    padding: 16px;
+  }
+  .stat {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0));
+  }
+  .stat .k {
+    font-family: "DM Mono", monospace;
+    font-size: 10px;
+    color: var(--warm-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .stat .v {
+    margin-top: 8px;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--off-white);
+  }
+  .stat .note {
+    margin-top: 8px;
+    color: var(--warm-mid);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .progress-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .progress-table th,
+  .progress-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-top: 1px solid var(--line);
+    vertical-align: middle;
+  }
+  .progress-table th {
+    font-family: "DM Mono", monospace;
+    font-size: 11px;
+    color: var(--warm-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    background: rgba(255,255,255,0.01);
+  }
+  .bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    border-radius: 999px;
+  }
+  .rate { color: var(--warm-mid); font-size: 12px; }
+  .status-badge {
+    font-family: "DM Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 5px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--warm-mid);
+    display: inline-block;
+  }
+
+  .roadmap {
+    padding: 12px 16px 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .phase {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.01);
+  }
+  .phase-top {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(168, 144, 112, 0.1);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+  .phase-name {
+    font-family: "Playfair Display", serif;
+    font-size: 22px;
+  }
+  .phase-meta {
+    color: var(--warm-mid);
+    font-size: 13px;
+  }
+  .phase ul {
+    list-style: none;
+    padding: 10px 14px 14px;
+    display: grid;
+    gap: 8px;
+  }
+  .phase li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    color: var(--cream);
+    font-size: 14px;
+    line-height: 1.35;
+  }
+  .tick {
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: transparent;
+    flex: 0 0 18px;
+    margin-top: 1px;
+  }
+  .tick.done {
+    color: var(--ok);
+    border-color: rgba(156,207,146,0.45);
+    background: rgba(156,207,146,0.08);
+  }
+  .tick.progress {
+    color: var(--warn);
+    border-color: rgba(217,186,123,0.45);
+    background: rgba(217,186,123,0.08);
+  }
+  .tick.todo {
+    color: transparent;
+  }
+
+  .notes {
+    padding: 16px;
+    color: var(--warm-mid);
+    font-size: 13px;
+    line-height: 1.55;
+    border-top: 1px solid var(--line);
+  }
+  .notes code {
+    font-family: "DM Mono", monospace;
+    color: var(--cream);
+    font-size: 12px;
+  }
+
+  @media (max-width: 980px) {
+    nav { padding: 16px 20px; }
+    .nav-links { gap: 14px; overflow-x: auto; }
+    main { padding: 24px 16px 56px; }
+    .hero { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: 1fr; }
+    .progress-table { font-size: 13px; }
+    .progress-table th:nth-child(3),
+    .progress-table td:nth-child(3) { display: none; }
+    .section-head h2 { font-size: 23px; }
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="./">DIG</a>
+    <ul class="nav-links">
+      <li><a href="./">Home</a></li>
+      <li><a href="./whitepaper">Tech Paper</a></li>
+      <li><a class="active" href="./progress">Progress</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="hero-card">
+        <div class="eyebrow">Build Tracking</div>
+        <h1>Database build, <em>not vibes.</em></h1>
+        <p class="lede">
+          Execution tracker for the Dig implementation plan. This page is a manual progress snapshot for ingest, transforms, gates, and the next actions needed to move from data loading to retrieval/API work.
+        </p>
+        <div class="meta-grid">
+          <div class="meta">
+            <div class="k">Current focus</div>
+            <div class="v">Phase 1 / Gate B closeout</div>
+          </div>
+          <div class="meta">
+            <div class="k">Latest milestone commit</div>
+            <div class="v"><code>6e36d44</code></div>
+          </div>
+          <div class="meta">
+            <div class="k">Tests</div>
+            <div class="v">28 / 28 passing</div>
+          </div>
+          <div class="meta">
+            <div class="k">Next gate</div>
+            <div class="v">Gate B (Phase 1)</div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hero-side">
+        <div class="eyebrow">Roadmap Snapshot</div>
+        <div class="side-list">
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 0A — System foundations</span><span class="state">done</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 0B — Profiling + normalization</span><span class="state">done</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Gate A — Passed</span><span class="state">closed</span></div>
+          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 1 — Ingest + canonical transforms</span><span class="state">in progress</span></div>
+          <div class="phase-pill"><span class="dot warn"></span><span class="label">Gate B — QA + repeatability + FTS</span><span class="state">next</span></div>
+          <div class="phase-pill"><span class="dot"></span><span class="label">Phase 2 — Retrieval core</span><span class="state">queued</span></div>
+          <div class="phase-pill"><span class="dot"></span><span class="label">Phase 3 — REST + MCP alpha</span><span class="state">queued</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Live Build Snapshot</h2>
+        <div class="sub">Manual update from overnight runs / latest operator report</div>
+      </div>
+      <div class="grid">
+        <div class="stat">
+          <div class="k">Raw entities</div>
+          <div class="v">24,025,633</div>
+          <div class="note">All 4 entity types ingested into <code>ingest.raw_entities</code></div>
+        </div>
+        <div class="stat">
+          <div class="k">raw_entities size</div>
+          <div class="v">81 GB</div>
+          <div class="note">Main disk pressure driver during coexisting raw + catalog transforms</div>
+        </div>
+        <div class="stat">
+          <div class="k">DB size (mid-transform)</div>
+          <div class="v">107 GB</div>
+          <div class="note">Estimated final ~200 GB with raw + catalog; ~120 GB catalog-only</div>
+        </div>
+        <div class="stat">
+          <div class="k">Docker disk free</div>
+          <div class="v">8.4 GB</div>
+          <div class="note">Expanded Docker allowance recommended before full releases transform completion</div>
+        </div>
+      </div>
+
+      <table class="progress-table">
+        <thead>
+          <tr>
+            <th>Process</th>
+            <th>Status</th>
+            <th>Progress</th>
+            <th>Rate / note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              Releases ingest
+              <div class="bar"><span style="width:100%"></span></div>
+            </td>
+            <td><span class="status-badge">done</span></td>
+            <td>18,876,362 releases loaded</td>
+            <td class="rate">4,770s (80 min), ~3,958/s</td>
+          </tr>
+          <tr>
+            <td>
+              Artists transform
+              <div class="bar"><span style="width:100%"></span></div>
+            </td>
+            <td><span class="status-badge">done</span></td>
+            <td>Complete</td>
+            <td class="rate">48s</td>
+          </tr>
+          <tr>
+            <td>
+              Labels transform
+              <div class="bar"><span style="width:100%"></span></div>
+            </td>
+            <td><span class="status-badge">done</span></td>
+            <td>Complete</td>
+            <td class="rate">626s (~10 min)</td>
+          </tr>
+          <tr>
+            <td>
+              Masters transform
+              <div class="bar"><span style="width:100%"></span></div>
+            </td>
+            <td><span class="status-badge">done</span></td>
+            <td>Complete</td>
+            <td class="rate">1,822s (~30 min)</td>
+          </tr>
+          <tr>
+            <td>
+              Releases transform
+              <div class="bar"><span style="width:9%"></span></div>
+            </td>
+            <td><span class="status-badge">in progress</span></td>
+            <td>~8.7% (snapshot)</td>
+            <td class="rate">~1k/s target, disk I/O constrained</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="notes">
+        Recommended operating posture while Phase 1 runs: finish transforms, run QA, fix transform/QA bugs only, populate FTS, then close Gate B. Avoid Phase 2 API/MCP feature work until Gate B is passed.
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Roadmap & Checklist</h2>
+        <div class="sub">Implementation plan execution tracker (manual)</div>
+      </div>
+      <div class="roadmap">
+        <div class="phase">
+          <div class="phase-top">
+            <div>
+              <div class="phase-name">Phase 0A / 0B + Gate A</div>
+              <div class="phase-meta">Foundations, profiling, normalization, legal/image strategy, QA gates</div>
+            </div>
+            <span class="status-badge">passed</span>
+          </div>
+          <ul>
+            <li><span class="tick done">✓</span><span>System scaffold (monorepo, Fastify, Kysely, migrations, local Postgres/Redis, CI)</span></li>
+            <li><span class="tick done">✓</span><span>Full profiling for artists/labels/masters + 500k release sample, sizing report, image absence confirmation in sampled releases</span></li>
+            <li><span class="tick done">✓</span><span>Normalization Dictionary v1 + Preserve/Normalize matrix + QA Gate Spec + Image Strategy v1</span></li>
+            <li><span class="tick done">✓</span><span>Parser fixtures/tests and LEGAL draft completed; Gate A checklist closed</span></li>
+          </ul>
+        </div>
+
+        <div class="phase">
+          <div class="phase-top">
+            <div>
+              <div class="phase-name">Phase 1 + Gate B</div>
+              <div class="phase-meta">Raw ingest, canonical transforms, QA, idempotency, FTS baseline</div>
+            </div>
+            <span class="status-badge">active</span>
+          </div>
+          <ul>
+            <li><span class="tick done">✓</span><span>7.1 Ingest infra tables + catalog schema + indexes + FTS columns</span></li>
+            <li><span class="tick done">✓</span><span>7.2 Full-tree parser and ingest pipeline hardening; 28 tests passing</span></li>
+            <li><span class="tick done">✓</span><span>Raw ingest complete for all 4 entity types into <code>ingest.raw_entities</code></span></li>
+            <li><span class="tick progress">◐</span><span>7.3 Canonical upserts — releases transform in progress (artists/labels/masters complete)</span></li>
+            <li><span class="tick todo">•</span><span>7.5 QA/reconciliation report and threshold validation</span></li>
+            <li><span class="tick todo">•</span><span>7.6 / 7.6A Idempotency + rollback validation on real runs</span></li>
+            <li><span class="tick todo">•</span><span>7.7 FTS vector population + performance check</span></li>
+            <li><span class="tick todo">•</span><span>Gate B closeout + Phase 1 handoff snapshot</span></li>
+          </ul>
+        </div>
+
+        <div class="phase">
+          <div class="phase-top">
+            <div>
+              <div class="phase-name">Phase 2</div>
+              <div class="phase-meta">Retrieval core (search + entity retrieval + direct traversal)</div>
+            </div>
+            <span class="status-badge">queued</span>
+          </div>
+          <ul>
+            <li><span class="tick todo">•</span><span>Lock query envelope before endpoint implementation</span></li>
+            <li><span class="tick todo">•</span><span>Run benchmark suite from <code>docs/phase2-search-benchmark-suite.md</code> and capture baseline</span></li>
+            <li><span class="tick todo">•</span><span>Implement multi-entity search + filters (genre/style/year/country/format/label)</span></li>
+            <li><span class="tick todo">•</span><span>Entity retrieval services + v1 direct graph traversal</span></li>
+            <li><span class="tick todo">•</span><span>Lock JSON response contracts and error format for Phase 3</span></li>
+          </ul>
+        </div>
+
+        <div class="phase">
+          <div class="phase-top">
+            <div>
+              <div class="phase-name">Phase 3</div>
+              <div class="phase-meta">REST API + MCP public alpha</div>
+            </div>
+            <span class="status-badge">queued</span>
+          </div>
+          <ul>
+            <li><span class="tick todo">•</span><span>Expose `/v1` REST endpoints on top of retrieval core</span></li>
+            <li><span class="tick todo">•</span><span>MCP tools (`search_catalog`, `get_release`, `get_artist`, etc.)</span></li>
+            <li><span class="tick todo">•</span><span>Rate limiting + keys + request logging + docs/examples</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="notes">
+        This page is intentionally manual-first. Once Phase 2 starts, it can be upgraded to read live metrics (DB counts, test status, benchmark outputs) from generated JSON artifacts or a small internal endpoint.
+      </div>
+    </section>
+  </main>
+</body>
+</html>
