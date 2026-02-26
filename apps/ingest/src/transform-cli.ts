@@ -5,13 +5,18 @@
  * processes them through canonical transforms, and writes
  * to catalog.* tables.
  *
+ * Uses cursor-based pagination (WHERE discogs_id > last_seen) instead of
+ * OFFSET for consistent performance on large tables. Automatically resumes
+ * from the last processed discogs_id on restart.
+ *
  * Usage:
  *   pnpm transform --batch-id <uuid> [--type artists|labels|masters|releases] [--page-size 1000]
  *
  * If --type is omitted, transforms all types in order: artists, labels, masters, releases.
  */
 
-import { createDb } from "@dig/db";
+import { createDb, sql } from "@dig/db";
+import type { Kysely, Database } from "@dig/db";
 import type { XmlNode } from "./parser.js";
 import { transformArtists } from "./transforms/artists.js";
 import { transformLabels } from "./transforms/labels.js";
@@ -23,6 +28,14 @@ type EntityType = "artist" | "label" | "master" | "release";
 const ALL_TYPES: EntityType[] = ["artist", "label", "master", "release"];
 
 const TRANSFORM_ORDER: EntityType[] = ["artist", "label", "master", "release"];
+
+/** Maps entity_type → the primary catalog table to check for resume cursor */
+const CATALOG_TABLE: Record<EntityType, string> = {
+  artist: "catalog.artists",
+  label: "catalog.labels",
+  master: "catalog.masters",
+  release: "catalog.releases",
+};
 
 interface TransformArgs {
   batchId: string;
@@ -62,6 +75,22 @@ function parseArgs(argv: string[]): TransformArgs {
   }
 
   return { batchId, types: types ?? TRANSFORM_ORDER, pageSize };
+}
+
+/**
+ * Find the resume cursor: the max discogs_id already in the catalog table
+ * for this batch. Returns 0 if no rows exist (start from beginning).
+ */
+async function getResumeCursor(
+  db: Kysely<Database>,
+  entityType: EntityType,
+  batchId: string,
+): Promise<number> {
+  const table = CATALOG_TABLE[entityType];
+  const result = await sql<{ max_id: number | null }>`
+    SELECT MAX(discogs_id) as max_id FROM ${sql.table(table)} WHERE batch_id = ${batchId}
+  `.execute(db);
+  return result.rows[0]?.max_id ?? 0;
 }
 
 async function main() {
@@ -112,22 +141,42 @@ async function main() {
         continue;
       }
 
-      // Page through raw_entities
-      let offset = 0;
+      // Check for resume point
+      let cursor = await getResumeCursor(db, entityType, args.batchId);
       let processedCount = 0;
+      let resumedCount = 0;
 
-      while (offset < totalEntities) {
+      if (cursor > 0) {
+        // Count how many we've already done to show accurate progress
+        const doneResult = await sql<{ count: number }>`
+          SELECT COUNT(*)::int as count FROM ${sql.table(CATALOG_TABLE[entityType])}
+          WHERE batch_id = ${args.batchId}
+        `.execute(db);
+        processedCount = doneResult.rows[0]?.count ?? 0;
+        resumedCount = processedCount;
+        console.log(`[transform] Resuming from discogs_id ${cursor} (${processedCount.toLocaleString()} already done)`);
+      }
+
+      // Cursor-based pagination through raw_entities
+      let pagesEmpty = false;
+      while (!pagesEmpty) {
         const rawRows = await db
           .selectFrom("ingest.raw_entities")
           .select(["discogs_id", "raw_payload"])
           .where("batch_id", "=", args.batchId)
           .where("entity_type", "=", entityType)
+          .where("discogs_id", ">", cursor)
           .orderBy("discogs_id", "asc")
           .limit(args.pageSize)
-          .offset(offset)
           .execute();
 
-        if (rawRows.length === 0) break;
+        if (rawRows.length === 0) {
+          pagesEmpty = true;
+          break;
+        }
+
+        // Advance cursor to the last discogs_id in this page
+        cursor = rawRows[rawRows.length - 1].discogs_id;
 
         // Parse raw_payload from JSON string to XmlNode
         const rows = rawRows.map((r) => ({
@@ -161,11 +210,15 @@ async function main() {
         }
 
         processedCount += rawRows.length;
-        offset += rawRows.length;
 
         // Progress log every page
         const pct = ((processedCount / totalEntities) * 100).toFixed(1);
-        process.stdout.write(`\r[transform] ${entityType}: ${processedCount.toLocaleString()}/${totalEntities.toLocaleString()} (${pct}%)`);
+        const elapsedSec = (Date.now() - typeStart) / 1000;
+        const newRows = processedCount - resumedCount;
+        const rate = elapsedSec > 0 ? (newRows / elapsedSec).toFixed(0) : "0";
+        const remaining = totalEntities - processedCount;
+        const eta = Number(rate) > 0 ? (remaining / Number(rate) / 60).toFixed(0) : "?";
+        process.stdout.write(`\r[transform] ${entityType}: ${processedCount.toLocaleString()}/${totalEntities.toLocaleString()} (${pct}%) ${rate}/s ETA ${eta}min`);
       }
 
       const typeElapsed = ((Date.now() - typeStart) / 1000).toFixed(1);
