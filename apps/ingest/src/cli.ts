@@ -39,7 +39,9 @@ interface CliArgs {
 }
 
 function parseArgs(argv: string[]): CliArgs {
-  const [, , command, ...rest] = argv;
+  // Skip "--" separator that pnpm passes through
+  const args = argv.slice(2).filter((a) => a !== "--");
+  const [command, ...rest] = args;
 
   if (!VALID_TYPES.includes(command as EntityType)) {
     console.error(`Error: first argument must be one of: ${VALID_TYPES.join(", ")}`);

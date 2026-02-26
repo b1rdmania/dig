@@ -64,17 +64,21 @@ docker-compose.yml — Local Postgres 16 + Redis 7
 ```
 
 ## Current Phase
-Phase 0A — COMPLETE. Scaffold, docker, migrations, CI, hosting all done.
-Phase 0B — COMPLETE. Profiling, normalization dictionary, image strategy, QA gates, sizing, legal.
-Gate A — PASSED. All 10 checklist items resolved.
-Next: Phase 1 — Ingestion Foundation + Canonical Database.
+Phase 1 — Ingestion Foundation + Canonical Database. IN PROGRESS.
+- Migration 002 (catalog schema): 25 tables, all indexes — APPLIED
+- Parser v2 (tree parser): XmlNode trees, 25 tests — DONE
+- Raw ingest CLI: XML→raw_entities pipeline — DONE (tested on 289k artists)
+- Canonical transforms: artists, labels, masters, releases + all child tables — DONE
+- Transform runner CLI: batch-scoped, paginated, idempotent — DONE
+- QA report generator — DONE
+- Artists canonicalized: 289,500 artists + 5 child tables from real data — VERIFIED
 
-## Phase 1 Starting Points
-1. Provision Fly.io staging environment
-2. Create ingest infra tables (dump_batches, raw_entities)
-3. Build canonical schema migrations (catalog.artists, catalog.releases, etc.)
-4. Implement full XML→raw_entities pipeline
-5. Implement raw→canonical normalization transforms
+## Phase 1 Remaining Work
+1. Ingest labels, masters, releases dumps into raw_entities
+2. Run transforms for labels, masters, releases
+3. Verify QA report across all entity types
+4. FTS search_vector population (deferred until canonical rows stable)
+5. Full dataset validation and Gate B checklist
 
 ## Important References
 - [Implementation Plan](docs/implementation-plan-agent-first.md) — canonical build plan (~1000 lines)

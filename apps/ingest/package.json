@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "echo ok",
     "test": "vitest run --passWithNoTests",
-    "ingest": "tsx src/cli.ts"
+    "ingest": "tsx src/cli.ts",
+    "transform": "tsx src/transform-cli.ts",
+    "qa": "tsx src/qa-report.ts"
   },
   "dependencies": {
     "@dig/db": "workspace:*",
