@@ -440,6 +440,7 @@ Build deterministic search + entity retrieval + scoped traversal.
 - Multi-entity search (releases, artists, labels, masters)
 - Filter support (genre, style, year, country, format, label)
 - Pagination (cursor-based, not offset)
+- Lock and benchmark against `docs/phase2-search-benchmark-suite.md` before exposing endpoints
 
 #### 9.2 Entity retrieval services
 
@@ -486,6 +487,7 @@ Direct graph links only:
 - Stable JSON contracts (documented)
 - Search latency baseline on full dataset
 - Rate limit middleware wired (not enforced on public yet)
+- Phase 2 benchmark results recorded (latency + query envelope decisions)
 
 ### Done Criteria
 
