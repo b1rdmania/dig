@@ -151,6 +151,21 @@ async function getBatchInfo(db: Kysely<Database>): Promise<{ batchId: string; du
   return { batchId: batch.id, dumpDate: batch.dump_date };
 }
 
+/**
+ * Detect whether a release query has filters that make ts_rank_cd + sort
+ * prohibitively expensive. When true, we skip rank computation and order
+ * by discogs_id DESC (newest first) — same strategy as broad queries.
+ *
+ * This avoids the 54k-page bitmap heap scan that PG uses to compute
+ * ts_rank_cd on large FTS result sets. Without rank sort, PG can use
+ * an index scan backward on uq_releases_batch_discogs which is 100x faster.
+ */
+function hasExpensiveFilters(params: SearchParams, type: SearchEntityType): boolean {
+  if (type !== "release") return false;
+  return !!(params.genre || params.style || params.country
+    || params.year !== undefined || params.yearMin !== undefined || params.yearMax !== undefined);
+}
+
 async function searchSingleType(
   db: Kysely<Database>,
   type: SearchEntityType,
@@ -159,10 +174,14 @@ async function searchSingleType(
   dumpDate: string,
   limit: number,
   cursorData: DecodedCursor | null,
-): Promise<{ results: SearchResult[]; hasMore: boolean }> {
+): Promise<{ results: SearchResult[]; hasMore: boolean; skippedRank: boolean }> {
   const tableName = `catalog.${type === "artist" ? "artists" : type === "label" ? "labels" : type === "master" ? "masters" : "releases"}` as const;
   const isNameType = type === "artist" || type === "label";
   const nameCol = isNameType ? "name" : "title";
+
+  // For filtered release queries, skip ts_rank_cd to avoid expensive bitmap heap scan + sort.
+  // PG can use index scan backward on discogs_id instead, which is 100x faster.
+  const skipRank = hasExpensiveFilters(params, type);
 
   // Build the query
   let query = db
@@ -174,14 +193,19 @@ async function searchSingleType(
     ] as any[])
     .where("batch_id" as any, "=", batchId);
 
-  // FTS ranking — use websearch_to_tsquery for stricter matching on releases
+  // FTS matching
   if (params.q) {
     const tsqueryFn = type === "release"
       ? sql`websearch_to_tsquery('english', ${params.q})`
       : sql`plainto_tsquery('english', ${params.q})`;
-    query = query
-      .where(sql`search_vector @@ ${tsqueryFn}` as any)
-      .select(sql`ts_rank_cd(search_vector, ${tsqueryFn})`.as("rank") as any);
+    query = query.where(sql`search_vector @@ ${tsqueryFn}` as any);
+
+    if (skipRank) {
+      // No rank computation — order by discogs_id DESC instead
+      query = query.select(sql`0`.as("rank") as any);
+    } else {
+      query = query.select(sql`ts_rank_cd(search_vector, ${tsqueryFn})`.as("rank") as any);
+    }
   } else {
     query = query.select(sql`0`.as("rank") as any);
   }
@@ -211,7 +235,7 @@ async function searchSingleType(
     query = query.where("country" as any, "=", params.country);
   }
 
-  // Genre/style filters via subquery
+  // Genre/style filters via EXISTS subquery
   if (params.genre && (type === "master" || type === "release")) {
     const genreTable = type === "master" ? "catalog.master_genres" : "catalog.release_genres";
     const fkCol = type === "master" ? "master_discogs_id" : "release_discogs_id";
@@ -223,8 +247,8 @@ async function searchSingleType(
     query = query.where(sql`EXISTS (SELECT 1 FROM ${sql.table(styleTable)} s WHERE s.${sql.ref(fkCol)} = ${sql.ref("discogs_id")} AND s.batch_id = ${batchId} AND s.style = ${params.style})` as any);
   }
 
-  // Minimum rank threshold — filters low-relevance noise from common terms
-  if (params.q) {
+  // Minimum rank threshold — only when computing rank (not for filtered/broad queries)
+  if (params.q && !skipRank) {
     const tsqueryFn = type === "release"
       ? sql`websearch_to_tsquery('english', ${params.q})`
       : sql`plainto_tsquery('english', ${params.q})`;
@@ -232,20 +256,20 @@ async function searchSingleType(
   }
 
   // Cursor-based pagination
-  if (cursorData && params.q) {
+  if (cursorData && params.q && !skipRank) {
     const tsqueryFn = type === "release"
       ? sql`websearch_to_tsquery('english', ${params.q})`
       : sql`plainto_tsquery('english', ${params.q})`;
     query = query.where(sql`(ts_rank_cd(search_vector, ${tsqueryFn}), discogs_id) < (${cursorData.rank}, ${cursorData.discogs_id})` as any);
   } else if (cursorData) {
-    query = query.where("discogs_id" as any, ">", cursorData.discogs_id);
+    query = query.where("discogs_id" as any, "<", cursorData.discogs_id);
   }
 
-  // Order by rank desc, then discogs_id for tie-breaking
-  if (params.q) {
+  // Order: ranked queries by rank desc, filtered/browse by discogs_id desc
+  if (params.q && !skipRank) {
     query = query.orderBy(sql`rank` as any, "desc").orderBy("discogs_id" as any, "desc");
   } else {
-    query = query.orderBy("discogs_id" as any, "asc");
+    query = query.orderBy("discogs_id" as any, "desc");
   }
 
   query = query.limit(limit + 1);
@@ -270,7 +294,7 @@ async function searchSingleType(
     },
   }));
 
-  return { results, hasMore };
+  return { results, hasMore, skippedRank: skipRank };
 }
 
 /**
@@ -387,6 +411,17 @@ export async function search(
   return await db.connection().execute(async (conn) => {
     await sql`SET statement_timeout = '2s'`.execute(conn);
 
+    // For filtered release queries, disable bitmapscan to force index scan backward
+    // on uq_releases_batch_discogs. Without this, PG picks bitmap heap scan on the
+    // FTS GIN index which requires reading tens of thousands of heap pages.
+    // With index scan backward + LIMIT, PG finds matches in <100ms.
+    // Only applies when release type is in scope AND filters are present.
+    const typesInScope = params.type ? [params.type] : ["artist", "label", "master", "release"];
+    const needsFilterPlanHint = typesInScope.includes("release") && hasExpensiveFilters(params, "release");
+    if (needsFilterPlanHint) {
+      await sql`SET enable_bitmapscan = off`.execute(conn);
+    }
+
     try {
       const { batchId, dumpDate } = await getBatchInfo(conn);
 
@@ -422,11 +457,15 @@ export async function search(
             continue;
           }
 
-          const { results, hasMore: typeHasMore } = await searchSingleType(
+          const { results, hasMore: typeHasMore, skippedRank } = await searchSingleType(
             conn, entityType, params, batchId, dumpDate, limit, cursorData,
           );
           allResults.push(...results);
           if (typeHasMore) hasMore = true;
+          if (skippedRank) {
+            degraded = true;
+            hint = hint ?? "Filtered results — showing recent matches. Remove filters for relevance-ranked results.";
+          }
         } catch (err: any) {
           // If a single entity type query times out (57014), skip it gracefully
           if (err.code === "57014") {
@@ -489,6 +528,9 @@ export async function search(
         },
       };
     } finally {
+      if (needsFilterPlanHint) {
+        await sql`RESET enable_bitmapscan`.execute(conn).catch(() => {});
+      }
       await sql`RESET statement_timeout`.execute(conn).catch(() => {});
     }
   });
