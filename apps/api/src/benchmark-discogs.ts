@@ -5,7 +5,7 @@
  * then produces a side-by-side latency comparison.
  *
  * Usage:
- *   npx tsx apps/api/src/benchmark-discogs.ts --token YOUR_DISCOGS_TOKEN [--dig-url http://localhost:3000] [--runs 2]
+ *   npx tsx apps/api/src/benchmark-discogs.ts --token YOUR_DISCOGS_TOKEN [--dig-url http://localhost:3002] [--runs 2]
  *
  * Rate limit: Discogs allows 60 req/min authenticated. We throttle to ~55/min to stay safe.
  */
@@ -108,7 +108,7 @@ function percentile(sorted: number[], p: number): number {
 async function main() {
   const args = process.argv.slice(2);
   let token = "";
-  let digUrl = "http://localhost:3000";
+  let digUrl = "http://localhost:3002";
   let runs = 2;
 
   for (let i = 0; i < args.length; i++) {

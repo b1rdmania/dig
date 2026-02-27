@@ -389,6 +389,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`CREATE INDEX idx_release_formats_lookup ON catalog.release_formats(batch_id, release_discogs_id)`.execute(db);
   await sql`CREATE INDEX idx_release_genres_lookup ON catalog.release_genres(batch_id, release_discogs_id)`.execute(db);
   await sql`CREATE INDEX idx_release_styles_lookup ON catalog.release_styles(batch_id, release_discogs_id)`.execute(db);
+  await sql`CREATE INDEX idx_release_genres_genre ON catalog.release_genres(batch_id, genre, release_discogs_id)`.execute(db);
+  await sql`CREATE INDEX idx_release_styles_style ON catalog.release_styles(batch_id, style, release_discogs_id)`.execute(db);
   await sql`CREATE INDEX idx_release_identifiers_lookup ON catalog.release_identifiers(batch_id, release_discogs_id)`.execute(db);
   await sql`CREATE INDEX idx_release_companies_lookup ON catalog.release_companies(batch_id, release_discogs_id)`.execute(db);
   await sql`CREATE INDEX idx_release_videos_lookup ON catalog.release_videos(batch_id, release_discogs_id)`.execute(db);

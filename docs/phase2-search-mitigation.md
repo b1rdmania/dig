@@ -15,14 +15,15 @@ Root cause: trigram GIN scans generate massive candidate sets for short/common t
 **Release fuzzy search is disabled in v1.**
 
 Search path for releases:
-1. Primary: `plainto_tsquery()` against `search_vector` (tsvector FTS with GIN index)
+1. Primary: `websearch_to_tsquery()` against `search_vector` (tsvector FTS with GIN index)
 2. If FTS returns zero results: return empty results with `hint: "Try a different spelling"`
 3. Do **not** fall back to `pg_trgm` for releases
 
 Search path for artists/labels/masters:
 1. Primary: `plainto_tsquery()` against `search_vector`
 2. If FTS returns zero results AND query length >= 4: fall back to `similarity()` via `pg_trgm`
-3. Limit fuzzy fallback to 10 results, `similarity_threshold = 0.3`
+3. Artists: limit 10, `similarity_threshold = 0.30`
+4. Labels/masters: limit 5, `similarity_threshold = 0.45`
 
 ### Acceptance Criteria
 
@@ -49,11 +50,12 @@ Queries like "Love", "The", "DJ" match millions of rows. Without `LIMIT`, these 
 
 ### v1 Policy
 
-1. Enforce `LIMIT` on all queries (max 100, default 20)
+1. Enforce `LIMIT` on all queries (max 50, default 20)
 2. Use `ts_rank_cd()` (cover density) not `ts_rank()` (frequency) — better ranking for short queries
 3. Reject 1-character queries at validation layer
 4. For queries that return > 10,000 estimated rows: skip `total_estimate` (use `null`)
-5. Apply `statement_timeout = '5s'` on all search queries
+5. Apply `statement_timeout = '3s'` on all search queries
+6. For broad/filtered release queries, use guarded degraded path (no rank sort, `discogs_id DESC`, `meta.degraded=true`)
 
 ### Acceptance Criteria
 
@@ -61,7 +63,7 @@ Queries like "Love", "The", "DJ" match millions of rows. Without `LIMIT`, these 
 |--------|--------|
 | "Love" query returns in < 1,000ms | Enforced by statement_timeout |
 | "The" query returns in < 1,000ms | Enforced by statement_timeout |
-| No query ever exceeds 5,000ms | statement_timeout kills at 5s |
+| No query ever exceeds 3,000ms per entity type | statement_timeout kills at 3s |
 
 ## Risk 3: Filter combination cardinality
 

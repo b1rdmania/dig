@@ -14,7 +14,7 @@
  * - Min query length: 2 chars, max: 200 chars
  * - Max page size: 50, default 20
  * - Cursor-based pagination
- * - 2s per-statement timeout (enforced via pinned connection)
+ * - 3s per-statement timeout (enforced via pinned connection)
  * - Fuzzy: artist (full), label/master (stricter threshold + cap), release (disabled)
  * - Broad query detection → degraded response
  * - Filtered release queries → degraded response (no rank sort)
@@ -91,8 +91,6 @@ const SIMILARITY_ARTIST = 0.3;
 const SIMILARITY_LABEL_MASTER = 0.45;
 /** Max fuzzy results for label/master to cap candidate scan */
 const FUZZY_CAP_LABEL_MASTER = 5;
-/** Max candidate rows for guarded path prefilter */
-const GUARDED_CANDIDATE_CAP = 5000;
 
 /** High-frequency single terms that trigger degraded mode on releases */
 const BROAD_TERMS = new Set([
@@ -264,14 +262,14 @@ async function searchRanked(
       : sql`plainto_tsquery('english', ${params.q})`;
     query = query.where(sql`(ts_rank_cd(search_vector, ${tsqueryFn}), discogs_id) < (${cursorData.rank}, ${cursorData.discogs_id})` as any);
   } else if (cursorData) {
-    query = query.where("discogs_id" as any, ">", cursorData.discogs_id);
+    query = query.where("discogs_id" as any, "<", cursorData.discogs_id);
   }
 
   // Order by rank desc, then discogs_id for tie-breaking
   if (params.q) {
     query = query.orderBy(sql`rank` as any, "desc").orderBy("discogs_id" as any, "desc");
   } else {
-    query = query.orderBy("discogs_id" as any, "asc");
+    query = query.orderBy("discogs_id" as any, "desc");
   }
 
   query = query.limit(limit + 1);

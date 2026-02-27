@@ -500,11 +500,11 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 2 search hardening — fix filtered queries</div>
+            <div class="v">Phase 2 search hardening — two-path release search validation</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>8113b05</code></div>
+            <div class="v"><code>a16df00</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
@@ -633,7 +633,7 @@
     <section class="section">
       <div class="section-head">
         <h2>Search Benchmark</h2>
-        <div class="sub">Native Postgres 14 — 32 queries, 8 categories, 3 runs — <code>pnpm benchmark:search</code></div>
+        <div class="sub">Native Postgres 14 baseline + targeted post-fix probes — <code>pnpm benchmark:search --base-url http://localhost:3002 --runs 3</code></div>
       </div>
       <table class="progress-table">
         <thead>
@@ -669,10 +669,10 @@
           </tr>
           <tr>
             <td>Filtered</td>
-            <td>2,066ms</td>
-            <td>2,205ms</td>
+            <td>35ms (warm)</td>
+            <td>2,967ms (cold worst)</td>
             <td>p95 &lt; 300ms</td>
-            <td><span class="status-badge" style="color:var(--fail);border-color:rgba(217,123,123,0.45)">broken</span></td>
+            <td><span class="status-badge" style="color:var(--warn);border-color:rgba(217,186,123,0.45)">improved, rerun pending</span></td>
           </tr>
           <tr>
             <td>Multi-entity</td>
@@ -705,7 +705,7 @@
         </tbody>
       </table>
       <div class="notes">
-        <strong>Run 4 on native Postgres 14 (not Docker).</strong> Cold-start DB with no prior cache. Key finding: filtered queries (genre/country/style) are <strong>genuinely broken</strong> — not Docker artifacts. Timing out at 2s and returning 0 results. This is the P0 fix. Warm performance for retrieval (15ms), traversal (49ms), and common-term (4ms) is excellent. Full breakdown in <code>docs/phase2-search-benchmark-results.md</code>.
+        <strong>Baseline was Run 4 on native Postgres 14 (pre-fix).</strong> Latest code (<code>a16df00</code>) implements the two-path release strategy: ranked path for normal queries, guarded degraded path for broad/filtered release queries. Targeted probes now return results for filtered queries (previously 0-result timeouts); full 32-query benchmark rerun is the next validation step. Full history in <code>docs/phase2-search-benchmark-results.md</code>.
       </div>
     </section>
 
@@ -790,7 +790,7 @@
         </div>
       </div>
       <div class="notes">
-        Dig is faster than Discogs in <strong>6 of 7 categories</strong> and <strong>32 of 46 individual queries</strong>. Our overall p50 is 36ms vs Discogs' 236ms. The one category Discogs wins is <strong>filtered search</strong> — our genre/country/style filter queries are broken (timing out, returning 0 results). This is a query plan bug, not a fundamental limitation. Discogs latency includes network round-trip to their CDN; Dig is local — production numbers will include Fly.io network latency (~20-50ms) but will still be competitive. Fuzzy typo search ("Radiohed" finding Radiohead) works on Dig but <strong>not</strong> on Discogs.
+        Dig is faster than Discogs in <strong>6 of 7 categories</strong> and <strong>32 of 46 individual queries</strong> on the last completed comparison run (overall p50: 36ms vs 236ms). Filtered search used to be the outlier; post-fix two-path results are improved and awaiting a fresh like-for-like rerun against Discogs.
       </div>
     </section>
 
@@ -807,14 +807,14 @@
             </div>
           </div>
           <ul>
-            <li><span class="tick done">✓</span><span><strong>Statement timeout enforcement</strong> — pinned <code>db.connection()</code> with <code>SET statement_timeout = '2s'</code>. Max query: 19.7s → 2.0s</span></li>
+            <li><span class="tick done">✓</span><span><strong>Statement timeout enforcement</strong> — pinned <code>db.connection()</code> with <code>SET statement_timeout = '3s'</code>. Max query now bounded per entity type.</span></li>
             <li><span class="tick done">✓</span><span><strong>Broad query detection</strong> — 30-term high-frequency list + short token heuristic. "Love": 12s → 5ms, "Remix": 15s → 7ms</span></li>
             <li><span class="tick done">✓</span><span><strong>Degraded response path</strong> — broad release queries return unranked recent matches with <code>meta.degraded: true</code> and refinement hint</span></li>
             <li><span class="tick done">✓</span><span><strong>websearch_to_tsquery</strong> — stricter FTS matching for releases, reducing candidate sets on common terms</span></li>
             <li><span class="tick done">✓</span><span><strong>Rank threshold</strong> — filter <code>ts_rank_cd > 0.0001</code>, eliminating noise results</span></li>
             <li><span class="tick done">✓</span><span><strong>Max page size</strong> — reduced from 100 to 50, limiting sort cost</span></li>
             <li><span class="tick done">✓</span><span><strong>Per-entity-type timeout handling</strong> — if one entity type times out, remaining types still return results</span></li>
-            <li><span class="tick done">✓</span><span><strong>Traversal p95</strong> — 544ms → 58ms (timeout enforcement eliminated unbounded traversals)</span></li>
+            <li><span class="tick done">✓</span><span><strong>Two-path release search rewrite</strong> — Path A ranked + Path B guarded degraded for broad/filtered release queries</span></li>
           </ul>
         </div>
       </div>
@@ -880,14 +880,14 @@
             <li><span class="tick done">✓</span><span>Traversal services: 5 link types (artist→releases, artist→masters, label→releases, master→releases, release→credits)</span></li>
             <li><span class="tick done">✓</span><span>Fastify /v1 routes wired: search, entities, traversal — all live-tested against 192GB database</span></li>
             <li><span class="tick done">✓</span><span>Benchmark runner (<code>pnpm benchmark:search</code>): 32-query suite, 8 categories, acceptance criteria</span></li>
-            <li><span class="tick done">✓</span><span><code>statement_timeout</code> enforcement via pinned <code>db.connection()</code> — 2s per-statement, graceful per-entity-type fallback</span></li>
+            <li><span class="tick done">✓</span><span><code>statement_timeout</code> enforcement via pinned <code>db.connection()</code> — 3s per-statement, graceful per-entity-type fallback</span></li>
             <li><span class="tick done">✓</span><span>Broad query detection + degraded response path: "Love" 12s→5ms, "Remix" 15s→7ms, max query 19.7s→2.0s</span></li>
             <li><span class="tick done">✓</span><span>Query envelope tightening: <code>websearch_to_tsquery</code> for releases, rank threshold 0.0001, max page 50</span></li>
             <li><span class="tick done">✓</span><span>Benchmark Run 3 (Docker): 4/7 pass. Warm p50 well under all targets</span></li>
             <li><span class="tick done">✓</span><span>Native Postgres migration — 58GB catalog cloned from Docker PG to native PG 14 (25 tables, 204M+ rows)</span></li>
             <li><span class="tick done">✓</span><span>Benchmark Run 4 (native PG): common-term now passes. Filtered queries confirmed genuinely broken (not Docker artifact)</span></li>
             <li><span class="tick done">✓</span><span>Discogs API comparison benchmark: Dig faster in 6/7 categories, 32/46 queries. Overall p50: 36ms vs 236ms</span></li>
-            <li><span class="tick progress">◐</span><span>Fix filtered queries (P0): genre/country/style filters timing out at 2s, returning 0 results — query plan bug</span></li>
+            <li><span class="tick progress">◐</span><span>Filtered query fix (P0): two-path rewrite shipped in <code>a16df00</code>; full benchmark rerun and docs lock still pending</span></li>
             <li><span class="tick todo">•</span><span>Optimize fuzzy pg_trgm on labels/masters (1.3-2.2s for typo queries)</span></li>
             <li><span class="tick todo">•</span><span>Startup warmup for pg_trgm GIN indexes (eliminate cold-cache spikes)</span></li>
             <li><span class="tick todo">•</span><span>Rate limit middleware + ops hooks (request timing, query logging)</span></li>
@@ -945,7 +945,7 @@
       <div class="notes">
         <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 289k artists. Full Discogs CC0 February 2026 dump.<br>
         <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) for all entity types + <code>pg_trgm</code> fuzzy for artist/label/master. Release fuzzy disabled in v1.<br>
-        <strong>Next milestone:</strong> Fix filtered query bug (P0) → optimize pg_trgm fuzzy → Phase 3 deployment to Fly.io.
+        <strong>Next milestone:</strong> Run authoritative post-fix benchmark suite → lock Phase 2 decision block → Phase 3 deployment prep.
       </div>
     </section>
   </main>

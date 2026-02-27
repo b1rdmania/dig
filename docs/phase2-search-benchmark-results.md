@@ -7,6 +7,16 @@
 **Runner:** `pnpm benchmark:search --runs 3` (96 total requests, 5 warmup)
 **Mitigations applied:** same as Run 3 (statement_timeout, broad query, websearch_to_tsquery, rank threshold, max page 50)
 
+### Release decision block (Phase 2 gate)
+
+| Decision | Status | Rationale |
+|----------|--------|-----------|
+| Keep two-path release search (ranked + guarded) | **Accepted** | Eliminates 0-result timeout failures on filtered release queries while preserving relevance ranking for normal queries. |
+| Keep release fuzzy disabled in v1 | **Accepted** | 18.9M-row release trigram remains above latency target; guarded FTS path is the reliable fallback. |
+| Raise statement timeout from 2s to 3s | **Accepted** | Allows cold-cache multi-filter release queries to return instead of failing hard, while still bounding runaway scans. |
+| Use guarded degraded response for filtered/broad release queries | **Accepted** | Deterministic completion with explicit `meta.degraded` + hint is preferable to silent timeouts. |
+| Add genre/style covering indexes to migrations | **Required before Phase 3** | Native DB already has them; migration parity is needed for reproducible deploys. |
+
 ### Summary
 
 | Category | p50 | p95 | Max | Target | Status |

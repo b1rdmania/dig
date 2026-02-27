@@ -8,7 +8,7 @@
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "benchmark:search": "npx tsx apps/api/src/benchmark.ts"
+    "benchmark:search": "npx tsx apps/api/src/benchmark.ts --base-url http://localhost:3002"
   },
   "devDependencies": {
     "@types/node": "^25.3.0"

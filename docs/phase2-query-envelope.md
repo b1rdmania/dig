@@ -10,7 +10,7 @@ Locked constraints for the v1 search API. All search endpoints must enforce thes
 | `q` (query string) | Max length: 200 characters | Prevent abuse; no realistic query exceeds this |
 | `limit` (page size) | Default: 20, Max: 50 | Keeps response payloads bounded; reduced from 100 to limit sort cost on large result sets |
 | `cursor` | Opaque string, base64-encoded | Cursor-based pagination only; no offset parameter exposed |
-| `timeout` | 5,000ms hard limit per query | Kill queries that exceed budget; return partial or error |
+| `timeout` | 3,000ms per-entity statement timeout | Bound worst-case scans while still allowing cold-cache filtered release queries to return |
 
 ## Allowed Filters
 
@@ -52,9 +52,9 @@ All filters are optional. Multiple filters combine with AND.
 
 | Entity | Fuzzy (pg_trgm) | Policy |
 |--------|-----------------|--------|
-| Artists | Enabled | `name % query` with GIN trgm index, 289k–9.9M rows, p95 < 500ms |
-| Labels | Enabled | `name % query` with GIN trgm index, 2.3M rows, p95 < 500ms |
-| Masters | Enabled | `title % query` with GIN trgm index, 2.5M rows, p95 < 500ms |
+| Artists | Enabled | `name % query` with `similarity_threshold=0.30`, limit 10 |
+| Labels | Enabled (guarded) | `name % query` with `similarity_threshold=0.45`, limit 5 |
+| Masters | Enabled (guarded) | `title % query` with `similarity_threshold=0.45`, limit 5 |
 | Releases | **Disabled in v1** | GIN trgm on 18.9M rows exceeds p99 target (4.4s warm on Docker). Use tsvector FTS only. |
 
 ### Fuzzy fallback strategy
@@ -62,8 +62,8 @@ All filters are optional. Multiple filters combine with AND.
 1. Primary: `plainto_tsquery()` against `search_vector` (tsvector FTS)
 2. If FTS returns zero results AND query length >= 4 AND entity type is not `release`:
    - Fall back to `similarity()` against `name`/`title` with `pg_trgm`
-   - Limit to 10 results
-   - Set `similarity_threshold` to 0.3
+   - Artists: limit 10, threshold 0.30
+   - Labels/masters: limit 5, threshold 0.45
 3. If entity type is `release` and FTS returns zero results:
    - Return empty results with `hint: "Try a different spelling"` in response metadata
    - Do not attempt trgm fallback
@@ -116,6 +116,17 @@ The `degraded` flag in `meta` tells clients that:
 
 If a broad query has filters applied (genre, year, country), it is **not** classified as broad — the filters narrow the result set enough for ranked results to be feasible. The heuristic only fires for unfiltered broad terms.
 
+## Release Search Two-Path Strategy
+
+To avoid rank-sort blowups on large release result sets, v1 release search uses two execution paths:
+
+1. **Path A (ranked)**: `ts_rank_cd` + relevance sort for unfiltered release queries.
+2. **Path B (guarded)**: no rank computation, ordered by `discogs_id DESC`, with `meta.degraded=true`.
+   - Broad single-term release queries always use guarded path.
+   - Filtered release queries use guarded path.
+   - For single-filter guarded queries, `enable_bitmapscan=off` is set on the pinned connection for that query and reset immediately after.
+   - For multi-filter guarded queries, bitmap scan remains enabled because `BitmapAnd` is typically the better plan.
+
 ## Pathological Query Handling
 
 | Pattern | Behavior |
@@ -130,15 +141,15 @@ If a broad query has filters applied (genre, year, country), it is **not** class
 
 ## Timeout Budget Breakdown
 
-Per-statement timeout: 2,000ms. Set via `SET statement_timeout = '2s'` on a pinned connection (`db.connection().execute()`).
+Per-statement timeout: 3,000ms. Set via `SET statement_timeout = '3s'` on a pinned connection (`db.connection().execute()`).
 
 | Phase | Budget |
 |-------|--------|
 | Query parsing + validation | < 5ms |
-| SQL execution (per entity type) | < 2,000ms |
+| SQL execution (per entity type) | < 3,000ms |
 | Response serialization | < 50ms |
 | Overhead (connection, middleware) | ~50ms |
 
-If a single entity type query exceeds 2s, it is cancelled via `statement_timeout` (error code `57014`). The search continues with remaining entity types and returns partial results with `hint: "Some results may be incomplete due to query complexity"`.
+If a single entity type query exceeds 3s, it is cancelled via `statement_timeout` (error code `57014`). The search continues with remaining entity types and returns partial results with `hint: "Some results may be incomplete due to query complexity"`.
 
-Total wall time for multi-entity search is bounded to ~8s worst case (4 entity types x 2s each), but typically completes in < 1s for specific queries.
+Total wall time for multi-entity search is bounded to ~12s worst case (4 entity types x 3s each), but typical queries complete in < 1s.

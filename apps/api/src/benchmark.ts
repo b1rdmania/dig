@@ -5,10 +5,10 @@
  * against a live API server and reports latency statistics.
  *
  * Usage:
- *   npx tsx apps/api/src/benchmark.ts [--base-url http://localhost:3000] [--runs 3]
+ *   npx tsx apps/api/src/benchmark.ts [--base-url http://localhost:3002] [--runs 3]
  */
 
-const DEFAULT_BASE_URL = "http://localhost:3000";
+const DEFAULT_BASE_URL = "http://localhost:3002";
 const DEFAULT_RUNS = 3;
 
 interface BenchmarkQuery {
