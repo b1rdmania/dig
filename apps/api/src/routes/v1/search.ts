@@ -31,8 +31,9 @@ export function registerSearchRoutes(app: FastifyInstance, db: Kysely<Database>)
       const result = await search(db, params);
       return reply.send(result);
     } catch (err: any) {
-      if (err.code === "57014") {
-        // statement_timeout
+      // statement_timeout — may be direct (code 57014) or wrapped in transaction error (cause.code)
+      const pgCode = err.code ?? err.cause?.code;
+      if (pgCode === "57014") {
         return reply.status(504).send({
           error: { code: "QUERY_TIMEOUT", message: "Search query exceeded timeout", details: null },
         });

@@ -10,6 +10,7 @@ export { healthCheck } from "./health.js";
 export {
   search,
   validateSearchParams,
+  isBroadQuery,
   type SearchParams,
   type SearchResponse,
   type SearchResult,

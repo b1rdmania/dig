@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateSearchParams, type SearchParams, type SearchResponse } from "../search.js";
+import { validateSearchParams, isBroadQuery, type SearchParams, type SearchResponse } from "../search.js";
 
 describe("validateSearchParams", () => {
   it("rejects empty params (no query, no filters)", () => {
@@ -74,6 +74,40 @@ describe("validateSearchParams", () => {
   });
 });
 
+describe("isBroadQuery", () => {
+  it("detects single short tokens as broad", () => {
+    expect(isBroadQuery({ q: "Love" })).toBe(true);
+    expect(isBroadQuery({ q: "DJ" })).toBe(true);
+    expect(isBroadQuery({ q: "ab" })).toBe(true);
+  });
+
+  it("detects known high-frequency terms as broad", () => {
+    expect(isBroadQuery({ q: "remix" })).toBe(true);
+    expect(isBroadQuery({ q: "HOUSE" })).toBe(true);
+    expect(isBroadQuery({ q: "dance" })).toBe(true);
+  });
+
+  it("does not flag multi-word queries as broad", () => {
+    expect(isBroadQuery({ q: "love song" })).toBe(false);
+    expect(isBroadQuery({ q: "dark side of the moon" })).toBe(false);
+  });
+
+  it("does not flag longer specific terms as broad", () => {
+    expect(isBroadQuery({ q: "radiohead" })).toBe(false);
+    expect(isBroadQuery({ q: "thriller" })).toBe(false);
+  });
+
+  it("does not flag broad terms when filters are applied", () => {
+    expect(isBroadQuery({ q: "Love", genre: "Electronic" })).toBe(false);
+    expect(isBroadQuery({ q: "DJ", year: 1995 })).toBe(false);
+    expect(isBroadQuery({ q: "remix", country: "US" })).toBe(false);
+  });
+
+  it("does not flag empty query as broad", () => {
+    expect(isBroadQuery({ q: "" })).toBe(false);
+  });
+});
+
 describe("SearchResponse shape", () => {
   it("matches the response contract", () => {
     const response: SearchResponse = {
@@ -105,6 +139,7 @@ describe("SearchResponse shape", () => {
         filters_applied: {},
         elapsed_ms: 96,
         hint: null,
+        degraded: false,
       },
     };
 
@@ -116,13 +151,45 @@ describe("SearchResponse shape", () => {
     expect(response.pagination.has_more).toBe(true);
     expect(response.meta.query).toBe("radiohead");
     expect(response.meta.hint).toBeNull();
+    expect(response.meta.degraded).toBe(false);
+  });
+
+  it("supports degraded response", () => {
+    const response: SearchResponse = {
+      results: [
+        {
+          type: "release",
+          discogs_id: 12345,
+          name: null,
+          title: "Love Song",
+          year: 2020,
+          country: "US",
+          data_quality: "Correct",
+          relevance: 0,
+          provenance: { source: "discogs", dump_date: "2026-02-01", discogs_id: 12345 },
+        },
+      ],
+      pagination: { cursor: "abc", has_more: true, total_estimate: null },
+      meta: {
+        query: "love",
+        type: "release",
+        filters_applied: {},
+        elapsed_ms: 45,
+        hint: "Broad query — showing recent matches. Add filters or more search terms for ranked results.",
+        degraded: true,
+      },
+    };
+
+    expect(response.meta.degraded).toBe(true);
+    expect(response.meta.hint).toContain("Broad query");
+    expect(response.results[0].relevance).toBe(0);
   });
 
   it("supports empty results", () => {
     const response: SearchResponse = {
       results: [],
       pagination: { cursor: null, has_more: false, total_estimate: null },
-      meta: { query: "nonexistent", type: null, filters_applied: {}, elapsed_ms: 5, hint: "Try a different spelling" },
+      meta: { query: "nonexistent", type: null, filters_applied: {}, elapsed_ms: 5, hint: "Try a different spelling", degraded: false },
     };
 
     expect(response.results).toHaveLength(0);

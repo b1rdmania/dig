@@ -8,7 +8,7 @@ Locked constraints for the v1 search API. All search endpoints must enforce thes
 |-----------|-----------|-----------|
 | `q` (query string) | Min length: 2 characters | 1-char queries ("A", "I") hit millions of rows with no useful ranking |
 | `q` (query string) | Max length: 200 characters | Prevent abuse; no realistic query exceeds this |
-| `limit` (page size) | Default: 20, Max: 100 | Keeps response payloads bounded; >100 results per page has no UX justification |
+| `limit` (page size) | Default: 20, Max: 50 | Keeps response payloads bounded; reduced from 100 to limit sort cost on large result sets |
 | `cursor` | Opaque string, base64-encoded | Cursor-based pagination only; no offset parameter exposed |
 | `timeout` | 5,000ms hard limit per query | Kill queries that exceed budget; return partial or error |
 
@@ -68,26 +68,77 @@ All filters are optional. Multiple filters combine with AND.
    - Return empty results with `hint: "Try a different spelling"` in response metadata
    - Do not attempt trgm fallback
 
+## Broad Query Detection & Degraded Response
+
+Single common terms ("Love", "Remix", "DJ", "House") match hundreds of thousands of rows in releases. These are detected as "broad queries" and served via a degraded-but-useful path.
+
+### Broad query heuristic
+
+A query is classified as **broad** when:
+1. It is a single token (no spaces after trim), AND
+2. It is 2–5 characters long, OR it matches a known high-frequency term list
+
+Known high-frequency terms (v1, hardcoded):
+`love`, `remix`, `the`, `you`, `live`, `blue`, `rock`, `jazz`, `house`, `soul`, `baby`, `night`, `dance`, `dream`, `world`, `heart`, `time`, `best`, `gold`, `fire`, `magic`, `party`, `super`, `radio`, `black`, `white`, `sweet`, `angel`, `crazy`, `happy`
+
+### Degraded response contract
+
+When a broad query is detected for releases:
+1. Skip the full `ts_rank_cd` sort (expensive on 400k+ rows)
+2. Instead: return results from `search_vector @@ query` with `LIMIT 50`, ordered by `discogs_id DESC` (newest first — deterministic, fast, no sort on rank)
+3. Set `meta.degraded` to `true` in the response
+4. Set `meta.hint` to `"Broad query — showing recent matches. Add filters or more search terms for ranked results."`
+5. Set `pagination.has_more` to `true` (there are always more results for broad terms)
+
+The `degraded` flag in `meta` tells clients that:
+- Results are **not** ranked by relevance
+- The result set is a **sample**, not the top-N by score
+- Adding filters (genre, year, country) or more search terms will produce ranked results
+
+### Response shape addition
+
+```json
+{
+  "meta": {
+    "query": "love",
+    "type": "release",
+    "filters_applied": {},
+    "elapsed_ms": 45,
+    "hint": "Broad query — showing recent matches. Add filters or more search terms for ranked results.",
+    "degraded": true
+  }
+}
+```
+
+`meta.degraded` is `false` (or absent) for normal queries, `true` for broad queries.
+
+### Broad query + filters
+
+If a broad query has filters applied (genre, year, country), it is **not** classified as broad — the filters narrow the result set enough for ranked results to be feasible. The heuristic only fires for unfiltered broad terms.
+
 ## Pathological Query Handling
 
 | Pattern | Behavior |
 |---------|----------|
 | 1-character query | Reject with 400: "Query must be at least 2 characters" |
-| Common stop words only ("the", "a", "an") | Execute but expect low relevance; no special handling |
+| Broad single-term query (releases) | Degraded mode: capped unranked results + refinement hint |
+| Common stop words only ("the", "a", "an") | Execute but tsvector strips them; may return 0 results |
 | Query > 200 characters | Reject with 400: "Query too long" |
-| `limit` > 100 | Clamp to 100 silently (or reject with 400) |
+| `limit` > 50 | Clamp to 50 silently |
 | `limit` < 1 | Default to 20 |
 | Empty `q` with filters only | Allowed — browse mode (filter-only queries return by year desc) |
 
 ## Timeout Budget Breakdown
 
-Total: 5,000ms hard limit.
+Per-statement timeout: 2,000ms. Set via `SET statement_timeout = '2s'` on a pinned connection (`db.connection().execute()`).
 
 | Phase | Budget |
 |-------|--------|
 | Query parsing + validation | < 5ms |
-| SQL execution | < 4,500ms |
+| SQL execution (per entity type) | < 2,000ms |
 | Response serialization | < 50ms |
-| Overhead (connection, middleware) | ~445ms |
+| Overhead (connection, middleware) | ~50ms |
 
-If SQL execution exceeds 4,500ms, cancel via `statement_timeout` and return 504 with partial results or error.
+If a single entity type query exceeds 2s, it is cancelled via `statement_timeout` (error code `57014`). The search continues with remaining entity types and returns partial results with `hint: "Some results may be incomplete due to query complexity"`.
+
+Total wall time for multi-entity search is bounded to ~8s worst case (4 entity types x 2s each), but typically completes in < 1s for specific queries.
