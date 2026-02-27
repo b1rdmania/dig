@@ -69,6 +69,7 @@ export interface SearchResponse {
     elapsed_ms: number;
     hint: string | null;
     degraded: boolean;
+    degraded_reason: string | null;
   };
 }
 
@@ -168,6 +169,29 @@ export function validateSearchParams(params: SearchParams): SearchError | null {
     }
   }
   return null;
+}
+
+/**
+ * Check if a query string produces an empty tsquery after PG normalization.
+ * Stop words like "The", "A", "An" get stripped entirely, producing an empty
+ * tsquery that matches everything — causing a full table scan and timeout.
+ * We detect these client-side to short-circuit before hitting the DB.
+ */
+const ENGLISH_STOP_WORDS = new Set([
+  "a", "about", "an", "and", "are", "as", "at", "be", "but", "by", "for",
+  "from", "had", "has", "have", "he", "her", "his", "how", "i", "if", "in",
+  "into", "is", "it", "its", "just", "me", "my", "no", "not", "of", "on",
+  "or", "our", "s", "she", "so", "t", "that", "the", "their", "them", "then",
+  "there", "these", "they", "this", "to", "too", "us", "very", "was", "we",
+  "what", "when", "which", "who", "will", "with", "would", "you", "your",
+]);
+
+function isEmptyTsquery(q: string): boolean {
+  // After lowercasing and splitting, if every token is a stop word, the
+  // tsquery will be empty and match all rows (or none, depending on PG version).
+  const tokens = q.toLowerCase().trim().split(/\s+/).filter(t => t.length > 0);
+  if (tokens.length === 0) return true;
+  return tokens.every(t => ENGLISH_STOP_WORDS.has(t));
 }
 
 async function getBatchInfo(db: Kysely<Database>): Promise<{ batchId: string; dumpDate: string }> {
@@ -565,6 +589,25 @@ export async function search(
   const limit = Math.min(Math.max(params.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
   const cursorData = params.cursor ? decodeCursor(params.cursor) : null;
 
+  // Short-circuit: if the query is entirely stop words, the tsquery will be
+  // empty and match everything (causing a full table scan / timeout).
+  // Return empty results immediately with a hint.
+  if (params.q && isEmptyTsquery(params.q)) {
+    return {
+      results: [],
+      pagination: { cursor: null, has_more: false, total_estimate: null },
+      meta: {
+        query: params.q,
+        type: params.type ?? null,
+        filters_applied: {},
+        elapsed_ms: Date.now() - start,
+        hint: "Query contains only common words. Try more specific search terms.",
+        degraded: true,
+        degraded_reason: "empty_tsquery",
+      },
+    };
+  }
+
   const broad = isBroadQuery(params);
 
   // Use a single connection with statement_timeout to enforce per-query time limits.
@@ -590,6 +633,7 @@ export async function search(
       let hasMore = false;
       let hint: string | null = null;
       let degraded = false;
+      let degradedReason: string | null = null;
 
       for (const entityType of types) {
         try {
@@ -606,6 +650,7 @@ export async function search(
             allResults.push(...results);
             if (typeHasMore) hasMore = true;
             degraded = true;
+            degradedReason = "broad_query";
             hint = "Broad query \u2014 showing recent matches. Add filters or more search terms for ranked results.";
             continue;
           }
@@ -632,6 +677,7 @@ export async function search(
             allResults.push(...results);
             if (typeHasMore) hasMore = true;
             degraded = true;
+            degradedReason = degradedReason ?? (capped ? "filtered_capped" : "filtered");
             hint = hint ?? (capped
               ? "Filtered results capped \u2014 try narrowing your search for complete results."
               : "Filtered results \u2014 showing recent matches. Remove filters for relevance-ranked results.");
@@ -648,6 +694,7 @@ export async function search(
           // If a single entity type query times out (57014), skip it gracefully
           if (err.code === "57014") {
             hint = hint ?? "Some results may be incomplete due to query complexity";
+            degradedReason = degradedReason ?? "statement_timeout";
             continue;
           }
           throw err;
@@ -703,6 +750,7 @@ export async function search(
           elapsed_ms: Date.now() - start,
           hint,
           degraded,
+          degraded_reason: degradedReason,
         },
       };
     } finally {

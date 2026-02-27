@@ -140,6 +140,7 @@ describe("SearchResponse shape", () => {
         elapsed_ms: 96,
         hint: null,
         degraded: false,
+        degraded_reason: null,
       },
     };
 
@@ -177,6 +178,7 @@ describe("SearchResponse shape", () => {
         elapsed_ms: 45,
         hint: "Broad query — showing recent matches. Add filters or more search terms for ranked results.",
         degraded: true,
+        degraded_reason: "broad_query",
       },
     };
 
@@ -189,7 +191,7 @@ describe("SearchResponse shape", () => {
     const response: SearchResponse = {
       results: [],
       pagination: { cursor: null, has_more: false, total_estimate: null },
-      meta: { query: "nonexistent", type: null, filters_applied: {}, elapsed_ms: 5, hint: "Try a different spelling", degraded: false },
+      meta: { query: "nonexistent", type: null, filters_applied: {}, elapsed_ms: 5, hint: "Try a different spelling", degraded: false, degraded_reason: null },
     };
 
     expect(response.results).toHaveLength(0);
