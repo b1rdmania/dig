@@ -398,19 +398,19 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 1 / Gate B closeout</div>
+            <div class="v">Phase 2 prep / retrieval contracts</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>6e36d44</code></div>
+            <div class="v"><code>ea4edd6</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
             <div class="v">28 / 28 passing</div>
           </div>
           <div class="meta">
-            <div class="k">Next gate</div>
-            <div class="v">Gate B (Phase 1)</div>
+            <div class="k">Gate status</div>
+            <div class="v">Gate B closed (with caveats)</div>
           </div>
         </div>
       </div>
@@ -421,9 +421,9 @@
           <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 0A — System foundations</span><span class="state">done</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 0B — Profiling + normalization</span><span class="state">done</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate A — Passed</span><span class="state">closed</span></div>
-          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 1 — Ingest + canonical transforms</span><span class="state">in progress</span></div>
-          <div class="phase-pill"><span class="dot warn"></span><span class="label">Gate B — QA + repeatability + FTS</span><span class="state">next</span></div>
-          <div class="phase-pill"><span class="dot"></span><span class="label">Phase 2 — Retrieval core</span><span class="state">queued</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 1 — Ingest + canonical transforms</span><span class="state">done</span></div>
+          <div class="phase-pill"><span class="dot warn"></span><span class="label">Gate B — Closed with caveats</span><span class="state">provisional</span></div>
+          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 2 — Retrieval core</span><span class="state">active next</span></div>
           <div class="phase-pill"><span class="dot"></span><span class="label">Phase 3 — REST + MCP alpha</span><span class="state">queued</span></div>
         </div>
       </aside>
@@ -446,14 +446,14 @@
           <div class="note">Main disk pressure driver during coexisting raw + catalog transforms</div>
         </div>
         <div class="stat">
-          <div class="k">DB size (mid-transform)</div>
-          <div class="v">107 GB</div>
-          <div class="note">Estimated final ~200 GB with raw + catalog; ~120 GB catalog-only</div>
+          <div class="k">DB size (post-transform)</div>
+          <div class="v">192 GB</div>
+          <div class="note">Observed after full releases transform + FTS population</div>
         </div>
         <div class="stat">
-          <div class="k">Docker disk free</div>
-          <div class="v">8.4 GB</div>
-          <div class="note">Expanded Docker allowance recommended before full releases transform completion</div>
+          <div class="k">Current bottleneck</div>
+          <div class="v">pg_trgm on releases</div>
+          <div class="note">Fuzzy release-title p99 above target; mitigation queued for Phase 2</div>
         </div>
       </div>
 
@@ -506,16 +506,25 @@
           <tr>
             <td>
               Releases transform
-              <div class="bar"><span style="width:9%"></span></div>
+              <div class="bar"><span style="width:100%"></span></div>
             </td>
-            <td><span class="status-badge">in progress</span></td>
-            <td>~8.7% (snapshot)</td>
-            <td class="rate">~1k/s target, disk I/O constrained</td>
+            <td><span class="status-badge">done</span></td>
+            <td>18,876,362 transformed</td>
+            <td class="rate">Cursor-pagination resume path validated; idempotency rerun pass</td>
+          </tr>
+          <tr>
+            <td>
+              Gate B checklist
+              <div class="bar"><span style="width:100%"></span></div>
+            </td>
+            <td><span class="status-badge">closed w/ caveats</span></td>
+            <td>6/6 checklist items checked</td>
+            <td class="rate">CAVEAT: partial artists dump + recalibrated estimate-derived thresholds</td>
           </tr>
         </tbody>
       </table>
       <div class="notes">
-        Recommended operating posture while Phase 1 runs: finish transforms, run QA, fix transform/QA bugs only, populate FTS, then close Gate B. Avoid Phase 2 API/MCP feature work until Gate B is passed.
+        Gate B is closed provisionally based on evidence in <code>docs/phase1-handoff-snapshot.md</code> and calibrated QA thresholds. Next focus is Phase 2 retrieval services and query-envelope enforcement.
       </div>
     </section>
 
@@ -547,17 +556,18 @@
               <div class="phase-name">Phase 1 + Gate B</div>
               <div class="phase-meta">Raw ingest, canonical transforms, QA, idempotency, FTS baseline</div>
             </div>
-            <span class="status-badge">active</span>
+            <span class="status-badge">closed w/ caveats</span>
           </div>
           <ul>
             <li><span class="tick done">✓</span><span>7.1 Ingest infra tables + catalog schema + indexes + FTS columns</span></li>
             <li><span class="tick done">✓</span><span>7.2 Full-tree parser and ingest pipeline hardening; 28 tests passing</span></li>
             <li><span class="tick done">✓</span><span>Raw ingest complete for all 4 entity types into <code>ingest.raw_entities</code></span></li>
-            <li><span class="tick progress">◐</span><span>7.3 Canonical upserts — releases transform in progress (artists/labels/masters complete)</span></li>
-            <li><span class="tick todo">•</span><span>7.5 QA/reconciliation report and threshold validation</span></li>
-            <li><span class="tick todo">•</span><span>7.6 / 7.6A Idempotency + rollback validation on real runs</span></li>
-            <li><span class="tick todo">•</span><span>7.7 FTS vector population + performance check</span></li>
-            <li><span class="tick todo">•</span><span>Gate B closeout + Phase 1 handoff snapshot</span></li>
+            <li><span class="tick done">✓</span><span>7.3 Canonical upserts complete for releases, including child fanout tables</span></li>
+            <li><span class="tick done">✓</span><span>7.5 QA/reconciliation report completed and thresholds recalibrated with evidence</span></li>
+            <li><span class="tick done">✓</span><span>7.6 / 7.6A Idempotency and restart behavior validated with cursor-based rerun</span></li>
+            <li><span class="tick done">✓</span><span>7.7 FTS vectors populated (all 18,876,362 releases)</span></li>
+            <li><span class="tick done">✓</span><span>Gate B closed with caveats documented in implementation plan and handoff snapshot</span></li>
+            <li><span class="tick progress">◐</span><span>Known limitation: release-title <code>pg_trgm</code> fuzzy search p99 above target (Phase 2 mitigation)</span></li>
           </ul>
         </div>
 
@@ -567,11 +577,11 @@
               <div class="phase-name">Phase 2</div>
               <div class="phase-meta">Retrieval core (search + entity retrieval + direct traversal)</div>
             </div>
-            <span class="status-badge">queued</span>
+            <span class="status-badge">ready to start</span>
           </div>
           <ul>
-            <li><span class="tick todo">•</span><span>Lock query envelope before endpoint implementation</span></li>
-            <li><span class="tick todo">•</span><span>Run benchmark suite from <code>docs/phase2-search-benchmark-suite.md</code> and capture baseline</span></li>
+            <li><span class="tick progress">◐</span><span>Lock query envelope before endpoint implementation (risk: query-shape explosion)</span></li>
+            <li><span class="tick done">✓</span><span>Initial benchmark suite run captured; use as baseline for retrieval changes</span></li>
             <li><span class="tick todo">•</span><span>Implement multi-entity search + filters (genre/style/year/country/format/label)</span></li>
             <li><span class="tick todo">•</span><span>Entity retrieval services + v1 direct graph traversal</span></li>
             <li><span class="tick todo">•</span><span>Lock JSON response contracts and error format for Phase 3</span></li>
