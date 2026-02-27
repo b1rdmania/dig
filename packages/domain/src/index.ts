@@ -11,6 +11,7 @@ export {
   search,
   validateSearchParams,
   isBroadQuery,
+  getTimeoutStats,
   type SearchParams,
   type SearchResponse,
   type SearchResult,

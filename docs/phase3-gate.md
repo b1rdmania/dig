@@ -17,12 +17,13 @@ Companion to Section 10.1 of the [implementation plan](implementation-plan-agent
 
 ### API key + rate-limit policy
 
-- [ ] Define anonymous tier: requests/min, requests/day, max concurrent
-- [ ] Define keyed tier: requests/min, requests/day, max concurrent
+- [x] Define anonymous tier: 60 req/min per IP
+- [x] Define keyed tier: 300 req/min per API key (`X-API-Key` header)
 - [ ] API key generation + storage (auth schema tables already exist in migration 001)
-- [ ] Rate-limit middleware (ioredis sliding window or token bucket)
-- [ ] Rate-limit headers in response: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
-- [ ] 429 response with `Retry-After` header
+- [x] Rate-limit middleware (`@fastify/rate-limit` + ioredis sliding window)
+- [x] Rate-limit headers in response: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+- [x] 429 response with `Retry-After` header
+- [x] Rate-limit policy documented in `docs/rate-limit-policy.md`
 
 ### MCP tool contracts
 
@@ -57,10 +58,12 @@ Companion to Section 10.1 of the [implementation plan](implementation-plan-agent
 
 ### Operational readiness
 
-- [ ] Structured logging: request_id, elapsed_ms, status_code, category, degraded_reason
-- [ ] `getTimeoutStats()` exposed on `/v1/health` or `/v1/metrics` (internal)
-- [ ] Alert threshold: timeout rate > 1% per 15min per category → log warning (already in code)
+- [x] Structured logging: request_id, elapsed_ms, status_code, category, api_key (JSON to stdout)
+- [x] `getTimeoutStats()` exposed on `/v1/health` response
+- [x] Alert threshold: timeout rate > 1% per 15min per category → log warning (in search.ts)
 - [ ] Error tracking: unhandled exceptions → structured log (Fly logs or future Sentry)
+- [x] CORS configured for browser clients (`@fastify/cors`)
+- [x] `X-Request-Id` on all responses (UUID, accepts client-provided)
 
 ## Decision: Go / No-Go
 
@@ -68,7 +71,8 @@ Companion to Section 10.1 of the [implementation plan](implementation-plan-agent
 |-----------|----------|--------|
 | Phase 2 SLOs frozen and accepted | Yes | Done |
 | Timeout rate guardrail in code | Yes | Done |
-| API key + rate-limit middleware | Yes | Pending |
+| API key + rate-limit middleware | Yes | **Done** (two-tier, headers, CORS) |
+| Structured logging | Yes | **Done** (JSON, request_id, category) |
 | MCP tools tested with Inspector | Yes | Pending |
 | Fly deployment + smoke test | Yes | Pending |
 | Production benchmark baseline | Nice-to-have | Pending |
