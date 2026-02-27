@@ -3,7 +3,7 @@
 **Date**: 2026-02-26
 **Batch ID**: `e0050fc3-6176-491a-8d78-0fc02a6464f7`
 **Dump Date**: 2026-02-01 (Discogs monthly data dump)
-**Gate B Status**: Provisional — pipeline complete, QA gate pending threshold recalibration + full artists import
+**Gate B Status**: CLOSED WITH CAVEATS — `CAVEAT:partial-artists`, `CAVEAT:recalibrated-estimates`
 
 ---
 
