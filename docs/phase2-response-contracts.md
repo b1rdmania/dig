@@ -287,3 +287,99 @@ All error responses use this shape. No exceptions.
 - `error.message` is always a human-readable string.
 - `error.details` is `null` or a JSON object with additional context (never a string).
 - Error responses never include a `results` or entity key — only `error`.
+
+## 5. MCP Tool Contracts
+
+MCP tools return the same JSON payloads as REST, wrapped in MCP `content` blocks. Error taxonomy is identical.
+
+### MCP server config
+
+```jsonc
+// Claude Desktop / Claude Code — claude_desktop_config.json or .claude/settings.json
+{
+  "mcpServers": {
+    "dig-catalog": {
+      "url": "http://localhost:3001/sse"
+    }
+  }
+}
+```
+
+### Tools
+
+| Tool | REST equivalent | Parameters |
+|------|----------------|------------|
+| `search_catalog` | `GET /v1/search` | query, type?, genre?, style?, year?, year_min?, year_max?, country?, limit?, cursor? |
+| `get_artist` | `GET /v1/artists/:id` | discogs_id |
+| `get_label` | `GET /v1/labels/:id` | discogs_id |
+| `get_master` | `GET /v1/masters/:id` | discogs_id |
+| `get_release` | `GET /v1/releases/:id` | discogs_id |
+| `traverse_links` | `GET /v1/{entity}/:id/{link}` | link_type, discogs_id, limit?, cursor? |
+
+### Output format
+
+Each tool returns a `content` array with a single `text` block containing pretty-printed JSON. The JSON matches the corresponding REST response shape exactly (including `degraded`, `degraded_reason`, and `provenance`).
+
+```jsonc
+// Successful result
+{
+  "content": [{ "type": "text", "text": "{ \"results\": [...], \"meta\": { ... } }" }]
+}
+
+// Error result
+{
+  "content": [{ "type": "text", "text": "{ \"error\": { \"code\": \"NOT_FOUND\", ... } }" }],
+  "isError": true
+}
+```
+
+### Example: search_catalog response
+
+```jsonc
+// Tool call: search_catalog({ query: "radiohead", type: "artist", limit: 3 })
+{
+  "results": [
+    {
+      "type": "artist",
+      "discogs_id": 3840,
+      "name": "Radiohead",
+      "title": null,
+      "year": null,
+      "country": null,
+      "data_quality": "Needs Vote",
+      "relevance": 0.1,
+      "provenance": { "source": "discogs", "dump_date": "2026-02-01", "discogs_id": 3840 }
+    }
+  ],
+  "pagination": { "cursor": null, "has_more": false, "total_estimate": null },
+  "meta": {
+    "query": "radiohead",
+    "type": "artist",
+    "filters_applied": {},
+    "elapsed_ms": 241,
+    "hint": null,
+    "degraded": false,
+    "degraded_reason": null
+  }
+}
+```
+
+### Example: traverse_links response
+
+```jsonc
+// Tool call: traverse_links({ link_type: "artist_releases", discogs_id: 3840, limit: 3 })
+{
+  "links": [
+    {
+      "type": "release",
+      "discogs_id": 3165,
+      "title": "Kid A",
+      "year": 2000,
+      "role": null,
+      "provenance": { "source": "discogs", "dump_date": "2026-02-01", "discogs_id": 3165 }
+    }
+  ],
+  "pagination": { "cursor": "eyJkaXNjb2dzX2lkIjozMTY1fQ", "has_more": true, "total_estimate": null },
+  "meta": { "source_type": "artist", "source_discogs_id": 3840, "link_type": "releases", "elapsed_ms": 25 }
+}
+```

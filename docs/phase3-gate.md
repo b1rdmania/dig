@@ -27,11 +27,15 @@ Companion to Section 10.1 of the [implementation plan](implementation-plan-agent
 
 ### MCP tool contracts
 
-- [ ] Lock MCP tool schemas to current response contracts (including `meta.degraded_reason`)
-- [ ] Tools: `search_catalog`, `get_artist`, `get_label`, `get_master`, `get_release`, `explain_relationships`
-- [ ] Each tool returns structured JSON matching `docs/phase2-response-contracts.md`
-- [ ] Tool descriptions include parameter constraints from `docs/phase2-query-envelope.md`
-- [ ] Test with MCP Inspector and Claude Desktop
+- [x] Lock MCP tool schemas to current response contracts (including `meta.degraded_reason`)
+- [x] Tools: `search_catalog`, `get_artist`, `get_label`, `get_master`, `get_release`, `traverse_links`
+- [x] Each tool returns structured JSON matching `docs/phase2-response-contracts.md`
+- [x] Tool descriptions include parameter constraints from `docs/phase2-query-envelope.md`
+- [x] 18 contract tests passing (`apps/mcp/src/__tests__/tools-contract.test.ts`)
+- [x] 47-assertion smoke test passing against live MCP server (`apps/mcp/src/smoke-test.ts`)
+- [x] Error taxonomy: INVALID_REQUEST, NOT_FOUND, QUERY_TIMEOUT, INTERNAL_ERROR (same as REST)
+- [ ] Test with Claude Desktop (requires Fly deployment or local tunnel)
+- [ ] Test with Claude Code (requires MCP server config)
 
 ### Fly.io deployment runbook
 
@@ -73,7 +77,7 @@ Companion to Section 10.1 of the [implementation plan](implementation-plan-agent
 | Timeout rate guardrail in code | Yes | Done |
 | API key + rate-limit middleware | Yes | **Done** (two-tier, headers, CORS) |
 | Structured logging | Yes | **Done** (JSON, request_id, category) |
-| MCP tools tested with Inspector | Yes | Pending |
+| MCP tools wired + contract tested | Yes | **Done** (6 tools, 18 unit + 47 smoke) |
 | Fly deployment + smoke test | Yes | Pending |
 | Production benchmark baseline | Nice-to-have | Pending |
 | Rollback runbook documented | Yes | Pending |
