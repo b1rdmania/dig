@@ -398,19 +398,19 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 2 prep / retrieval contracts</div>
+            <div class="v">Phase 2 implementation + benchmarks</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>4fb59b8</code></div>
+            <div class="v"><code>584bfa9</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
             <div class="v">52 / 52 passing</div>
           </div>
           <div class="meta">
-            <div class="k">Gate status</div>
-            <div class="v">Gate B closed (with caveats)</div>
+            <div class="k">Benchmark status</div>
+            <div class="v">3/7 pass, 4 need mitigation</div>
           </div>
         </div>
       </div>
@@ -423,7 +423,7 @@
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate A — Passed</span><span class="state">closed</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 1 — Ingest + canonical transforms</span><span class="state">done</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate B — Closed with caveats</span><span class="state">closed</span></div>
-          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 2 — Retrieval core</span><span class="state">active next</span></div>
+          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 2 — Retrieval core</span><span class="state">in progress</span></div>
           <div class="phase-pill"><span class="dot"></span><span class="label">Phase 3 — REST + MCP alpha</span><span class="state">queued</span></div>
         </div>
       </aside>
@@ -577,15 +577,20 @@
               <div class="phase-name">Phase 2</div>
               <div class="phase-meta">Retrieval core (search + entity retrieval + direct traversal)</div>
             </div>
-            <span class="status-badge">ready to start</span>
+            <span class="status-badge">in progress</span>
           </div>
           <ul>
             <li><span class="tick done">✓</span><span>Query envelope locked (<code>docs/phase2-query-envelope.md</code>): filters, sorts, fuzzy policy, timeout budget</span></li>
             <li><span class="tick done">✓</span><span>Response contracts locked (<code>docs/phase2-response-contracts.md</code>): search, entity detail, traversal, errors</span></li>
             <li><span class="tick done">✓</span><span>Search mitigation plan (<code>docs/phase2-search-mitigation.md</code>): release fuzzy disabled in v1</span></li>
-            <li><span class="tick done">✓</span><span>Initial benchmark suite run captured; dedicated runner added at <code>apps/api/src/benchmark.ts</code></span></li>
-            <li><span class="tick todo">•</span><span>Implement multi-entity search + filters (genre/style/year/country/format/label)</span></li>
-            <li><span class="tick todo">•</span><span>Entity retrieval services + v1 direct graph traversal</span></li>
+            <li><span class="tick done">✓</span><span>Multi-entity FTS search with filters (genre/style/year/country) + fuzzy fallback on artist/label/master</span></li>
+            <li><span class="tick done">✓</span><span>Entity retrieval services: artist, label, master, release (all child tables joined)</span></li>
+            <li><span class="tick done">✓</span><span>Traversal services: 5 link types (artist→releases, artist→masters, label→releases, master→releases, release→credits)</span></li>
+            <li><span class="tick done">✓</span><span>Fastify /v1 routes wired: search, entities, traversal — all live-tested against 192GB database</span></li>
+            <li><span class="tick done">✓</span><span>Benchmark runner (<code>pnpm benchmark:search</code>): 32-query suite, 8 categories, acceptance criteria checking</span></li>
+            <li><span class="tick progress">◐</span><span>Benchmark results: 3/7 pass (release-fts, unicode, retrieval). 4 fail on Docker for Mac — needs native PG migration</span></li>
+            <li><span class="tick todo">•</span><span>Fix <code>statement_timeout</code> (not enforced without transaction context)</span></li>
+            <li><span class="tick todo">•</span><span>Migrate to native Postgres (brew) and re-benchmark</span></li>
             <li><span class="tick todo">•</span><span>Rate limit middleware + ops hooks (request timing, query logging)</span></li>
           </ul>
         </div>
