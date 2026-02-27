@@ -89,7 +89,7 @@ const MIN_RANK_THRESHOLD = 0.0001;
 /** Fuzzy similarity threshold for artists (289k rows — fast) */
 const SIMILARITY_ARTIST = 0.3;
 /** Stricter fuzzy threshold for labels (2.3M) and masters (2.5M) */
-const SIMILARITY_LABEL_MASTER = 0.45;
+const SIMILARITY_LABEL_MASTER = 0.5;
 /** Max fuzzy results for label/master to cap candidate scan */
 const FUZZY_CAP_LABEL_MASTER = 5;
 
