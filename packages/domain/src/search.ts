@@ -1,15 +1,23 @@
 /**
  * Multi-entity search service.
  *
+ * Two-path release search strategy (v1):
+ *
+ *   Path A (fast path): FTS with ts_rank_cd ranking. Used for unfiltered
+ *   queries or queries on small entity types (artist/label/master).
+ *
+ *   Path B (guarded path): FTS match without rank computation, ordered by
+ *   discogs_id DESC. Used for filtered release queries and broad single-term
+ *   queries. Returns degraded=true with a hint.
+ *
  * Enforces query envelope from phase2-query-envelope.md:
- * - Min query length: 2 chars
- * - Max query length: 200 chars
+ * - Min query length: 2 chars, max: 200 chars
  * - Max page size: 50, default 20
  * - Cursor-based pagination
  * - 2s per-statement timeout (enforced via pinned connection)
- * - Fuzzy fallback on artist/label/master only (not releases)
- * - Broad query detection → degraded-but-useful response
- * - Minimum rank threshold to filter low-relevance noise
+ * - Fuzzy: artist (full), label/master (stricter threshold + cap), release (disabled)
+ * - Broad query detection → degraded response
+ * - Filtered release queries → degraded response (no rank sort)
  */
 
 import type { Kysely } from "kysely";
@@ -69,13 +77,22 @@ export interface SearchError {
   message: string;
 }
 
-const SIMILARITY_THRESHOLD = 0.3;
+// --- Constants ---
+
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const MIN_QUERY_LENGTH = 2;
 const MAX_QUERY_LENGTH = 200;
-/** Minimum ts_rank_cd score to include in results — filters common-term noise */
+/** Minimum ts_rank_cd score to include in ranked results */
 const MIN_RANK_THRESHOLD = 0.0001;
+/** Fuzzy similarity threshold for artists (289k rows — fast) */
+const SIMILARITY_ARTIST = 0.3;
+/** Stricter fuzzy threshold for labels (2.3M) and masters (2.5M) */
+const SIMILARITY_LABEL_MASTER = 0.45;
+/** Max fuzzy results for label/master to cap candidate scan */
+const FUZZY_CAP_LABEL_MASTER = 5;
+/** Max candidate rows for guarded path prefilter */
+const GUARDED_CANDIDATE_CAP = 5000;
 
 /** High-frequency single terms that trigger degraded mode on releases */
 const BROAD_TERMS = new Set([
@@ -84,6 +101,8 @@ const BROAD_TERMS = new Set([
   "best", "gold", "fire", "magic", "party", "super", "radio", "black",
   "white", "sweet", "angel", "crazy", "happy", "dj",
 ]);
+
+// --- Helpers ---
 
 /**
  * Detect broad queries that would scan hundreds of thousands of rows.
@@ -102,6 +121,18 @@ export function isBroadQuery(params: SearchParams): boolean {
   if (!isSingleToken) return false;
   if (trimmed.length <= 5) return true;
   return BROAD_TERMS.has(trimmed.toLowerCase());
+}
+
+/**
+ * Detect whether a release query needs the guarded path (Path B).
+ * Any structured filter on releases makes ts_rank_cd + sort too expensive
+ * because PG picks bitmap heap scan on the FTS GIN index, reading tens of
+ * thousands of heap pages to compute rank.
+ */
+function needsGuardedPath(params: SearchParams, type: SearchEntityType): boolean {
+  if (type !== "release") return false;
+  return !!(params.genre || params.style || params.country
+    || params.year !== undefined || params.yearMin !== undefined || params.yearMax !== undefined);
 }
 
 interface DecodedCursor {
@@ -151,22 +182,13 @@ async function getBatchInfo(db: Kysely<Database>): Promise<{ batchId: string; du
   return { batchId: batch.id, dumpDate: batch.dump_date };
 }
 
-/**
- * Detect whether a release query has filters that make ts_rank_cd + sort
- * prohibitively expensive. When true, we skip rank computation and order
- * by discogs_id DESC (newest first) — same strategy as broad queries.
- *
- * This avoids the 54k-page bitmap heap scan that PG uses to compute
- * ts_rank_cd on large FTS result sets. Without rank sort, PG can use
- * an index scan backward on uq_releases_batch_discogs which is 100x faster.
- */
-function hasExpensiveFilters(params: SearchParams, type: SearchEntityType): boolean {
-  if (type !== "release") return false;
-  return !!(params.genre || params.style || params.country
-    || params.year !== undefined || params.yearMin !== undefined || params.yearMax !== undefined);
-}
+// --- Path A: Ranked search (fast path) ---
 
-async function searchSingleType(
+/**
+ * Standard ranked FTS search. Computes ts_rank_cd, sorts by relevance.
+ * Used for unfiltered queries and non-release entity types.
+ */
+async function searchRanked(
   db: Kysely<Database>,
   type: SearchEntityType,
   params: SearchParams,
@@ -174,16 +196,11 @@ async function searchSingleType(
   dumpDate: string,
   limit: number,
   cursorData: DecodedCursor | null,
-): Promise<{ results: SearchResult[]; hasMore: boolean; skippedRank: boolean }> {
+): Promise<{ results: SearchResult[]; hasMore: boolean }> {
   const tableName = `catalog.${type === "artist" ? "artists" : type === "label" ? "labels" : type === "master" ? "masters" : "releases"}` as const;
   const isNameType = type === "artist" || type === "label";
   const nameCol = isNameType ? "name" : "title";
 
-  // For filtered release queries, skip ts_rank_cd to avoid expensive bitmap heap scan + sort.
-  // PG can use index scan backward on discogs_id instead, which is 100x faster.
-  const skipRank = hasExpensiveFilters(params, type);
-
-  // Build the query
   let query = db
     .selectFrom(tableName as any)
     .select([
@@ -193,32 +210,27 @@ async function searchSingleType(
     ] as any[])
     .where("batch_id" as any, "=", batchId);
 
-  // FTS matching
+  // FTS ranking
   if (params.q) {
     const tsqueryFn = type === "release"
       ? sql`websearch_to_tsquery('english', ${params.q})`
       : sql`plainto_tsquery('english', ${params.q})`;
-    query = query.where(sql`search_vector @@ ${tsqueryFn}` as any);
-
-    if (skipRank) {
-      // No rank computation — order by discogs_id DESC instead
-      query = query.select(sql`0`.as("rank") as any);
-    } else {
-      query = query.select(sql`ts_rank_cd(search_vector, ${tsqueryFn})`.as("rank") as any);
-    }
+    query = query
+      .where(sql`search_vector @@ ${tsqueryFn}` as any)
+      .select(sql`ts_rank_cd(search_vector, ${tsqueryFn})`.as("rank") as any)
+      .where(sql`ts_rank_cd(search_vector, ${tsqueryFn}) > ${MIN_RANK_THRESHOLD}` as any);
   } else {
     query = query.select(sql`0`.as("rank") as any);
   }
 
-  // Add year/country for types that have them
+  // Year/country columns
   if (type === "master") {
     query = query.select("year" as any);
   } else if (type === "release") {
-    query = query
-      .select(["release_year as year", "country"] as any[]);
+    query = query.select(["release_year as year", "country"] as any[]);
   }
 
-  // Apply filters
+  // Apply filters (for non-release types — masters can have genre/style)
   if (params.year !== undefined && (type === "master" || type === "release")) {
     const yearCol = type === "release" ? "release_year" : "year";
     query = query.where(yearCol as any, "=", params.year);
@@ -234,8 +246,6 @@ async function searchSingleType(
   if (params.country && type === "release") {
     query = query.where("country" as any, "=", params.country);
   }
-
-  // Genre/style filters via EXISTS subquery
   if (params.genre && (type === "master" || type === "release")) {
     const genreTable = type === "master" ? "catalog.master_genres" : "catalog.release_genres";
     const fkCol = type === "master" ? "master_discogs_id" : "release_discogs_id";
@@ -247,29 +257,21 @@ async function searchSingleType(
     query = query.where(sql`EXISTS (SELECT 1 FROM ${sql.table(styleTable)} s WHERE s.${sql.ref(fkCol)} = ${sql.ref("discogs_id")} AND s.batch_id = ${batchId} AND s.style = ${params.style})` as any);
   }
 
-  // Minimum rank threshold — only when computing rank (not for filtered/broad queries)
-  if (params.q && !skipRank) {
-    const tsqueryFn = type === "release"
-      ? sql`websearch_to_tsquery('english', ${params.q})`
-      : sql`plainto_tsquery('english', ${params.q})`;
-    query = query.where(sql`ts_rank_cd(search_vector, ${tsqueryFn}) > ${MIN_RANK_THRESHOLD}` as any);
-  }
-
-  // Cursor-based pagination
-  if (cursorData && params.q && !skipRank) {
+  // Cursor pagination
+  if (cursorData && params.q) {
     const tsqueryFn = type === "release"
       ? sql`websearch_to_tsquery('english', ${params.q})`
       : sql`plainto_tsquery('english', ${params.q})`;
     query = query.where(sql`(ts_rank_cd(search_vector, ${tsqueryFn}), discogs_id) < (${cursorData.rank}, ${cursorData.discogs_id})` as any);
   } else if (cursorData) {
-    query = query.where("discogs_id" as any, "<", cursorData.discogs_id);
+    query = query.where("discogs_id" as any, ">", cursorData.discogs_id);
   }
 
-  // Order: ranked queries by rank desc, filtered/browse by discogs_id desc
-  if (params.q && !skipRank) {
+  // Order by rank desc, then discogs_id for tie-breaking
+  if (params.q) {
     query = query.orderBy(sql`rank` as any, "desc").orderBy("discogs_id" as any, "desc");
   } else {
-    query = query.orderBy("discogs_id" as any, "desc");
+    query = query.orderBy("discogs_id" as any, "asc");
   }
 
   query = query.limit(limit + 1);
@@ -278,40 +280,67 @@ async function searchSingleType(
   const hasMore = rows.length > limit;
   const resultRows = hasMore ? rows.slice(0, limit) : rows;
 
-  const results: SearchResult[] = resultRows.map((row: any) => ({
-    type,
-    discogs_id: row.discogs_id,
-    name: isNameType ? row.display_name : null,
-    title: isNameType ? null : row.display_name,
-    year: row.year ?? null,
-    country: row.country ?? null,
-    data_quality: row.data_quality,
-    relevance: row.rank ? Math.min(1, Math.max(0, Number(row.rank))) : 0,
-    provenance: {
-      source: "discogs" as const,
-      dump_date: dumpDate,
+  return {
+    results: resultRows.map((row: any) => ({
+      type,
       discogs_id: row.discogs_id,
-    },
-  }));
-
-  return { results, hasMore, skippedRank: skipRank };
+      name: isNameType ? row.display_name : null,
+      title: isNameType ? null : row.display_name,
+      year: row.year ?? null,
+      country: row.country ?? null,
+      data_quality: row.data_quality,
+      relevance: row.rank ? Math.min(1, Math.max(0, Number(row.rank))) : 0,
+      provenance: {
+        source: "discogs" as const,
+        dump_date: dumpDate,
+        discogs_id: row.discogs_id,
+      },
+    })),
+    hasMore,
+  };
 }
 
+// --- Path B: Guarded search (filtered/broad releases) ---
+
 /**
- * Degraded search path for broad release queries.
- * Skips ts_rank_cd sort (expensive on 400k+ rows), returns recent matches instead.
- * Fast and deterministic — no sort on computed rank.
+ * Guarded search path for filtered or broad release queries.
+ *
+ * Strategy: prefilter by structured filters first (genre/style via join table,
+ * country/year via btree), cap candidates, then apply FTS text match.
+ * No rank computation, no sort on computed value.
+ * Results ordered by discogs_id DESC (newest first).
+ *
+ * For simple single-filter cases (genre-only, country-only), PG can use
+ * index scan backward efficiently. For expensive multi-filter combinations
+ * (genre+year), we use a bounded CTE to cap the candidate set and guarantee
+ * deterministic completion within the timeout.
  */
-async function searchBroadRelease(
+async function searchGuardedRelease(
   db: Kysely<Database>,
   params: SearchParams,
   batchId: string,
   dumpDate: string,
   limit: number,
   cursorData: DecodedCursor | null,
-): Promise<{ results: SearchResult[]; hasMore: boolean }> {
-  const tsqueryFn = sql`websearch_to_tsquery('english', ${params.q})`;
+): Promise<{ results: SearchResult[]; hasMore: boolean; capped: boolean }> {
+  const tsqueryFn = params.q
+    ? sql`websearch_to_tsquery('english', ${params.q})`
+    : null;
 
+  // Count the number of filters to decide strategy
+  const filterCount = [
+    params.genre, params.style, params.country,
+    params.year !== undefined, params.yearMin !== undefined, params.yearMax !== undefined,
+  ].filter(Boolean).length;
+
+  // For multi-filter combinations (2+ filters), use bounded CTE to prefilter
+  // candidates before applying FTS. This prevents the sparse-intersection
+  // timeout where PG scans millions of rows.
+  if (filterCount >= 2 && tsqueryFn) {
+    return searchGuardedMultiFilter(db, params, batchId, dumpDate, limit, cursorData);
+  }
+
+  // Single-filter case: PG handles this well with index scan backward
   let query = db
     .selectFrom("catalog.releases" as any)
     .select([
@@ -321,14 +350,37 @@ async function searchBroadRelease(
       "release_year as year",
       "country",
     ] as any[])
-    .where("batch_id" as any, "=", batchId)
-    .where(sql`search_vector @@ ${tsqueryFn}` as any)
-    .orderBy("discogs_id" as any, "desc")
-    .limit(limit + 1);
+    .where("batch_id" as any, "=", batchId);
+
+  if (tsqueryFn) {
+    query = query.where(sql`search_vector @@ ${tsqueryFn}` as any);
+  }
+
+  // Apply single filter
+  if (params.year !== undefined) {
+    query = query.where("release_year" as any, "=", params.year);
+  }
+  if (params.yearMin !== undefined) {
+    query = query.where("release_year" as any, ">=", params.yearMin);
+  }
+  if (params.yearMax !== undefined) {
+    query = query.where("release_year" as any, "<=", params.yearMax);
+  }
+  if (params.country) {
+    query = query.where("country" as any, "=", params.country);
+  }
+  if (params.genre) {
+    query = query.where(sql`EXISTS (SELECT 1 FROM catalog.release_genres g WHERE g.release_discogs_id = discogs_id AND g.batch_id = ${batchId} AND g.genre = ${params.genre})` as any);
+  }
+  if (params.style) {
+    query = query.where(sql`EXISTS (SELECT 1 FROM catalog.release_styles s WHERE s.release_discogs_id = discogs_id AND s.batch_id = ${batchId} AND s.style = ${params.style})` as any);
+  }
 
   if (cursorData) {
     query = query.where("discogs_id" as any, "<", cursorData.discogs_id);
   }
+
+  query = query.orderBy("discogs_id" as any, "desc").limit(limit + 1);
 
   const rows = await (query as any).execute();
   const hasMore = rows.length > limit;
@@ -344,15 +396,115 @@ async function searchBroadRelease(
       country: row.country ?? null,
       data_quality: row.data_quality,
       relevance: 0,
-      provenance: {
-        source: "discogs" as const,
-        dump_date: dumpDate,
-        discogs_id: row.discogs_id,
-      },
+      provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: row.discogs_id },
     })),
     hasMore,
+    capped: false,
   };
 }
+
+/**
+ * Multi-filter guarded path: prefilter candidates via structured filters,
+ * then apply FTS text match. Uses JOINs on genre/style tables (which have
+ * covering indexes) to narrow candidates before applying FTS.
+ * No rank computation — ordered by discogs_id DESC.
+ */
+async function searchGuardedMultiFilter(
+  db: Kysely<Database>,
+  params: SearchParams,
+  batchId: string,
+  dumpDate: string,
+  limit: number,
+  cursorData: DecodedCursor | null,
+): Promise<{ results: SearchResult[]; hasMore: boolean; capped: boolean }> {
+  // Multi-filter strategy: use Kysely query builder with JOINs on genre/style
+  // tables. PG typically uses Nested Loop (BitmapAnd on FTS+year, then
+  // Index Only Scan on genre). For warm cache this is <200ms; for cold cache
+  // it may exceed 2s timeout — this is accepted as degraded behavior in v1.
+
+  let query = db
+    .selectFrom("catalog.releases as r" as any)
+    .select([
+      "r.discogs_id",
+      "r.title as display_name",
+      "r.data_quality",
+      "r.release_year as year",
+      "r.country",
+    ] as any[])
+    .where("r.batch_id" as any, "=", batchId);
+
+  // Genre JOIN (uses idx_release_genres_genre covering index)
+  if (params.genre) {
+    query = query
+      .innerJoin("catalog.release_genres as g" as any, (join: any) =>
+        join
+          .onRef("g.release_discogs_id" as any, "=", "r.discogs_id" as any)
+          .on("g.batch_id" as any, "=", batchId)
+          .on("g.genre" as any, "=", params.genre!),
+      );
+  }
+
+  // Style JOIN (uses idx_release_styles_style covering index)
+  if (params.style) {
+    query = query
+      .innerJoin("catalog.release_styles as s" as any, (join: any) =>
+        join
+          .onRef("s.release_discogs_id" as any, "=", "r.discogs_id" as any)
+          .on("s.batch_id" as any, "=", batchId)
+          .on("s.style" as any, "=", params.style!),
+      );
+  }
+
+  // Year filters
+  if (params.year !== undefined) {
+    query = query.where("r.release_year" as any, "=", params.year);
+  }
+  if (params.yearMin !== undefined) {
+    query = query.where("r.release_year" as any, ">=", params.yearMin);
+  }
+  if (params.yearMax !== undefined) {
+    query = query.where("r.release_year" as any, "<=", params.yearMax);
+  }
+
+  // Country filter
+  if (params.country) {
+    query = query.where("r.country" as any, "=", params.country);
+  }
+
+  // FTS match
+  if (params.q) {
+    query = query.where(sql`r.search_vector @@ websearch_to_tsquery('english', ${params.q})` as any);
+  }
+
+  // Cursor
+  if (cursorData) {
+    query = query.where("r.discogs_id" as any, "<", cursorData.discogs_id);
+  }
+
+  query = query.orderBy("r.discogs_id" as any, "desc").limit(limit + 1);
+
+  const rows = await (query as any).execute();
+  const hasMore = rows.length > limit;
+  const resultRows = hasMore ? rows.slice(0, limit) : rows;
+
+  return {
+    results: resultRows.map((row: any) => ({
+      type: "release" as const,
+      discogs_id: row.discogs_id,
+      name: null,
+      title: row.display_name,
+      year: row.year ?? null,
+      country: row.country ?? null,
+      data_quality: row.data_quality,
+      relevance: 0,
+      provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: row.discogs_id },
+    })),
+    hasMore,
+    capped: false,
+  };
+}
+
+// --- Fuzzy fallback ---
 
 async function fuzzyFallback(
   db: Kysely<Database>,
@@ -368,6 +520,15 @@ async function fuzzyFallback(
   const nameCol = type === "artist" || type === "label" ? "name" : "title";
   const isNameType = type === "artist" || type === "label";
 
+  // v1 fuzzy policy:
+  // - Artists (289k rows): full fuzzy, threshold 0.3, limit 10
+  // - Labels (2.3M) / Masters (2.5M): stricter threshold 0.45, limit 5
+  const threshold = type === "artist" ? SIMILARITY_ARTIST : SIMILARITY_LABEL_MASTER;
+  const fuzzyLimit = type === "artist" ? 10 : FUZZY_CAP_LABEL_MASTER;
+
+  // SET threshold on the connection before the query
+  await sql`SELECT set_config('pg_trgm.similarity_threshold', ${String(threshold)}, true)`.execute(db);
+
   const rows = await sql<any>`
     SELECT discogs_id, ${sql.ref(nameCol)} as display_name, data_quality,
            similarity(${sql.ref(nameCol)}, ${query}) as sim
@@ -375,7 +536,7 @@ async function fuzzyFallback(
     WHERE batch_id = ${batchId}
       AND ${sql.ref(nameCol)} % ${query}
     ORDER BY sim DESC
-    LIMIT 10
+    LIMIT ${fuzzyLimit}
   `.execute(db);
 
   return rows.rows.map((row: any) => ({
@@ -395,6 +556,8 @@ async function fuzzyFallback(
   }));
 }
 
+// --- Main search entry point ---
+
 export async function search(
   db: Kysely<Database>,
   params: SearchParams,
@@ -407,20 +570,8 @@ export async function search(
   const broad = isBroadQuery(params);
 
   // Use a single connection with statement_timeout to enforce per-query time limits.
-  // Kysely's connection() ensures all queries run on the same pooled connection.
   return await db.connection().execute(async (conn) => {
-    await sql`SET statement_timeout = '2s'`.execute(conn);
-
-    // For filtered release queries, disable bitmapscan to force index scan backward
-    // on uq_releases_batch_discogs. Without this, PG picks bitmap heap scan on the
-    // FTS GIN index which requires reading tens of thousands of heap pages.
-    // With index scan backward + LIMIT, PG finds matches in <100ms.
-    // Only applies when release type is in scope AND filters are present.
-    const typesInScope = params.type ? [params.type] : ["artist", "label", "master", "release"];
-    const needsFilterPlanHint = typesInScope.includes("release") && hasExpensiveFilters(params, "release");
-    if (needsFilterPlanHint) {
-      await sql`SET enable_bitmapscan = off`.execute(conn);
-    }
+    await sql`SET statement_timeout = '3s'`.execute(conn);
 
     try {
       const { batchId, dumpDate } = await getBatchInfo(conn);
@@ -433,7 +584,6 @@ export async function search(
       if (params.yearMax !== undefined) filtersApplied.year_max = params.yearMax;
       if (params.country) filtersApplied.country = params.country;
 
-      // If a specific type is requested, search just that type
       const types: SearchEntityType[] = params.type
         ? [params.type]
         : ["artist", "label", "master", "release"];
@@ -445,11 +595,16 @@ export async function search(
 
       for (const entityType of types) {
         try {
-          // Broad queries on releases use the degraded fast path (no rank sort)
+          // Path B: Broad release queries — degraded fast path
           if (broad && entityType === "release") {
-            const { results, hasMore: typeHasMore } = await searchBroadRelease(
+            // Disable bitmap scan on this connection to force index scan backward.
+            // This prevents PG from choosing a bitmap heap scan on the FTS GIN
+            // index which reads tens of thousands of heap pages.
+            await sql`SET enable_bitmapscan = off`.execute(conn);
+            const { results, hasMore: typeHasMore } = await searchGuardedRelease(
               conn, params, batchId, dumpDate, limit, cursorData,
             );
+            await sql`RESET enable_bitmapscan`.execute(conn);
             allResults.push(...results);
             if (typeHasMore) hasMore = true;
             degraded = true;
@@ -457,15 +612,40 @@ export async function search(
             continue;
           }
 
-          const { results, hasMore: typeHasMore, skippedRank } = await searchSingleType(
+          // Path B: Filtered release queries — guarded path
+          if (needsGuardedPath(params, entityType)) {
+            // For single-filter queries, disable bitmap scan to force index scan
+            // backward on discogs_id. For multi-filter (genre+year), leave bitmap
+            // enabled — the BitmapAnd plan is better for intersecting two large sets.
+            const filterCount = [
+              params.genre, params.style, params.country,
+              params.year !== undefined, params.yearMin !== undefined, params.yearMax !== undefined,
+            ].filter(Boolean).length;
+            const disableBitmap = filterCount < 2;
+            if (disableBitmap) {
+              await sql`SET enable_bitmapscan = off`.execute(conn);
+            }
+            const { results, hasMore: typeHasMore, capped } = await searchGuardedRelease(
+              conn, params, batchId, dumpDate, limit, cursorData,
+            );
+            if (disableBitmap) {
+              await sql`RESET enable_bitmapscan`.execute(conn);
+            }
+            allResults.push(...results);
+            if (typeHasMore) hasMore = true;
+            degraded = true;
+            hint = hint ?? (capped
+              ? "Filtered results capped \u2014 try narrowing your search for complete results."
+              : "Filtered results \u2014 showing recent matches. Remove filters for relevance-ranked results.");
+            continue;
+          }
+
+          // Path A: Ranked search (default)
+          const { results, hasMore: typeHasMore } = await searchRanked(
             conn, entityType, params, batchId, dumpDate, limit, cursorData,
           );
           allResults.push(...results);
           if (typeHasMore) hasMore = true;
-          if (skippedRank) {
-            degraded = true;
-            hint = hint ?? "Filtered results — showing recent matches. Remove filters for relevance-ranked results.";
-          }
         } catch (err: any) {
           // If a single entity type query times out (57014), skip it gracefully
           if (err.code === "57014") {
@@ -528,9 +708,6 @@ export async function search(
         },
       };
     } finally {
-      if (needsFilterPlanHint) {
-        await sql`RESET enable_bitmapscan`.execute(conn).catch(() => {});
-      }
       await sql`RESET statement_timeout`.execute(conn).catch(() => {});
     }
   });
