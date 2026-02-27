@@ -402,7 +402,7 @@
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>ea4edd6</code></div>
+            <div class="v"><code>45fd696</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
@@ -422,7 +422,7 @@
           <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 0B — Profiling + normalization</span><span class="state">done</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate A — Passed</span><span class="state">closed</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 1 — Ingest + canonical transforms</span><span class="state">done</span></div>
-          <div class="phase-pill"><span class="dot warn"></span><span class="label">Gate B — Closed with caveats</span><span class="state">provisional</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Gate B — Closed with caveats</span><span class="state">closed</span></div>
           <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 2 — Retrieval core</span><span class="state">active next</span></div>
           <div class="phase-pill"><span class="dot"></span><span class="label">Phase 3 — REST + MCP alpha</span><span class="state">queued</span></div>
         </div>
@@ -524,7 +524,7 @@
         </tbody>
       </table>
       <div class="notes">
-        Gate B is closed provisionally based on evidence in <code>docs/phase1-handoff-snapshot.md</code> and calibrated QA thresholds. Next focus is Phase 2 retrieval services and query-envelope enforcement.
+        Gate B closed with caveats (<code>CAVEAT:partial-artists</code>, <code>CAVEAT:recalibrated-estimates</code>). Evidence in <code>docs/phase1-handoff-snapshot.md</code>. Phase 2 query envelope, response contracts, and search mitigation plan are locked. Ready for retrieval implementation.
       </div>
     </section>
 
@@ -580,11 +580,13 @@
             <span class="status-badge">ready to start</span>
           </div>
           <ul>
-            <li><span class="tick progress">◐</span><span>Lock query envelope before endpoint implementation (risk: query-shape explosion)</span></li>
+            <li><span class="tick done">✓</span><span>Query envelope locked (<code>docs/phase2-query-envelope.md</code>): filters, sorts, fuzzy policy, timeout budget</span></li>
+            <li><span class="tick done">✓</span><span>Response contracts locked (<code>docs/phase2-response-contracts.md</code>): search, entity detail, traversal, errors</span></li>
+            <li><span class="tick done">✓</span><span>Search mitigation plan (<code>docs/phase2-search-mitigation.md</code>): release fuzzy disabled in v1</span></li>
             <li><span class="tick done">✓</span><span>Initial benchmark suite run captured; use as baseline for retrieval changes</span></li>
             <li><span class="tick todo">•</span><span>Implement multi-entity search + filters (genre/style/year/country/format/label)</span></li>
             <li><span class="tick todo">•</span><span>Entity retrieval services + v1 direct graph traversal</span></li>
-            <li><span class="tick todo">•</span><span>Lock JSON response contracts and error format for Phase 3</span></li>
+            <li><span class="tick todo">•</span><span>Rate limit middleware + ops hooks (request timing, query logging)</span></li>
           </ul>
         </div>
 
