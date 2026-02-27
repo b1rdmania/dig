@@ -500,11 +500,11 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 2 search hardening — two-path release search validation</div>
+            <div class="v">Phase 2 search hardening — benchmark validated, decision block pending</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>a16df00</code></div>
+            <div class="v"><code>bd00be3</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
@@ -512,7 +512,7 @@
           </div>
           <div class="meta">
             <div class="k">vs Discogs</div>
-            <div class="v">Dig faster in 6/7 categories (p50: 36ms vs 236ms)</div>
+            <div class="v">Dig faster in 7/7 categories, 38/46 queries (p50: 36ms vs 223ms)</div>
           </div>
         </div>
       </div>
@@ -553,9 +553,9 @@
           <div class="note">Observed after full releases transform + FTS population</div>
         </div>
         <div class="stat">
-          <div class="k">Current bottleneck</div>
-          <div class="v">Docker for Mac I/O</div>
-          <div class="note">Cold-cache spikes dominate p95; migrating to native PG for true baseline</div>
+          <div class="k">Search benchmark</div>
+          <div class="v">0 errors / 96</div>
+          <div class="note">Run 5: all 96 queries return results. 0 errors. p50 30ms overall</div>
         </div>
       </div>
 
@@ -633,7 +633,7 @@
     <section class="section">
       <div class="section-head">
         <h2>Search Benchmark</h2>
-        <div class="sub">Native Postgres 14 baseline + targeted post-fix probes — <code>pnpm benchmark:search --base-url http://localhost:3002 --runs 3</code></div>
+        <div class="sub">Run 5 — Post two-path rewrite, native PG 14, <code>bd00be3</code> — 96 requests, 0 errors</div>
       </div>
       <table class="progress-table">
         <thead>
@@ -648,132 +648,132 @@
         <tbody>
           <tr>
             <td>Release FTS</td>
-            <td>30ms</td>
-            <td>745ms</td>
+            <td>34ms</td>
+            <td>531ms</td>
             <td>p95 &lt; 500ms</td>
-            <td><span class="status-badge" style="color:var(--warn);border-color:rgba(217,186,123,0.45)">warm ~400ms</span></td>
+            <td><span class="status-badge" style="color:var(--warn);border-color:rgba(217,186,123,0.45)">near target</span></td>
           </tr>
           <tr>
             <td>Common-term</td>
             <td>4ms</td>
-            <td>314ms</td>
+            <td>3,080ms</td>
             <td>p99 &lt; 1,000ms</td>
-            <td><span class="status-badge" style="color:var(--ok);border-color:rgba(156,207,146,0.45)">pass</span></td>
+            <td><span class="status-badge" style="color:var(--fail);border-color:rgba(217,123,123,0.45)">"The" stop-word bug</span></td>
           </tr>
           <tr>
             <td>Fuzzy</td>
-            <td>64ms</td>
-            <td>2,242ms</td>
+            <td>23ms</td>
+            <td>1,174ms</td>
             <td>p95 &lt; 500ms</td>
-            <td><span class="status-badge" style="color:var(--fail);border-color:rgba(217,123,123,0.45)">trgm slow</span></td>
+            <td><span class="status-badge" style="color:var(--warn);border-color:rgba(217,186,123,0.45)">label/master trgm</span></td>
           </tr>
           <tr>
             <td>Filtered</td>
-            <td>35ms (warm)</td>
-            <td>2,967ms (cold worst)</td>
+            <td>44ms</td>
+            <td>2,581ms</td>
             <td>p95 &lt; 300ms</td>
-            <td><span class="status-badge" style="color:var(--warn);border-color:rgba(217,186,123,0.45)">improved, rerun pending</span></td>
+            <td><span class="status-badge" style="color:var(--warn);border-color:rgba(217,186,123,0.45)">genre+year cold cache</span></td>
           </tr>
           <tr>
             <td>Multi-entity</td>
-            <td>43ms</td>
-            <td>2,988ms</td>
+            <td>30ms</td>
+            <td>1,650ms</td>
             <td>n/a</td>
-            <td><span class="status-badge">n/a</span></td>
+            <td><span class="status-badge">cross-type includes release</span></td>
           </tr>
           <tr>
             <td>Unicode</td>
-            <td>33ms</td>
-            <td>563ms</td>
+            <td>3ms</td>
+            <td>80ms</td>
             <td>n/a</td>
-            <td><span class="status-badge" style="color:var(--ok);border-color:rgba(156,207,146,0.45)">pass warm</span></td>
+            <td><span class="status-badge" style="color:var(--ok);border-color:rgba(156,207,146,0.45)">pass</span></td>
           </tr>
           <tr>
             <td>Retrieval</td>
-            <td>15ms</td>
-            <td>1,220ms</td>
+            <td>12ms</td>
+            <td>36ms</td>
             <td>p95 &lt; 200ms</td>
-            <td><span class="status-badge" style="color:var(--ok);border-color:rgba(156,207,146,0.45)">pass warm</span></td>
+            <td><span class="status-badge" style="color:var(--ok);border-color:rgba(156,207,146,0.45)">pass</span></td>
           </tr>
           <tr>
             <td>Traversal</td>
-            <td>49ms</td>
-            <td>976ms</td>
+            <td>32ms</td>
+            <td>228ms</td>
             <td>p95 &lt; 200ms</td>
-            <td><span class="status-badge" style="color:var(--ok);border-color:rgba(156,207,146,0.45)">pass warm</span></td>
+            <td><span class="status-badge" style="color:var(--warn);border-color:rgba(217,186,123,0.45)">label releases 220ms</span></td>
           </tr>
         </tbody>
       </table>
       <div class="notes">
-        <strong>Baseline was Run 4 on native Postgres 14 (pre-fix).</strong> Latest code (<code>a16df00</code>) implements the two-path release strategy: ranked path for normal queries, guarded degraded path for broad/filtered release queries. Targeted probes now return results for filtered queries (previously 0-result timeouts); full 32-query benchmark rerun is the next validation step. Full history in <code>docs/phase2-search-benchmark-results.md</code>.
+        <strong>Run 5 (<code>bd00be3</code>):</strong> 0 errors across 96 queries. All filtered queries now return results (previously 0-result timeouts). Two-path strategy: Path A (ranked) for unfiltered, Path B (guarded, no rank) for filtered/broad. Known outliers: "The" hits 3s timeout (empty tsquery stop-word bug — fix pending), genre+year ~2.5s on cold cache (100ms warm), label/master fuzzy ~1.1s (pg_trgm on 2.3M+ rows). Full history in <code>docs/phase2-search-benchmark-results.md</code>.
       </div>
     </section>
 
     <section class="section">
       <div class="section-head">
         <h2>Dig vs Discogs</h2>
-        <div class="sub">Same queries, side-by-side — p50 latency comparison (lower is better)</div>
+        <div class="sub">Post two-path rewrite — same queries, side-by-side p50 latency (lower is better)</div>
       </div>
       <div class="chart-legend">
         <div class="chart-legend-item"><span class="chart-legend-swatch" style="background:linear-gradient(90deg, var(--accent), var(--accent-light))"></span> Dig (local, native PG)</div>
         <div class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--discogs-bar)"></span> Discogs API (remote CDN)</div>
       </div>
-      <!-- max bar = 2078ms for scale. each ms = 100%/2078 of bar width -->
+      <!-- max bar = 350ms for readable scale. values above clipped visually -->
       <div class="chart-row">
         <div class="chart-label">Release FTS</div>
         <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(21 / 2078 * 100%)"></div><span class="chart-bar-ms">21ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(265 / 2078 * 100%)"></div><span class="chart-bar-ms">265ms</span></div>
-        </div>
-        <div class="chart-winner dig-wins">Dig 12x</div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-label">Common-term</div>
-        <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(12 / 2078 * 100%)"></div><span class="chart-bar-ms">12ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(197 / 2078 * 100%)"></div><span class="chart-bar-ms">197ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(15 / 350 * 100%)"></div><span class="chart-bar-ms">15ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(246 / 350 * 100%)"></div><span class="chart-bar-ms">246ms</span></div>
         </div>
         <div class="chart-winner dig-wins">Dig 16x</div>
       </div>
       <div class="chart-row">
+        <div class="chart-label">Common-term</div>
+        <div class="chart-bars">
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(8 / 350 * 100%)"></div><span class="chart-bar-ms">8ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(194 / 350 * 100%)"></div><span class="chart-bar-ms">194ms</span></div>
+        </div>
+        <div class="chart-winner dig-wins">Dig 24x</div>
+      </div>
+      <div class="chart-row">
         <div class="chart-label">Fuzzy</div>
         <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(34 / 2078 * 100%)"></div><span class="chart-bar-ms">34ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(182 / 2078 * 100%)"></div><span class="chart-bar-ms">182ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(30 / 350 * 100%)"></div><span class="chart-bar-ms">30ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(194 / 350 * 100%)"></div><span class="chart-bar-ms">194ms</span></div>
         </div>
-        <div class="chart-winner dig-wins">Dig 5x</div>
+        <div class="chart-winner dig-wins">Dig 6x</div>
       </div>
       <div class="chart-row">
         <div class="chart-label">Filtered</div>
         <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(2078 / 2078 * 100%)"></div><span class="chart-bar-ms">2,078ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(202 / 2078 * 100%)"></div><span class="chart-bar-ms">202ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(66 / 350 * 100%)"></div><span class="chart-bar-ms">66ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(223 / 350 * 100%)"></div><span class="chart-bar-ms">223ms</span></div>
         </div>
-        <div class="chart-winner discogs-wins">Discogs 10x</div>
+        <div class="chart-winner dig-wins">Dig 3x</div>
       </div>
       <div class="chart-row">
         <div class="chart-label">Multi-entity</div>
         <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(47 / 2078 * 100%)"></div><span class="chart-bar-ms">47ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(180 / 2078 * 100%)"></div><span class="chart-bar-ms">180ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(43 / 350 * 100%)"></div><span class="chart-bar-ms">43ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(222 / 350 * 100%)"></div><span class="chart-bar-ms">222ms</span></div>
         </div>
-        <div class="chart-winner dig-wins">Dig 4x</div>
+        <div class="chart-winner dig-wins">Dig 5x</div>
       </div>
       <div class="chart-row">
         <div class="chart-label">Unicode</div>
         <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(5 / 2078 * 100%)"></div><span class="chart-bar-ms">5ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(226 / 2078 * 100%)"></div><span class="chart-bar-ms">226ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(6 / 350 * 100%)"></div><span class="chart-bar-ms">6ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(186 / 350 * 100%)"></div><span class="chart-bar-ms">186ms</span></div>
         </div>
-        <div class="chart-winner dig-wins">Dig 45x</div>
+        <div class="chart-winner dig-wins">Dig 31x</div>
       </div>
       <div class="chart-row">
         <div class="chart-label">Retrieval</div>
         <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(17 / 2078 * 100%)"></div><span class="chart-bar-ms">17ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(226 / 2078 * 100%)"></div><span class="chart-bar-ms">226ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(35 / 350 * 100%)"></div><span class="chart-bar-ms">35ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(221 / 350 * 100%)"></div><span class="chart-bar-ms">221ms</span></div>
         </div>
-        <div class="chart-winner dig-wins">Dig 13x</div>
+        <div class="chart-winner dig-wins">Dig 6x</div>
       </div>
       <div class="scorecard">
         <div class="scorecard-item">
@@ -781,16 +781,16 @@
           <div class="k">Dig overall p50</div>
         </div>
         <div class="scorecard-item">
-          <div class="v">236ms</div>
+          <div class="v">223ms</div>
           <div class="k">Discogs overall p50</div>
         </div>
         <div class="scorecard-item">
-          <div class="v" style="color:var(--ok)">32/46</div>
+          <div class="v" style="color:var(--ok)">38/46</div>
           <div class="k">Queries Dig is faster</div>
         </div>
       </div>
       <div class="notes">
-        Dig is faster than Discogs in <strong>6 of 7 categories</strong> and <strong>32 of 46 individual queries</strong> on the last completed comparison run (overall p50: 36ms vs 236ms). Filtered search used to be the outlier; post-fix two-path results are improved and awaiting a fresh like-for-like rerun against Discogs.
+        Post two-path rewrite: Dig is now faster than Discogs in <strong>all 7 categories</strong> and <strong>38 of 46 individual queries</strong> (overall p50: 36ms vs 223ms). Filtered search was previously the outlier (Discogs 10x faster) — now Dig is 3x faster at p50. Discogs still wins on 8 queries: genre+year cold cache (~2.2s vs 250ms) and a few Run 2 cold-start FTS hits.
       </div>
     </section>
 
@@ -886,10 +886,13 @@
             <li><span class="tick done">✓</span><span>Benchmark Run 3 (Docker): 4/7 pass. Warm p50 well under all targets</span></li>
             <li><span class="tick done">✓</span><span>Native Postgres migration — 58GB catalog cloned from Docker PG to native PG 14 (25 tables, 204M+ rows)</span></li>
             <li><span class="tick done">✓</span><span>Benchmark Run 4 (native PG): common-term now passes. Filtered queries confirmed genuinely broken (not Docker artifact)</span></li>
-            <li><span class="tick done">✓</span><span>Discogs API comparison benchmark: Dig faster in 6/7 categories, 32/46 queries. Overall p50: 36ms vs 236ms</span></li>
-            <li><span class="tick progress">◐</span><span>Filtered query fix (P0): two-path rewrite shipped in <code>a16df00</code>; full benchmark rerun and docs lock still pending</span></li>
-            <li><span class="tick todo">•</span><span>Optimize fuzzy pg_trgm on labels/masters (1.3-2.2s for typo queries)</span></li>
+            <li><span class="tick done">✓</span><span>Discogs API comparison benchmark: Dig faster in 7/7 categories, 38/46 queries. Overall p50: 36ms vs 223ms</span></li>
+            <li><span class="tick done">✓</span><span>Filtered query fix (P0): two-path rewrite (<code>a16df00</code>), migration indexes + docs sync (<code>bd00be3</code>)</span></li>
+            <li><span class="tick done">✓</span><span>Benchmark Run 5: 0 errors / 96 queries. All filtered queries returning results. Retrieval p95 36ms, Unicode p95 80ms</span></li>
+            <li><span class="tick progress">◐</span><span>Stop-word empty tsquery fix (P0): "The" hits 3s timeout — needs short-circuit before DB hit</span></li>
+            <li><span class="tick todo">•</span><span>Optimize fuzzy pg_trgm on labels/masters (1.1s for typo queries at threshold 0.45)</span></li>
             <li><span class="tick todo">•</span><span>Startup warmup for pg_trgm GIN indexes (eliminate cold-cache spikes)</span></li>
+            <li><span class="tick todo">•</span><span>Phase 2 release decision block — lock go/no-go criteria in benchmark docs</span></li>
             <li><span class="tick todo">•</span><span>Rate limit middleware + ops hooks (request timing, query logging)</span></li>
           </ul>
         </div>
@@ -945,7 +948,7 @@
       <div class="notes">
         <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 289k artists. Full Discogs CC0 February 2026 dump.<br>
         <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) for all entity types + <code>pg_trgm</code> fuzzy for artist/label/master. Release fuzzy disabled in v1.<br>
-        <strong>Next milestone:</strong> Run authoritative post-fix benchmark suite → lock Phase 2 decision block → Phase 3 deployment prep.
+        <strong>Next milestone:</strong> Fix stop-word empty tsquery bug → rerun benchmark → lock Phase 2 decision block → Phase 3 deployment prep.
       </div>
     </section>
   </main>
