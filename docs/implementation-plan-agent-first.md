@@ -496,6 +496,13 @@ Direct graph links only:
 - Rate limit middleware wired (not enforced on public yet)
 - Phase 2 benchmark results recorded (latency + query envelope decisions)
 
+### Reference Docs
+
+- [Query Envelope](phase2-query-envelope.md) — locked input constraints, filter/sort/fuzzy policy
+- [Response Contracts](phase2-response-contracts.md) — locked JSON shapes for search, entity detail, traversal, errors
+- [Search Mitigation](phase2-search-mitigation.md) — known risks (release fuzzy, common terms, deep pagination) with v1 policies
+- [Search Benchmark Suite](phase2-search-benchmark-suite.md) — 32-query benchmark set with targets
+
 ### Done Criteria
 
 - Deterministic results for repeated queries
@@ -503,6 +510,9 @@ Direct graph links only:
 - Traversal scope documented and tested
 - Search p95 latency `< 200ms` on full dataset
 - Rate limit middleware works (tested with API key + IP fallback)
+- Response shapes match `phase2-response-contracts.md` exactly
+- Query envelope enforced per `phase2-query-envelope.md`
+- Search mitigation policies implemented per `phase2-search-mitigation.md`
 
 ### Estimated time
 
