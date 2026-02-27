@@ -39,7 +39,9 @@ GET /v1/search?q=...&type=...&genre=...&year=...&limit=20&cursor=...
     "type": "artist",
     "filters_applied": {},
     "elapsed_ms": 96,
-    "hint": null                      // e.g. "Try a different spelling" when fuzzy unavailable
+    "hint": null,                     // e.g. "Try a different spelling" when fuzzy unavailable
+    "degraded": false,                // true when results are unranked or incomplete
+    "degraded_reason": null           // one of: "empty_tsquery", "broad_query", "filtered", "filtered_capped", "statement_timeout", or null
   }
 }
 ```
@@ -51,6 +53,8 @@ GET /v1/search?q=...&type=...&genre=...&year=...&limit=20&cursor=...
 - `pagination.cursor` is `null` when there are no more results.
 - `pagination.total_estimate` may be `null` if estimation is too expensive.
 - `meta.hint` is `null` unless the system has a suggestion (e.g., fuzzy disabled for releases).
+- `meta.degraded` is `true` when results are returned via a non-ranked path (broad queries, filtered queries, stop-word short-circuits, or statement timeouts).
+- `meta.degraded_reason` provides machine-readable context. Values: `"empty_tsquery"` (query was all stop words), `"broad_query"` (single high-frequency term), `"filtered"` (filtered release path, unranked), `"filtered_capped"` (filtered + candidate cap hit), `"statement_timeout"` (query timed out, partial results).
 
 ## 2. Entity Detail Responses
 

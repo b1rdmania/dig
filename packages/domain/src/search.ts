@@ -78,6 +78,62 @@ export interface SearchError {
   message: string;
 }
 
+// --- Timeout rate tracking ---
+
+/**
+ * Lightweight in-process timeout rate tracker.
+ * Logs a warning if statement_timeout errors exceed 1% of requests
+ * per 15-minute window for any category. Provides operational signal
+ * before users experience sustained degradation.
+ */
+const TIMEOUT_WINDOW_MS = 15 * 60 * 1000;
+const TIMEOUT_ALERT_THRESHOLD = 0.01; // 1%
+
+interface TimeoutBucket {
+  total: number;
+  timeouts: number;
+  windowStart: number;
+}
+
+const timeoutBuckets = new Map<string, TimeoutBucket>();
+
+function trackRequest(category: string, timedOut: boolean): void {
+  const now = Date.now();
+  let bucket = timeoutBuckets.get(category);
+  if (!bucket || now - bucket.windowStart > TIMEOUT_WINDOW_MS) {
+    bucket = { total: 0, timeouts: 0, windowStart: now };
+    timeoutBuckets.set(category, bucket);
+  }
+  bucket.total++;
+  if (timedOut) bucket.timeouts++;
+
+  // Check threshold
+  if (bucket.total >= 10 && bucket.timeouts / bucket.total > TIMEOUT_ALERT_THRESHOLD) {
+    console.warn(
+      `[dig:search] TIMEOUT_RATE_HIGH category=${category} ` +
+      `timeouts=${bucket.timeouts}/${bucket.total} ` +
+      `rate=${(bucket.timeouts / bucket.total * 100).toFixed(1)}% ` +
+      `window=${Math.round((now - bucket.windowStart) / 1000)}s`,
+    );
+  }
+}
+
+/** Expose timeout stats for health/metrics endpoints */
+export function getTimeoutStats(): Record<string, { total: number; timeouts: number; rate: number }> {
+  const now = Date.now();
+  const stats: Record<string, { total: number; timeouts: number; rate: number }> = {};
+  for (const [category, bucket] of timeoutBuckets) {
+    if (now - bucket.windowStart <= TIMEOUT_WINDOW_MS && bucket.total > 0) {
+      stats[category] = {
+        total: bucket.total,
+        timeouts: bucket.timeouts,
+        rate: bucket.timeouts / bucket.total,
+      };
+    }
+  }
+  return stats;
+}
+
 // --- Constants ---
 
 const DEFAULT_LIMIT = 20;
@@ -690,9 +746,11 @@ export async function search(
           );
           allResults.push(...results);
           if (typeHasMore) hasMore = true;
+          trackRequest(entityType, false);
         } catch (err: any) {
           // If a single entity type query times out (57014), skip it gracefully
           if (err.code === "57014") {
+            trackRequest(entityType, true);
             hint = hint ?? "Some results may be incomplete due to query complexity";
             degradedReason = degradedReason ?? "statement_timeout";
             continue;
@@ -711,8 +769,10 @@ export async function search(
           try {
             const fuzzyResults = await fuzzyFallback(conn, entityType, params.q, batchId, dumpDate);
             allResults.push(...fuzzyResults);
+            trackRequest(`${entityType}_fuzzy`, false);
           } catch (err: any) {
             if (err.code === "57014") {
+              trackRequest(`${entityType}_fuzzy`, true);
               hint = hint ?? "Some results may be incomplete due to query complexity";
               continue;
             }
