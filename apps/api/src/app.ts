@@ -7,6 +7,9 @@ import rateLimit from "@fastify/rate-limit";
 import Redis from "ioredis";
 import { createDb } from "@dig/db";
 import { healthCheck } from "@dig/domain";
+import { registerSearchRoutes } from "./routes/v1/search.js";
+import { registerEntityRoutes } from "./routes/v1/entities.js";
+import { registerTraversalRoutes } from "./routes/v1/traversal.js";
 
 export interface AppDeps {
   databaseUrl: string;
@@ -31,11 +34,34 @@ export async function buildApp(deps: AppDeps): Promise<{
     });
   }
 
+  // Global error handler for consistent error format
+  app.setErrorHandler((error: Error & { statusCode?: number }, _req, reply) => {
+    if (error.statusCode === 429) {
+      return reply.status(429).send({
+        error: { code: "RATE_LIMITED", message: "Too many requests", details: { retry_after: 60 } },
+      });
+    }
+    const status = error.statusCode ?? 500;
+    return reply.status(status).send({
+      error: {
+        code: status >= 500 ? "INTERNAL_ERROR" : "INVALID_REQUEST",
+        message: error.message,
+        details: null,
+      },
+    });
+  });
+
+  // Health
   app.get("/v1/health", async (_req, reply) => {
     const status = await healthCheck(db);
     const httpStatus = status.status === "ok" ? 200 : 503;
     return reply.status(httpStatus).send(status);
   });
+
+  // Phase 2 routes
+  registerSearchRoutes(app, db);
+  registerEntityRoutes(app, db);
+  registerTraversalRoutes(app, db);
 
   return { app, db };
 }
