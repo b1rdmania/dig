@@ -1,0 +1,37 @@
+{
+  "source": "musicbrainz",
+  "tier": "enrichment",
+  "versioning": {
+    "mode": "batch",
+    "key_field": "source_batch_key"
+  },
+  "license": {
+    "type": "public_domain",
+    "notes": "Verify current terms before production ingest."
+  },
+  "datasets": [
+    {
+      "name": "artist_relations",
+      "entity_type": "artist",
+      "priority": "high",
+      "fields": ["id", "name", "relations", "area", "begin_area", "end_area"]
+    },
+    {
+      "name": "label_relations",
+      "entity_type": "label",
+      "priority": "medium",
+      "fields": ["id", "name", "relations", "area"]
+    },
+    {
+      "name": "release_relations",
+      "entity_type": "release",
+      "priority": "medium",
+      "fields": ["id", "title", "relations", "date", "country"]
+    }
+  ],
+  "output_contract": {
+    "required": ["source", "source_id", "confidence", "match_method"],
+    "format": "ndjson"
+  }
+}
+
