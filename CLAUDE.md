@@ -81,22 +81,23 @@ docker-compose.yml     — Local Postgres 16 + Redis 7
 ```
 
 ## Current Phase
-Phase 3 — Public Alpha. Gate D: GO (staging alpha) at `fac52c6`.
+Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 - API + MCP deployed to Fly.io (iad region)
 - Two-tier rate limiting with Upstash Redis
 - Structured JSON request logging
 - 47/47 MCP smoke tests passing against remote server
 - Rollback drill verified
 - Staging data: full artists/labels/masters + 50k release sample
-- Claude Code MCP verified (Willie Nelson search live from dig-mcp.fly.dev)
+- Claude Code + Claude Desktop MCP both verified
 - Production benchmark Run 7: 32 queries, 0 errors, p50 117ms (internet round trip)
-- progress.html updated: Production Round Trip chart, First MCP Result screenshot, Phase 3 deployed
+- Docs pass complete: quickstart, ops runbook, alpha invite, Phase 4 prerequisites
 
-## Phase 3 Remaining Work (Day 4-5)
-1. API + MCP quickstart docs (auth modes, rate limits, error codes, curl examples, MCP setup)
-2. Ops runbook section (429 spike triage, timeout-rate >1%, MCP SSE disconnects)
-3. Public alpha invite prep (criteria + usage policy, note 50k release staging sample)
-4. Phase 4 prerequisites doc (full release migration, full-corpus benchmark, DB capacity plan)
+## Next: Phase 4
+1. Soft alpha invite (send keys to 5-10 testers)
+2. Full releases dataset migration (18.9M rows → 200GB Fly volume)
+3. Full-corpus benchmark rerun (Run 8) + SLO adjustment
+4. Next.js frontend scaffold + Vercel deploy
+5. See `docs/phase4-prerequisites.md` for full plan
 
 ## MCP Tools
 | Tool | Description |
@@ -110,7 +111,11 @@ Phase 3 — Public Alpha. Gate D: GO (staging alpha) at `fac52c6`.
 
 ## Important References
 - [Implementation Plan](docs/implementation-plan-agent-first.md) — canonical build plan
+- [Quickstart](docs/quickstart.md) — API + MCP reference with curl examples
 - [Response Contracts](docs/phase2-response-contracts.md) — locked JSON shapes
 - [Phase 3 Gate](docs/phase3-gate.md) — deployment checklist + evidence
+- [Ops Runbook](docs/ops-runbook.md) — incident triage, deployment, rollback
+- [Alpha Invite](docs/alpha-invite.md) — staging limitations, usage policy
+- [Phase 4 Prerequisites](docs/phase4-prerequisites.md) — migration, capacity, costs
 - [Rate-Limit Policy](docs/rate-limit-policy.md) — tier definitions
 - [Operator Guide](docs/OPERATOR.md) — how Claude Code runs this project
