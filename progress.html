@@ -1060,16 +1060,17 @@
           <div class="phase-top">
             <div>
               <div class="phase-name">Phase 4A (EN-A)</div>
-              <div class="phase-meta">Enrichment foundation: MusicBrainz + Wikidata + Setlist (additive only)</div>
+              <div class="phase-meta">Knowledge-graph enrichment layer. Discogs stays canonical; MB/Wikidata/Setlist are additive with provenance + confidence.</div>
             </div>
             <span class="status-badge">planned</span>
           </div>
           <ul>
-            <li><span class="tick done">✓</span><span>Enrichment implementation plan drafted (<code>docs/enrichment-implementation-plan.md</code>)</span></li>
-            <li><span class="tick done">✓</span><span>EN-A migration spec drafted with DDL/upserts/indexes (<code>docs/enrichment-migration-spec-en-a.md</code>)</span></li>
-            <li><span class="tick done">✓</span><span>Staged prep complete: manifests, field mapping, crosswalk templates, parser skeletons</span></li>
-            <li><span class="tick todo">•</span><span>Implement <code>006_enrich_schema.ts</code> after restore + Run 8</span></li>
-            <li><span class="tick todo">•</span><span>Run EN-A quality gate (crosswalk precision + latency delta checks)</span></li>
+            <li><span class="tick done">✓</span><span><strong>Step 1 — Plan locked:</strong> scope, non-goals, gates EN-A→EN-D, and source trust policy documented (<code>docs/enrichment-implementation-plan.md</code>).</span></li>
+            <li><span class="tick done">✓</span><span><strong>Step 2 — Schema spec ready:</strong> EN-A DDL with keys, indexes, constraints, and upsert strategy drafted (<code>docs/enrichment-migration-spec-en-a.md</code>).</span></li>
+            <li><span class="tick done">✓</span><span><strong>Step 3 — Staged prep complete:</strong> source manifests, field mappings, crosswalk candidate templates, and parser/adaptor skeletons are in repo.</span></li>
+            <li><span class="tick todo">•</span><span><strong>Step 4 — Implement migration:</strong> create <code>006_enrich_schema.ts</code> and update <code>packages/db/src/schema.ts</code> (after restore + Run 8).</span></li>
+            <li><span class="tick todo">•</span><span><strong>Step 5 — Sample ingest:</strong> load a small MB/Wikidata slice into <code>enrich.*</code>, generate crosswalks, and verify additive-only behavior (no <code>catalog.*</code> overwrite).</span></li>
+            <li><span class="tick todo">•</span><span><strong>Step 6 — EN-A gate:</strong> pass precision sampling + latency delta checks, then enable enrichment in traversal behind <code>include_enrichment</code> and <code>min_confidence</code>.</span></li>
           </ul>
         </div>
 
