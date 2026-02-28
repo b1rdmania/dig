@@ -502,11 +502,11 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 3 complete — docs pass done, staging alpha ready for invite</div>
+            <div class="v">Phase 4 data migration in progress + Run 8 benchmark prep</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>150c6ba</code></div>
+            <div class="v"><code>2f3d063</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
@@ -531,6 +531,8 @@
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate C — Passed</span><span class="state">closed</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 3 — REST + MCP alpha</span><span class="state">done</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate D — GO (staging)</span><span class="state">closed</span></div>
+          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 4 — Full restore + Run 8</span><span class="state">in progress</span></div>
+          <div class="phase-pill"><span class="dot"></span><span class="label">Phase 4A — Enrichment (EN-A)</span><span class="state">planned</span></div>
         </div>
       </aside>
     </section>
@@ -573,6 +575,15 @@
           </tr>
         </thead>
         <tbody>
+          <tr>
+            <td>
+              Full restore to Fly
+              <div class="bar"><span style="width:30%"></span></div>
+            </td>
+            <td><span class="status-badge">in progress</span></td>
+            <td>pg_restore (12 tables / ~555M rows), first batch active</td>
+            <td class="rate">~400MB/min observed. Estimated 4–5h total</td>
+          </tr>
           <tr>
             <td>
               Releases ingest
@@ -630,7 +641,7 @@
         </tbody>
       </table>
       <div class="notes">
-        Gate B closed with caveats (<code>CAVEAT:partial-artists</code>, <code>CAVEAT:recalibrated-estimates</code>). Evidence in <code>docs/phase1-handoff-snapshot.md</code>. Phase 2 query envelope, response contracts, and search mitigation plan are locked. Ready for retrieval implementation.
+        Gate B remains closed with caveats (<code>CAVEAT:partial-artists</code>, <code>CAVEAT:recalibrated-estimates</code>). Current active work is full-corpus Fly restore for Phase 4, followed by Run 8 benchmark. Enrichment staged prep is complete: manifests, mapping docs, crosswalk templates, and adapter skeletons.
       </div>
     </section>
 
@@ -997,9 +1008,9 @@
             <li><span class="tick done">✓</span><span>Warm/cold SLO framework documented in <code>docs/phase2-search-benchmark-results.md</code></span></li>
             <li><span class="tick done">✓</span><span>Benchmark Run 6 (<code>0c03bb9</code>): 0 errors / 96. Common-term now passes. 4/8 warm SLOs pass</span></li>
             <li><span class="tick done">✓</span><span>Fuzzy threshold tuned: labels/masters 0.45→0.5 (warm 87ms in isolation; benchmark spike is cache eviction)</span></li>
-            <li><span class="tick todo">•</span><span>Startup warmup for pg_trgm GIN indexes (eliminate cold-cache spikes)</span></li>
-            <li><span class="tick todo">•</span><span>Phase 2 release decision block — lock go/no-go criteria in benchmark docs</span></li>
-            <li><span class="tick todo">•</span><span>Rate limit middleware + ops hooks (request timing, query logging)</span></li>
+            <li><span class="tick done">✓</span><span>Phase 2 release decision block locked in benchmark docs + implementation plan gate criteria</span></li>
+            <li><span class="tick done">✓</span><span>Rate limit middleware + ops hooks shipped in Phase 3 API protection pass</span></li>
+            <li><span class="tick progress">◐</span><span>Startup warmup for pg_trgm/GIN remains deferred until full-corpus migration stabilizes</span></li>
           </ul>
         </div>
 
@@ -1033,15 +1044,32 @@
               <div class="phase-name">Phase 4</div>
               <div class="phase-meta">Human search UI (Next.js on Vercel)</div>
             </div>
-            <span class="status-badge">next</span>
+            <span class="status-badge">in progress</span>
           </div>
           <ul>
-            <li><span class="tick todo">•</span><span>Full releases dataset migration (18.9M rows, 200GB Fly volume)</span></li>
-            <li><span class="tick todo">•</span><span>Full-corpus benchmark rerun (Run 8) + SLO adjustment</span></li>
+            <li><span class="tick progress">◐</span><span>Full releases dataset migration in progress on Fly Postgres (pg_restore parallel load)</span></li>
+            <li><span class="tick todo">•</span><span>Full-corpus benchmark rerun (Run 8) + SLO adjustment after restore</span></li>
             <li><span class="tick todo">•</span><span>Next.js frontend with mobile-first search interface</span></li>
             <li><span class="tick todo">•</span><span>Release/artist/label detail pages with cover art (Cover Art Archive)</span></li>
             <li><span class="tick todo">•</span><span>Graph traversal UI (artist → releases → credits → related artists)</span></li>
             <li><span class="tick todo">•</span><span>Deploy to Vercel, connected to Fly.io API backend</span></li>
+          </ul>
+        </div>
+
+        <div class="phase">
+          <div class="phase-top">
+            <div>
+              <div class="phase-name">Phase 4A (EN-A)</div>
+              <div class="phase-meta">Enrichment foundation: MusicBrainz + Wikidata + Setlist (additive only)</div>
+            </div>
+            <span class="status-badge">planned</span>
+          </div>
+          <ul>
+            <li><span class="tick done">✓</span><span>Enrichment implementation plan drafted (<code>docs/enrichment-implementation-plan.md</code>)</span></li>
+            <li><span class="tick done">✓</span><span>EN-A migration spec drafted with DDL/upserts/indexes (<code>docs/enrichment-migration-spec-en-a.md</code>)</span></li>
+            <li><span class="tick done">✓</span><span>Staged prep complete: manifests, field mapping, crosswalk templates, parser skeletons</span></li>
+            <li><span class="tick todo">•</span><span>Implement <code>006_enrich_schema.ts</code> after restore + Run 8</span></li>
+            <li><span class="tick todo">•</span><span>Run EN-A quality gate (crosswalk precision + latency delta checks)</span></li>
           </ul>
         </div>
 
@@ -1064,7 +1092,7 @@
         <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 584k artists. Full Discogs CC0 February 2026 dump (local). Staging: 50k release sample.<br>
         <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) for all entity types + <code>pg_trgm</code> fuzzy for artist/label/master. Release fuzzy disabled in v1.<br>
         <strong>Live:</strong> <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE). Gate D GO at <code>150c6ba</code>.<br>
-        <strong>Next milestone:</strong> Soft alpha invite → Phase 4 (full release migration + human search UI).
+        <strong>Next milestone:</strong> Finish full-corpus restore → Run 8 benchmark → EN-A migration implementation.
       </div>
     </section>
   </main>
