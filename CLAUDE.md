@@ -13,7 +13,7 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - Runtime: TypeScript + Node.js (ES2022, Bundler module resolution)
 - API: Fastify
 - MCP: TypeScript MCP SDK (@modelcontextprotocol/sdk), remote SSE transport via Express
-- DB: Postgres + PgBouncer, accessed via Kysely
+- DB: Postgres + Kysely (no ORM)
 - Cache/queues: Redis (ioredis) — Upstash in production
 - Search: Postgres FTS + pg_trgm
 - XML parsing: saxes (SAX streaming, memory-bounded)
@@ -23,6 +23,13 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - Frontend (Phase 4): Next.js on Vercel
 - Images: Cover Art Archive first + fallback placeholders
 
+## Live URLs
+- **API**: https://dig-api.fly.dev/ (staging alpha)
+- **MCP**: https://dig-mcp.fly.dev/sse (staging alpha)
+- **Health**: https://dig-api.fly.dev/v1/health
+- **Marketing**: https://dig.baby (Vercel)
+- **GitHub**: https://github.com/b1rdmania/dig
+
 ## Key Commands
 - `pnpm dev` — start API server (from root)
 - `pnpm test` — run all tests across workspace
@@ -30,59 +37,78 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - `docker compose up -d` — start local Postgres + Redis
 - `DATABASE_URL=postgresql://dig:dig_local@localhost:5433/dig pnpm --filter @dig/db migrate:up` — run migrations
 - `pnpm --filter @dig/ingest ingest -- releases --file ./path/to/dump.xml.gz` — run ingest CLI
+- `fly deploy --config fly.api.toml --remote-only` — deploy API to Fly
+- `fly deploy --config fly.mcp.toml --remote-only` — deploy MCP to Fly
+- `MCP_URL="https://dig-mcp.fly.dev/sse" npx tsx apps/mcp/src/smoke-test.ts` — MCP remote smoke test
 
 ## Database
-- Schemas: `auth`, `ingest`, `catalog` (catalog added in Phase 1)
-- Migrations live in `packages/db/migrations/` (Kysely FileMigrationProvider)
-- Schema types in `packages/db/src/schema.ts` — update this when adding migrations
-- Auth tables exist but are not enforced until Phase 5
-- Local connection: `postgresql://dig:dig_local@localhost:5433/dig`
+- Schemas: `auth`, `ingest`, `catalog`
+- Migrations: `packages/db/migrations/` (001–005)
+- Schema types: `packages/db/src/schema.ts`
+- Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG 16, port 5433)
+- Fly staging: `dig-db` (shared-cpu-2x, 1GB RAM, 40GB disk)
+- Fly proxy: `fly proxy 15432:5432 -a dig-db`
 
 ## Conventions
 - API routes under `/v1/` prefix always
 - Cursor-based pagination, not offset
 - Every response includes provenance (source, dump_date, discogs_id)
-- Error format: `{ error: { code, message, details? } }`
+- Error format: `{ error: { code, message, details? } }` — same taxonomy REST + MCP
+- Error codes: INVALID_REQUEST, NOT_FOUND, QUERY_TIMEOUT, RATE_LIMITED, INTERNAL_ERROR
 - No LLM inference in the retrieval path — structured data only
-- `explain_relationships` returns structured payloads, not generated prose
 - Workspace packages export from `src/` directly (not `dist/`) during development
+- Two-tier rate limits: anonymous 60/min (IP), keyed 300/min (X-API-Key)
 
 ## File Layout
 ```
-apps/api/          — Fastify REST API server (port 3000)
-apps/api/src/app.ts — app factory for test injection
+apps/api/              — Fastify REST API server (port 3000)
+apps/api/src/app.ts    — app factory (rate-limit, CORS, logging, routes)
 apps/api/src/server.ts — production entrypoint
-apps/mcp/          — MCP SSE server (port 3001)
-apps/ingest/       — Discogs XML import pipeline (CLI)
-apps/ingest/src/parser.ts — streaming SAX parser
-packages/db/       — Kysely DB layer, migrations, schema types
-packages/domain/   — Shared domain services (health, search, retrieval)
-docs/              — Implementation plan, specs, strategy docs
-docs/OPERATOR.md   — How Claude Code operates on this project
-docker-compose.yml — Local Postgres 16 + Redis 7
-.env.example       — Required environment variables
+apps/mcp/              — MCP SSE server (port 3001)
+apps/mcp/src/server.ts — 6 tools wired to @dig/domain
+apps/mcp/src/smoke-test.ts — 47-assertion live smoke test
+apps/ingest/           — Discogs XML import pipeline (CLI)
+packages/db/           — Kysely DB layer, migrations, schema types
+packages/domain/       — Shared domain services (health, search, retrieval, traversal)
+docs/                  — Implementation plan, specs, strategy docs
+docs/phase3-gate.md    — Phase 3 gate checklist + evidence
+docs/phase2-response-contracts.md — Locked JSON response shapes
+docs/rate-limit-policy.md — Rate-limit tiers + headers
+Dockerfile             — Shared monorepo Docker build
+fly.api.toml           — Fly config for dig-api
+fly.mcp.toml           — Fly config for dig-mcp
+docker-compose.yml     — Local Postgres 16 + Redis 7
 ```
 
 ## Current Phase
-Phase 1 — Ingestion Foundation + Canonical Database. IN PROGRESS.
-- Migration 002 (catalog schema): 25 tables, all indexes — APPLIED
-- Parser v2 (tree parser): XmlNode trees, 25 tests — DONE
-- Raw ingest CLI: XML→raw_entities pipeline — DONE (tested on 289k artists)
-- Canonical transforms: artists, labels, masters, releases + all child tables — DONE
-- Transform runner CLI: batch-scoped, paginated, idempotent — DONE
-- QA report generator — DONE
-- Artists canonicalized: 289,500 artists + 5 child tables from real data — VERIFIED
+Phase 3 — Public Alpha Hardening. Gate D: GO (staging alpha).
+- API + MCP deployed to Fly.io (iad region)
+- Two-tier rate limiting with Upstash Redis
+- Structured JSON request logging
+- 47/47 MCP smoke tests passing against remote server
+- Rollback drill verified
+- Staging data: full artists/labels/masters + 50k release sample
 
-## Phase 1 Remaining Work
-1. Ingest labels, masters, releases dumps into raw_entities
-2. Run transforms for labels, masters, releases
-3. Verify QA report across all entity types
-4. FTS search_vector population (deferred until canonical rows stable)
-5. Full dataset validation and Gate B checklist
+## Phase 3 Remaining Work
+1. Claude Desktop + Claude Code MCP client verification (manual)
+2. Production benchmark baseline (Run 7)
+3. Full dataset migration (18M releases → need 200GB+ Fly volume)
+4. Self-serve API + MCP quickstart docs
+5. Soft alpha invite
+
+## MCP Tools
+| Tool | Description |
+|------|-------------|
+| `search_catalog` | FTS + fuzzy search across 24M+ records |
+| `get_artist` | Artist detail by Discogs ID |
+| `get_label` | Label detail by Discogs ID |
+| `get_master` | Master release detail by Discogs ID |
+| `get_release` | Release detail with tracks, credits, formats |
+| `traverse_links` | Navigate entity graph (5 link types) |
 
 ## Important References
-- [Implementation Plan](docs/implementation-plan-agent-first.md) — canonical build plan (~1000 lines)
+- [Implementation Plan](docs/implementation-plan-agent-first.md) — canonical build plan
+- [Response Contracts](docs/phase2-response-contracts.md) — locked JSON shapes
+- [Phase 3 Gate](docs/phase3-gate.md) — deployment checklist + evidence
+- [Rate-Limit Policy](docs/rate-limit-policy.md) — tier definitions
 - [Operator Guide](docs/OPERATOR.md) — how Claude Code runs this project
-- [Weekly Execution Checklist](docs/implementation-plan-agent-first.md#21-phase-0a0b-weekly-execution-checklist-12-person-team) — Section 21 of the plan
-- GitHub: [b1rdmania/dig](https://github.com/b1rdmania/dig)
-- Live marketing site: [dig.baby](https://dig.baby)
