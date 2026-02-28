@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+.git/
+.env
+.env.*
+!.env.example
+*.log
+data/
+discogs_*.xml.gz
+discogs_*.xml.gz.part
+discogs_*_CHECKSUM.txt
+.DS_Store
+.vercel
+docs/

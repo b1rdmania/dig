@@ -1,0 +1,45 @@
+# Fly.io config for dig-mcp (MCP SSE server)
+# Deploy: fly deploy --config fly.mcp.toml
+
+app = "dig-mcp"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  strategy = "rolling"
+
+[env]
+  PORT = "3001"
+  NODE_ENV = "production"
+
+[processes]
+  app = "pnpm --filter @dig/mcp dev"
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 3001
+  processes = ["app"]
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+  # MCP SSE requires sticky sessions — single machine for now.
+  # TODO: Add Fly-Force-Instance-Id header support for multi-machine.
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

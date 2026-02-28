@@ -123,7 +123,7 @@ async function main() {
   console.log("\n--- get_release ---");
   const releaseResult = await client.callTool({
     name: "get_release",
-    arguments: { discogs_id: 888896 },
+    arguments: { discogs_id: 1 },
   });
   const rr = JSON.parse((releaseResult.content as any)[0].text);
   assert(rr.release !== undefined, "release key present");
