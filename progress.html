@@ -500,7 +500,7 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 3 deployed — staging alpha live on Fly.io (dig-api + dig-mcp)</div>
+            <div class="v">Phase 3 complete — docs pass done, staging alpha ready for invite</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
@@ -527,7 +527,7 @@
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate B — Closed with caveats</span><span class="state">closed</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 2 — Retrieval core</span><span class="state">done</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate C — Passed</span><span class="state">closed</span></div>
-          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 3 — REST + MCP alpha</span><span class="state">deployed</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 3 — REST + MCP alpha</span><span class="state">done</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate D — GO (staging)</span><span class="state">closed</span></div>
         </div>
       </aside>
@@ -1007,7 +1007,7 @@
               <div class="phase-name">Phase 3</div>
               <div class="phase-meta">REST API + MCP public alpha</div>
             </div>
-            <span class="status-badge">deployed</span>
+            <span class="status-badge">done</span>
           </div>
           <ul>
             <li><span class="tick done">✓</span><span>REST API hardening: two-tier rate limiting (60/min anon, 300/min keyed), CORS, structured JSON logging</span></li>
@@ -1018,7 +1018,10 @@
             <li><span class="tick done">✓</span><span>Production benchmark Run 7: 32 queries, 0 errors, p50 117ms (internet round trip)</span></li>
             <li><span class="tick done">✓</span><span>Gate D: GO (staging alpha) — all required criteria met</span></li>
             <li><span class="tick done">✓</span><span>Claude Desktop + Claude Code MCP verified (both environments confirmed working)</span></li>
-            <li><span class="tick todo">•</span><span>API documentation + usage examples + public alpha invite flow</span></li>
+            <li><span class="tick done">✓</span><span>API quickstart doc with curl examples, MCP setup, error codes (<code>docs/quickstart.md</code>)</span></li>
+            <li><span class="tick done">✓</span><span>Ops runbook: 4 incident types, deployment, rollback, DB access (<code>docs/ops-runbook.md</code>)</span></li>
+            <li><span class="tick done">✓</span><span>Alpha invite brief with staging limitations + usage policy (<code>docs/alpha-invite.md</code>)</span></li>
+            <li><span class="tick done">✓</span><span>Phase 4 prerequisites: migration plan, capacity plan, cost estimates (<code>docs/phase4-prerequisites.md</code>)</span></li>
           </ul>
         </div>
 
@@ -1028,9 +1031,11 @@
               <div class="phase-name">Phase 4</div>
               <div class="phase-meta">Human search UI (Next.js on Vercel)</div>
             </div>
-            <span class="status-badge">future</span>
+            <span class="status-badge">next</span>
           </div>
           <ul>
+            <li><span class="tick todo">•</span><span>Full releases dataset migration (18.9M rows, 200GB Fly volume)</span></li>
+            <li><span class="tick todo">•</span><span>Full-corpus benchmark rerun (Run 8) + SLO adjustment</span></li>
             <li><span class="tick todo">•</span><span>Next.js frontend with mobile-first search interface</span></li>
             <li><span class="tick todo">•</span><span>Release/artist/label detail pages with cover art (Cover Art Archive)</span></li>
             <li><span class="tick todo">•</span><span>Graph traversal UI (artist → releases → credits → related artists)</span></li>
@@ -1057,7 +1062,7 @@
         <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 584k artists. Full Discogs CC0 February 2026 dump (local). Staging: 50k release sample.<br>
         <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) for all entity types + <code>pg_trgm</code> fuzzy for artist/label/master. Release fuzzy disabled in v1.<br>
         <strong>Live:</strong> <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE). Gate D GO at <code>150c6ba</code>.<br>
-        <strong>Next milestone:</strong> API docs pass → Claude Desktop verification → public alpha invite.
+        <strong>Next milestone:</strong> Soft alpha invite → Phase 4 (full release migration + human search UI).
       </div>
     </section>
   </main>
