@@ -500,19 +500,19 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 2 search hardening — benchmark validated, decision block pending</div>
+            <div class="v">Phase 3 deployed — staging alpha live on Fly.io (dig-api + dig-mcp)</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>0c03bb9</code></div>
+            <div class="v"><code>150c6ba</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
-            <div class="v">60 passing (33 domain, 26 parser, 1 API)</div>
+            <div class="v">65 unit + 47 MCP smoke (18 contract, 47 remote)</div>
           </div>
           <div class="meta">
-            <div class="k">vs Discogs</div>
-            <div class="v">Dig faster in 7/7 categories, 38/46 queries (p50: 36ms vs 223ms)</div>
+            <div class="k">Live APIs</div>
+            <div class="v">dig-api.fly.dev (REST) + dig-mcp.fly.dev (MCP SSE)</div>
           </div>
         </div>
       </div>
@@ -525,8 +525,10 @@
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate A — Passed</span><span class="state">closed</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 1 — Ingest + canonical transforms</span><span class="state">done</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate B — Closed with caveats</span><span class="state">closed</span></div>
-          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 2 — Retrieval core</span><span class="state">in progress</span></div>
-          <div class="phase-pill"><span class="dot"></span><span class="label">Phase 3 — REST + MCP alpha</span><span class="state">queued</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 2 — Retrieval core</span><span class="state">done</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Gate C — Passed</span><span class="state">closed</span></div>
+          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 3 — REST + MCP alpha</span><span class="state">deployed</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Gate D — GO (staging)</span><span class="state">closed</span></div>
         </div>
       </aside>
     </section>
@@ -796,6 +798,102 @@
 
     <section class="section">
       <div class="section-head">
+        <h2>First MCP Result</h2>
+        <div class="sub">Willie Nelson via Claude Code → dig-mcp.fly.dev → Fly Postgres — 2026-02-28</div>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <img src="./mcp-first-result.png" alt="First MCP result: Willie Nelson - Diamonds In The Rough, queried live via Claude Code MCP" style="max-width:100%;border-radius:12px;border:1px solid var(--line);box-shadow:0 4px 24px rgba(0,0,0,0.4);">
+        <p style="color:var(--warm-mid);font-size:13px;text-align:center;max-width:60ch;">First live MCP tool call — Claude Code querying <code>search_catalog</code> for Willie Nelson 1980s releases, returning structured data from Fly Postgres via SSE transport.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Production Round Trip</h2>
+        <div class="sub">Run 7 — First internet round trip, macOS → Fly.io Virginia, <code>150c6ba</code></div>
+      </div>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><span class="chart-legend-swatch" style="background:linear-gradient(90deg, var(--accent), var(--accent-light))"></span> Production (Fly.io, internet)</div>
+        <div class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--discogs-bar)"></span> Local (native PG, Run 6)</div>
+      </div>
+      <!-- max bar = 3500ms for readable scale. fuzzy/multi clipped -->
+      <div class="chart-row">
+        <div class="chart-label">Release FTS</div>
+        <div class="chart-bars">
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Fly</span><div class="chart-bar dig" style="width:calc(149 / 600 * 100%)"></div><span class="chart-bar-ms">149ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Local</span><div class="chart-bar discogs" style="width:calc(579 / 600 * 100%)"></div><span class="chart-bar-ms">579ms</span></div>
+        </div>
+        <div class="chart-winner dig-wins">Fly 4x</div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-label">Common-term</div>
+        <div class="chart-bars">
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Fly</span><div class="chart-bar dig" style="width:calc(600 / 600 * 100%)"></div><span class="chart-bar-ms">1,143ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Local</span><div class="chart-bar discogs" style="width:calc(258 / 600 * 100%)"></div><span class="chart-bar-ms">258ms</span></div>
+        </div>
+        <div class="chart-winner discogs-wins">Local 4x</div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-label">Fuzzy</div>
+        <div class="chart-bars">
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Fly</span><div class="chart-bar dig" style="width:calc(600 / 600 * 100%)"></div><span class="chart-bar-ms">3,301ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Local</span><div class="chart-bar discogs" style="width:calc(600 / 600 * 100%)"></div><span class="chart-bar-ms">1,232ms</span></div>
+        </div>
+        <div class="chart-winner discogs-wins">Local 3x</div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-label">Filtered</div>
+        <div class="chart-bars">
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Fly</span><div class="chart-bar dig" style="width:calc(198 / 600 * 100%)"></div><span class="chart-bar-ms">198ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Local</span><div class="chart-bar discogs" style="width:calc(600 / 600 * 100%)"></div><span class="chart-bar-ms">3,051ms</span></div>
+        </div>
+        <div class="chart-winner dig-wins">Fly 15x</div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-label">Unicode</div>
+        <div class="chart-bars">
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Fly</span><div class="chart-bar dig" style="width:calc(161 / 600 * 100%)"></div><span class="chart-bar-ms">161ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Local</span><div class="chart-bar discogs" style="width:calc(82 / 600 * 100%)"></div><span class="chart-bar-ms">82ms</span></div>
+        </div>
+        <div class="chart-winner discogs-wins">Local 2x</div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-label">Retrieval</div>
+        <div class="chart-bars">
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Fly</span><div class="chart-bar dig" style="width:calc(185 / 600 * 100%)"></div><span class="chart-bar-ms">185ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Local</span><div class="chart-bar discogs" style="width:calc(26 / 600 * 100%)"></div><span class="chart-bar-ms">26ms</span></div>
+        </div>
+        <div class="chart-winner discogs-wins">Local 7x</div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-label">Traversal</div>
+        <div class="chart-bars">
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Fly</span><div class="chart-bar dig" style="width:calc(232 / 600 * 100%)"></div><span class="chart-bar-ms">232ms</span></div>
+          <div class="chart-bar-wrap"><span class="chart-bar-tag">Local</span><div class="chart-bar discogs" style="width:calc(230 / 600 * 100%)"></div><span class="chart-bar-ms">230ms</span></div>
+        </div>
+        <div class="chart-winner" style="color:var(--warm-mid)">~same</div>
+      </div>
+      <div class="scorecard">
+        <div class="scorecard-item">
+          <div class="v" style="color:var(--ok)">117ms</div>
+          <div class="k">Fly p50 (internet)</div>
+        </div>
+        <div class="scorecard-item">
+          <div class="v">26ms</div>
+          <div class="k">Local p50 (Run 6)</div>
+        </div>
+        <div class="scorecard-item">
+          <div class="v" style="color:var(--info)">~80ms</div>
+          <div class="k">Network overhead</div>
+        </div>
+      </div>
+      <div class="notes">
+        <strong>Run 7 (<code>150c6ba</code>):</strong> First internet round trip benchmark. 32 queries, 0 errors. Network adds ~80-100ms to every request. Release FTS and filtered are <strong>faster</strong> on Fly — staging has 50k releases vs 18.9M local. Fuzzy and common-term are slower (full dataset + network). Retrieval and traversal are production-ready at &lt;250ms. Rate limiting confirmed working (429s triggered at req 56 in Run 2). Staging dataset: 584k artists, 2.3M labels, 2.5M masters, 50k releases.
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
         <h2>Mitigations Applied</h2>
         <div class="sub">Search fixes shipped in Phase 2 hardening</div>
       </div>
@@ -872,7 +970,7 @@
               <div class="phase-name">Phase 2</div>
               <div class="phase-meta">Retrieval core (search + entity retrieval + direct traversal)</div>
             </div>
-            <span class="status-badge">in progress</span>
+            <span class="status-badge">done</span>
           </div>
           <ul>
             <li><span class="tick done">✓</span><span>Query envelope locked (<code>docs/phase2-query-envelope.md</code>): filters, sorts, fuzzy policy, timeout budget, broad query spec</span></li>
@@ -909,13 +1007,17 @@
               <div class="phase-name">Phase 3</div>
               <div class="phase-meta">REST API + MCP public alpha</div>
             </div>
-            <span class="status-badge">queued</span>
+            <span class="status-badge">deployed</span>
           </div>
           <ul>
-            <li><span class="tick todo">•</span><span>REST API hardening: rate limiting, API key auth, request logging, error standardization</span></li>
-            <li><span class="tick todo">•</span><span>MCP server tools: <code>search_catalog</code>, <code>get_release</code>, <code>get_artist</code>, <code>get_master</code>, <code>get_label</code>, <code>explain_relationships</code></span></li>
-            <li><span class="tick todo">•</span><span>MCP SSE transport via Express (port 3001), tested with Claude Desktop + MCP Inspector</span></li>
-            <li><span class="tick todo">•</span><span>Deploy to Fly.io: API + MCP servers, Fly Postgres, Upstash Redis</span></li>
+            <li><span class="tick done">✓</span><span>REST API hardening: two-tier rate limiting (60/min anon, 300/min keyed), CORS, structured JSON logging</span></li>
+            <li><span class="tick done">✓</span><span>MCP server: 6 tools (<code>search_catalog</code>, <code>get_artist</code>, <code>get_label</code>, <code>get_master</code>, <code>get_release</code>, <code>traverse_links</code>)</span></li>
+            <li><span class="tick done">✓</span><span>MCP SSE transport via Express (port 3001), 18 contract tests + 47 smoke tests passing</span></li>
+            <li><span class="tick done">✓</span><span>Deployed to Fly.io: dig-api + dig-mcp, Fly Postgres (2.5M masters, 50k releases), Upstash Redis</span></li>
+            <li><span class="tick done">✓</span><span>Rollback drill executed (v2→v1→latest, health verified)</span></li>
+            <li><span class="tick done">✓</span><span>Production benchmark Run 7: 32 queries, 0 errors, p50 117ms (internet round trip)</span></li>
+            <li><span class="tick done">✓</span><span>Gate D: GO (staging alpha) — all required criteria met</span></li>
+            <li><span class="tick progress">◐</span><span>Claude Desktop MCP client verification (manual, pending)</span></li>
             <li><span class="tick todo">•</span><span>API documentation + usage examples + public alpha invite flow</span></li>
           </ul>
         </div>
@@ -952,9 +1054,10 @@
         </div>
       </div>
       <div class="notes">
-        <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 289k artists. Full Discogs CC0 February 2026 dump.<br>
+        <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 584k artists. Full Discogs CC0 February 2026 dump (local). Staging: 50k release sample.<br>
         <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) for all entity types + <code>pg_trgm</code> fuzzy for artist/label/master. Release fuzzy disabled in v1.<br>
-        <strong>Next milestone:</strong> Lock Phase 2 decision block → Phase 3 deployment prep (rate limits, API key auth, MCP tools, Fly.io deploy).
+        <strong>Live:</strong> <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE). Gate D GO at <code>150c6ba</code>.<br>
+        <strong>Next milestone:</strong> API docs pass → Claude Desktop verification → public alpha invite.
       </div>
     </section>
   </main>

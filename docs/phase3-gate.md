@@ -36,7 +36,7 @@ Companion to Section 10.1 of the [implementation plan](implementation-plan-agent
 - [x] Error taxonomy: INVALID_REQUEST, NOT_FOUND, QUERY_TIMEOUT, INTERNAL_ERROR (same as REST)
 - [x] 47/47 smoke tests passing against remote Fly MCP server (`dig-mcp.fly.dev`)
 - [ ] Test with Claude Desktop (manual — needs user config)
-- [ ] Test with Claude Code (manual — needs MCP server config)
+- [x] Test with Claude Code (verified — Willie Nelson search via dig-mcp.fly.dev, 2026-02-28)
 
 ### Fly.io deployment runbook
 
@@ -151,7 +151,7 @@ Added to `~/.claude.json` via `claude mcp add --transport sse --scope local dig-
 
 Commit: `150c6ba`. Tools available on next session restart.
 
-**Verification status:** Config applied, pending first interactive call in new session.
+**Verification status:** Verified. First live call: Willie Nelson 1980s releases search → Diamonds In The Rough (master 308172) returned successfully. Screenshot: `mcp-first-result.png`.
 
 ### Claude Desktop config
 
@@ -190,7 +190,7 @@ All 6 tools verified: `search_catalog`, `get_artist`, `get_label`, `get_master`,
 | Fly deployment + smoke test | Yes | **Done** (dig-api + dig-mcp, 47/47 remote) |
 | Rollback drill | Yes | **Done** (v2→v1→latest, health verified) |
 | MCP SDK smoke against remote | Yes | **Done** (47/47 at 2026-02-28T02:15Z) |
-| Claude Code MCP config | Yes | **Done** (config applied, needs session restart) |
+| Claude Code MCP config | Yes | **Done** (verified — Willie Nelson search live) |
 | Claude Desktop MCP test | Nice-to-have | Pending (manual) |
 | Production benchmark baseline | Nice-to-have | Pending (needs remote host) |
 | Full dataset migration | Phase 4 | Staging only (50k releases + full artists/labels/masters) |

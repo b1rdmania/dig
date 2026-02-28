@@ -34,7 +34,95 @@ Statement timeout rate is tracked in-process. If `statement_timeout` errors exce
 
 ---
 
-## Run 6 — Post stop-word fix (current)
+## Run 7 — Production (Fly.io staging)
+
+**Date:** 2026-02-28
+**Commit:** `150c6ba`
+**Environment:** Fly Postgres 17 (shared-cpu-2x, 1GB RAM, iad region). Client: macOS → internet → Fly.io Virginia.
+**Dataset:** Full artists (584k), labels (2.3M), masters (2.5M) + 50k release sample. FTS vectors pre-populated.
+**Note:** Anonymous rate limit (60 req/min) triggered during Run 2 → 41/96 errors are 429s. Run 1 is the valid baseline.
+
+### Summary (Run 1 only — before rate limit hit)
+
+| Category | p50 | p95 | Max | Warm SLO | Status |
+|----------|-----|-----|-----|----------|--------|
+| release-fts | 99ms | 149ms | 149ms | < 500ms | **PASS** |
+| common-term | 113ms | 1,143ms | 1,143ms | < 250ms | **FAIL** (DJ query, FTS ranked) |
+| fuzzy | 105ms | 3,301ms | 3,301ms | < 1.3s (L/M) | **FAIL** (label/master trgm) |
+| filtered | 125ms | 198ms | 198ms | < 300ms | **PASS** |
+| multi-entity | 322ms | 6,191ms | 6,191ms | < 500ms | **FAIL** (cross-entity "music") |
+| unicode | 117ms | 161ms | 161ms | < 100ms | **FAIL** (network overhead) |
+| retrieval | 101ms | 185ms | 185ms | < 200ms | **PASS** (borderline) |
+| traversal | 101ms | 232ms | 232ms | < 250ms | **PASS** (borderline) |
+
+**Overall (Run 1):** 0 errors / 32 queries. p50: 117ms. Network adds ~80-100ms vs local.
+
+### Key findings
+
+1. **Network overhead is ~80-100ms per request.** Local p50 was 26ms, production p50 is 107ms. This is expected for internet round trips to Virginia.
+
+2. **Release FTS now passes comfortably.** p95 149ms (was 579ms local). Smaller release sample (50k vs 18.9M) means faster scans. Full dataset will regress.
+
+3. **Fuzzy label/master still slow.** 2.8-3.3s — same pg_trgm scan issue regardless of deployment. Full dataset (2.3M labels, 2.5M masters) is the bottleneck.
+
+4. **Cross-entity "music" is the worst query.** 6.2s — this is the known v1 tradeoff. Composite query across all entity types with a common term.
+
+5. **Rate limiting works correctly.** 429s started at request ~56 in Run 2, exactly matching the 60/min anonymous limit. Benchmark should use API key for keyed tier (300/min).
+
+6. **Retrieval and traversal are fast.** 88-232ms including network. Point lookups are production-ready.
+
+### Detail (Run 1)
+
+| # | Query | Latency | Status | Results |
+|---|-------|---------|--------|---------|
+| 1 | Exact title match | 149ms | OK | 11 |
+| 2 | Partial title match | 104ms | OK | 18 |
+| 3 | Multi-word release | 119ms | OK | 0 |
+| 4 | Obscure release | 98ms | OK | 0 |
+| 5 | "Love" stress test | 113ms | OK | 20 |
+| 6 | "The" stress test | 155ms | OK | 0 |
+| 7 | "DJ" stress test | 1,143ms | OK | 20 |
+| 8 | "Remix" stress test | 106ms | OK | 20 |
+| 9 | Artist typo | 168ms | OK | 10 |
+| 10 | Label typo | 3,148ms | OK | 0 |
+| 11 | Master typo | 3,301ms | OK | 0 |
+| 12 | Artist 2-char off | 105ms | OK | 1 |
+| 13 | Genre filter | 163ms | OK | 20 |
+| 14 | Genre + year | 112ms | OK | 20 |
+| 15 | Country filter | 198ms | OK | 2 |
+| 16 | Style filter | 125ms | OK | 20 |
+| 17 | Cross-entity search | 107ms | OK | 20 |
+| 18 | Cross-entity common | 6,191ms | OK | 20 |
+| 19 | Cross-entity label | 322ms | OK | 20 |
+| 20 | Cross-entity obscure | 1,050ms | OK | 20 |
+| 21 | Bjork unicode | 97ms | OK | 2 |
+| 22 | Dahlback unicode | 143ms | OK | 8 |
+| 23 | Cafe del Mar | 117ms | OK | 4 |
+| 24 | Motorhead ASCII | 161ms | OK | 1 |
+| 25 | Artist detail | 136ms | OK | 1 |
+| 26 | Label detail | 101ms | OK | 1 |
+| 27 | Master detail | 101ms | OK | 1 |
+| 28 | Release detail | 185ms | OK | 1 |
+| 29 | Artist releases | 101ms | OK | 9 |
+| 30 | Artist masters | 232ms | OK | 20 |
+| 31 | Label releases | 190ms | OK | 20 |
+| 32 | Release credits | 92ms | OK | 2 |
+
+### Production vs local SLO comparison
+
+| Category | Local p95 (Run 6) | Production p95 (Run 7) | Delta | Notes |
+|----------|-------------------|------------------------|-------|-------|
+| release-fts | 579ms | 149ms | -430ms | Smaller release sample |
+| common-term | 258ms | 1,143ms | +885ms | DJ query slower with network |
+| fuzzy | 1,232ms | 3,301ms | +2,069ms | Same trgm issue + network |
+| filtered | 3,051ms | 198ms | -2,853ms | Smaller release sample |
+| unicode | 82ms | 161ms | +79ms | Network overhead only |
+| retrieval | 26ms | 185ms | +159ms | Network overhead only |
+| traversal | 230ms | 232ms | +2ms | Consistent |
+
+---
+
+## Run 6 — Post stop-word fix (previous)
 
 **Date:** 2026-02-27
 **Commit:** `0b6df75` (stop-word empty tsquery + degraded_reason)
@@ -257,18 +345,19 @@ Warm traversal: 3-336ms. Label releases slow on warm — may need index tuning.
 
 ## Progression
 
-| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5 | Run 6 |
-|--------|-------|-------|-------|-------|-------|-------|
-| Environment | Docker | Docker | Docker | Native PG | Native PG | Native PG |
-| Key change | baseline | +timeout | +broad query | native PG | two-path rewrite | +stop-word fix |
-| Max query | 19,673ms | 5,754ms | 2,015ms | 2,988ms | 3,021ms | **3,051ms** |
-| "Love" release | 11,927ms | 2,045ms | 5ms | 2ms | 5ms | **5ms** |
-| "The" release | — | — | — | 2ms* | 3,000ms | **1ms** |
-| "Remix" release | 15,651ms | 2,128ms | 7ms | 3ms | 4ms | **3ms** |
-| Filtered p95 | — | — | 2,015ms | 2,205ms | 2,547ms | **3,051ms** (genre+year cold) |
-| Genre (single) | — | — | timeout | timeout | 128ms | **27ms** |
-| Errors | — | — | — | — | 0/96 | **0/96** |
-| Criteria pass | 3/7 | 4/7 | 4/7 | 2/7 | — | **4/8 warm SLO** |
+| Metric | Run 1 | Run 2 | Run 3 | Run 4 | Run 5 | Run 6 | Run 7 |
+|--------|-------|-------|-------|-------|-------|-------|-------|
+| Environment | Docker | Docker | Docker | Native PG | Native PG | Native PG | **Fly.io** |
+| Key change | baseline | +timeout | +broad query | native PG | two-path rewrite | +stop-word fix | **production deploy** |
+| Max query | 19,673ms | 5,754ms | 2,015ms | 2,988ms | 3,021ms | 3,051ms | **6,191ms** |
+| p50 | — | — | — | — | — | 26ms | **117ms** |
+| "Love" release | 11,927ms | 2,045ms | 5ms | 2ms | 5ms | 5ms | **113ms** |
+| "The" release | — | — | — | 2ms* | 3,000ms | 1ms | **155ms** |
+| "Remix" release | 15,651ms | 2,128ms | 7ms | 3ms | 4ms | 3ms | **106ms** |
+| Filtered p95 | — | — | 2,015ms | 2,205ms | 2,547ms | 3,051ms | **198ms** |
+| Genre (single) | — | — | timeout | timeout | 128ms | 27ms | **163ms** |
+| Errors | — | — | — | — | 0/96 | 0/96 | **0/32** (Run 1) |
+| Criteria pass | 3/7 | 4/7 | 4/7 | 2/7 | — | 4/8 | **4/8** |
 
 *Run 4 "The" was 2ms because FTS returned rows (no stop-word fix yet), just happened to be fast that run.
 
