@@ -7,6 +7,7 @@ Agent-first, data-first implementation plan for `Dig` (`1–2 person team`)
 - `Preserve everything raw, normalize in layers`
 - `Retrieval core is the product`
 - `Agent interfaces first, human UI second`
+- `Discogs is canonical; enrichment is additive with provenance`
 - `Images are mandatory, so image strategy is a gating workstream`
 - `No silent data loss`
 - `Ship infrastructure, not inference`
@@ -46,6 +47,7 @@ Agent-first, data-first implementation plan for `Dig` (`1–2 person team`)
 - open public editing
 - LLM inference in the retrieval path
 - Spotify/Apple Music/Bandcamp automated matching (see Media Matching Strategy)
+- replacing Discogs canonical fields with third-party enrichment data
 
 ## 2. Open Decisions (must be resolved in Phase 0)
 
@@ -750,6 +752,64 @@ Ship the human experience on top of the same retrieval core.
 
 ---
 
+## 14A. Phase 4A: Enrichment Knowledge Graph Layer (Additive)
+
+### Goal
+
+Add cross-source relationship/context enrichment without breaking deterministic catalog truth.
+
+### Sources (planned)
+
+- Discogs: canonical spine (`catalog.*`)
+- MusicBrainz: typed relationship enrichment
+- Wikidata: contextual enrichment (bio/history/scene/location)
+- Setlist.fm: live performance timeline enrichment
+
+### Rules (locked)
+
+- Discogs remains canonical
+- Enrichment is additive only (`source_tier=enrichment`)
+- Every enrichment field includes provenance + confidence
+- Low-confidence matches are excluded by default and routed to review queue
+
+### Tasks
+
+- Add `enrich.*` schema for crosswalks, edges, context, and enrichment ingest batches
+- Implement Discogs↔MusicBrainz crosswalks with deterministic matching + confidence
+- Extend API/MCP contracts with `include_enrichment` + `min_confidence`
+- Add enrichment traversal/context tools with strict source tagging
+- Integrate Wikidata and Setlist as separate enrichment streams (not canonical merges)
+
+### Deliverables
+
+- Enrichment schema and pipelines
+- Crosswalk coverage report + precision sampling report
+- Traversal responses with enrichment edges (opt-in)
+- Updated API/MCP docs with enrichment semantics
+
+### Done Criteria
+
+- Canonical fields never overwritten by enrichment ingest
+- Enrichment responses include `source`, `source_id`, `confidence`, `match_method`
+- Traversal with enrichment passes latency and quality thresholds
+- Source terms/attribution requirements documented and implemented
+
+### Reference
+
+- [Enrichment Implementation Plan](enrichment-implementation-plan.md)
+
+---
+
+## 14B. Enrichment Gate E1 (after Phase 4A)
+
+- [ ] `enrich.*` schema live and migration-safe
+- [ ] Crosswalk precision threshold met on reviewed sample
+- [ ] Enrichment traversal/context contracts stable and documented
+- [ ] No canonical overwrite regressions
+- [ ] Source attribution + kill-switch controls in place
+
+---
+
 ## 15. Phase 5: Curation / Crates / Editorial
 
 ### Goal
@@ -930,6 +990,7 @@ Future-proofing depends on stable contracts and controlled schema evolution.
 | C | Phase 2 | Retrieval contracts stable, search latency acceptable |
 | D | Phase 3 | Public alpha operable, docs usable, MCP working |
 | E | Phase 4 | Human UI useful and mobile-friendly |
+| E1 | Phase 4A | Enrichment layer additive, quality-gated, provenance-complete |
 
 ---
 

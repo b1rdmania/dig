@@ -252,6 +252,7 @@ psql "postgresql://postgres:<password>@localhost:15432/dig"
 - Cover Art Archive integration (image URLs per release)
 - Search warmup on deploy (pg_prewarm for GIN indexes)
 - Multi-filter composite index for genre+year queries
+- Enrichment prerequisites for Phase 4A (`docs/enrichment-implementation-plan.md`)
 
 ---
 
@@ -267,8 +268,9 @@ psql "postgresql://postgres:<password>@localhost:15432/dig"
 | 6 | Test key-authenticated requests | Manual | 5 min |
 | 7 | Update progress.html | `progress.html` | 10 min |
 | 8 | Final commit + push | — | 5 min |
+| 9 | Add enrichment implementation plan linkage | `docs/enrichment-implementation-plan.md` + Phase 4 docs | 10 min |
 
-**Total: ~2 hours of focused work.**
+**Total: ~2h10 of focused work.**
 
 ---
 
@@ -278,6 +280,7 @@ psql "postgresql://postgres:<password>@localhost:15432/dig"
 - [ ] `docs/ops-runbook.md` covers the 4 incident types above
 - [ ] `docs/alpha-invite.md` has explicit staging limitations
 - [ ] `docs/phase4-prerequisites.md` has disk/RAM/cost estimates
+- [ ] `docs/enrichment-implementation-plan.md` linked from Phase 4 docs
 - [ ] At least 1 API key generated and tested at 300 req/min tier
 - [ ] All docs committed and pushed
 - [ ] progress.html updated with Day 4 status

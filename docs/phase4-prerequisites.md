@@ -1,6 +1,7 @@
 # Phase 4 Prerequisites
 
 Phase 4 is the human search UI (Next.js on Vercel). Before starting, these prerequisites must be met.
+After Phase 4 baseline, enrichment work is executed via [Enrichment Implementation Plan](enrichment-implementation-plan.md) (Phase 4A / Gate E1).
 
 ## 1. Full Releases Dataset Migration
 
@@ -140,7 +141,36 @@ shared_buffers is typically 25% of RAM. At 1GB, that's 256MB — barely enough t
 - Or materialized view for common filter combinations
 - Blocked until full release data is loaded (index on 50k is meaningless)
 
-## 5. Phase 4 Kickoff Checklist
+## 5. Enrichment Prerequisites (Phase 4A)
+
+These items are required before starting MusicBrainz/Wikidata/Setlist ingestion at scale.
+
+### Crosswalk + schema readiness
+
+- [ ] `enrich.*` schema migrations created and tested (crosswalks, edges, context, ingest batches)
+- [ ] Deterministic matching policy locked (exact > deterministic fallback > review queue)
+- [ ] Confidence thresholds defined and documented
+
+### Source/legal readiness
+
+- [ ] MusicBrainz usage terms reviewed and documented
+- [ ] Wikidata usage/attribution requirements documented
+- [ ] Setlist.fm usage terms reviewed before bulk ingestion
+- [ ] Source kill-switch config prepared (disable source feed without redeploy)
+
+### API/MCP readiness
+
+- [ ] `include_enrichment` + `min_confidence` contract additions implemented
+- [ ] Per-edge provenance fields implemented (`source`, `source_id`, `confidence`, `match_method`)
+- [ ] Enrichment responses are additive only (no canonical overwrite)
+
+### Quality gate readiness
+
+- [ ] Crosswalk precision sampling method documented
+- [ ] Enrichment latency impact benchmark plan documented
+- [ ] Review queue workflow defined for low-confidence matches
+
+## 6. Phase 4 Kickoff Checklist
 
 - [ ] Full releases migrated to Fly Postgres
 - [ ] Fly volume at 200GB+
@@ -151,3 +181,4 @@ shared_buffers is typically 25% of RAM. At 1GB, that's 256MB — barely enough t
 - [ ] Next.js scaffold created in `apps/web/`
 - [ ] Vercel project created and linked
 - [ ] CAA integration spike (ID mapping feasibility)
+- [ ] Enrichment prerequisites reviewed and sequenced (Phase 4A plan accepted)
