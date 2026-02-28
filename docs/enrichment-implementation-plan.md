@@ -105,6 +105,7 @@ All tools must return structured payloads aligned with `phase2-response-contract
 - Add `enrich.*` migrations
 - Lock deterministic matching rules and confidence thresholds
 - Implement low-confidence review queue
+- Implement DDL per [EN-A Migration Spec](enrichment-migration-spec-en-a.md)
 
 Done criteria:
 - Migrations apply cleanly
@@ -216,4 +217,3 @@ Done criteria:
 4. Run quality sampling and lock Gate EN-B
 5. Add Wikidata context for mapped entities
 6. Add Setlist timeline as separate enrichment stream
-
