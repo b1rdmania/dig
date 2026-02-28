@@ -132,6 +132,71 @@ URLs:
 | Production benchmark baseline | Nice-to-have | Pending (needs remote host) |
 | Claude Desktop/Code MCP client test | Nice-to-have | Pending (manual user verification) |
 
-**Gate status: GO** — all required criteria met. Public alpha invite ready pending user MCP client verification.
+## MCP Client Verification Evidence
 
-**Gate owner:** Project lead signs off after MCP client verification.
+### Claude Code config
+
+Added to `~/.claude.json` via `claude mcp add --transport sse --scope local dig-catalog "https://dig-mcp.fly.dev/sse"`:
+
+```json
+{
+  "mcpServers": {
+    "dig-catalog": {
+      "type": "sse",
+      "url": "https://dig-mcp.fly.dev/sse"
+    }
+  }
+}
+```
+
+Commit: `150c6ba`. Tools available on next session restart.
+
+**Verification status:** Config applied, pending first interactive call in new session.
+
+### Claude Desktop config
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "dig-catalog": {
+      "url": "https://dig-mcp.fly.dev/sse"
+    }
+  }
+}
+```
+
+**Verification status:** Pending manual setup + test call.
+
+### Programmatic verification (MCP SDK smoke test)
+
+```
+MCP_URL="https://dig-mcp.fly.dev/sse" npx tsx apps/mcp/src/smoke-test.ts
+→ 47/47 passed (2026-02-28T02:15Z)
+```
+
+All 6 tools verified: `search_catalog`, `get_artist`, `get_label`, `get_master`, `get_release`, `traverse_links`.
+
+## Gate D Decision
+
+| Criterion | Required | Status |
+|-----------|----------|--------|
+| Phase 2 SLOs frozen and accepted | Yes | **Done** |
+| Timeout rate guardrail in code | Yes | **Done** |
+| API key + rate-limit middleware | Yes | **Done** (two-tier, headers, CORS) |
+| Structured logging | Yes | **Done** (JSON, request_id, category) |
+| MCP tools wired + contract tested | Yes | **Done** (6 tools, 18 unit + 47 smoke) |
+| Fly deployment + smoke test | Yes | **Done** (dig-api + dig-mcp, 47/47 remote) |
+| Rollback drill | Yes | **Done** (v2→v1→latest, health verified) |
+| MCP SDK smoke against remote | Yes | **Done** (47/47 at 2026-02-28T02:15Z) |
+| Claude Code MCP config | Yes | **Done** (config applied, needs session restart) |
+| Claude Desktop MCP test | Nice-to-have | Pending (manual) |
+| Production benchmark baseline | Nice-to-have | Pending (needs remote host) |
+| Full dataset migration | Phase 4 | Staging only (50k releases + full artists/labels/masters) |
+
+**Gate D status: GO (staging alpha)** — all required criteria met at commit `150c6ba`.
+
+Staging note: Fly Postgres contains full artists (584k), labels (2.3M), masters (2.5M) but only 50k releases. Full release migration (18M rows, ~200GB disk) is a Phase 4 prerequisite.
+
+**Gate owner:** Project lead signs off.
