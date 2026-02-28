@@ -232,6 +232,9 @@
     text-decoration-color: rgba(168, 144, 112, 0.3);
     transition: color 0.18s, text-decoration-color 0.18s;
   }
+  .nav-links a.active {
+    color: var(--off-white);
+  }
   .door:hover {
     color: var(--accent-light);
     text-decoration-color: var(--accent-light);
@@ -364,8 +367,10 @@
     <a class="nav-logo" href="./">DIG</a>
     <ul class="nav-links">
       <li><a href="./">Home</a></li>
-      <li><a href="./whitepaper">White Paper</a></li>
+      <li><a class="active" href="./record">Record Page</a></li>
+      <li><a href="./whitepaper">Tech Paper</a></li>
       <li><a href="./progress">Progress</a></li>
+      <li><a href="./#access">Early Access</a></li>
     </ul>
   </nav>
 
