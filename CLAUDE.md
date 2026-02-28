@@ -81,20 +81,22 @@ docker-compose.yml     — Local Postgres 16 + Redis 7
 ```
 
 ## Current Phase
-Phase 3 — Public Alpha Hardening. Gate D: GO (staging alpha).
+Phase 3 — Public Alpha. Gate D: GO (staging alpha) at `fac52c6`.
 - API + MCP deployed to Fly.io (iad region)
 - Two-tier rate limiting with Upstash Redis
 - Structured JSON request logging
 - 47/47 MCP smoke tests passing against remote server
 - Rollback drill verified
 - Staging data: full artists/labels/masters + 50k release sample
+- Claude Code MCP verified (Willie Nelson search live from dig-mcp.fly.dev)
+- Production benchmark Run 7: 32 queries, 0 errors, p50 117ms (internet round trip)
+- progress.html updated: Production Round Trip chart, First MCP Result screenshot, Phase 3 deployed
 
-## Phase 3 Remaining Work
-1. Claude Desktop + Claude Code MCP client verification (manual)
-2. Production benchmark baseline (Run 7)
-3. Full dataset migration (18M releases → need 200GB+ Fly volume)
-4. Self-serve API + MCP quickstart docs
-5. Soft alpha invite
+## Phase 3 Remaining Work (Day 4-5)
+1. API + MCP quickstart docs (auth modes, rate limits, error codes, curl examples, MCP setup)
+2. Ops runbook section (429 spike triage, timeout-rate >1%, MCP SSE disconnects)
+3. Public alpha invite prep (criteria + usage policy, note 50k release staging sample)
+4. Phase 4 prerequisites doc (full release migration, full-corpus benchmark, DB capacity plan)
 
 ## MCP Tools
 | Tool | Description |

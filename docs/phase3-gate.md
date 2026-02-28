@@ -35,7 +35,7 @@ Companion to Section 10.1 of the [implementation plan](implementation-plan-agent
 - [x] 47-assertion smoke test passing against live MCP server (`apps/mcp/src/smoke-test.ts`)
 - [x] Error taxonomy: INVALID_REQUEST, NOT_FOUND, QUERY_TIMEOUT, INTERNAL_ERROR (same as REST)
 - [x] 47/47 smoke tests passing against remote Fly MCP server (`dig-mcp.fly.dev`)
-- [ ] Test with Claude Desktop (manual — needs user config)
+- [x] Test with Claude Desktop (verified — user confirmed working, 2026-02-28)
 - [x] Test with Claude Code (verified — Willie Nelson search via dig-mcp.fly.dev, 2026-02-28)
 
 ### Fly.io deployment runbook
@@ -129,7 +129,7 @@ URLs:
 | MCP tools wired + contract tested | Yes | **Done** (6 tools, 18 unit + 47 smoke) |
 | Fly deployment + smoke test | Yes | **Done** (dig-api + dig-mcp deployed, 47/47 pass) |
 | Rollback drill | Yes | **Done** (v2→v1→latest, health verified) |
-| Production benchmark baseline | Nice-to-have | Pending (needs remote host) |
+| Production benchmark baseline | Nice-to-have | **Done** (Run 7, p50 117ms) |
 | Claude Desktop/Code MCP client test | Nice-to-have | Pending (manual user verification) |
 
 ## MCP Client Verification Evidence
@@ -167,7 +167,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-**Verification status:** Pending manual setup + test call.
+**Verification status:** Verified by user, 2026-02-28.
 
 ### Programmatic verification (MCP SDK smoke test)
 
@@ -191,11 +191,11 @@ All 6 tools verified: `search_catalog`, `get_artist`, `get_label`, `get_master`,
 | Rollback drill | Yes | **Done** (v2→v1→latest, health verified) |
 | MCP SDK smoke against remote | Yes | **Done** (47/47 at 2026-02-28T02:15Z) |
 | Claude Code MCP config | Yes | **Done** (verified — Willie Nelson search live) |
-| Claude Desktop MCP test | Nice-to-have | Pending (manual) |
-| Production benchmark baseline | Nice-to-have | Pending (needs remote host) |
+| Claude Desktop MCP test | Nice-to-have | **Done** (user verified, 2026-02-28) |
+| Production benchmark baseline | Nice-to-have | **Done** (Run 7, p50 117ms) |
 | Full dataset migration | Phase 4 | Staging only (50k releases + full artists/labels/masters) |
 
-**Gate D status: GO (staging alpha)** — all required criteria met at commit `150c6ba`.
+**Gate D status: GO (unconditional)** — all criteria met including both MCP client environments. Commit `fac52c6`.
 
 Staging note: Fly Postgres contains full artists (584k), labels (2.3M), masters (2.5M) but only 50k releases. Full release migration (18M rows, ~200GB disk) is a Phase 4 prerequisite.
 
