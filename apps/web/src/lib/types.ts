@@ -172,6 +172,22 @@ export interface ArtistResponse {
   artist: Artist;
 }
 
+// Label detail
+export interface Label {
+  discogs_id: number;
+  name: string;
+  profile: string | null;
+  contact_info: string | null;
+  parent_label: { discogs_id: number | null; name: string | null };
+  data_quality: string;
+  urls: string[];
+  provenance: Provenance;
+}
+
+export interface LabelResponse {
+  label: Label;
+}
+
 // Traversal
 export interface TraversalLink {
   type: "artist" | "label" | "master" | "release";
@@ -232,6 +248,12 @@ export function isTraversalResponse(data: unknown): data is TraversalResponse {
   if (!data || typeof data !== "object") return false;
   const d = data as Record<string, unknown>;
   return Array.isArray(d.links) && d.pagination !== undefined && d.meta !== undefined;
+}
+
+export function isLabelResponse(data: unknown): data is LabelResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return d.label !== undefined && typeof d.label === "object";
 }
 
 export function isApiError(data: unknown): data is ApiError {

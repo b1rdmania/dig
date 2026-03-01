@@ -14,6 +14,7 @@ function resultHref(result: SearchResult): string | null {
   }
   if (result.type === "master") return `/master/${result.discogs_id}`;
   if (result.type === "artist") return `/artist/${result.discogs_id}`;
+  if (result.type === "label") return `/label/${result.discogs_id}`;
   return null;
 }
 

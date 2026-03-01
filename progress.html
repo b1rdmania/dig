@@ -506,7 +506,7 @@
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>ea1f018</code></div>
+            <div class="v"><code>ed54ed5</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
@@ -783,91 +783,6 @@
 
     <section class="section">
       <div class="section-head">
-        <h2>Dig vs Discogs</h2>
-        <div class="sub">Post two-path rewrite — same queries, side-by-side p50 latency (lower is better)</div>
-      </div>
-      <div class="chart-legend">
-        <div class="chart-legend-item"><span class="chart-legend-swatch" style="background:linear-gradient(90deg, var(--accent), var(--accent-light))"></span> Dig (local, native PG)</div>
-        <div class="chart-legend-item"><span class="chart-legend-swatch" style="background:var(--discogs-bar)"></span> Discogs API (remote CDN)</div>
-      </div>
-      <!-- max bar = 350ms for readable scale. values above clipped visually -->
-      <div class="chart-row">
-        <div class="chart-label">Release FTS</div>
-        <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(15 / 350 * 100%)"></div><span class="chart-bar-ms">15ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(246 / 350 * 100%)"></div><span class="chart-bar-ms">246ms</span></div>
-        </div>
-        <div class="chart-winner dig-wins">Dig 16x</div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-label">Common-term</div>
-        <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(8 / 350 * 100%)"></div><span class="chart-bar-ms">8ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(194 / 350 * 100%)"></div><span class="chart-bar-ms">194ms</span></div>
-        </div>
-        <div class="chart-winner dig-wins">Dig 24x</div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-label">Fuzzy</div>
-        <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(30 / 350 * 100%)"></div><span class="chart-bar-ms">30ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(194 / 350 * 100%)"></div><span class="chart-bar-ms">194ms</span></div>
-        </div>
-        <div class="chart-winner dig-wins">Dig 6x</div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-label">Filtered</div>
-        <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(66 / 350 * 100%)"></div><span class="chart-bar-ms">66ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(223 / 350 * 100%)"></div><span class="chart-bar-ms">223ms</span></div>
-        </div>
-        <div class="chart-winner dig-wins">Dig 3x</div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-label">Multi-entity</div>
-        <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(43 / 350 * 100%)"></div><span class="chart-bar-ms">43ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(222 / 350 * 100%)"></div><span class="chart-bar-ms">222ms</span></div>
-        </div>
-        <div class="chart-winner dig-wins">Dig 5x</div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-label">Unicode</div>
-        <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(6 / 350 * 100%)"></div><span class="chart-bar-ms">6ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(186 / 350 * 100%)"></div><span class="chart-bar-ms">186ms</span></div>
-        </div>
-        <div class="chart-winner dig-wins">Dig 31x</div>
-      </div>
-      <div class="chart-row">
-        <div class="chart-label">Retrieval</div>
-        <div class="chart-bars">
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Dig</span><div class="chart-bar dig" style="width:calc(35 / 350 * 100%)"></div><span class="chart-bar-ms">35ms</span></div>
-          <div class="chart-bar-wrap"><span class="chart-bar-tag">Discogs</span><div class="chart-bar discogs" style="width:calc(221 / 350 * 100%)"></div><span class="chart-bar-ms">221ms</span></div>
-        </div>
-        <div class="chart-winner dig-wins">Dig 6x</div>
-      </div>
-      <div class="scorecard">
-        <div class="scorecard-item">
-          <div class="v" style="color:var(--ok)">36ms</div>
-          <div class="k">Dig overall p50</div>
-        </div>
-        <div class="scorecard-item">
-          <div class="v">223ms</div>
-          <div class="k">Discogs overall p50</div>
-        </div>
-        <div class="scorecard-item">
-          <div class="v" style="color:var(--ok)">38/46</div>
-          <div class="k">Queries Dig is faster</div>
-        </div>
-      </div>
-      <div class="notes">
-        Post two-path rewrite: Dig is now faster than Discogs in <strong>all 7 categories</strong> and <strong>38 of 46 individual queries</strong> (overall p50: 36ms vs 223ms). Filtered search was previously the outlier (Discogs 10x faster) — now Dig is 3x faster at p50. Discogs still wins on 8 queries: genre+year cold cache (~2.2s vs 250ms) and a few Run 2 cold-start FTS hits.
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
         <h2>First MCP Result</h2>
         <div class="sub">Willie Nelson via Claude Code → dig-mcp.fly.dev → Fly Postgres — 2026-02-28</div>
       </div>
@@ -1075,7 +990,7 @@
             <li><span class="tick done">✓</span><span>Fuzzy threshold tuned: labels/masters 0.45→0.5 (warm 87ms in isolation; benchmark spike is cache eviction)</span></li>
             <li><span class="tick done">✓</span><span>Phase 2 release decision block locked in benchmark docs + implementation plan gate criteria</span></li>
             <li><span class="tick done">✓</span><span>Rate limit middleware + ops hooks shipped in Phase 3 API protection pass</span></li>
-            <li><span class="tick progress">◐</span><span>Startup warmup for pg_trgm/GIN remains deferred until full-corpus migration stabilizes</span></li>
+            <li><span class="tick done">✓</span><span>Startup warmup (<code>pg_prewarm</code>) — 8 indexes, 325k blocks, verified on Fly</span></li>
           </ul>
         </div>
 
@@ -1117,7 +1032,7 @@
             <li><span class="tick done">✓</span><span>Run 8 benchmark: 0/96 errors, p50 108ms, 7/7 warm SLOs pass</span></li>
             <li><span class="tick done">✓</span><span>Dump cleanup (22GB freed) + DB scaled to serving profile (shared-cpu-2x, 4GB)</span></li>
             <li><span class="tick done">✓</span><span>Next.js frontend scaffold: search + release detail pages, CSS Modules design system, server-side API fetch with timeout + runtime guards</span></li>
-            <li><span class="tick done">✓</span><span>Deployed to Vercel (<code>web-eight-navy-21.vercel.app</code>), connected to Fly.io API backend</span></li>
+            <li><span class="tick done">✓</span><span>Deployed to Vercel (<code>app.dig.baby</code>), connected to Fly.io API backend</span></li>
             <li><span class="tick done">✓</span><span>Master-first search IA: grouped result sections, duplicate release collapse under master releases</span></li>
             <li><span class="tick done">✓</span><span>New entity pages: <code>/master/[id]</code> and <code>/artist/[id]</code>, linked from search + release views</span></li>
             <li><span class="tick done">✓</span><span>Release page upgraded with per-track expandable credits (performer/engineer/producer roles)</span></li>

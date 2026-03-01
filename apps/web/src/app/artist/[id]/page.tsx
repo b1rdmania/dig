@@ -34,28 +34,22 @@ export default async function ArtistPage({ params }: Props) {
   const { id } = await params;
 
   try {
-    // Core detail must load; related masters can fail-soft.
-    const artistData = await digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 });
-
-    if (!isArtistResponse(artistData)) {
-      return <ErrorMessage message="Unexpected API response format" />;
-    }
-
-    let mastersData: TraversalResponse = {
+    // Fetch artist detail and masters in parallel; masters fail-soft.
+    const defaultTraversal: TraversalResponse = {
       links: [],
       pagination: { cursor: null, has_more: false, total_estimate: null },
       meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "masters", elapsed_ms: 0 },
     };
-    try {
-      const mastersMaybe = await digFetch<TraversalResponse>(
-        `/v1/artists/${id}/masters?limit=30`,
-        { revalidate: 300 },
-      );
-      if (isTraversalResponse(mastersMaybe)) {
-        mastersData = mastersMaybe;
-      }
-    } catch {
-      // Fail-soft: keep artist page usable even if traversal is temporarily unavailable.
+
+    const [artistData, mastersData] = await Promise.all([
+      digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }),
+      digFetch<TraversalResponse>(`/v1/artists/${id}/masters?limit=30`, { revalidate: 300 })
+        .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
+        .catch(() => defaultTraversal),
+    ]);
+
+    if (!isArtistResponse(artistData)) {
+      return <ErrorMessage message="Unexpected API response format" />;
     }
 
     const artist = artistData.artist;
