@@ -2,7 +2,7 @@ import { isApiError } from "./types";
 
 const API_URL = process.env.DIG_API_URL || "https://dig-api.fly.dev";
 const API_KEY = process.env.DIG_API_KEY || "";
-const TIMEOUT_MS = 5000;
+const TIMEOUT_MS = 10000;
 
 export class ApiRequestError extends Error {
   constructor(

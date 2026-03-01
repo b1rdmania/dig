@@ -180,7 +180,7 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 - [x] SLO targets adjusted for full corpus (no changes needed — warm SLOs hold)
 - [ ] Search warmup script tested (pg_prewarm — pending)
 - [x] Next.js scaffold created in `apps/web/` (2910b1c)
-- [ ] Vercel project created and linked
+- [x] Vercel project created and linked (web-eight-navy-21.vercel.app)
 - [ ] CAA integration spike (ID mapping feasibility)
 - [x] Enrichment prerequisites reviewed and sequenced (Phase 4A plan accepted)
 

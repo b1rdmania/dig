@@ -27,6 +27,7 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - **API**: https://dig-api.fly.dev/ (staging alpha)
 - **MCP**: https://dig-mcp.fly.dev/sse (staging alpha)
 - **Health**: https://dig-api.fly.dev/v1/health
+- **Frontend**: https://web-eight-navy-21.vercel.app (staging alpha)
 - **Marketing**: https://dig.baby (Vercel)
 - **GitHub**: https://github.com/b1rdmania/dig
 
@@ -100,7 +101,7 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 4. [x] Cleanup dump + scale DB down (shared-cpu-2x, 4GB, 156GB/300GB used)
 5. [x] Enrichment foundation (Phase 4A): `enrich.*` schema applied
 6. [x] **Next.js frontend scaffold** — `apps/web`, search + release pages, build passes (`2910b1c`)
-7. [ ] Vercel deploy + env config
+7. [x] **Vercel deploy** — `web-eight-navy-21.vercel.app`, env vars set, search + release pages live
 8. [ ] Soft alpha invite (5-10 testers)
 8. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
 
