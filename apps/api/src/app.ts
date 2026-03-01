@@ -75,7 +75,12 @@ export async function buildApp(deps: AppDeps): Promise<{
       },
       timeWindow: RATE_WINDOW,
       redis,
-      keyGenerator: (req: FastifyRequest) => getApiKey(req) ?? req.ip,
+      keyGenerator: (req: FastifyRequest) => {
+        if (LOAD_TEST_TOKEN && req.headers["x-load-test-token"] === LOAD_TEST_TOKEN) {
+          return `loadtest:${LOAD_TEST_TOKEN}`;
+        }
+        return getApiKey(req) ?? req.ip;
+      },
       addHeadersOnExceeding: {
         "x-ratelimit-limit": true,
         "x-ratelimit-remaining": true,
