@@ -1,0 +1,24 @@
+.list {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--warm-mid);
+  padding: 0.5rem 0;
+  letter-spacing: 0.04em;
+}
+
+.degraded {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--accent);
+  padding: 0.25rem 0.5rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  display: inline-block;
+}

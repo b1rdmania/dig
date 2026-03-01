@@ -1,0 +1,44 @@
+.section {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.heading {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--warm-mid);
+  margin-bottom: 0.5rem;
+}
+
+.track {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr auto;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  align-items: baseline;
+  font-size: 0.9rem;
+}
+
+.track:not(:last-child) {
+  border-bottom: 1px solid var(--line);
+}
+
+.position {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--warm-mid);
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duration {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--warm-mid);
+}

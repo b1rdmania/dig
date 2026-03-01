@@ -1,0 +1,15 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--warm-mid);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius);
+  margin-top: 1rem;
+}

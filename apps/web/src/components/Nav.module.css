@@ -1,0 +1,32 @@
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--groove);
+  border-bottom: 1px solid var(--line);
+}
+
+.logo {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  color: var(--off-white);
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.logo:hover {
+  text-decoration: none;
+  color: var(--accent-light);
+}
+
+.tagline {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--warm-mid);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

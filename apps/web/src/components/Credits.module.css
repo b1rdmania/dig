@@ -1,0 +1,32 @@
+.section {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.heading {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--warm-mid);
+  margin-bottom: 0.5rem;
+}
+
+.group {
+  margin-bottom: 0.75rem;
+}
+
+.role {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: 0.2rem;
+}
+
+.names {
+  font-size: 0.85rem;
+  color: var(--cream);
+  line-height: 1.5;
+}

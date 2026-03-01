@@ -1,0 +1,35 @@
+.bone {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--surface-raised) 50%,
+    var(--surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius);
+}
+
+.line {
+  height: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.lineShort {
+  width: 60%;
+}
+
+.lineMedium {
+  width: 80%;
+}
+
+.heading {
+  height: 1.75rem;
+  width: 50%;
+  margin-bottom: 0.75rem;
+}
+
+.block {
+  height: 3rem;
+  margin-bottom: 0.5rem;
+}

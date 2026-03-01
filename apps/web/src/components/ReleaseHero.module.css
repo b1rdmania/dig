@@ -1,0 +1,56 @@
+.hero {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.artists {
+  font-size: 1.1rem;
+  color: var(--cream);
+  margin-bottom: 0.75rem;
+}
+
+.artistLink {
+  color: var(--accent-light);
+}
+
+.details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--warm-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detail {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--warm-mid);
+  border: 1px solid var(--line);
+  padding: 0.15rem 0.5rem;
+  border-radius: 2px;
+}
