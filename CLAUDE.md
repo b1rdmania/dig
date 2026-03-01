@@ -27,7 +27,7 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - **API**: https://dig-api.fly.dev/ (staging alpha)
 - **MCP**: https://dig-mcp.fly.dev/sse (staging alpha)
 - **Health**: https://dig-api.fly.dev/v1/health
-- **Frontend**: https://web-eight-navy-21.vercel.app (staging alpha)
+- **Frontend**: https://app.dig.baby (staging alpha, Vercel)
 - **Marketing**: https://dig.baby (Vercel)
 - **GitHub**: https://github.com/b1rdmania/dig
 
@@ -45,7 +45,7 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 
 ## Database
 - Schemas: `auth`, `ingest`, `catalog`, `enrich`
-- Migrations: `packages/db/migrations/` (001–007)
+- Migrations: `packages/db/migrations/` (001–008)
 - Schema types: `packages/db/src/schema.ts`
 - Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG 16, port 5433)
 - Fly staging: `dig-db` (shared-cpu-2x, 4GB RAM, 300GB disk)
@@ -101,12 +101,15 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 4. [x] Cleanup dump + scale DB down (shared-cpu-2x, 4GB, 156GB/300GB used)
 5. [x] Enrichment foundation (Phase 4A): `enrich.*` schema applied
 6. [x] **Next.js frontend scaffold** — `apps/web`, search + release pages, build passes (`2910b1c`)
-7. [x] **Vercel deploy** — `web-eight-navy-21.vercel.app`, env vars set, search + release pages live
+7. [x] **Vercel deploy** — `app.dig.baby`, env vars set, all pages live
 8. [x] pg_prewarm warmup executed + runbook documented
 9. [x] **Alpha invite** — `docs/alpha-invite.md` updated, 5 keys issued
-10. [x] **Filtered-query concurrency hardening** — migration `007_release_filtered_perf_indexes.ts` + capped fallback path. c100 filtered load now returns 0 timeouts / 0 errors (latency caveat remains under heavy contention)
-11. [x] **Search IA + entity pages** — master-first grouped search, duplicate release collapse, new `/master/[id]` + `/artist/[id]` routes, per-track expandable credits on release page
-12. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
+10. [x] **Filtered-query concurrency hardening** — migration `007` + capped fallback path. c100 load: 0 timeouts / 0 errors
+11. [x] **Search IA + entity pages** — master-first grouped search, duplicate release collapse, `/master/[id]` + `/artist/[id]` routes
+12. [x] **Cover Art Archive integration** — MusicBrainz crosswalk import (1,768,376 mappings), cover proxy endpoint (`/v1/releases/:id/cover`), Redis cache (7-day TTL), frontend display with vinyl placeholder fallback
+13. [x] **Master page perf fix** — migration `008_release_master_index.ts` for master→releases traversal. Page load: 10.3s → 0.9s
+14. **Gate E status**: GO with caveat for soft alpha (5-10 testers). NOT GO for broader/public (filtered p99 still high under heavy contention)
+15. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
 
 ## MCP Tools
 | Tool | Description |

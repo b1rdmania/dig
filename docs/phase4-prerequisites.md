@@ -181,7 +181,7 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 - [x] Search warmup script tested (pg_prewarm — 8 indexes, 325k blocks, verified)
 - [x] Next.js scaffold created in `apps/web/` (2910b1c)
 - [x] Vercel project created and linked (web-eight-navy-21.vercel.app)
-- [ ] CAA integration spike (ID mapping feasibility)
+- [x] CAA integration — 1,768,376 crosswalks imported, cover proxy live, frontend display with fallback
 - [x] Enrichment prerequisites reviewed and sequenced (Phase 4A plan accepted)
 
 ---
@@ -218,3 +218,16 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 **Step 8: Alpha invite** — PASS (alpha-invite.md updated with web UI, full corpus info, cold-start caveat, 5 keys issued.)
 **Step 9: Filtered-query concurrency hardening** — PASS (composite index applied on staging + capped fallback path deployed. c100 load tests now show 0 timeouts / 0 errors on filtered release queries; latency still high under heavy contention, tracked as scale/perf caveat for wider rollout.)
 **Step 10: Search IA + entity pages** — PASS (master-first grouped results, duplicate release collapse under masters, new `/master/[id]` and `/artist/[id]` pages, release page now includes per-track expandable credits and Discogs deep links.)
+**Step 11: Cover Art Archive integration** — PASS
+  - MusicBrainz crosswalk import CLI (`apps/ingest/src/musicbrainz-import.ts`): streams 6.5GB MB dump, extracts discogs_id→MBID mappings
+  - 1,768,376 crosswalks imported from Feb 28 2026 dump into `enrich.release_crosswalks`
+  - Cover proxy endpoint: `GET /v1/releases/:id/cover` — crosswalk lookup → CAA HEAD → Redis cache (7-day TTL)
+  - Frontend: cover art on release pages with vinyl SVG placeholder fallback
+  - Domain service: `packages/domain/src/covers.ts` (exported via `@dig/domain`)
+  - API route: `apps/api/src/routes/v1/covers.ts`, Redis shared with rate limiter
+  - Import bugs fixed: tar entry ordering, MBID dedup, int32 overflow filter
+**Step 12: Master page perf fix** — PASS
+  - Added `idx_releases_master` on `catalog.releases(master_discogs_id)` (migration `008`)
+  - Parallelized master detail + versions fetch with `Promise.all`
+  - Master page TTFB: 10.3s → 0.7s
+**Gate E: GO with caveat** — soft alpha (5-10 testers). NOT GO for broader/public (filtered p99 still high under heavy contention)
