@@ -32,6 +32,10 @@ export interface AppDeps {
 // These are alpha values — will be adjusted based on production traffic patterns.
 const ANON_RATE_LIMIT = 60;
 const KEYED_RATE_LIMIT = 300;
+
+// Load-test bypass: requests with this header skip rate limiting entirely.
+// Only active in staging (set via LOAD_TEST_TOKEN env var). Remove after test.
+const LOAD_TEST_TOKEN = process.env.LOAD_TEST_TOKEN || "";
 const RATE_WINDOW = "1 minute";
 
 function getApiKey(req: FastifyRequest): string | undefined {
@@ -63,7 +67,12 @@ export async function buildApp(deps: AppDeps): Promise<{
   if (deps.enableRateLimit !== false && deps.redisUrl) {
     const redis = new Redis(deps.redisUrl);
     await app.register(rateLimit, {
-      max: (req: FastifyRequest) => getApiKey(req) ? KEYED_RATE_LIMIT : ANON_RATE_LIMIT,
+      max: (req: FastifyRequest) => {
+        if (LOAD_TEST_TOKEN && req.headers["x-load-test-token"] === LOAD_TEST_TOKEN) {
+          return 1_000_000; // effectively unlimited
+        }
+        return getApiKey(req) ? KEYED_RATE_LIMIT : ANON_RATE_LIMIT;
+      },
       timeWindow: RATE_WINDOW,
       redis,
       keyGenerator: (req: FastifyRequest) => getApiKey(req) ?? req.ip,
