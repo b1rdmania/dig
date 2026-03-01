@@ -1036,146 +1036,32 @@ The marketing site currently promises some things that aren't scoped until later
 
 ---
 
-## 20. Immediate Next Work (Recommended Order)
+## 20. Current Execution Plan (March 2026)
 
-### Phase 0A (system)
-1. Initialize TypeScript project with Fastify scaffold
-2. Set up docker-compose for local Postgres + Redis
-3. Select and configure DB access layer + migrations
-4. Design auth schema (tables + roles)
-5. Set up CI with test runner
-6. Select hosting provider, provision staging
+Phase 0–3 are complete. The active work is now Phase 4 (human search UI) and Phase 4A (enrichment).
 
-### Phase 0B (data) — can start in parallel
-1. Write profiling scripts (run against full dataset)
-2. Write `Preserve vs Normalize v1 Matrix`
-3. Draft `Image Strategy v1` (with legal posture)
-4. Run profiling and finalize `Normalization Dictionary v1`
-5. Run FTS benchmark on representative sample
-6. Finalize `Phase 1 QA Gate Spec` with numeric thresholds
-7. Complete legal/terms review
+Authoritative execution order is maintained in:
 
----
+- `docs/phase4-prerequisites.md` (Phase 4 steps and checkpoints)
+- `docs/enrichment-implementation-plan.md` (Phase 4A and EN gates)
+- `docs/enrichment-migration-spec-en-a.md` (EN-A schema details)
 
-## 21. Phase 0A/0B Weekly Execution Checklist (1–2 Person Team)
+### Completed (frozen)
 
-This is the execution version of Phase 0. It is designed to produce a `go/no-go` decision for Phase 1 (full importer implementation).
+- Gate A: passed
+- Gate B: closed with caveats
+- Gate C: passed
+- Gate D: passed
+- Phase 4 steps 0–6: complete (full release load, Run 8, cleanup/scale-down, EN-A schema migration)
 
-### Owner model
+### Active work now
 
-- `Owner A` = backend/system lead (API scaffold, infra, DB, Redis, CI)
-- `Owner B` = data/profiling lead (dump profiling, normalization dictionary, image strategy)
-- `Solo mode` = do `Owner A` items first in each week, then `Owner B` items, and cut optional tasks if blocked
+1. Phase 4 step 7: `apps/web` Next.js scaffold and deploy to Vercel
+2. Phase 4 step 8: soft alpha invite using `docs/alpha-invite.md`
+3. Phase 4 hardening: `pg_prewarm` startup path and post-deploy warmup check
+4. Phase 4A execution: EN-B (MusicBrainz crosswalk + typed edges), then EN-C, EN-D
 
-### Week 1 (Foundations boot + profiling setup)
+### Explicitly superseded
 
-#### Owner A (system)
-- [ ] Initialize TypeScript monorepo (`apps/api`, `apps/mcp`, `packages/domain`, `packages/db`)
-- [ ] Fastify API scaffold with `/v1/health`
-- [ ] Local `docker-compose` for Postgres + Redis
-- [ ] Choose DB layer + migration tool and create first migration
-- [ ] Add CI pipeline (lint + typecheck + tests)
-- [ ] Add basic test runner and one passing smoke test
-
-#### Owner B (data)
-- [ ] Create profiling script skeletons for `artists`, `labels`, `masters`, `releases`
-- [ ] Define profiling output format (JSON + markdown summary)
-- [ ] Run small sanity profiles on each dump type (field presence + sample records)
-- [ ] Start `Preserve vs Normalize v1 Matrix` template
-- [ ] Start `Normalization Dictionary v1` template (headers only)
-
-#### Shared checkpoints (end of week)
-- [ ] Repo boots locally (`npm run dev`) with Postgres + Redis connected
-- [ ] Profiling scripts run on all dump types (even if only partial outputs)
-- [ ] Monorepo/package boundaries accepted (no churn into Week 2)
-
-### Week 2 (System decisions + full profiling pass)
-
-#### Owner A (system)
-- [ ] Finalize hosting provider choice (API/workers, Postgres, Redis)
-- [ ] Provision staging services
-- [ ] Add environment config/secrets handling
-- [ ] MCP SDK scaffold with SSE transport and one dummy tool
-- [ ] Define auth schema (`users`, `api_keys`) and create migrations
-- [ ] Write initial integration test (Fastify route via inject)
-
-#### Owner B (data)
-- [ ] Run profiling scripts against full dumps (or resumable segmented runs)
-- [ ] Produce first `Dataset Sizing Report` (rows + storage estimates)
-- [ ] Benchmark XML parser candidates on release dump segment (time + memory)
-- [ ] Profile image field presence/absence across full releases dump
-- [ ] Extract edge-case samples for ANV, credits, track positions, identifiers
-
-#### Shared checkpoints (end of week)
-- [ ] Hosting and runtime stack are locked
-- [ ] Auth scaffolding decision is documented
-- [ ] Full-dataset profiling outputs exist (not just samples)
-- [ ] Image source question is narrowed to concrete options
-
-### Week 3 (Normalization decisions + image/legal strategy)
-
-#### Owner A (system)
-- [ ] Add rate limiting middleware scaffold (IP + optional API key path)
-- [ ] Add request logging + basic metrics hooks
-- [ ] Create parser fixture test harness (golden XML fixtures)
-- [ ] Document freshness strategy and batch supersession model
-- [ ] Draft rollback metadata design for import batches (to support Phase 1 rollback)
-
-#### Owner B (data)
-- [ ] Draft `Normalization Dictionary v1` using profiled edge cases
-- [ ] Finalize `Preserve vs Normalize v1 Matrix`
-- [ ] Draft `Image Strategy v1`:
-  - [ ] source
-  - [ ] serving policy
-  - [ ] legal posture
-  - [ ] coverage KPI / launch threshold
-  - [ ] backfill estimate
-- [ ] Draft `Phase 1 QA Gate Spec` with numeric thresholds
-- [ ] Run FTS benchmark on representative sample and record p95
-
-#### Shared checkpoints (end of week)
-- [ ] Phase 0 artifacts exist in draft form
-- [ ] QA thresholds are numeric, not qualitative
-- [ ] Image strategy is chosen or escalated as blocker
-- [ ] Legal/terms review status is explicit (`complete` / `blocked` / `needs counsel`)
-
-### Week 4 (Phase Gate A closeout / go-no-go)
-
-#### Owner A (system)
-- [ ] Harden scaffolds (API, MCP, DB, Redis) enough for importer work to begin
-- [ ] Validate CI runs parser + integration tests
-- [ ] Finalize infra cost estimates by phase
-- [ ] Finalize local/staging runbooks (setup + deploy + rollback outlines)
-
-#### Owner B (data)
-- [ ] Finalize `Normalization Dictionary v1`
-- [ ] Finalize `Dataset Sizing Report`
-- [ ] Finalize `Image Strategy v1`
-- [ ] Finalize `Phase 1 QA Gate Spec`
-- [ ] Finalize `Preserve vs Normalize v1 Matrix`
-
-#### Shared Gate A review (must pass before Phase 1)
-- [ ] `Phase 0A` done criteria all pass
-- [ ] `Phase 0B` done criteria all pass
-- [ ] Open decisions section is reduced to Phase 1+ deferrals only
-- [ ] Risks register updated with Phase 1 import/QA risks
-- [ ] Decide `GO / NO-GO` for full importer implementation
-
-### Solo mode compression (if one person, 2–4 weeks)
-
-- Week 1: System scaffold + profiling skeletons
-- Week 2: Full profiling + stack/hosting/auth decisions
-- Week 3: Normalization dictionary + image strategy + QA thresholds
-- Week 4: FTS benchmark + legal review + Gate A closeout
-
-If constrained, cut in this order:
-1. Optional MCP dummy tool polish (keep scaffold only)
-2. Non-critical metrics/alerting setup (keep basic logging)
-3. Cost estimate precision (keep ballpark by phase)
-
-Do **not** cut:
-- full-dataset profiling
-- normalization dictionary
-- image strategy
-- QA thresholds
-- rollback design metadata for Phase 1
+The old Phase 0 weekly checklist is historical context only and is no longer an execution document.
+Use current gate/state docs above for all agent handoffs.

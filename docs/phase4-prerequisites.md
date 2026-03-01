@@ -2,6 +2,7 @@
 
 Phase 4 is the human search UI (Next.js on Vercel). Before starting, these prerequisites must be met.
 After Phase 4 baseline, enrichment work is executed via [Enrichment Implementation Plan](enrichment-implementation-plan.md) (Phase 4A / Gate E1).
+Execution handoff document: [Current Agent Handoff](current-agent-handoff.md).
 
 ## 1. Full Releases Dataset Migration
 
