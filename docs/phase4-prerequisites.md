@@ -178,7 +178,7 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 - [x] Fly Postgres at shared-cpu-4x / 2GB RAM (8GB during load)
 - [x] Run 8 benchmark completed and documented (0/96 errors, 7/7 warm SLOs pass)
 - [x] SLO targets adjusted for full corpus (no changes needed — warm SLOs hold)
-- [ ] Search warmup script tested (pg_prewarm — pending)
+- [x] Search warmup script tested (pg_prewarm — 8 indexes, 325k blocks, verified)
 - [x] Next.js scaffold created in `apps/web/` (2910b1c)
 - [x] Vercel project created and linked (web-eight-navy-21.vercel.app)
 - [ ] CAA integration spike (ID mapping feasibility)
@@ -213,5 +213,6 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 **Step 4: Cleanup dump** — PASS (11GB freed on Fly: 167GB → 156GB. Local dump also deleted.)
 **Step 5: Scale down** — PASS (shared-cpu-4x/8GB → shared-cpu-2x/4GB. 3/3 health checks, API green.)
 **Step 6: EN-A migration** — PASS (006_enrich_schema.ts applied local + Fly, 8 tables, health green)
-**Step 7: Frontend scaffold** — PASS (`apps/web` Next.js 15 scaffold: search + release pages, CSS Modules, server-side API fetch with 5s timeout + runtime guards, build passes. Commit `2910b1c`.)
-**Step 8: Alpha invite** — pending
+**Step 7: Frontend scaffold** — PASS (`apps/web` Next.js 15 scaffold: search + release pages, CSS Modules, server-side API fetch with 10s timeout + runtime guards, build passes. Commit `2910b1c`. Deployed to Vercel: `web-eight-navy-21.vercel.app`, domain `app.dig.baby` pending DNS.)
+**Step 7a: pg_prewarm** — PASS (8 indexes warmed, 325k blocks/~2.5GB. All warm queries <200ms except fuzzy label ~3.2s (known). Runbook updated.)
+**Step 8: Alpha invite** — PASS (alpha-invite.md updated with web UI, full corpus info, cold-start caveat, 5 keys issued.)

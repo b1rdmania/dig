@@ -8,13 +8,15 @@ Operational reference for the Fly.io staging deployment. For API/MCP usage, see 
 |----------|------|--------|------|
 | API | dig-api | iad | shared-cpu-1x, 512MB, 2 machines |
 | MCP | dig-mcp | iad | shared-cpu-1x, 512MB, 1 machine |
-| Postgres | dig-db | iad | shared-cpu-2x, 1GB RAM, 40GB disk |
+| Postgres | dig-db | iad | shared-cpu-2x, 4GB RAM, 300GB disk |
 | Redis | dig-redis | iad | Upstash pay-per-use |
+| Frontend | @dig/web | iad | Vercel (Next.js) |
 
 URLs:
 - API: https://dig-api.fly.dev/v1/
 - MCP SSE: https://dig-mcp.fly.dev/sse
 - Health: https://dig-api.fly.dev/v1/health
+- Frontend: https://app.dig.baby (alias: web-eight-navy-21.vercel.app)
 
 ## Health Checks
 
@@ -88,6 +90,88 @@ npx tsx apps/mcp/src/smoke-test.ts
 ```
 
 Expected: 47/47 assertions passing.
+
+## Search Warmup (`pg_prewarm`)
+
+After a Postgres restart (deploy, OOM, Fly maintenance), search indexes are cold and the first queries against each index will be slow (1-6s instead of <200ms). Run this procedure to warm them.
+
+**When to run:** After any Postgres restart, or whenever cold-start latency is observed.
+
+### Step 1: Warm indexes
+
+```bash
+# Open proxy in one terminal
+fly proxy 15432:5432 -a dig-db
+
+# In another terminal, run pg_prewarm on all 8 search indexes (~2.5GB total)
+psql "postgresql://postgres:<password>@localhost:15432/dig" <<'SQL'
+-- FTS indexes (GIN on search_vector)
+SELECT 'idx_releases_search' AS idx, pg_prewarm('catalog.idx_releases_search') AS blocks;
+SELECT 'idx_artists_search' AS idx, pg_prewarm('catalog.idx_artists_search') AS blocks;
+SELECT 'idx_labels_search' AS idx, pg_prewarm('catalog.idx_labels_search') AS blocks;
+SELECT 'idx_masters_search' AS idx, pg_prewarm('catalog.idx_masters_search') AS blocks;
+
+-- trgm indexes (GIN on name/title for fuzzy search)
+SELECT 'idx_artists_name_trgm' AS idx, pg_prewarm('catalog.idx_artists_name_trgm') AS blocks;
+SELECT 'idx_labels_name_trgm' AS idx, pg_prewarm('catalog.idx_labels_name_trgm') AS blocks;
+SELECT 'idx_masters_title_trgm' AS idx, pg_prewarm('catalog.idx_masters_title_trgm') AS blocks;
+SELECT 'idx_releases_title_trgm' AS idx, pg_prewarm('catalog.idx_releases_title_trgm') AS blocks;
+SQL
+```
+
+Expected output: 8 rows, each showing index name and block count. Total ~325k blocks (~2.5GB). Takes 10-30 seconds depending on disk speed.
+
+### Index sizes (reference)
+
+| Index | Type | Size |
+|-------|------|------|
+| idx_releases_title_trgm | trgm | 1650 MB |
+| idx_releases_search | FTS | 447 MB |
+| idx_masters_title_trgm | trgm | 158 MB |
+| idx_labels_name_trgm | trgm | 143 MB |
+| idx_masters_search | FTS | 58 MB |
+| idx_labels_search | FTS | 58 MB |
+| idx_artists_name_trgm | trgm | 18 MB |
+| idx_artists_search | FTS | 12 MB |
+
+### Step 2: Verify with query set
+
+```bash
+# Run these against the API — all should return 200 in <500ms (warm)
+curl -s -o /dev/null -w "artist FTS: %{time_total}s\n" \
+  "https://dig-api.fly.dev/v1/search?q=radiohead&type=artist" -H "X-API-Key: warmup"
+curl -s -o /dev/null -w "release FTS: %{time_total}s\n" \
+  "https://dig-api.fly.dev/v1/search?q=miles+davis&type=release" -H "X-API-Key: warmup"
+curl -s -o /dev/null -w "label FTS: %{time_total}s\n" \
+  "https://dig-api.fly.dev/v1/search?q=warp+records&type=label" -H "X-API-Key: warmup"
+curl -s -o /dev/null -w "master FTS: %{time_total}s\n" \
+  "https://dig-api.fly.dev/v1/search?q=dark+side+moon&type=master" -H "X-API-Key: warmup"
+curl -s -o /dev/null -w "fuzzy artist: %{time_total}s\n" \
+  "https://dig-api.fly.dev/v1/search?q=radioheed&type=artist" -H "X-API-Key: warmup"
+curl -s -o /dev/null -w "multi-entity: %{time_total}s\n" \
+  "https://dig-api.fly.dev/v1/search?q=daft+punk" -H "X-API-Key: warmup"
+curl -s -o /dev/null -w "release detail: %{time_total}s\n" \
+  "https://dig-api.fly.dev/v1/releases/1" -H "X-API-Key: warmup"
+```
+
+Pass criteria: all queries < 500ms except fuzzy label (known ~3s for trgm scan on 2.3M rows).
+
+### First warmup run (2026-03-01)
+
+Executed against Fly Postgres (shared-cpu-2x, 4GB RAM). Results post-prewarm:
+
+| Query | Latency |
+|-------|---------|
+| artist FTS (radiohead) | 149ms |
+| release FTS (miles davis) | 162ms |
+| label FTS (warp records) | 148ms |
+| master FTS (dark side moon) | 156ms |
+| fuzzy artist (radioheed) | 144ms |
+| fuzzy label (warrp) | 3,258ms |
+| release detail (1) | 170ms |
+| multi-entity (daft punk) | 133ms |
+
+All within SLO except fuzzy label (known — trgm scan on full label corpus).
 
 ---
 

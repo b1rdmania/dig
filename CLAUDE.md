@@ -102,7 +102,8 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 5. [x] Enrichment foundation (Phase 4A): `enrich.*` schema applied
 6. [x] **Next.js frontend scaffold** — `apps/web`, search + release pages, build passes (`2910b1c`)
 7. [x] **Vercel deploy** — `web-eight-navy-21.vercel.app`, env vars set, search + release pages live
-8. [ ] Soft alpha invite (5-10 testers)
+8. [x] pg_prewarm warmup executed + runbook documented
+9. [x] **Alpha invite** — `docs/alpha-invite.md` updated, 5 keys issued
 8. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
 
 ## MCP Tools

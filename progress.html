@@ -502,7 +502,7 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 4 Step 7 complete. Frontend scaffold live. Vercel deploy + alpha invite next.</div>
+            <div class="v">Phase 4 Steps 0-8 complete. Frontend + Vercel + pg_prewarm + alpha invite done. Gate E review next.</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
@@ -1119,7 +1119,8 @@
             <li><span class="tick done">✓</span><span>Next.js frontend scaffold: search + release detail pages, CSS Modules design system, server-side API fetch with timeout + runtime guards</span></li>
             <li><span class="tick done">✓</span><span>Deployed to Vercel (<code>web-eight-navy-21.vercel.app</code>), connected to Fly.io API backend</span></li>
             <li><span class="tick todo">•</span><span>Artist/label/master detail pages + Cover Art Archive integration</span></li>
-            <li><span class="tick todo">•</span><span>Search warmup (<code>pg_prewarm</code>) + soft alpha invite</span></li>
+            <li><span class="tick done">✓</span><span>Search warmup (<code>pg_prewarm</code>) — 8 indexes, 325k blocks, all warm queries &lt;200ms</span></li>
+            <li><span class="tick done">✓</span><span>Soft alpha invite — 5 keys issued, invite brief updated with web UI + cold-start caveats</span></li>
           </ul>
         </div>
 
@@ -1160,7 +1161,7 @@
         <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 584k artists — full Discogs CC0 February 2026 dump, now live on Fly.io. Disk: 156GB / 300GB.<br>
         <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) for all entity types + <code>pg_trgm</code> fuzzy for artist/label/master. Release fuzzy disabled in v1. Run 8: 7/7 warm SLOs pass.<br>
         <strong>Live:</strong> <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE). Full corpus serving. EN-A enrichment schema applied.<br>
-        <strong>Next milestone:</strong> Vercel deploy + pg_prewarm + soft alpha invite. Enrichment data ingest in background.
+        <strong>Next milestone:</strong> Custom domain DNS (<code>app.dig.baby</code>), artist/label/master detail pages, Cover Art Archive integration. Enrichment data ingest in background.
       </div>
     </section>
   </main>
