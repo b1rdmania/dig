@@ -45,7 +45,7 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 
 ## Database
 - Schemas: `auth`, `ingest`, `catalog`, `enrich`
-- Migrations: `packages/db/migrations/` (001–006)
+- Migrations: `packages/db/migrations/` (001–007)
 - Schema types: `packages/db/src/schema.ts`
 - Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG 16, port 5433)
 - Fly staging: `dig-db` (shared-cpu-2x, 4GB RAM, 300GB disk)
@@ -104,7 +104,8 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 7. [x] **Vercel deploy** — `web-eight-navy-21.vercel.app`, env vars set, search + release pages live
 8. [x] pg_prewarm warmup executed + runbook documented
 9. [x] **Alpha invite** — `docs/alpha-invite.md` updated, 5 keys issued
-8. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
+10. [~] **Filtered-query concurrency hardening** — load test exposed `genre+year` at c100 as bottleneck; adding capped fallback in domain search + migration `007_release_filtered_perf_indexes.ts` before Gate E closeout
+11. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
 
 ## MCP Tools
 | Tool | Description |

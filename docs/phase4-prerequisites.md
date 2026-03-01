@@ -216,3 +216,4 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 **Step 7: Frontend scaffold** — PASS (`apps/web` Next.js 15 scaffold: search + release pages, CSS Modules, server-side API fetch with 10s timeout + runtime guards, build passes. Commit `2910b1c`. Deployed to Vercel: `web-eight-navy-21.vercel.app`, domain `app.dig.baby` pending DNS.)
 **Step 7a: pg_prewarm** — PASS (8 indexes warmed, 325k blocks/~2.5GB. All warm queries <200ms except fuzzy label ~3.2s (known). Runbook updated.)
 **Step 8: Alpha invite** — PASS (alpha-invite.md updated with web UI, full corpus info, cold-start caveat, 5 keys issued.)
+**Step 9: Filtered-query concurrency hardening** — IN PROGRESS (100-concurrent load test exposed `genre+year` filtered release path as bottleneck under contention. Implementing capped fallback + composite year/discogs index migration `007_release_filtered_perf_indexes.ts`; rerun c100 benchmark after migration.)

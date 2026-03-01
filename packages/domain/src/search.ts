@@ -582,6 +582,99 @@ async function searchGuardedMultiFilter(
   };
 }
 
+/**
+ * Last-resort fallback for filtered release queries that timed out.
+ *
+ * Strategy:
+ * - Skip FTS entirely to avoid expensive BitmapAnd + heap reads under contention.
+ * - Apply only structured filters in SQL.
+ * - Pull a bounded recent slice and optionally do lightweight title matching in memory.
+ *
+ * This path is intentionally degraded but guarantees a deterministic response instead
+ * of empty timeout results under high concurrency.
+ */
+async function searchFilteredCappedRelease(
+  db: Kysely<Database>,
+  params: SearchParams,
+  batchId: string,
+  dumpDate: string,
+  limit: number,
+  cursorData: DecodedCursor | null,
+): Promise<{ results: SearchResult[]; hasMore: boolean }> {
+  const fetchCap = Math.min(Math.max(limit * 10, 50), 200);
+
+  let query = db
+    .selectFrom("catalog.releases" as any)
+    .select([
+      "discogs_id",
+      "title as display_name",
+      "data_quality",
+      "release_year as year",
+      "country",
+    ] as any[])
+    .where("batch_id" as any, "=", batchId);
+
+  if (params.year !== undefined) {
+    query = query.where("release_year" as any, "=", params.year);
+  }
+  if (params.yearMin !== undefined) {
+    query = query.where("release_year" as any, ">=", params.yearMin);
+  }
+  if (params.yearMax !== undefined) {
+    query = query.where("release_year" as any, "<=", params.yearMax);
+  }
+  if (params.country) {
+    query = query.where("country" as any, "=", params.country);
+  }
+  if (params.genre) {
+    query = query.where(sql`EXISTS (SELECT 1 FROM catalog.release_genres g WHERE g.release_discogs_id = discogs_id AND g.batch_id = ${batchId} AND g.genre = ${params.genre})` as any);
+  }
+  if (params.style) {
+    query = query.where(sql`EXISTS (SELECT 1 FROM catalog.release_styles s WHERE s.release_discogs_id = discogs_id AND s.batch_id = ${batchId} AND s.style = ${params.style})` as any);
+  }
+
+  if (cursorData) {
+    query = query.where("discogs_id" as any, "<", cursorData.discogs_id);
+  }
+
+  query = query.orderBy("discogs_id" as any, "desc").limit(fetchCap + 1);
+  const rows = await (query as any).execute();
+  const hasMore = rows.length > fetchCap;
+  const baseRows = hasMore ? rows.slice(0, fetchCap) : rows;
+
+  // Lightweight text filter in memory (degraded approximation of search term).
+  let filteredRows = baseRows;
+  const q = params.q?.trim().toLowerCase();
+  if (q) {
+    const terms = q.split(/\s+/).filter((t) => t.length >= 2);
+    if (terms.length > 0) {
+      const matched = baseRows.filter((row: any) => {
+        const title = String(row.display_name ?? "").toLowerCase();
+        return terms.some((t) => title.includes(t));
+      });
+      if (matched.length > 0) {
+        filteredRows = matched;
+      }
+    }
+  }
+
+  const finalRows = filteredRows.slice(0, limit);
+  return {
+    results: finalRows.map((row: any) => ({
+      type: "release" as const,
+      discogs_id: row.discogs_id,
+      name: null,
+      title: row.display_name,
+      year: row.year ?? null,
+      country: row.country ?? null,
+      data_quality: row.data_quality,
+      relevance: 0,
+      provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: row.discogs_id },
+    })),
+    hasMore: hasMore || filteredRows.length > limit,
+  };
+}
+
 // --- Fuzzy fallback ---
 
 async function fuzzyFallback(
@@ -750,6 +843,21 @@ export async function search(
         } catch (err: any) {
           // If a single entity type query times out (57014), skip it gracefully
           if (err.code === "57014") {
+            // Filtered release queries should degrade to a capped fallback instead
+            // of returning empty results under concurrency pressure.
+            if (entityType === "release" && needsGuardedPath(params, entityType)) {
+              const capped = await searchFilteredCappedRelease(
+                conn, params, batchId, dumpDate, limit, cursorData,
+              );
+              allResults.push(...capped.results);
+              if (capped.hasMore) hasMore = true;
+              degraded = true;
+              degradedReason = degradedReason ?? "filtered_capped";
+              hint = hint ?? "High-load fallback applied for filtered search. Refine terms for more precise ranking.";
+              trackRequest(entityType, true);
+              continue;
+            }
+
             trackRequest(entityType, true);
             hint = hint ?? "Some results may be incomplete due to query complexity";
             degradedReason = degradedReason ?? "statement_timeout";

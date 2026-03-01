@@ -502,11 +502,11 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 4 Steps 0-8 complete. Frontend + Vercel + pg_prewarm + alpha invite done. Gate E review next.</div>
+            <div class="v">Phase 4 Steps 0-8 complete. Running Step 9 filtered-query concurrency hardening before Gate E closeout.</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>2910b1c</code></div>
+            <div class="v"><code>e3ef0bc</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
@@ -1121,6 +1121,7 @@
             <li><span class="tick todo">•</span><span>Artist/label/master detail pages + Cover Art Archive integration</span></li>
             <li><span class="tick done">✓</span><span>Search warmup (<code>pg_prewarm</code>) — 8 indexes, 325k blocks, all warm queries &lt;200ms</span></li>
             <li><span class="tick done">✓</span><span>Soft alpha invite — 5 keys issued, invite brief updated with web UI + cold-start caveats</span></li>
+            <li><span class="tick todo">•</span><span>Step 9: filtered release query hardening under concurrency (c100). Adding composite index + capped fallback, then re-benchmark.</span></li>
           </ul>
         </div>
 
