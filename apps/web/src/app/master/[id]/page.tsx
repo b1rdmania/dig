@@ -35,13 +35,28 @@ export default async function MasterPage({ params }: Props) {
   const { id } = await params;
 
   try {
-    const [masterData, releasesData] = await Promise.all([
-      digFetch<MasterResponse>(`/v1/masters/${id}`, { revalidate: 300 }),
-      digFetch<TraversalResponse>(`/v1/masters/${id}/releases?limit=100`, { revalidate: 300 }),
-    ]);
+    // Core detail must load; related versions can fail-soft.
+    const masterData = await digFetch<MasterResponse>(`/v1/masters/${id}`, { revalidate: 300 });
 
-    if (!isMasterResponse(masterData) || !isTraversalResponse(releasesData)) {
+    if (!isMasterResponse(masterData)) {
       return <ErrorMessage message="Unexpected API response format" />;
+    }
+
+    let releasesData: TraversalResponse = {
+      links: [],
+      pagination: { cursor: null, has_more: false, total_estimate: null },
+      meta: { source_type: "master", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
+    };
+    try {
+      const releasesMaybe = await digFetch<TraversalResponse>(
+        `/v1/masters/${id}/releases?limit=40`,
+        { revalidate: 300 },
+      );
+      if (isTraversalResponse(releasesMaybe)) {
+        releasesData = releasesMaybe;
+      }
+    } catch {
+      // Fail-soft: keep master page usable even if traversal is temporarily unavailable.
     }
 
     const master = masterData.master;
