@@ -115,6 +115,7 @@ describe("SearchResponse shape", () => {
         {
           type: "artist",
           discogs_id: 3840,
+          master_discogs_id: null,
           name: "Radiohead",
           title: null,
           year: null,
@@ -161,6 +162,7 @@ describe("SearchResponse shape", () => {
         {
           type: "release",
           discogs_id: 12345,
+          master_discogs_id: 54321,
           name: null,
           title: "Love Song",
           year: 2020,

@@ -42,6 +42,7 @@ export interface SearchParams {
 export interface SearchResult {
   type: SearchEntityType;
   discogs_id: number;
+  master_discogs_id: number | null;
   name: string | null;
   title: string | null;
   year: number | null;
@@ -306,6 +307,7 @@ async function searchRanked(
     query = query.select("year" as any);
   } else if (type === "release") {
     query = query.select(["release_year as year", "country"] as any[]);
+    query = query.select("master_discogs_id" as any);
   }
 
   // Apply filters (for non-release types — masters can have genre/style)
@@ -362,6 +364,7 @@ async function searchRanked(
     results: resultRows.map((row: any) => ({
       type,
       discogs_id: row.discogs_id,
+      master_discogs_id: type === "release" ? (row.master_discogs_id ?? null) : null,
       name: isNameType ? row.display_name : null,
       title: isNameType ? null : row.display_name,
       year: row.year ?? null,
@@ -423,6 +426,7 @@ async function searchGuardedRelease(
     .selectFrom("catalog.releases" as any)
     .select([
       "discogs_id",
+      "master_discogs_id",
       "title as display_name",
       "data_quality",
       "release_year as year",
@@ -468,6 +472,7 @@ async function searchGuardedRelease(
     results: resultRows.map((row: any) => ({
       type: "release" as const,
       discogs_id: row.discogs_id,
+      master_discogs_id: row.master_discogs_id ?? null,
       name: null,
       title: row.display_name,
       year: row.year ?? null,
@@ -504,6 +509,7 @@ async function searchGuardedMultiFilter(
     .selectFrom("catalog.releases as r" as any)
     .select([
       "r.discogs_id",
+      "r.master_discogs_id",
       "r.title as display_name",
       "r.data_quality",
       "r.release_year as year",
@@ -569,6 +575,7 @@ async function searchGuardedMultiFilter(
     results: resultRows.map((row: any) => ({
       type: "release" as const,
       discogs_id: row.discogs_id,
+      master_discogs_id: row.master_discogs_id ?? null,
       name: null,
       title: row.display_name,
       year: row.year ?? null,
@@ -607,6 +614,7 @@ async function searchFilteredCappedRelease(
     .selectFrom("catalog.releases" as any)
     .select([
       "discogs_id",
+      "master_discogs_id",
       "title as display_name",
       "data_quality",
       "release_year as year",
@@ -663,6 +671,7 @@ async function searchFilteredCappedRelease(
     results: finalRows.map((row: any) => ({
       type: "release" as const,
       discogs_id: row.discogs_id,
+      master_discogs_id: row.master_discogs_id ?? null,
       name: null,
       title: row.display_name,
       year: row.year ?? null,
@@ -713,6 +722,7 @@ async function fuzzyFallback(
   return rows.rows.map((row: any) => ({
     type,
     discogs_id: row.discogs_id,
+    master_discogs_id: null,
     name: isNameType ? row.display_name : null,
     title: isNameType ? null : row.display_name,
     year: null,
@@ -725,6 +735,27 @@ async function fuzzyFallback(
       discogs_id: row.discogs_id,
     },
   }));
+}
+
+function scoreSearchResult(result: SearchResult, rawQuery: string, explicitType?: SearchEntityType): number {
+  const relevanceScore = result.relevance * 100;
+  if (explicitType) return relevanceScore;
+
+  const typeWeight: Record<SearchEntityType, number> = {
+    artist: 400,
+    master: 300,
+    release: 200,
+    label: 100,
+  };
+
+  const display = (result.name || result.title || "").toLowerCase();
+  const q = rawQuery.trim().toLowerCase();
+  let bonus = 0;
+  if (q.length > 0 && display.length > 0) {
+    if (display === q) bonus += 1200;
+    else if (display.startsWith(q)) bonus += 220;
+  }
+  return typeWeight[result.type] + relevanceScore + bonus;
 }
 
 // --- Main search entry point ---
@@ -905,8 +936,15 @@ export async function search(
         }
       }
 
-      // Sort combined results by relevance (degraded results have relevance=0, will sort to end)
-      allResults.sort((a, b) => b.relevance - a.relevance);
+      // Sort combined results with artist/master preference for all-type searches.
+      // Explicit type searches keep strict relevance ordering.
+      allResults.sort((a, b) => {
+        const sa = scoreSearchResult(a, params.q || "", params.type);
+        const sb = scoreSearchResult(b, params.q || "", params.type);
+        if (sb !== sa) return sb - sa;
+        if (b.relevance !== a.relevance) return b.relevance - a.relevance;
+        return b.discogs_id - a.discogs_id;
+      });
 
       // Trim to limit
       if (allResults.length > limit) {

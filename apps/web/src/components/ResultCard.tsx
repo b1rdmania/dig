@@ -8,7 +8,10 @@ interface Props {
 }
 
 function resultHref(result: SearchResult): string | null {
-  if (result.type === "release") return `/release/${result.discogs_id}`;
+  if (result.type === "release") {
+    if (result.master_discogs_id) return `/master/${result.master_discogs_id}`;
+    return `/release/${result.discogs_id}`;
+  }
   if (result.type === "master") return `/master/${result.discogs_id}`;
   if (result.type === "artist") return `/artist/${result.discogs_id}`;
   return null;

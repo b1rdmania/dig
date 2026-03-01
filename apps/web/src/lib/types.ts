@@ -10,6 +10,7 @@ export interface Provenance {
 export interface SearchResult {
   type: "artist" | "label" | "master" | "release";
   discogs_id: number;
+  master_discogs_id: number | null;
   name: string | null;
   title: string | null;
   year: number | null;
