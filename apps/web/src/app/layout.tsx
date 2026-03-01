@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display, DM_Mono, DM_Sans } from "next/font/google";
 import { Nav } from "@/components/Nav";
+import { Footer } from "@/components/Footer";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -10,7 +11,7 @@ const playfair = Playfair_Display({
 });
 
 const dmMono = DM_Mono({
-  weight: "400",
+  weight: ["300", "400", "500"],
   subsets: ["latin"],
   variable: "--font-mono",
   display: "swap",
@@ -46,7 +47,10 @@ export default function RootLayout({
     >
       <body>
         <Nav />
-        <main style={{ padding: "1rem" }}>{children}</main>
+        <main>
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );

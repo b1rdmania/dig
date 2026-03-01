@@ -2,7 +2,7 @@ import { SkeletonHeading, SkeletonLine, SkeletonBlock } from "@/components/Skele
 
 export default function ReleaseLoading() {
   return (
-    <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "1rem 0" }}>
+    <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
       <SkeletonHeading />
       <SkeletonLine width="medium" />
       <SkeletonLine width="short" />

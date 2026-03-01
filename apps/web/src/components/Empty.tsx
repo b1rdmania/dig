@@ -3,7 +3,7 @@ export function Empty({ message }: { message?: string }) {
     <div
       style={{
         textAlign: "center",
-        padding: "3rem 1rem",
+        padding: "4rem 1rem",
         maxWidth: "var(--max-width)",
         margin: "0 auto",
       }}

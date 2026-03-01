@@ -49,7 +49,7 @@ export default async function ReleasePage({ params }: Props) {
         <Tracklist tracks={release.tracks} />
         <Credits credits={release.credits} />
         {release.notes && (
-          <section style={{ padding: "1rem 0", borderBottom: "1px solid var(--line)" }}>
+          <section style={{ padding: "1.25rem 0", borderBottom: "1px solid var(--line)" }}>
             <h2
               style={{
                 fontFamily: "var(--font-mono)",

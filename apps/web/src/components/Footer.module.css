@@ -1,0 +1,42 @@
+.footer {
+  background: var(--black);
+  padding: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--line);
+}
+
+.logo {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--warm-mid);
+}
+
+.note {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: rgba(184, 176, 160, 0.3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.note a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.note a:hover {
+  color: var(--warm-mid);
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+}

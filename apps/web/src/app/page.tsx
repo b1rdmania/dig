@@ -54,12 +54,14 @@ export default async function SearchPage({ searchParams }: Props) {
 
   return (
     <>
-      <div style={{ padding: "1rem 0", maxWidth: "var(--max-width)", margin: "0 auto" }}>
+      <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
         <Suspense>
           <SearchBar />
         </Suspense>
       </div>
-      <SearchContent searchParams={resolved} />
+      <div style={{ marginTop: "2rem" }}>
+        <SearchContent searchParams={resolved} />
+      </div>
     </>
   );
 }
