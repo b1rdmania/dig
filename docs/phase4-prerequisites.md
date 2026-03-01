@@ -175,9 +175,9 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 - [x] Full releases migrated to Fly Postgres
 - [x] Fly volume at 200GB+ (300GB)
 - [x] Fly Postgres at shared-cpu-4x / 2GB RAM (8GB during load)
-- [ ] Run 8 benchmark completed and documented
-- [ ] SLO targets adjusted for full corpus
-- [ ] Search warmup script tested
+- [x] Run 8 benchmark completed and documented (0/96 errors, 7/7 warm SLOs pass)
+- [x] SLO targets adjusted for full corpus (no changes needed — warm SLOs hold)
+- [ ] Search warmup script tested (pg_prewarm — pending)
 - [ ] Next.js scaffold created in `apps/web/`
 - [ ] Vercel project created and linked
 - [ ] CAA integration spike (ID mapping feasibility)
@@ -211,6 +211,6 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
   - Full results: `docs/phase2-search-benchmark-results.md`
 **Step 4: Cleanup dump** — PASS (11GB freed on Fly: 167GB → 156GB. Local dump also deleted.)
 **Step 5: Scale down** — PASS (shared-cpu-4x/8GB → shared-cpu-2x/4GB. 3/3 health checks, API green.)
-**Step 6: EN-A migration** — pending
+**Step 6: EN-A migration** — PASS (006_enrich_schema.ts applied local + Fly, 8 tables, health green)
 **Step 7: Frontend scaffold** — pending
 **Step 8: Alpha invite** — pending

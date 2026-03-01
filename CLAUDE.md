@@ -42,8 +42,8 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - `MCP_URL="https://dig-mcp.fly.dev/sse" npx tsx apps/mcp/src/smoke-test.ts` — MCP remote smoke test
 
 ## Database
-- Schemas: `auth`, `ingest`, `catalog`, `enrich` (planned — Phase 4A)
-- Migrations: `packages/db/migrations/` (001–005)
+- Schemas: `auth`, `ingest`, `catalog`, `enrich`
+- Migrations: `packages/db/migrations/` (001–006)
 - Schema types: `packages/db/src/schema.ts`
 - Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG 16, port 5433)
 - Fly staging: `dig-db` (shared-cpu-2x, 4GB RAM, 300GB disk)
