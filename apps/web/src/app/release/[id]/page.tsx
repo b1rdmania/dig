@@ -33,19 +33,21 @@ export default async function ReleasePage({ params }: Props) {
   const { id } = await params;
 
   try {
-    const data = await digFetch<ReleaseResponse>(`/v1/releases/${id}`, {
-      revalidate: 300,
-    });
+    const [data, coverData] = await Promise.all([
+      digFetch<ReleaseResponse>(`/v1/releases/${id}`, { revalidate: 300 }),
+      digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${id}/cover`, { revalidate: 3600 }).catch(() => null),
+    ]);
 
     if (!isReleaseResponse(data)) {
       return <ErrorMessage message="Unexpected API response format" />;
     }
 
     const release = data.release;
+    const coverUrl = coverData?.cover?.url ?? null;
 
     return (
       <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
-        <ReleaseHero release={release} />
+        <ReleaseHero release={release} coverUrl={coverUrl} />
         <Tracklist tracks={release.tracks} />
         <Credits credits={release.credits} />
         {release.notes && (

@@ -28,6 +28,7 @@ export {
   type MasterDetail,
   type ReleaseDetail,
 } from "./retrieval/index.js";
+export { getCoverUrl, type CoverResult } from "./covers.js";
 export {
   getArtistReleases,
   getArtistMasters,

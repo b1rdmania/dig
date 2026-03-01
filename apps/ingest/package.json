@@ -11,15 +11,18 @@
     "test": "vitest run --passWithNoTests",
     "ingest": "tsx src/cli.ts",
     "transform": "tsx src/transform-cli.ts",
-    "qa": "tsx src/qa-report.ts"
+    "qa": "tsx src/qa-report.ts",
+    "musicbrainz": "tsx src/musicbrainz-import.ts"
   },
   "dependencies": {
     "@dig/db": "workspace:*",
     "@dig/domain": "workspace:*",
+    "ioredis": "^5.4.2",
     "saxes": "^6.0.0",
-    "ioredis": "^5.4.2"
+    "tar-stream": "^3.1.8"
   },
   "devDependencies": {
+    "@types/tar-stream": "^3.1.4",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

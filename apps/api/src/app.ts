@@ -19,6 +19,7 @@ import { healthCheck, getTimeoutStats } from "@dig/domain";
 import { registerSearchRoutes } from "./routes/v1/search.js";
 import { registerEntityRoutes } from "./routes/v1/entities.js";
 import { registerTraversalRoutes } from "./routes/v1/traversal.js";
+import { registerCoverRoutes } from "./routes/v1/covers.js";
 
 export interface AppDeps {
   databaseUrl: string;
@@ -63,9 +64,11 @@ export async function buildApp(deps: AppDeps): Promise<{
     ],
   });
 
+  // --- Redis (shared by rate limiter + cover cache) ---
+  const redis = deps.redisUrl ? new Redis(deps.redisUrl) : null;
+
   // --- Rate limiting ---
-  if (deps.enableRateLimit !== false && deps.redisUrl) {
-    const redis = new Redis(deps.redisUrl);
+  if (deps.enableRateLimit !== false && redis) {
     await app.register(rateLimit, {
       max: (req: FastifyRequest) => {
         if (LOAD_TEST_TOKEN && req.headers["x-load-test-token"] === LOAD_TEST_TOKEN) {
@@ -180,6 +183,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerSearchRoutes(app, db);
   registerEntityRoutes(app, db);
   registerTraversalRoutes(app, db);
+  registerCoverRoutes(app, db, redis);
 
   return { app, db };
 }

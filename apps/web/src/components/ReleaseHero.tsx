@@ -5,13 +5,35 @@ import styles from "./ReleaseHero.module.css";
 
 interface Props {
   release: Release;
+  coverUrl?: string | null;
 }
 
-export function ReleaseHero({ release }: Props) {
+export function ReleaseHero({ release, coverUrl }: Props) {
   const format = release.formats[0];
 
   return (
     <section className={styles.hero}>
+      <div className={styles.heroContent}>
+        <div className={styles.cover}>
+          {coverUrl ? (
+            <img
+              src={coverUrl}
+              alt={`${release.title} cover art`}
+              className={styles.coverImg}
+              loading="eager"
+            />
+          ) : (
+            <div className={styles.coverPlaceholder}>
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={styles.vinylIcon}>
+                <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
+                <circle cx="24" cy="24" r="15" stroke="currentColor" strokeWidth="0.75" opacity="0.2" />
+                <circle cx="24" cy="24" r="8" stroke="currentColor" strokeWidth="0.75" opacity="0.2" />
+                <circle cx="24" cy="24" r="3" fill="currentColor" opacity="0.3" />
+              </svg>
+            </div>
+          )}
+        </div>
+        <div className={styles.info}>
       <h1 className={styles.title}>{release.title}</h1>
       <div className={styles.artists}>
         {release.artists.map((artist, index) => (
@@ -72,6 +94,8 @@ export function ReleaseHero({ release }: Props) {
         >
           Open on Discogs
         </a>
+      </div>
+        </div>
       </div>
     </section>
   );
