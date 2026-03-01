@@ -55,7 +55,8 @@ async function main() {
 
   // In-memory lookup maps (populated during tar stream)
   let discogsLinkTypeId: number | null = null;
-  const discogsLinkIds = new Set<number>();
+  // link.id → link.link_type — we store all, then filter after link_type is known
+  const linkIdToLinkType = new Map<number, number>();
   const urlIdToDiscogsId = new Map<number, number>();
   const releaseIdToMbid = new Map<number, string>();
   // Store full triple for l_release_url so we can filter by link ID after
@@ -96,10 +97,8 @@ async function main() {
             break;
           }
           case "link": {
-            const lt = parseInt(f[1], 10);
-            if (discogsLinkTypeId !== null && lt === discogsLinkTypeId) {
-              discogsLinkIds.add(parseInt(f[0], 10));
-            }
+            // Store all — we filter by link_type after all tables are parsed
+            linkIdToLinkType.set(parseInt(f[0], 10), parseInt(f[1], 10));
             break;
           }
           case "url": {
@@ -160,8 +159,16 @@ async function main() {
     process.exit(1);
   }
 
+  // Build discogsLinkIds now that link_type has been parsed
+  const discogsLinkIds = new Set<number>();
+  if (discogsLinkTypeId !== null) {
+    for (const [linkId, linkType] of linkIdToLinkType) {
+      if (linkType === discogsLinkTypeId) discogsLinkIds.add(linkId);
+    }
+  }
+
   console.log(`[mb-import] Maps built:`);
-  console.log(`  Discogs link IDs: ${discogsLinkIds.size.toLocaleString()}`);
+  console.log(`  Discogs link IDs: ${discogsLinkIds.size.toLocaleString()} (from ${linkIdToLinkType.size.toLocaleString()} total links)`);
   console.log(`  Discogs URLs: ${urlIdToDiscogsId.size.toLocaleString()}`);
   console.log(`  MB releases: ${releaseIdToMbid.size.toLocaleString()}`);
   console.log(`  l_release_url triples: ${relUrlTriples.length.toLocaleString()}`);
@@ -174,6 +181,7 @@ async function main() {
   console.log("[mb-import] Joining...");
   const mappings: Array<{ discogsId: number; mbid: string }> = [];
   const seen = new Set<number>();
+  const seenMbid = new Set<string>();
   let skippedLink = 0;
   let skippedUrl = 0;
   let skippedMbid = 0;
@@ -184,8 +192,11 @@ async function main() {
     if (discogsId === undefined) { skippedUrl++; continue; }
     const mbid = releaseIdToMbid.get(releaseId);
     if (!mbid) { skippedMbid++; continue; }
+    if (discogsId > 2_147_483_647) continue; // exceeds int32 — bogus URL
     if (seen.has(discogsId)) continue;
+    if (seenMbid.has(mbid)) continue; // multiple Discogs releases can share one MBID
     seen.add(discogsId);
+    seenMbid.add(mbid);
     mappings.push({ discogsId, mbid });
   }
 
