@@ -502,11 +502,11 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 4 complete through Step 6. Core search + record page next.</div>
+            <div class="v">Phase 4 Step 7 complete. Frontend scaffold live. Vercel deploy + alpha invite next.</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>06b5c58</code></div>
+            <div class="v"><code>2910b1c</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
@@ -1116,10 +1116,10 @@
             <li><span class="tick done">✓</span><span>ANALYZE + search_vector verification — all 18.9M releases populated</span></li>
             <li><span class="tick done">✓</span><span>Run 8 benchmark: 0/96 errors, p50 108ms, 7/7 warm SLOs pass</span></li>
             <li><span class="tick done">✓</span><span>Dump cleanup (22GB freed) + DB scaled to serving profile (shared-cpu-2x, 4GB)</span></li>
-            <li><span class="tick progress">◐</span><span>Next.js frontend with mobile-first search + record page (core track)</span></li>
-            <li><span class="tick todo">•</span><span>Release/artist/label detail pages with cover art (Cover Art Archive)</span></li>
-            <li><span class="tick todo">•</span><span>Search → record → traversal end-to-end flow</span></li>
-            <li><span class="tick todo">•</span><span>Deploy to Vercel, connected to Fly.io API backend</span></li>
+            <li><span class="tick done">✓</span><span>Next.js frontend scaffold: search + release detail pages, CSS Modules design system, server-side API fetch with timeout + runtime guards</span></li>
+            <li><span class="tick progress">◐</span><span>Deploy to Vercel, connected to Fly.io API backend</span></li>
+            <li><span class="tick todo">•</span><span>Artist/label/master detail pages + Cover Art Archive integration</span></li>
+            <li><span class="tick todo">•</span><span>Search warmup (<code>pg_prewarm</code>) + soft alpha invite</span></li>
           </ul>
         </div>
 
@@ -1160,7 +1160,7 @@
         <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 584k artists — full Discogs CC0 February 2026 dump, now live on Fly.io. Disk: 156GB / 300GB.<br>
         <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) for all entity types + <code>pg_trgm</code> fuzzy for artist/label/master. Release fuzzy disabled in v1. Run 8: 7/7 warm SLOs pass.<br>
         <strong>Live:</strong> <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE). Full corpus serving. EN-A enrichment schema applied.<br>
-        <strong>Next milestone:</strong> Core search UI + record page (Next.js on Vercel). Enrichment data ingest in background.
+        <strong>Next milestone:</strong> Vercel deploy + pg_prewarm + soft alpha invite. Enrichment data ingest in background.
       </div>
     </section>
   </main>

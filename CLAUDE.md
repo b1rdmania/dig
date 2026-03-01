@@ -5,7 +5,7 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 
 ## Architecture
 - **Monorepo** (pnpm workspaces): `apps/` and `packages/`
-- **Apps**: `apps/api` (Fastify REST), `apps/mcp` (MCP SSE server), `apps/ingest` (XML import workers)
+- **Apps**: `apps/api` (Fastify REST), `apps/mcp` (MCP SSE server), `apps/ingest` (XML import workers), `apps/web` (Next.js frontend)
 - **Packages**: `packages/db` (Kysely + migrations), `packages/domain` (shared retrieval services)
 - All apps import from `@dig/domain` for business logic — no framework code in domain
 
@@ -32,6 +32,7 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 
 ## Key Commands
 - `pnpm dev` — start API server (from root)
+- `pnpm dev:web` — start Next.js frontend (port 3002)
 - `pnpm test` — run all tests across workspace
 - `pnpm typecheck` — typecheck all packages
 - `docker compose up -d` — start local Postgres + Redis
@@ -97,9 +98,10 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 2. [x] ANALYZE + search_vector verification — all populated
 3. [x] **Run 8 benchmark** — 0 errors, p50 108ms, 7/7 warm SLOs pass
 4. [x] Cleanup dump + scale DB down (shared-cpu-2x, 4GB, 156GB/300GB used)
-5. Enrichment foundation (Phase 4A): `enrich.*` schema + MusicBrainz crosswalks
-6. Next.js frontend scaffold + Vercel deploy
-7. Soft alpha invite (5-10 testers)
+5. [x] Enrichment foundation (Phase 4A): `enrich.*` schema applied
+6. [x] **Next.js frontend scaffold** — `apps/web`, search + release pages, build passes (`2910b1c`)
+7. [ ] Vercel deploy + env config
+8. [ ] Soft alpha invite (5-10 testers)
 8. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
 
 ## MCP Tools

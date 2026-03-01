@@ -179,7 +179,7 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 - [x] Run 8 benchmark completed and documented (0/96 errors, 7/7 warm SLOs pass)
 - [x] SLO targets adjusted for full corpus (no changes needed — warm SLOs hold)
 - [ ] Search warmup script tested (pg_prewarm — pending)
-- [ ] Next.js scaffold created in `apps/web/`
+- [x] Next.js scaffold created in `apps/web/` (2910b1c)
 - [ ] Vercel project created and linked
 - [ ] CAA integration spike (ID mapping feasibility)
 - [x] Enrichment prerequisites reviewed and sequenced (Phase 4A plan accepted)
@@ -213,5 +213,5 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 **Step 4: Cleanup dump** — PASS (11GB freed on Fly: 167GB → 156GB. Local dump also deleted.)
 **Step 5: Scale down** — PASS (shared-cpu-4x/8GB → shared-cpu-2x/4GB. 3/3 health checks, API green.)
 **Step 6: EN-A migration** — PASS (006_enrich_schema.ts applied local + Fly, 8 tables, health green)
-**Step 7: Frontend scaffold** — pending
+**Step 7: Frontend scaffold** — PASS (`apps/web` Next.js 15 scaffold: search + release pages, CSS Modules, server-side API fetch with 5s timeout + runtime guards, build passes. Commit `2910b1c`.)
 **Step 8: Alpha invite** — pending
