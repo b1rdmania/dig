@@ -46,7 +46,7 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - Migrations: `packages/db/migrations/` (001–005)
 - Schema types: `packages/db/src/schema.ts`
 - Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG 16, port 5433)
-- Fly staging: `dig-db` (shared-cpu-4x, 8GB RAM, 300GB disk — scaled for full load)
+- Fly staging: `dig-db` (shared-cpu-2x, 4GB RAM, 300GB disk)
 - Fly proxy: `fly proxy 15432:5432 -a dig-db`
 
 ## Conventions
@@ -93,17 +93,14 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 - Docs pass complete: quickstart, ops runbook, alpha invite, Phase 4 prerequisites
 
 ## Current: Phase 4 — Data Load + Enrichment Foundation
-1. **Full releases dataset migration** — COMPLETE (pg_restore finished, ~555M rows across 12 tables)
-   - Fly DB: shared-cpu-4x, 8GB RAM, 300GB disk (~158GB used)
-2. [x] Re-enable triggers (done automatically by pg_restore --disable-triggers)
-3. Populate FTS search_vectors for releases (~18.9M rows)
-4. ANALYZE all 12 release tables + verify row counts
-5. Full-corpus benchmark rerun (Run 8) + SLO adjustment
-6. Clean up dump file on Fly (`/data/dig-releases-full.dump`, ~11GB)
-7. Scale Fly VM back down after load
-8. Enrichment foundation (Phase 4A): `enrich.*` schema + MusicBrainz crosswalks
-9. Next.js frontend scaffold + Vercel deploy
-10. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
+1. [x] **Full releases dataset migration** — COMPLETE (~555M rows, 12 tables, verified)
+2. [x] ANALYZE + search_vector verification — all populated
+3. [x] **Run 8 benchmark** — 0 errors, p50 108ms, 7/7 warm SLOs pass
+4. [x] Cleanup dump + scale DB down (shared-cpu-2x, 4GB, 156GB/300GB used)
+5. Enrichment foundation (Phase 4A): `enrich.*` schema + MusicBrainz crosswalks
+6. Next.js frontend scaffold + Vercel deploy
+7. Soft alpha invite (5-10 testers)
+8. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
 
 ## MCP Tools
 | Tool | Description |

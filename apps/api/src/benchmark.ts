@@ -78,12 +78,14 @@ interface RunResult {
   error: string | null;
 }
 
-async function runQuery(baseUrl: string, query: BenchmarkQuery): Promise<RunResult> {
+async function runQuery(baseUrl: string, query: BenchmarkQuery, apiKey?: string): Promise<RunResult> {
   const url = `${baseUrl}${query.path}`;
   const start = performance.now();
+  const headers: Record<string, string> = {};
+  if (apiKey) headers["X-API-Key"] = apiKey;
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { headers });
     const latencyMs = Math.round(performance.now() - start);
     const body = (await res.json()) as Record<string, any>;
 
@@ -124,22 +126,25 @@ async function main() {
   const args = process.argv.slice(2);
   let baseUrl = DEFAULT_BASE_URL;
   let runs = DEFAULT_RUNS;
+  let apiKey: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--base-url" && args[i + 1]) baseUrl = args[++i];
     if (args[i] === "--runs" && args[i + 1]) runs = parseInt(args[++i], 10);
+    if (args[i] === "--api-key" && args[i + 1]) apiKey = args[++i];
   }
 
   console.log(`\n🔍 Dig Search Benchmark`);
   console.log(`   Base URL: ${baseUrl}`);
   console.log(`   Queries: ${QUERIES.length}`);
   console.log(`   Runs per query: ${runs}`);
+  console.log(`   API key: ${apiKey ? "yes (300/min)" : "no (60/min)"}`);
   console.log(`   Total requests: ${QUERIES.length * runs}\n`);
 
   // Warmup run (not counted)
   console.log("Warming up...");
   for (const q of QUERIES.slice(0, 5)) {
-    await runQuery(baseUrl, q);
+    await runQuery(baseUrl, q, apiKey);
   }
 
   const allResults: RunResult[] = [];
@@ -147,7 +152,7 @@ async function main() {
   for (let run = 1; run <= runs; run++) {
     console.log(`\nRun ${run}/${runs}:`);
     for (const query of QUERIES) {
-      const result = await runQuery(baseUrl, query);
+      const result = await runQuery(baseUrl, query, apiKey);
       allResults.push(result);
 
       const status = result.statusCode === 200 ? "OK" : `${result.statusCode}`;

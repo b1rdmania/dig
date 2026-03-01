@@ -172,13 +172,45 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 
 ## 6. Phase 4 Kickoff Checklist
 
-- [ ] Full releases migrated to Fly Postgres
-- [ ] Fly volume at 200GB+
-- [ ] Fly Postgres at shared-cpu-4x / 2GB RAM
+- [x] Full releases migrated to Fly Postgres
+- [x] Fly volume at 200GB+ (300GB)
+- [x] Fly Postgres at shared-cpu-4x / 2GB RAM (8GB during load)
 - [ ] Run 8 benchmark completed and documented
 - [ ] SLO targets adjusted for full corpus
 - [ ] Search warmup script tested
 - [ ] Next.js scaffold created in `apps/web/`
 - [ ] Vercel project created and linked
 - [ ] CAA integration spike (ID mapping feasibility)
-- [ ] Enrichment prerequisites reviewed and sequenced (Phase 4A plan accepted)
+- [x] Enrichment prerequisites reviewed and sequenced (Phase 4A plan accepted)
+
+---
+
+## Phase 4 Execution Log
+
+### 2026-03-01 — Operator: Claude Code
+
+**Preflight snapshot:**
+- Machine: `d8d1009a0702d8` (shared-cpu-4x, 8GB RAM, iad)
+- Disk: 167GB / 295GB (59%)
+- 1 critical health check (metrics token — non-blocking)
+
+**Step 0: Data load (COMPLETE)**
+- pg_restore of 12 release/track tables finished. ~555M rows, ~14 hours.
+- Row counts verified — Fly matches local Docker exactly:
+  - releases: 18,876,362 | release_artists: 22,941,980
+  - release_credits: 68,279,405 | release_labels: 21,903,042
+  - release_formats: 19,332,941 | release_genres: 25,132,711
+  - release_styles: 28,476,230 | release_identifiers: 33,122,730
+  - release_companies: 33,396,408 | release_videos: 10,910,851
+  - tracks: 168,024,918 | track_credits: 85,996,293
+
+**Step 1: ANALYZE** — PASS (all 12 tables, no errors)
+**Step 2: search_vector population** — PASS (already populated from source dump: 18,876,362/18,876,362)
+**Step 3: Run 8 benchmark** — PASS (0 errors / 96 queries, p50 108ms, 5/7 cold, **7/7 warm**)
+  - Warm SLOs all pass. Cold failures are pg_prewarm-solvable.
+  - Full results: `docs/phase2-search-benchmark-results.md`
+**Step 4: Cleanup dump** — PASS (11GB freed on Fly: 167GB → 156GB. Local dump also deleted.)
+**Step 5: Scale down** — PASS (shared-cpu-4x/8GB → shared-cpu-2x/4GB. 3/3 health checks, API green.)
+**Step 6: EN-A migration** — pending
+**Step 7: Frontend scaffold** — pending
+**Step 8: Alpha invite** — pending
