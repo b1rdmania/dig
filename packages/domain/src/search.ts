@@ -806,30 +806,44 @@ export async function search(
 
           // Path B: Filtered release queries — guarded path
           if (needsGuardedPath(params, entityType)) {
-            // For single-filter queries, disable bitmap scan to force index scan
-            // backward on discogs_id. For multi-filter (genre+year), leave bitmap
-            // enabled — the BitmapAnd plan is better for intersecting two large sets.
             const filterCount = [
               params.genre, params.style, params.country,
               params.year !== undefined, params.yearMin !== undefined, params.yearMax !== undefined,
             ].filter(Boolean).length;
-            const disableBitmap = filterCount < 2;
-            if (disableBitmap) {
-              await sql`SET enable_bitmapscan = off`.execute(conn);
+
+            // Multi-filter queries (genre+year etc.) go straight to capped fallback.
+            // The guarded BitmapAnd path is fine single-query (~120ms) but under c100
+            // concurrency, connection pool contention causes 6s+ latency. The capped
+            // path skips FTS entirely and uses pure structured filters — fast even
+            // under heavy concurrency.
+            if (filterCount >= 2) {
+              const capped = await searchFilteredCappedRelease(
+                conn, params, batchId, dumpDate, limit, cursorData,
+              );
+              allResults.push(...capped.results);
+              if (capped.hasMore) hasMore = true;
+              degraded = true;
+              degradedReason = degradedReason ?? "filtered_capped";
+              hint = hint ?? "Filtered results — showing recent matches. Simplify filters for ranked results.";
+              trackRequest(entityType, false);
+              continue;
             }
+
+            // Single-filter: try guarded path with tighter timeout
+            await sql`SET statement_timeout = '1500ms'`.execute(conn);
+            await sql`SET enable_bitmapscan = off`.execute(conn);
             const { results, hasMore: typeHasMore, capped } = await searchGuardedRelease(
               conn, params, batchId, dumpDate, limit, cursorData,
             );
-            if (disableBitmap) {
-              await sql`RESET enable_bitmapscan`.execute(conn);
-            }
+            await sql`RESET enable_bitmapscan`.execute(conn);
+            await sql`SET statement_timeout = '3s'`.execute(conn);
             allResults.push(...results);
             if (typeHasMore) hasMore = true;
             degraded = true;
             degradedReason = degradedReason ?? (capped ? "filtered_capped" : "filtered");
             hint = hint ?? (capped
-              ? "Filtered results capped \u2014 try narrowing your search for complete results."
-              : "Filtered results \u2014 showing recent matches. Remove filters for relevance-ranked results.");
+              ? "Filtered results capped — try narrowing your search for complete results."
+              : "Filtered results — showing recent matches. Remove filters for relevance-ranked results.");
             continue;
           }
 
@@ -846,6 +860,8 @@ export async function search(
             // Filtered release queries should degrade to a capped fallback instead
             // of returning empty results under concurrency pressure.
             if (entityType === "release" && needsGuardedPath(params, entityType)) {
+              // Restore timeout for capped fallback (it uses structured filters only, fast)
+              await sql`SET statement_timeout = '3s'`.execute(conn);
               const capped = await searchFilteredCappedRelease(
                 conn, params, batchId, dumpDate, limit, cursorData,
               );
