@@ -42,11 +42,11 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - `MCP_URL="https://dig-mcp.fly.dev/sse" npx tsx apps/mcp/src/smoke-test.ts` — MCP remote smoke test
 
 ## Database
-- Schemas: `auth`, `ingest`, `catalog`
+- Schemas: `auth`, `ingest`, `catalog`, `enrich` (planned — Phase 4A)
 - Migrations: `packages/db/migrations/` (001–005)
 - Schema types: `packages/db/src/schema.ts`
 - Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG 16, port 5433)
-- Fly staging: `dig-db` (shared-cpu-2x, 1GB RAM, 40GB disk)
+- Fly staging: `dig-db` (shared-cpu-4x, 8GB RAM, 300GB disk — scaled for full load)
 - Fly proxy: `fly proxy 15432:5432 -a dig-db`
 
 ## Conventions
@@ -92,12 +92,18 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 - Production benchmark Run 7: 32 queries, 0 errors, p50 117ms (internet round trip)
 - Docs pass complete: quickstart, ops runbook, alpha invite, Phase 4 prerequisites
 
-## Next: Phase 4
-1. Soft alpha invite (send keys to 5-10 testers)
-2. Full releases dataset migration (18.9M rows → 200GB Fly volume)
-3. Full-corpus benchmark rerun (Run 8) + SLO adjustment
-4. Next.js frontend scaffold + Vercel deploy
-5. See `docs/phase4-prerequisites.md` for full plan
+## Current: Phase 4 — Data Load + Enrichment Foundation
+1. **Full releases dataset migration** — COMPLETE (pg_restore finished, ~555M rows across 12 tables)
+   - Fly DB: shared-cpu-4x, 8GB RAM, 300GB disk (~158GB used)
+2. [x] Re-enable triggers (done automatically by pg_restore --disable-triggers)
+3. Populate FTS search_vectors for releases (~18.9M rows)
+4. ANALYZE all 12 release tables + verify row counts
+5. Full-corpus benchmark rerun (Run 8) + SLO adjustment
+6. Clean up dump file on Fly (`/data/dig-releases-full.dump`, ~11GB)
+7. Scale Fly VM back down after load
+8. Enrichment foundation (Phase 4A): `enrich.*` schema + MusicBrainz crosswalks
+9. Next.js frontend scaffold + Vercel deploy
+10. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
 
 ## MCP Tools
 | Tool | Description |
@@ -117,5 +123,6 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 - [Ops Runbook](docs/ops-runbook.md) — incident triage, deployment, rollback
 - [Alpha Invite](docs/alpha-invite.md) — staging limitations, usage policy
 - [Phase 4 Prerequisites](docs/phase4-prerequisites.md) — migration, capacity, costs
+- [Enrichment Plan](docs/enrichment-implementation-plan.md) — MusicBrainz + Wikidata + Setlist rollout
 - [Rate-Limit Policy](docs/rate-limit-policy.md) — tier definitions
 - [Operator Guide](docs/OPERATOR.md) — how Claude Code runs this project
