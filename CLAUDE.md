@@ -104,8 +104,9 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 7. [x] **Vercel deploy** — `web-eight-navy-21.vercel.app`, env vars set, search + release pages live
 8. [x] pg_prewarm warmup executed + runbook documented
 9. [x] **Alpha invite** — `docs/alpha-invite.md` updated, 5 keys issued
-10. [~] **Filtered-query concurrency hardening** — load test exposed `genre+year` at c100 as bottleneck; adding capped fallback in domain search + migration `007_release_filtered_perf_indexes.ts` before Gate E closeout
-11. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
+10. [x] **Filtered-query concurrency hardening** — migration `007_release_filtered_perf_indexes.ts` + capped fallback path. c100 filtered load now returns 0 timeouts / 0 errors (latency caveat remains under heavy contention)
+11. [x] **Search IA + entity pages** — master-first grouped search, duplicate release collapse, new `/master/[id]` + `/artist/[id]` routes, per-track expandable credits on release page
+12. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
 
 ## MCP Tools
 | Tool | Description |

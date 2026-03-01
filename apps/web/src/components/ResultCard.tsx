@@ -8,18 +8,32 @@ interface Props {
 }
 
 function resultHref(result: SearchResult): string | null {
-  // Only releases have detail pages in this scaffold
   if (result.type === "release") return `/release/${result.discogs_id}`;
+  if (result.type === "master") return `/master/${result.discogs_id}`;
+  if (result.type === "artist") return `/artist/${result.discogs_id}`;
   return null;
 }
 
 export function ResultCard({ result }: Props) {
   const href = resultHref(result);
+  const subtitleParts: string[] = [];
+  if (result.type === "release" || result.type === "master") {
+    if (result.year) subtitleParts.push(String(result.year));
+    if (result.country) subtitleParts.push(result.country);
+  }
+
   const content = (
     <>
       <span className={styles.badge}>{typeLabel(result.type)}</span>
-      <span className={styles.name}>{displayName(result)}</span>
-      {result.year && <span className={styles.year}>{result.year}</span>}
+      <div className={styles.main}>
+        <span className={styles.name}>{displayName(result)}</span>
+        {subtitleParts.length > 0 && (
+          <span className={styles.subtitle}>{subtitleParts.join(" • ")}</span>
+        )}
+      </div>
+      {result.year && (result.type === "artist" || result.type === "label") && (
+        <span className={styles.year}>{result.year}</span>
+      )}
     </>
   );
 

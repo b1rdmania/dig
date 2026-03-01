@@ -127,6 +127,72 @@ export interface ReleaseResponse {
   release: Release;
 }
 
+// Master detail
+export interface MasterArtist {
+  discogs_id: number;
+  name: string;
+  role: string | null;
+  join_relation: string | null;
+}
+
+export interface Master {
+  discogs_id: number;
+  title: string;
+  year: number | null;
+  main_release_discogs_id: number | null;
+  data_quality: string;
+  artists: MasterArtist[];
+  genres: string[];
+  styles: string[];
+  videos: Array<{ url: string; title: string | null; duration_seconds: number | null }>;
+  provenance: Provenance;
+}
+
+export interface MasterResponse {
+  master: Master;
+}
+
+// Artist detail
+export interface Artist {
+  discogs_id: number;
+  name: string;
+  real_name: string | null;
+  profile: string | null;
+  data_quality: string;
+  aliases: Array<{ discogs_id: number | null; name: string }>;
+  name_variations: string[];
+  members: Array<{ discogs_id: number | null; name: string }>;
+  groups: Array<{ discogs_id: number | null; name: string }>;
+  urls: string[];
+  provenance: Provenance;
+}
+
+export interface ArtistResponse {
+  artist: Artist;
+}
+
+// Traversal
+export interface TraversalLink {
+  type: "artist" | "label" | "master" | "release";
+  discogs_id: number;
+  name?: string;
+  title?: string;
+  year?: number | null;
+  role?: string | null;
+  provenance: Provenance;
+}
+
+export interface TraversalResponse {
+  links: TraversalLink[];
+  pagination: Pagination;
+  meta: {
+    source_type: string;
+    source_discogs_id: number;
+    link_type: string;
+    elapsed_ms: number;
+  };
+}
+
 // Error
 export interface ApiError {
   error: {
@@ -147,6 +213,24 @@ export function isReleaseResponse(data: unknown): data is ReleaseResponse {
   if (!data || typeof data !== "object") return false;
   const d = data as Record<string, unknown>;
   return d.release !== undefined && typeof d.release === "object";
+}
+
+export function isMasterResponse(data: unknown): data is MasterResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return d.master !== undefined && typeof d.master === "object";
+}
+
+export function isArtistResponse(data: unknown): data is ArtistResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return d.artist !== undefined && typeof d.artist === "object";
+}
+
+export function isTraversalResponse(data: unknown): data is TraversalResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return Array.isArray(d.links) && d.pagination !== undefined && d.meta !== undefined;
 }
 
 export function isApiError(data: unknown): data is ApiError {

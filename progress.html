@@ -502,7 +502,7 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 4 Steps 0-8 complete. Running Step 9 filtered-query concurrency hardening before Gate E closeout.</div>
+            <div class="v">Phase 4 Steps 0-10 complete. Gate E review with performance caveats before wider rollout.</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
@@ -1118,10 +1118,13 @@
             <li><span class="tick done">✓</span><span>Dump cleanup (22GB freed) + DB scaled to serving profile (shared-cpu-2x, 4GB)</span></li>
             <li><span class="tick done">✓</span><span>Next.js frontend scaffold: search + release detail pages, CSS Modules design system, server-side API fetch with timeout + runtime guards</span></li>
             <li><span class="tick done">✓</span><span>Deployed to Vercel (<code>web-eight-navy-21.vercel.app</code>), connected to Fly.io API backend</span></li>
-            <li><span class="tick todo">•</span><span>Artist/label/master detail pages + Cover Art Archive integration</span></li>
+            <li><span class="tick done">✓</span><span>Master-first search IA: grouped result sections, duplicate release collapse under master releases</span></li>
+            <li><span class="tick done">✓</span><span>New entity pages: <code>/master/[id]</code> and <code>/artist/[id]</code>, linked from search + release views</span></li>
+            <li><span class="tick done">✓</span><span>Release page upgraded with per-track expandable credits (performer/engineer/producer roles)</span></li>
+            <li><span class="tick todo">•</span><span>Cover Art Archive integration</span></li>
             <li><span class="tick done">✓</span><span>Search warmup (<code>pg_prewarm</code>) — 8 indexes, 325k blocks, all warm queries &lt;200ms</span></li>
             <li><span class="tick done">✓</span><span>Soft alpha invite — 5 keys issued, invite brief updated with web UI + cold-start caveats</span></li>
-            <li><span class="tick todo">•</span><span>Step 9: filtered release query hardening under concurrency (c100). Adding composite index + capped fallback, then re-benchmark.</span></li>
+            <li><span class="tick done">✓</span><span>Step 9: filtered release query hardening under concurrency (c100) — 0 timeouts/errors after index + fallback changes</span></li>
           </ul>
         </div>
 

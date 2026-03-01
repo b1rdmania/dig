@@ -22,3 +22,34 @@
   margin-bottom: 0.5rem;
   display: inline-block;
 }
+
+.collapsed {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--warm-mid);
+  margin-top: 0.35rem;
+}
+
+.section {
+  margin-top: 1.4rem;
+}
+
+.sectionHeading {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--warm-mid);
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sectionCount {
+  font-size: 0.58rem;
+  opacity: 0.8;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}

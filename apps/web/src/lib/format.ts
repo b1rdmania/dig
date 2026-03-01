@@ -22,3 +22,15 @@ export function formatDescriptions(descriptions: string[]): string {
 export function typeLabel(type: string): string {
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
+
+export function discogsUrl(type: "artist" | "master" | "release" | "label", discogsId: number): string {
+  return `https://www.discogs.com/${type}/${discogsId}`;
+}
+
+export function normalizedTitle(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}

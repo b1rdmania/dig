@@ -13,13 +13,32 @@ export function Tracklist({ tracks }: Props) {
     <section className={styles.section}>
       <h2 className={styles.heading}>Tracklist</h2>
       {tracks.map((track, i) => (
-        <div key={`${track.position_raw}-${i}`} className={styles.track}>
-          <span className={styles.position}>{track.position_raw}</span>
-          <span className={styles.title}>{track.title}</span>
-          <span className={styles.duration}>
-            {formatDuration(track.duration_seconds)}
-          </span>
-        </div>
+        <details key={`${track.position_raw}-${i}`} className={styles.track}>
+          <summary className={styles.summary}>
+            <span className={styles.position}>{track.position_raw}</span>
+            <span className={styles.title}>{track.title}</span>
+            <span className={styles.duration}>
+              {formatDuration(track.duration_seconds)}
+            </span>
+          </summary>
+          {track.credits.length > 0 && (
+            <div className={styles.credits}>
+              {Object.entries(
+                track.credits.reduce<Record<string, string[]>>((acc, credit) => {
+                  const role = credit.role || "Other";
+                  acc[role] = acc[role] || [];
+                  acc[role].push(credit.artist_name);
+                  return acc;
+                }, {}),
+              ).map(([role, names]) => (
+                <div key={`${track.position_raw}-${role}`} className={styles.creditRow}>
+                  <span className={styles.creditRole}>{role}</span>
+                  <span className={styles.creditNames}>{names.join(", ")}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </details>
       ))}
     </section>
   );

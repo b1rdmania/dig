@@ -1,0 +1,103 @@
+.page {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.hero {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin-top: 0.5rem;
+  color: var(--cream);
+  font-size: 1.02rem;
+}
+
+.meta {
+  margin-top: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--warm-mid);
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.tags {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--warm-mid);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.15rem 0.45rem;
+}
+
+.links {
+  margin-top: 0.9rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.link {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-light);
+}
+
+.section {
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.heading {
+  font-family: var(--font-mono);
+  color: var(--warm-mid);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin-bottom: 0.55rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--line);
+  align-items: baseline;
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.releaseTitle {
+  color: var(--off-white);
+}
+
+.small {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--warm-mid);
+}

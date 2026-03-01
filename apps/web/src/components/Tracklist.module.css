@@ -13,12 +13,26 @@
 }
 
 .track {
+  border-bottom: 1px solid var(--line);
+}
+
+.summary {
+  list-style: none;
   display: grid;
   grid-template-columns: 2.5rem 1fr auto;
   gap: 0.5rem;
-  padding: 0.35rem 0;
+  padding: 0.4rem 0;
   align-items: baseline;
   font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary:hover .title {
+  color: var(--off-white);
 }
 
 .track:not(:last-child) {
@@ -41,4 +55,28 @@
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--warm-mid);
+}
+
+.credits {
+  padding: 0.2rem 0 0.6rem 2.5rem;
+}
+
+.creditRow {
+  display: grid;
+  grid-template-columns: minmax(5rem, 9rem) 1fr;
+  gap: 0.5rem;
+  padding: 0.18rem 0;
+}
+
+.creditRole {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--warm-mid);
+  text-transform: uppercase;
+}
+
+.creditNames {
+  font-size: 0.78rem;
+  color: var(--cream);
 }

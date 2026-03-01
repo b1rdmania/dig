@@ -25,6 +25,13 @@ async function SearchContent({
   if (typeof searchParams.type === "string" && searchParams.type) {
     params.set("type", searchParams.type);
   }
+  const passthrough = ["genre", "style", "country", "year", "year_min", "year_max"];
+  for (const key of passthrough) {
+    const value = searchParams[key];
+    if (typeof value === "string" && value) {
+      params.set(key, value);
+    }
+  }
 
   try {
     const data = await digFetch<SearchResponse>(

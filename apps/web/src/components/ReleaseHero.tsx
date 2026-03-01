@@ -1,5 +1,6 @@
+import Link from "next/link";
 import type { Release } from "@/lib/types";
-import { artistNames, formatDescriptions } from "@/lib/format";
+import { formatDescriptions, discogsUrl } from "@/lib/format";
 import styles from "./ReleaseHero.module.css";
 
 interface Props {
@@ -12,7 +13,16 @@ export function ReleaseHero({ release }: Props) {
   return (
     <section className={styles.hero}>
       <h1 className={styles.title}>{release.title}</h1>
-      <div className={styles.artists}>{artistNames(release.artists)}</div>
+      <div className={styles.artists}>
+        {release.artists.map((artist, index) => (
+          <span key={`${artist.discogs_id}-${index}`}>
+            <Link href={`/artist/${artist.discogs_id}`} className={styles.artistLink}>
+              {artist.name}
+            </Link>
+            {index < release.artists.length - 1 ? ", " : ""}
+          </span>
+        ))}
+      </div>
       <div className={styles.details}>
         {release.release_year && (
           <span className={styles.detail}>{release.release_year}</span>
@@ -48,6 +58,21 @@ export function ReleaseHero({ release }: Props) {
           ))}
         </div>
       )}
+      <div className={styles.links}>
+        {release.master_discogs_id && (
+          <Link href={`/master/${release.master_discogs_id}`} className={styles.link}>
+            View Master Page
+          </Link>
+        )}
+        <a
+          href={discogsUrl("release", release.discogs_id)}
+          target="_blank"
+          rel="noreferrer"
+          className={styles.link}
+        >
+          Open on Discogs
+        </a>
+      </div>
     </section>
   );
 }
