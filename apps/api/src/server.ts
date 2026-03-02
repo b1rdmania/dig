@@ -16,7 +16,7 @@ const { app } = await buildApp({
 });
 
 try {
-  await app.listen({ port, host: "0.0.0.0" });
+  await app.listen({ port, host: "::" });
   console.log(`[api] Listening on port ${port}`);
 } catch (err) {
   app.log.error(err);
