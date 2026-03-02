@@ -3,12 +3,16 @@ import { notFound } from "next/navigation";
 import { ApiRequestError, digFetch } from "@/lib/api";
 import {
   isMasterResponse,
+  isReleaseResponse,
   isTraversalResponse,
   type MasterResponse,
+  type ReleaseResponse,
   type TraversalResponse,
 } from "@/lib/types";
 import { discogsUrl } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
+import { Tracklist } from "@/components/Tracklist";
+import { Credits } from "@/components/Credits";
 import { Provenance } from "@/components/Provenance";
 import styles from "./page.module.css";
 
@@ -35,7 +39,6 @@ export default async function MasterPage({ params }: Props) {
   const { id } = await params;
 
   try {
-    // Fetch master detail and versions in parallel; versions fail-soft.
     const defaultTraversal: TraversalResponse = {
       links: [],
       pagination: { cursor: null, has_more: false, total_estimate: null },
@@ -56,44 +59,101 @@ export default async function MasterPage({ params }: Props) {
     const master = masterData.master;
     const artistLine = master.artists.map((a) => a.name).join(", ");
 
+    // Fetch main release detail + cover art for full content display
+    const mainReleaseId = master.main_release_discogs_id;
+    let mainRelease: ReleaseResponse["release"] | null = null;
+    let coverUrl: string | null = null;
+
+    if (mainReleaseId) {
+      const [releaseData, coverData] = await Promise.all([
+        digFetch<ReleaseResponse>(`/v1/releases/${mainReleaseId}`, { revalidate: 300 }).catch(() => null),
+        digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${mainReleaseId}/cover`, { revalidate: 3600 }).catch(() => null),
+      ]);
+      if (releaseData && isReleaseResponse(releaseData)) {
+        mainRelease = releaseData.release;
+      }
+      coverUrl = coverData?.cover?.url ?? null;
+    }
+
     return (
       <div className={styles.page}>
         <section className={styles.hero}>
-          <h1 className={styles.title}>{master.title}</h1>
-          {artistLine && <div className={styles.subtitle}>{artistLine}</div>}
-          <div className={styles.meta}>
-            {master.year && <span>{master.year}</span>}
-            <span>Master #{master.discogs_id}</span>
-          </div>
-          {(master.genres.length > 0 || master.styles.length > 0) && (
-            <div className={styles.tags}>
-              {master.genres.map((g) => (
-                <span className={styles.tag} key={`g-${g}`}>{g}</span>
-              ))}
-              {master.styles.map((s) => (
-                <span className={styles.tag} key={`s-${s}`}>{s}</span>
-              ))}
+          <div className={styles.heroContent}>
+            <div className={styles.cover}>
+              {coverUrl ? (
+                <img
+                  src={coverUrl}
+                  alt={`${master.title} cover art`}
+                  className={styles.coverImg}
+                  loading="eager"
+                />
+              ) : (
+                <div className={styles.coverPlaceholder}>
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={styles.vinylIcon}>
+                    <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
+                    <circle cx="24" cy="24" r="15" stroke="currentColor" strokeWidth="0.75" opacity="0.2" />
+                    <circle cx="24" cy="24" r="8" stroke="currentColor" strokeWidth="0.75" opacity="0.2" />
+                    <circle cx="24" cy="24" r="3" fill="currentColor" opacity="0.3" />
+                  </svg>
+                </div>
+              )}
             </div>
-          )}
-          <div className={styles.links}>
-            <a
-              href={discogsUrl("master", master.discogs_id)}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.link}
-            >
-              Open Master on Discogs
-            </a>
-            {master.main_release_discogs_id && (
-              <Link href={`/release/${master.main_release_discogs_id}`} className={styles.link}>
-                Open Main Release
-              </Link>
-            )}
+            <div className={styles.info}>
+              <h1 className={styles.title}>{master.title}</h1>
+              {artistLine && (
+                <div className={styles.artists}>
+                  {master.artists.map((artist, index) => (
+                    <span key={`${artist.discogs_id}-${index}`}>
+                      <Link href={`/artist/${artist.discogs_id}`} className={styles.artistLink}>
+                        {artist.name}
+                      </Link>
+                      {index < master.artists.length - 1 ? ", " : ""}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className={styles.meta}>
+                {master.year && <span>{master.year}</span>}
+                <span>Master #{master.discogs_id}</span>
+              </div>
+              {(master.genres.length > 0 || master.styles.length > 0) && (
+                <div className={styles.tags}>
+                  {master.genres.map((g) => (
+                    <span className={styles.tag} key={`g-${g}`}>{g}</span>
+                  ))}
+                  {master.styles.map((s) => (
+                    <span className={styles.tag} key={`s-${s}`}>{s}</span>
+                  ))}
+                </div>
+              )}
+              <div className={styles.links}>
+                <a
+                  href={discogsUrl("master", master.discogs_id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={styles.link}
+                >
+                  Open on Discogs
+                </a>
+              </div>
+            </div>
           </div>
         </section>
 
+        {mainRelease && <Tracklist tracks={mainRelease.tracks} />}
+        {mainRelease && <Credits credits={mainRelease.credits} />}
+
+        {mainRelease?.notes && (
+          <section className={styles.section}>
+            <h2 className={styles.heading}>Notes</h2>
+            <p className={styles.copy}>{mainRelease.notes}</p>
+          </section>
+        )}
+
         <section className={styles.section}>
-          <h2 className={styles.heading}>Versions</h2>
+          <h2 className={styles.heading}>
+            Versions ({releasesData.links.length})
+          </h2>
           {releasesData.links.length === 0 && (
             <div className={styles.small}>No linked releases found.</div>
           )}
