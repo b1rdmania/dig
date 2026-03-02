@@ -13,7 +13,8 @@ primary_region = "iad"
 [env]
   PORT = "3002"
   NODE_ENV = "production"
-  DIG_API_URL = "https://dig-api.fly.dev"
+  # Internal Fly networking — ~1ms to API instead of internet round-trip
+  DIG_API_URL = "http://dig-api.internal:3000"
 
 [http_service]
   internal_port = 3002
