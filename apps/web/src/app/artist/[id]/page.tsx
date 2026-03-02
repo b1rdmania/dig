@@ -151,14 +151,14 @@ export default async function ArtistPage({ params }: Props) {
         )}
 
         <section className={styles.section}>
-          <h2 className={styles.heading}>Key Masters</h2>
+          <h2 className={styles.heading}>Releases</h2>
           {mastersData.links.length === 0 && (
-            <div className={styles.small}>No linked masters found.</div>
+            <div className={styles.small}>No releases found.</div>
           )}
           {mastersData.links.map((link) => (
             <div className={styles.row} key={link.discogs_id}>
-              <Link href={`/master/${link.discogs_id}`} className={styles.item}>
-                {link.title || `Master ${link.discogs_id}`}
+              <Link href={`/release/${link.discogs_id}`} className={styles.item}>
+                {link.title || `Release ${link.discogs_id}`}
               </Link>
               <span className={styles.small}>{link.year || "—"}</span>
             </div>

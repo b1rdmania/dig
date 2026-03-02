@@ -84,8 +84,8 @@ export function ReleaseHero({ release, coverUrl }: Props) {
       )}
       <div className={styles.links}>
         {release.master_discogs_id && (
-          <Link href={`/master/${release.master_discogs_id}`} className={styles.link}>
-            View Master Page
+          <Link href={`/release/${release.master_discogs_id}`} className={styles.link}>
+            View Release Page
           </Link>
         )}
         <a

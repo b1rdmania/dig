@@ -20,6 +20,8 @@ export function formatDescriptions(descriptions: string[]): string {
 }
 
 export function typeLabel(type: string): string {
+  if (type === "master") return "Release";
+  if (type === "release") return "Version";
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
 

@@ -92,7 +92,7 @@ export default async function LabelPage({ params }: Props) {
           )}
           {releasesData.links.map((link) => (
             <div className={styles.row} key={link.discogs_id}>
-              <Link href={`/release/${link.discogs_id}`} className={styles.item}>
+              <Link href={`/version/${link.discogs_id}`} className={styles.item}>
                 {link.title || `Release ${link.discogs_id}`}
               </Link>
               <span className={styles.small}>{link.year || "—"}</span>
