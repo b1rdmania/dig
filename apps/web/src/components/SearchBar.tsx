@@ -10,17 +10,15 @@ export function SearchBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
-  const [type, setType] = useState(searchParams.get("type") || "");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pushParams = useCallback(
-    (q: string, t: string) => {
+    (q: string) => {
       const params = new URLSearchParams();
       if (q.trim()) params.set("q", q.trim());
-      if (t) params.set("type", t);
-      // Preserve other existing filters
+      // Preserve existing filters (type, genre, etc.)
       for (const [key, val] of searchParams.entries()) {
-        if (key !== "q" && key !== "type" && key !== "cursor") {
+        if (key !== "q" && key !== "cursor") {
           params.set(key, val);
         }
       }
@@ -32,17 +30,16 @@ export function SearchBar() {
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      pushParams(query, type);
+      pushParams(query);
     }, DEBOUNCE_MS);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [query, type, pushParams]);
+  }, [query, pushParams]);
 
   // Sync from URL on back/forward navigation
   useEffect(() => {
     setQuery(searchParams.get("q") || "");
-    setType(searchParams.get("type") || "");
   }, [searchParams]);
 
   return (
@@ -55,17 +52,6 @@ export function SearchBar() {
         onChange={(e) => setQuery(e.target.value)}
         autoFocus
       />
-      <select
-        className={styles.typeSelect}
-        value={type}
-        onChange={(e) => setType(e.target.value)}
-      >
-        <option value="">All</option>
-        <option value="artist">Artist</option>
-        <option value="label">Label</option>
-        <option value="master">Master</option>
-        <option value="release">Release</option>
-      </select>
     </div>
   );
 }
