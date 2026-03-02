@@ -6,6 +6,7 @@ import { Tracklist } from "@/components/Tracklist";
 import { Credits } from "@/components/Credits";
 import { Provenance } from "@/components/Provenance";
 import { ErrorMessage } from "@/components/ErrorMessage";
+import { PageViewTracker } from "@/components/PageViewTracker";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -49,6 +50,7 @@ export default async function VersionPage({ params }: Props) {
 
     return (
       <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
+        <PageViewTracker type="version" entityId={release.discogs_id} title={release.title} />
         <ReleaseHero release={release} coverUrl={coverUrl} />
         <Tracklist tracks={release.tracks} />
         <Credits credits={release.credits} />

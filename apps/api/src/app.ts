@@ -20,6 +20,7 @@ import { registerSearchRoutes } from "./routes/v1/search.js";
 import { registerEntityRoutes } from "./routes/v1/entities.js";
 import { registerTraversalRoutes } from "./routes/v1/traversal.js";
 import { registerCoverRoutes } from "./routes/v1/covers.js";
+import { registerEventRoutes } from "./routes/v1/events.js";
 
 export interface AppDeps {
   databaseUrl: string;
@@ -54,7 +55,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   // --- CORS ---
   await app.register(cors, {
     origin: true,
-    methods: ["GET", "OPTIONS"],
+    methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "X-API-Key"],
     exposedHeaders: [
       "X-RateLimit-Limit",
@@ -115,7 +116,8 @@ export async function buildApp(deps: AppDeps): Promise<{
 
     // Categorize route for monitoring
     let category = "other";
-    if (route.includes("/search")) category = "search";
+    if (route.includes("/events")) category = "telemetry";
+    else if (route.includes("/search")) category = "search";
     else if (route.includes("/health")) category = "health";
     else if (route.includes("/credits")) category = "traversal";
     else if (route.includes("/releases") || route.includes("/masters")) {
@@ -184,6 +186,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerEntityRoutes(app, db);
   registerTraversalRoutes(app, db);
   registerCoverRoutes(app, db, redis);
+  registerEventRoutes(app);
 
   return { app, db };
 }

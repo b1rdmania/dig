@@ -14,6 +14,8 @@ import { ErrorMessage } from "@/components/ErrorMessage";
 import { Tracklist } from "@/components/Tracklist";
 import { Credits } from "@/components/Credits";
 import { Provenance } from "@/components/Provenance";
+import { PageViewTracker } from "@/components/PageViewTracker";
+import { OutboundLink } from "@/components/OutboundLink";
 import styles from "./page.module.css";
 
 interface Props {
@@ -106,6 +108,7 @@ async function MasterAsRelease({ master: masterData, id }: { master: MasterRespo
 
   return (
     <div className={styles.page}>
+      <PageViewTracker type="release" entityId={master.discogs_id} title={master.title} />
       <section className={styles.hero}>
         <div className={styles.heroContent}>
           <div className={styles.cover}>
@@ -155,14 +158,14 @@ async function MasterAsRelease({ master: masterData, id }: { master: MasterRespo
               </div>
             )}
             <div className={styles.links}>
-              <a
+              <OutboundLink
                 href={discogsUrl("master", master.discogs_id)}
-                target="_blank"
-                rel="noreferrer"
+                entityType="master"
+                entityId={master.discogs_id}
                 className={styles.link}
               >
                 Open on Discogs
-              </a>
+              </OutboundLink>
             </div>
           </div>
         </div>

@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import type { SearchResponse } from "@/lib/types";
+import { trackSearchSubmitted, trackSearchResultClicked } from "@/lib/analytics";
 import { ResultCard } from "./ResultCard";
 import styles from "./SearchResults.module.css";
 
@@ -7,6 +11,18 @@ interface Props {
 }
 
 export function SearchResults({ data }: Props) {
+  const tracked = useRef(false);
+  useEffect(() => {
+    if (!tracked.current) {
+      tracked.current = true;
+      trackSearchSubmitted(
+        data.meta.query,
+        data.results.length,
+        data.meta.elapsed_ms,
+        data.meta.degraded,
+      );
+    }
+  }, [data]);
   const masters = data.results.filter((r) => r.type === "master");
   const artists = data.results.filter((r) => r.type === "artist");
   const labels = data.results.filter((r) => r.type === "label");
@@ -57,8 +73,13 @@ export function SearchResults({ data }: Props) {
               {section.title}
               <span className={styles.sectionCount}>{section.items.length}</span>
             </h2>
-            {shown.map((r) => (
-              <ResultCard key={`${r.type}-${r.discogs_id}`} result={r} />
+            {shown.map((r, idx) => (
+              <div
+                key={`${r.type}-${r.discogs_id}`}
+                onClick={() => trackSearchResultClicked(data.meta.query, r.type, r.discogs_id, idx)}
+              >
+                <ResultCard result={r} />
+              </div>
             ))}
             {overflow > 0 && (
               <div className={styles.overflow}>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Release } from "@/lib/types";
 import { formatDescriptions, discogsUrl } from "@/lib/format";
+import { OutboundLink } from "./OutboundLink";
 import styles from "./ReleaseHero.module.css";
 
 interface Props {
@@ -88,14 +89,14 @@ export function ReleaseHero({ release, coverUrl }: Props) {
             View Release Page
           </Link>
         )}
-        <a
+        <OutboundLink
           href={discogsUrl("release", release.discogs_id)}
-          target="_blank"
-          rel="noreferrer"
+          entityType="release"
+          entityId={release.discogs_id}
           className={styles.link}
         >
           Open on Discogs
-        </a>
+        </OutboundLink>
       </div>
         </div>
       </div>

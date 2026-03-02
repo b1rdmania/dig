@@ -1,6 +1,6 @@
 # Phase 5 Week 1 Execution Board
 
-Status: in-progress (Day 4 complete)
+Status: in-progress (Day 5 complete)
 Scope: execute immediate post-Phase 4 priorities without changing Phase 0-4 architecture decisions.
 
 This board is an execution layer on top of:
@@ -83,9 +83,9 @@ Tasks:
 3. Document event schema + query examples
 
 Done criteria:
-1. Events are emitted and observable
-2. Event fields are documented in one place
-3. Can answer top search/click-through questions from data
+1. ~~Events are emitted and observable~~ ✅ 5 event types: `search_submitted`, `search_result_clicked`, `release_page_viewed`, `version_page_viewed`, `outbound_discogs_clicked`. All logged to Fly structured logs.
+2. ~~Event fields are documented in one place~~ ✅ `docs/telemetry-schema.md` — full schema, log format, query examples.
+3. ~~Can answer top search/click-through questions from data~~ ✅ Query examples documented: top queries, click-through rate, session flow.
 
 ### Day 6: Alpha Ops Pack (P1)
 
