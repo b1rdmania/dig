@@ -54,6 +54,8 @@ export async function generateMetadata({ params }: Props) {
 export default async function ReleasePage({ params }: Props) {
   const { id } = await params;
 
+  if (!/^\d+$/.test(id)) notFound();
+
   // Try master first — this is the "release" in user-facing terms
   let masterData: MasterResponse | null = null;
   try {

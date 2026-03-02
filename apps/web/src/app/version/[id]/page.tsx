@@ -32,6 +32,8 @@ export async function generateMetadata({ params }: Props) {
 export default async function VersionPage({ params }: Props) {
   const { id } = await params;
 
+  if (!/^\d+$/.test(id)) notFound();
+
   try {
     const [data, coverData] = await Promise.all([
       digFetch<ReleaseResponse>(`/v1/releases/${id}`, { revalidate: 300 }),
