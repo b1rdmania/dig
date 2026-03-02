@@ -1,6 +1,6 @@
 # Phase 5 Week 1 Execution Board
 
-Status: planned  
+Status: in-progress (Day 1 complete)
 Scope: execute immediate post-Phase 4 priorities without changing Phase 0-4 architecture decisions.
 
 This board is an execution layer on top of:
@@ -31,9 +31,9 @@ Tasks:
 3. Publish baseline results in docs and progress page
 
 Done criteria:
-1. Baseline numbers are committed
-2. Outliers are tagged with severity (`P0`/`P1`)
-3. A go/no-go threshold is explicit for each search class
+1. ~~Baseline numbers are committed~~ ✅ `docs/slo-baseline-alpha.md` (commit `f5cb332`)
+2. ~~Outliers are tagged with severity (`P0`/`P1`)~~ ✅ Broad FTS p95 and filtered release p95 tagged P1
+3. ~~A go/no-go threshold is explicit for each search class~~ ✅ GO for all classes (two with caveats)
 
 ### Day 2: Filtered Query Hardening (P0)
 
