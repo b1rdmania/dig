@@ -122,7 +122,10 @@ shared_buffers is typically 25% of RAM. At 1GB, that's 256MB — barely enough t
 
 ### Next.js frontend scaffold
 - Create `apps/web/` in the monorepo
-- Deploy to Vercel, connect to `dig-api.fly.dev`
+- Deployed to Fly.io (`dig-web`, always-on, no cold starts) — migrated from Vercel
+- `Dockerfile.web` + `fly.web.toml` (shared-cpu-1x, 512MB, iad)
+- DNS: `app.dig.baby` CNAME → `qxd113e.dig-web.fly.dev` (cutover pending)
+- Vercel project retained as 24h rollback fallback
 - Mobile-first search interface
 
 ### Cover Art Archive integration
@@ -213,7 +216,7 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
 **Step 4: Cleanup dump** — PASS (11GB freed on Fly: 167GB → 156GB. Local dump also deleted.)
 **Step 5: Scale down** — PASS (shared-cpu-4x/8GB → shared-cpu-2x/4GB. 3/3 health checks, API green.)
 **Step 6: EN-A migration** — PASS (006_enrich_schema.ts applied local + Fly, 8 tables, health green)
-**Step 7: Frontend scaffold** — PASS (`apps/web` Next.js 15 scaffold: search + release pages, CSS Modules, server-side API fetch with 10s timeout + runtime guards, build passes. Commit `2910b1c`. Deployed to Vercel: `web-eight-navy-21.vercel.app`, domain `app.dig.baby` pending DNS.)
+**Step 7: Frontend scaffold** — PASS (`apps/web` Next.js 15 scaffold: search + release pages, CSS Modules, server-side API fetch with 10s timeout + runtime guards, build passes. Commit `2910b1c`. Initially deployed to Vercel, migrated to Fly.io (`dig-web`) for always-on — no cold starts. `Dockerfile.web` + `fly.web.toml`. Commit `0c4f008`.)
 **Step 7a: pg_prewarm** — PASS (8 indexes warmed, 325k blocks/~2.5GB. All warm queries <200ms except fuzzy label ~3.2s (known). Runbook updated.)
 **Step 8: Alpha invite** — PASS (alpha-invite.md updated with web UI, full corpus info, cold-start caveat, 5 keys issued.)
 **Step 9: Filtered-query concurrency hardening** — PASS (composite index applied on staging + capped fallback path deployed. c100 load tests now show 0 timeouts / 0 errors on filtered release queries; latency still high under heavy contention, tracked as scale/perf caveat for wider rollout.)
@@ -230,4 +233,11 @@ These items are required before starting MusicBrainz/Wikidata/Setlist ingestion 
   - Added `idx_releases_master` on `catalog.releases(master_discogs_id)` (migration `008`)
   - Parallelized master detail + versions fetch with `Promise.all`
   - Master page TTFB: 10.3s → 0.7s
+**Step 13: Frontend migration Vercel → Fly.io** — PASS
+  - Eliminated cold start delays (Vercel serverless → Fly always-on container)
+  - `Dockerfile.web` + `fly.web.toml` (shared-cpu-1x, 512MB, iad region)
+  - Pre-cutover baseline: homepage 0.16s, release 0.16s, master 0.17s, artist 0.44s, label 0.28s
+  - DNS cutover: `app.dig.baby` CNAME → `qxd113e.dig-web.fly.dev` (pending user action)
+  - Vercel retained as 24h rollback fallback
+  - Internal networking (`dig-api.internal`) attempted but deferred — requires API `auto_stop_machines = "off"`
 **Gate E: GO with caveat** — soft alpha (5-10 testers). NOT GO for broader/public (filtered p99 still high under heavy contention)

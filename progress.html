@@ -641,7 +641,7 @@
         </tbody>
       </table>
       <div class="notes">
-        Full-corpus restore complete. Run 8 benchmark passed (7/7 warm SLOs). EN-A enrichment schema applied. Frontend live at app.dig.baby with search, master/artist/release pages. Cover Art Archive integrated: 1.77M crosswalks from MusicBrainz, cover proxy with Redis cache, vinyl placeholder fallback. Gate E: GO for soft alpha. Master page perf fixed (10.3s → 0.9s via idx_releases_master).
+        Full-corpus restore complete. Run 8 benchmark passed (7/7 warm SLOs). EN-A enrichment schema applied. Frontend migrated from Vercel to Fly.io (always-on, no cold starts). Cover Art Archive integrated: 1.77M crosswalks from MusicBrainz, cover proxy with Redis cache, vinyl placeholder fallback. Gate E: GO for soft alpha. Master page perf fixed (10.3s → 0.9s via idx_releases_master).
       </div>
     </section>
 
@@ -1032,7 +1032,7 @@
             <li><span class="tick done">✓</span><span>Run 8 benchmark: 0/96 errors, p50 108ms, 7/7 warm SLOs pass</span></li>
             <li><span class="tick done">✓</span><span>Dump cleanup (22GB freed) + DB scaled to serving profile (shared-cpu-2x, 4GB)</span></li>
             <li><span class="tick done">✓</span><span>Next.js frontend scaffold: search + release detail pages, CSS Modules design system, server-side API fetch with timeout + runtime guards</span></li>
-            <li><span class="tick done">✓</span><span>Deployed to Vercel (<code>app.dig.baby</code>), connected to Fly.io API backend</span></li>
+            <li><span class="tick done">✓</span><span>Deployed to Fly.io (<code>dig-web</code>, always-on), migrated from Vercel — no cold starts</span></li>
             <li><span class="tick done">✓</span><span>Master-first search IA: grouped result sections, duplicate release collapse under master releases</span></li>
             <li><span class="tick done">✓</span><span>New entity pages: <code>/master/[id]</code> and <code>/artist/[id]</code>, linked from search + release views</span></li>
             <li><span class="tick done">✓</span><span>Release page upgraded with per-track expandable credits (performer/engineer/producer roles)</span></li>
@@ -1079,7 +1079,7 @@
       <div class="notes">
         <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 584k artists — full Discogs CC0 February 2026 dump, now live on Fly.io. Disk: 156GB / 300GB.<br>
         <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) for all entity types + <code>pg_trgm</code> fuzzy for artist/label/master. Release fuzzy disabled in v1. Run 8: 7/7 warm SLOs pass.<br>
-        <strong>Live:</strong> <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE) + <a href="https://app.dig.baby" style="color:var(--accent-light)">app.dig.baby</a> (frontend). Full corpus serving. Cover art live via CAA.<br>
+        <strong>Live:</strong> <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE) + <a href="https://dig-web.fly.dev" style="color:var(--accent-light)">dig-web.fly.dev</a> (frontend, Fly.io). Full corpus serving. Cover art live via CAA. DNS cutover to <code>app.dig.baby</code> pending.<br>
         <strong>Next milestone:</strong> Wider alpha rollout (Gate E broader), enrichment data ingest, search refinement.
       </div>
     </section>

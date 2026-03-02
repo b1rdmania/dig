@@ -19,15 +19,15 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - XML parsing: saxes (SAX streaming, memory-bounded)
 - Test: Vitest
 - Package manager: pnpm (v10.27+)
-- Hosting: Fly.io (API + MCP + workers), Fly Postgres, Upstash Redis
-- Frontend (Phase 4): Next.js on Vercel
+- Hosting: Fly.io (API + MCP + Web + workers), Fly Postgres, Upstash Redis
+- Frontend: Next.js on Fly.io (always-on, no cold starts)
 - Images: Cover Art Archive first + fallback placeholders
 
 ## Live URLs
 - **API**: https://dig-api.fly.dev/ (staging alpha)
 - **MCP**: https://dig-mcp.fly.dev/sse (staging alpha)
 - **Health**: https://dig-api.fly.dev/v1/health
-- **Frontend**: https://app.dig.baby (staging alpha, Vercel)
+- **Frontend**: https://app.dig.baby (staging alpha, Fly.io — DNS cutover pending from Vercel)
 - **Marketing**: https://dig.baby (Vercel)
 - **GitHub**: https://github.com/b1rdmania/dig
 
@@ -41,6 +41,7 @@ Dig is a music data layer and search platform built on the Discogs CC0 catalog. 
 - `pnpm --filter @dig/ingest ingest -- releases --file ./path/to/dump.xml.gz` — run ingest CLI
 - `fly deploy --config fly.api.toml --remote-only` — deploy API to Fly
 - `fly deploy --config fly.mcp.toml --remote-only` — deploy MCP to Fly
+- `fly deploy --config fly.web.toml --remote-only` — deploy frontend to Fly
 - `MCP_URL="https://dig-mcp.fly.dev/sse" npx tsx apps/mcp/src/smoke-test.ts` — MCP remote smoke test
 
 ## Database
@@ -76,9 +77,11 @@ docs/                  — Implementation plan, specs, strategy docs
 docs/phase3-gate.md    — Phase 3 gate checklist + evidence
 docs/phase2-response-contracts.md — Locked JSON response shapes
 docs/rate-limit-policy.md — Rate-limit tiers + headers
-Dockerfile             — Shared monorepo Docker build
+Dockerfile             — Shared monorepo Docker build (API + MCP)
+Dockerfile.web         — Next.js frontend Docker build
 fly.api.toml           — Fly config for dig-api
 fly.mcp.toml           — Fly config for dig-mcp
+fly.web.toml           — Fly config for dig-web (frontend)
 docker-compose.yml     — Local Postgres 16 + Redis 7
 ```
 
@@ -101,7 +104,7 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 4. [x] Cleanup dump + scale DB down (shared-cpu-2x, 4GB, 156GB/300GB used)
 5. [x] Enrichment foundation (Phase 4A): `enrich.*` schema applied
 6. [x] **Next.js frontend scaffold** — `apps/web`, search + release pages, build passes (`2910b1c`)
-7. [x] **Vercel deploy** — `app.dig.baby`, env vars set, all pages live
+7. [x] **Fly.io deploy** — `app.dig.baby` (migrated from Vercel to Fly for always-on, no cold starts). DNS cutover pending. Vercel kept as fallback for 24h.
 8. [x] pg_prewarm warmup executed + runbook documented
 9. [x] **Alpha invite** — `docs/alpha-invite.md` updated, 5 keys issued
 10. [x] **Filtered-query concurrency hardening** — migration `007` + capped fallback path. c100 load: 0 timeouts / 0 errors
