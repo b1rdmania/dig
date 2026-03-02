@@ -881,6 +881,12 @@ Add differentiated human and agent-compounding layer.
 
 - `2–4+ weeks`
 
+### Execution Board
+
+- Short-horizon delivery sequence is tracked in:
+  - [Phase 5 Week 1 Execution Board](phase5-week1-execution-board.md)
+- This board is additive and does not replace Phase 5 scope or done criteria in this document.
+
 ---
 
 ## 16. Cross-Cutting Workstreams
