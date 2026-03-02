@@ -134,3 +134,16 @@ export function trackOutboundDiscogsClicked(entityType: string, entityId: number
     entity_id: entityId,
   });
 }
+
+export function trackMediaPlayClicked(youtubeId: string, position: number): void {
+  track("media_play_clicked", {
+    youtube_id: youtubeId,
+    position,
+  });
+}
+
+export function trackMediaShowMoreClicked(remainingCount: number): void {
+  track("media_show_more_clicked", {
+    remaining_count: remainingCount,
+  });
+}

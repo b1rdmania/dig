@@ -4,6 +4,7 @@ import { isReleaseResponse, type ReleaseResponse } from "@/lib/types";
 import { ReleaseHero } from "@/components/ReleaseHero";
 import { Tracklist } from "@/components/Tracklist";
 import { Credits } from "@/components/Credits";
+import { MediaSection } from "@/components/MediaSection";
 import { Provenance } from "@/components/Provenance";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { PageViewTracker } from "@/components/PageViewTracker";
@@ -54,6 +55,7 @@ export default async function VersionPage({ params }: Props) {
         <ReleaseHero release={release} coverUrl={coverUrl} />
         <Tracklist tracks={release.tracks} />
         <Credits credits={release.credits} />
+        <MediaSection videos={release.videos} />
         {release.notes && (
           <section style={{ padding: "1.25rem 0", borderBottom: "1px solid var(--line)" }}>
             <h2

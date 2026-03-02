@@ -16,6 +16,7 @@ import { Credits } from "@/components/Credits";
 import { Provenance } from "@/components/Provenance";
 import { PageViewTracker } from "@/components/PageViewTracker";
 import { OutboundLink } from "@/components/OutboundLink";
+import { MediaSection } from "@/components/MediaSection";
 import styles from "./page.module.css";
 
 interface Props {
@@ -173,6 +174,7 @@ async function MasterAsRelease({ master: masterData, id }: { master: MasterRespo
 
       {mainRelease && <Tracklist tracks={mainRelease.tracks} />}
       {mainRelease && <Credits credits={mainRelease.credits} />}
+      {mainRelease && <MediaSection videos={mainRelease.videos} />}
 
       {mainRelease?.notes && (
         <section className={styles.section}>
