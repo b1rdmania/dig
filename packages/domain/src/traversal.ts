@@ -39,6 +39,23 @@ export interface TraversalResponse {
   };
 }
 
+export interface MasterVideo {
+  url: string;
+  title: string | null;
+  duration_seconds: number | null;
+  release_discogs_id: number;
+  provenance: { source: "discogs"; dump_date: string; discogs_id: number };
+}
+
+export interface MasterVideosResponse {
+  videos: MasterVideo[];
+  meta: {
+    source_type: "master";
+    source_discogs_id: number;
+    elapsed_ms: number;
+  };
+}
+
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
@@ -300,6 +317,53 @@ export async function getMasterReleases(
       source_type: "master",
       source_discogs_id: masterDiscogsId,
       link_type: "releases",
+      elapsed_ms: Date.now() - start,
+    },
+  };
+}
+
+export async function getMasterVideos(
+  db: Kysely<Database>,
+  masterDiscogsId: number,
+  batchId: string,
+  dumpDate: string,
+  limit = 200,
+): Promise<MasterVideosResponse> {
+  const start = Date.now();
+  const lim = Math.min(Math.max(limit, 1), 500);
+
+  const rows = await db
+    .selectFrom("catalog.releases as r")
+    .innerJoin("catalog.release_videos as rv", (join) =>
+      join
+        .onRef("rv.release_discogs_id", "=", "r.discogs_id")
+        .onRef("rv.batch_id", "=", "r.batch_id"),
+    )
+    .select([
+      "rv.url",
+      "rv.title",
+      "rv.duration_seconds",
+      "rv.release_discogs_id",
+    ])
+    .where("r.master_discogs_id", "=", masterDiscogsId)
+    .where("r.batch_id", "=", batchId)
+    .orderBy("r.is_main_release", "desc")
+    .orderBy("r.release_year", "asc")
+    .orderBy("r.discogs_id", "asc")
+    .limit(lim)
+    .execute();
+
+  return {
+    videos: rows.map((row) => ({
+      url: row.url,
+      title: row.title,
+      duration_seconds: row.duration_seconds,
+      release_discogs_id: row.release_discogs_id,
+      provenance: { source: "discogs", dump_date: dumpDate, discogs_id: row.release_discogs_id },
+    })),
+    meta: {
+      source_type: "master",
+      source_discogs_id: masterDiscogsId,
       elapsed_ms: Date.now() - start,
     },
   };

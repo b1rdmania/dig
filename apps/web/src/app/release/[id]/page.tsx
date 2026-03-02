@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { ApiRequestError, digFetch } from "@/lib/api";
 import {
+  isMasterVideosResponse,
   isMasterResponse,
   isReleaseResponse,
   isTraversalResponse,
+  type MasterVideosResponse,
   type MasterResponse,
   type ReleaseResponse,
   type TraversalResponse,
@@ -89,10 +91,10 @@ async function MasterAsRelease({ master: masterData, id }: { master: MasterRespo
     meta: { source_type: "master", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
   };
 
-  // Fetch versions, main release detail, and cover art in parallel
+  // Fetch versions, main release detail, cover art, and aggregated master videos in parallel.
   const mainReleaseId = master.main_release_discogs_id;
 
-  const [releasesData, releaseDetail, coverData] = await Promise.all([
+  const [releasesData, releaseDetail, coverData, masterVideosData] = await Promise.all([
     digFetch<TraversalResponse>(`/v1/masters/${id}/releases?limit=40`, { revalidate: 300 })
       .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
       .catch(() => defaultTraversal),
@@ -102,6 +104,9 @@ async function MasterAsRelease({ master: masterData, id }: { master: MasterRespo
     mainReleaseId
       ? digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${mainReleaseId}/cover`, { revalidate: 3600 }).catch(() => null)
       : Promise.resolve(null),
+    digFetch<MasterVideosResponse>(`/v1/masters/${id}/videos?limit=200`, { revalidate: 300 })
+      .then((d) => (isMasterVideosResponse(d) ? d : { videos: [], meta: { source_type: "master", source_discogs_id: Number(id), elapsed_ms: 0 } }))
+      .catch(() => ({ videos: [], meta: { source_type: "master", source_discogs_id: Number(id), elapsed_ms: 0 } })),
   ]);
 
   const mainRelease = releaseDetail && isReleaseResponse(releaseDetail) ? releaseDetail.release : null;
@@ -174,7 +179,7 @@ async function MasterAsRelease({ master: masterData, id }: { master: MasterRespo
 
       {mainRelease && <Tracklist tracks={mainRelease.tracks} />}
       {mainRelease && <Credits credits={mainRelease.credits} />}
-      {mainRelease && <MediaSection videos={mainRelease.videos} />}
+      <MediaSection videos={masterVideosData.videos} />
 
       {mainRelease?.notes && (
         <section className={styles.section}>

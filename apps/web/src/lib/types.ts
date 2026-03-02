@@ -97,7 +97,7 @@ export interface ReleaseCompany {
 
 export interface ReleaseVideo {
   url: string;
-  title: string;
+  title: string | null;
   duration_seconds: number | null;
 }
 
@@ -213,6 +213,21 @@ export interface TraversalResponse {
   };
 }
 
+export interface MasterVideosResponse {
+  videos: Array<{
+    url: string;
+    title: string | null;
+    duration_seconds: number | null;
+    release_discogs_id: number;
+    provenance: Provenance;
+  }>;
+  meta: {
+    source_type: "master";
+    source_discogs_id: number;
+    elapsed_ms: number;
+  };
+}
+
 // Error
 export interface ApiError {
   error: {
@@ -251,6 +266,12 @@ export function isTraversalResponse(data: unknown): data is TraversalResponse {
   if (!data || typeof data !== "object") return false;
   const d = data as Record<string, unknown>;
   return Array.isArray(d.links) && d.pagination !== undefined && d.meta !== undefined;
+}
+
+export function isMasterVideosResponse(data: unknown): data is MasterVideosResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return Array.isArray(d.videos) && d.meta !== undefined;
 }
 
 export function isLabelResponse(data: unknown): data is LabelResponse {
