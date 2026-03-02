@@ -1,0 +1,33 @@
+# Dockerfile for dig-web (Next.js frontend)
+# Deploy: fly deploy --config fly.web.toml --remote-only
+
+FROM node:20-slim AS base
+RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
+
+WORKDIR /app
+
+# --- Install dependencies ---
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY tsconfig.base.json ./
+COPY packages/db/package.json packages/db/
+COPY packages/domain/package.json packages/domain/
+COPY apps/web/package.json apps/web/
+COPY apps/api/package.json apps/api/
+COPY apps/mcp/package.json apps/mcp/
+
+RUN pnpm install --frozen-lockfile
+
+# --- Copy source and build ---
+COPY packages/ packages/
+COPY apps/web/ apps/web/
+
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+RUN pnpm --filter @dig/web build
+
+ENV PORT=3002
+ENV HOSTNAME=0.0.0.0
+EXPOSE 3002
+
+CMD ["pnpm", "--filter", "@dig/web", "start"]

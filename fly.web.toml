@@ -1,0 +1,32 @@
+# Fly.io config for dig-web (Next.js frontend)
+# Deploy: fly deploy --config fly.web.toml --remote-only
+
+app = "dig-web"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.web"
+
+[deploy]
+  strategy = "rolling"
+
+[env]
+  PORT = "3002"
+  NODE_ENV = "production"
+  DIG_API_URL = "https://dig-api.fly.dev"
+
+[http_service]
+  internal_port = 3002
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
