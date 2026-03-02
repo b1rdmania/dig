@@ -842,12 +842,13 @@ export async function search(
               params.year !== undefined, params.yearMin !== undefined, params.yearMax !== undefined,
             ].filter(Boolean).length;
 
-            // Multi-filter queries (genre+year etc.) go straight to capped fallback.
-            // The guarded BitmapAnd path is fine single-query (~120ms) but under c100
-            // concurrency, connection pool contention causes 6s+ latency. The capped
-            // path skips FTS entirely and uses pure structured filters — fast even
-            // under heavy concurrency.
-            if (filterCount >= 2) {
+            // Genre/style filters hit expensive GIN+EXISTS paths that degrade
+            // badly under concurrency (7s+ p50 at c10). Route them straight to
+            // the capped fallback which skips FTS and uses pure structured filters.
+            // Scalar-only filters (year, country) are cheaper and can try FTS first.
+            const hasGenreOrStyle = !!(params.genre || params.style);
+
+            if (filterCount >= 2 || hasGenreOrStyle) {
               const capped = await searchFilteredCappedRelease(
                 conn, params, batchId, dumpDate, limit, cursorData,
               );
@@ -860,7 +861,7 @@ export async function search(
               continue;
             }
 
-            // Single-filter: try guarded path with tighter timeout
+            // Scalar-only filter (year/country): try guarded path with tighter timeout
             await sql`SET statement_timeout = '1500ms'`.execute(conn);
             await sql`SET enable_bitmapscan = off`.execute(conn);
             const { results, hasMore: typeHasMore, capped } = await searchGuardedRelease(
