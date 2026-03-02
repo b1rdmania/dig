@@ -14,24 +14,17 @@ export function Tracklist({ tracks }: Props) {
     <section className={styles.section}>
       <h2 className={styles.heading}>Tracklist</h2>
       {tracks.map((track, i) => (
-        <details key={`${track.position_raw}-${i}`} className={styles.track}>
-          <summary className={styles.summary}>
+        <div key={`${track.position_raw}-${i}`} className={styles.track}>
+          <div className={styles.row}>
             <span className={styles.position}>{track.position_raw}</span>
             <span className={styles.title}>{track.title}</span>
             <span className={styles.duration}>
               {formatDuration(track.duration_seconds)}
             </span>
-          </summary>
+          </div>
           {track.credits.length > 0 && (
             <div className={styles.credits}>
-              {Object.entries(
-                track.credits.reduce<Record<string, Array<{ name: string; id: number }>>>((acc, credit) => {
-                  const role = credit.role || "Other";
-                  acc[role] = acc[role] || [];
-                  acc[role].push({ name: credit.artist_name, id: credit.artist_discogs_id });
-                  return acc;
-                }, {}),
-              ).map(([role, artists]) => (
+              {groupCredits(track.credits).map(([role, artists]) => (
                 <div key={`${track.position_raw}-${role}`} className={styles.creditRow}>
                   <span className={styles.creditRole}>{role}</span>
                   <span className={styles.creditNames}>
@@ -48,8 +41,19 @@ export function Tracklist({ tracks }: Props) {
               ))}
             </div>
           )}
-        </details>
+        </div>
       ))}
     </section>
   );
+}
+
+function groupCredits(credits: Track["credits"]): Array<[string, Array<{ name: string; id: number }>]> {
+  const grouped = new Map<string, Array<{ name: string; id: number }>>();
+  for (const credit of credits) {
+    const role = credit.role || "Other";
+    const list = grouped.get(role) || [];
+    list.push({ name: credit.artist_name, id: credit.artist_discogs_id });
+    grouped.set(role, list);
+  }
+  return Array.from(grouped.entries());
 }

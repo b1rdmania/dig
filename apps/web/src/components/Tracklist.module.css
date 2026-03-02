@@ -16,27 +16,17 @@
   border-bottom: 1px solid var(--line);
 }
 
-.summary {
-  list-style: none;
+.track:last-child {
+  border-bottom: 0;
+}
+
+.row {
   display: grid;
   grid-template-columns: 2.5rem 1fr auto;
   gap: 0.5rem;
   padding: 0.4rem 0;
   align-items: baseline;
   font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.summary::-webkit-details-marker {
-  display: none;
-}
-
-.summary:hover .title {
-  color: var(--off-white);
-}
-
-.track:not(:last-child) {
-  border-bottom: 1px solid var(--line);
 }
 
 .position {
@@ -58,26 +48,32 @@
 }
 
 .credits {
-  padding: 0.2rem 0 0.6rem 2.5rem;
+  padding: 0 0 0.45rem 2.5rem;
 }
 
 .creditRow {
-  display: grid;
-  grid-template-columns: minmax(5rem, 9rem) 1fr;
-  gap: 0.5rem;
-  padding: 0.18rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.4rem;
+  padding: 0.1rem 0;
+  align-items: baseline;
 }
 
 .creditRole {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   letter-spacing: 0.04em;
   color: var(--warm-mid);
   text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.creditRole::after {
+  content: ":";
 }
 
 .creditNames {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: var(--cream);
 }
 
@@ -88,4 +84,29 @@
 
 .creditLink:hover {
   color: var(--accent-light);
+}
+
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: 2rem 1fr auto;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+  }
+
+  .position {
+    font-size: 0.68rem;
+  }
+
+  .credits {
+    padding-left: 2rem;
+  }
+
+  .creditRow {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .creditNames {
+    font-size: 0.7rem;
+  }
 }

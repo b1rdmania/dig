@@ -111,3 +111,7 @@ All filtered queries return explicit `degraded_reason`:
 | Deterministic degraded behavior with explicit `degraded_reason` | **PASS** — all filtered paths return `filtered_capped` |
 | Updated benchmark table committed | **PASS** — this document |
 | No regression on artist/broad search p95 | **PASS** — artist 171ms (was 149ms, noise), broad 375ms (improved from 3.6s) |
+
+### Caveat
+
+Day 2 stress tests ran at c10-c20 + 4 rps sustained — appropriate for soft alpha (5-10 testers). c100 filtered load remains a pre-broader-launch check. At c100, autocannon connection timeouts occur (not 5xx) because the 2x shared-cpu-1x API machines saturate. Rate limiting (300/min keyed) provides the real protection layer.
