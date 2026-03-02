@@ -95,9 +95,31 @@ Tasks:
 3. Verify rollback steps and incident runbook references
 
 Done criteria:
-1. Invite docs are ready for immediate send
-2. Rollback path is tested once
-3. Gate checklist is updated with decision state
+1. ~~Invite docs are ready for immediate send~~ ✅ `docs/alpha-invite.md` updated with current limitations/capabilities, 5 keys issued, MCP + REST + UI setup instructions complete.
+2. ~~Rollback path is tested once~~ ✅ Rollback releases verified (API v19, web v14). Rollback drill previously executed 2026-02-28 (documented in ops-runbook.md). Health endpoint confirmed OK.
+3. ~~Gate checklist is updated with decision state~~ ✅ See "Pre-Launch Gate Checklist" below.
+
+Bonus:
+- Events endpoint hardened with per-IP rate limiter (30 req/min, separate from global)
+- GitHub issue templates created (`.github/ISSUE_TEMPLATE/alpha-bug-report.md`, `alpha-feature-request.md`)
+- Ops runbook updated (frontend Vercel→Fly)
+
+## Pre-Launch Gate Checklist
+
+| # | Gate Item | Status | Evidence |
+|---|-----------|--------|----------|
+| 1 | Search stability inside SLO | ✅ GO | Day 1 baseline: p50 ~110ms, p95 <500ms. Day 2: 0 timeouts under c100. |
+| 2 | Track-level credits on release/version | ✅ GO | Day 3: always-visible inline credits, mobile-responsive at 480px. |
+| 3 | Search relevance improved | ✅ GO | Day 4: exact/prefix boost, FK dedup, per-type cap. Before/after in `docs/day4-search-ia-upgrade.md`. |
+| 4 | Instrumentation live | ✅ GO | Day 5: 5 event types, structured logs, verified in Fly. Schema in `docs/telemetry-schema.md`. |
+| 5 | Events rate-limited | ✅ GO | Day 6: per-IP 30 req/min on `/v1/events` write path. |
+| 6 | Invite docs ready | ✅ GO | `docs/alpha-invite.md` — setup for UI, REST, MCP. 5 keys issued. |
+| 7 | Bug report path | ✅ GO | GitHub issue templates: bug report + feature request. Triage via [b1rdmania/dig](https://github.com/b1rdmania/dig/issues). |
+| 8 | Rollback verified | ✅ GO | Drill executed 2026-02-28. Releases available for API + web. Documented in `docs/ops-runbook.md`. |
+| 9 | Ops runbook current | ✅ GO | Updated for Fly frontend, health checks, incident playbooks. |
+| 10 | No blocking enrichment dependency | ✅ GO | Enrichment is background work only. No launch-critical path. |
+
+**Overall decision: GO for soft alpha (5-10 testers).**
 
 ### Day 7: Soft Alpha + 24h Triage Loop (P1)
 

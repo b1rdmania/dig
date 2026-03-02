@@ -8,6 +8,32 @@
  */
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
+// Tighter per-IP rate limit for the write path (separate from global read limit).
+// 30 batches/min × 25 events/batch = 750 events/min max per IP.
+const EVENTS_RATE_LIMIT = 30;
+const EVENTS_WINDOW_MS = 60_000;
+const ipCounts = new Map<string, { count: number; resetAt: number }>();
+
+function checkEventsRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = ipCounts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    ipCounts.set(ip, { count: 1, resetAt: now + EVENTS_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= EVENTS_RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
+// Cleanup stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of ipCounts) {
+    if (now > entry.resetAt) ipCounts.delete(ip);
+  }
+}, 300_000).unref();
+
 const VALID_EVENT_NAMES = new Set([
   "search_submitted",
   "search_result_clicked",
@@ -30,6 +56,12 @@ interface EventsBody {
 
 export function registerEventRoutes(app: FastifyInstance): void {
   app.post("/v1/events", async (req: FastifyRequest<{ Body: EventsBody }>, reply) => {
+    if (!checkEventsRateLimit(req.ip)) {
+      return reply.status(429).send({
+        error: { code: "RATE_LIMITED", message: "Too many event submissions", details: null },
+      });
+    }
+
     const body = req.body;
 
     if (!body || !Array.isArray(body.events)) {

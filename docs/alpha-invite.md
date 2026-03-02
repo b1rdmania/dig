@@ -66,22 +66,24 @@ For Claude Desktop, add to `claude_desktop_config.json`:
 
 | Area | Limitation |
 |------|-----------|
-| Fuzzy label search | Slow (~3s p95). trgm scan on 2.3M rows. |
+| Broad queries | "music", "love" etc. may return degraded results (recent matches, not ranked) |
+| Filtered release search | Genre/style filters use capped fallback — fast but not ranked |
+| Popularity ranking | No popularity signal — can't distinguish iconic albums from same-titled obscure ones |
 | Release fuzzy | Disabled — 18.9M-row trigram scan exceeds targets |
-| Broad queries | "music", "love" etc. may take 2-5s or return degraded results |
 | Rate limits | 300/min keyed, 60/min anonymous. No burst allowance. |
 | Auth | Keys are for rate-limit tiering only, not access control |
-| Web UI cold start | First request after idle may take 2-5s (Vercel serverless + Fly machine wakeup) |
-| Web UI scope | Search + release detail only. Artist/label/master detail pages not yet built. |
-| Cover art | Not yet integrated (Cover Art Archive mapping pending) |
+| Cover art | Available for ~1.8M releases via MusicBrainz crosswalk. Others show placeholder. |
 
 ### What's working well
 
-- Full-text search: fast, accurate across all entity types (p50 108ms on 18.9M releases)
-- Entity detail: full Discogs data with tracks, credits, formats, identifiers
-- Graph traversal: 5 link types, cursor-paginated
-- MCP: all 6 tools verified in Claude Code and Claude Desktop
-- Web UI: search with type filter, release detail with tracklist/credits/provenance
+- **Search**: FTS with exact/prefix name boosting, master-first grouping, FK-based dedup (p50 ~60ms)
+- **Entity pages**: release (master) + version (pressing) + artist + label — all with tracks, credits, cover art
+- **Track credits**: always-visible per-track credits with artist links, mobile-responsive
+- **Cover art**: Cover Art Archive via MusicBrainz crosswalk, Redis-cached (7-day TTL)
+- **URL scheme**: `/release/[id]` = canonical album, `/version/[id]` = specific pressing
+- **Graph traversal**: 5 link types, cursor-paginated
+- **MCP**: all 6 tools verified in Claude Code and Claude Desktop
+- **Telemetry**: 5 event types logged (search, clicks, page views, outbound)
 
 ## Usage policy
 

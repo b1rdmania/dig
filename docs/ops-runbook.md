@@ -10,13 +10,14 @@ Operational reference for the Fly.io staging deployment. For API/MCP usage, see 
 | MCP | dig-mcp | iad | shared-cpu-1x, 512MB, 1 machine |
 | Postgres | dig-db | iad | shared-cpu-2x, 4GB RAM, 300GB disk |
 | Redis | dig-redis | iad | Upstash pay-per-use |
-| Frontend | @dig/web | iad | Vercel (Next.js) |
+| Frontend | dig-web | iad | shared-cpu-1x, 512MB, 1 machine (Fly) |
 
 URLs:
 - API: https://dig-api.fly.dev/v1/
 - MCP SSE: https://dig-mcp.fly.dev/sse
 - Health: https://dig-api.fly.dev/v1/health
-- Frontend: https://app.dig.baby (alias: web-eight-navy-21.vercel.app)
+- Frontend: https://app.dig.baby (Fly: dig-web.fly.dev)
+- Marketing: https://dig.baby (Vercel)
 
 ## Health Checks
 
