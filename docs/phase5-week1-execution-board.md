@@ -133,8 +133,9 @@ Done criteria:
 1. First user behavior data captured
 2. First alpha patch deployed
 3. Next-week priorities ranked by evidence
-4. Media embed plan + audit queries published:
+4. Media embed plan + audit published:
    - `docs/media-embeds-release-version-plan.md`
+   - `docs/media-embeds-audit.md` (M1 baseline metrics)
 
 ## Constraints (Do Not Violate)
 

@@ -502,19 +502,19 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 4 Steps 0-12 complete. Gate E: GO (soft alpha, 5-10 testers). CAA covers live. Master page perf fixed.</div>
+            <div class="v">Phase 5 — Soft alpha live. Week 1 execution complete (Days 1-7). Search IA, telemetry, credits UX, ops pack all shipped.</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
-            <div class="v"><code>ed54ed5</code></div>
+            <div class="v"><code>8f986f5</code></div>
           </div>
           <div class="meta">
             <div class="k">Tests</div>
             <div class="v">65 unit + 47 MCP smoke (18 contract, 47 remote)</div>
           </div>
           <div class="meta">
-            <div class="k">Live APIs</div>
-            <div class="v">dig-api.fly.dev (REST) + dig-mcp.fly.dev (MCP SSE)</div>
+            <div class="k">Live surfaces</div>
+            <div class="v"><a href="https://app.dig.baby" style="color:var(--accent-light)">app.dig.baby</a> (search UI) + dig-api.fly.dev (REST) + dig-mcp.fly.dev (MCP SSE)</div>
           </div>
         </div>
       </div>
@@ -531,7 +531,9 @@
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate C — Passed</span><span class="state">closed</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 3 — REST + MCP alpha</span><span class="state">done</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate D — GO (staging)</span><span class="state">closed</span></div>
-          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 4 — Data + search UI</span><span class="state">in progress</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 4 — Data + search UI</span><span class="state">done</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Gate E — GO (soft alpha)</span><span class="state">closed</span></div>
+          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 5 — Alpha hardening</span><span class="state">week 1 done</span></div>
           <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 4A — Enrichment (EN-A)</span><span class="state">schema applied</span></div>
         </div>
       </aside>
@@ -641,7 +643,7 @@
         </tbody>
       </table>
       <div class="notes">
-        Full-corpus restore complete. Run 8 benchmark passed (7/7 warm SLOs). EN-A enrichment schema applied. Frontend migrated from Vercel to Fly.io (always-on, no cold starts). Cover Art Archive integrated: 1.77M crosswalks from MusicBrainz, cover proxy with Redis cache, vinyl placeholder fallback. Gate E: GO for soft alpha. Master page perf fixed (10.3s → 0.9s via idx_releases_master).
+        Full-corpus restore complete. Run 8 benchmark passed (7/7 warm SLOs). Phase 5 Week 1 shipped: search IA upgrade (exact/prefix boost, FK dedup, per-type cap), track-level credits with inline roles, product telemetry (5 event types), alpha ops pack (issue templates, rollback verified, rate-limited events endpoint). Cover Art Archive integrated: 1.77M crosswalks, Redis cache. Version list now shows format + country. Artist aliases collapsible. Frontend on Fly.io (always-on).
       </div>
     </section>
 
@@ -1022,9 +1024,9 @@
           <div class="phase-top">
             <div>
               <div class="phase-name">Phase 4</div>
-              <div class="phase-meta">Full data load + human search UI</div>
+              <div class="phase-meta">Full data load + human search UI + Gate E</div>
             </div>
-            <span class="status-badge">in progress</span>
+            <span class="status-badge">done</span>
           </div>
           <ul>
             <li><span class="tick done">✓</span><span>Full releases dataset migration complete (~555M rows, 12 tables, row counts verified)</span></li>
@@ -1034,12 +1036,12 @@
             <li><span class="tick done">✓</span><span>Next.js frontend scaffold: search + release detail pages, CSS Modules design system, server-side API fetch with timeout + runtime guards</span></li>
             <li><span class="tick done">✓</span><span>Deployed to Fly.io (<code>dig-web</code>, always-on), migrated from Vercel — no cold starts</span></li>
             <li><span class="tick done">✓</span><span>Master-first search IA: grouped result sections, duplicate release collapse under master releases</span></li>
-            <li><span class="tick done">✓</span><span>New entity pages: <code>/master/[id]</code> and <code>/artist/[id]</code>, linked from search + release views</span></li>
-            <li><span class="tick done">✓</span><span>Release page upgraded with per-track expandable credits (performer/engineer/producer roles)</span></li>
+            <li><span class="tick done">✓</span><span>Entity pages: <code>/release/[id]</code> (canonical album), <code>/version/[id]</code> (pressing), <code>/artist/[id]</code>, <code>/label/[id]</code></span></li>
+            <li><span class="tick done">✓</span><span>URL restructure: <code>/master/</code> → <code>/release/</code>, <code>/release/</code> → <code>/version/</code> — matches user mental model</span></li>
             <li><span class="tick done">✓</span><span>Cover Art Archive integration — 1.77M crosswalks, cover proxy + Redis cache, frontend display</span></li>
             <li><span class="tick done">✓</span><span>Search warmup (<code>pg_prewarm</code>) — 8 indexes, 325k blocks, all warm queries &lt;200ms</span></li>
-            <li><span class="tick done">✓</span><span>Soft alpha invite — 5 keys issued, invite brief updated with web UI + cold-start caveats</span></li>
-            <li><span class="tick done">✓</span><span>Step 9: filtered release query hardening under concurrency (c100) — 0 timeouts/errors after index + fallback changes</span></li>
+            <li><span class="tick done">✓</span><span>Filtered release query hardening under concurrency (c100) — 0 timeouts/errors after index + fallback changes</span></li>
+            <li><span class="tick done">✓</span><span>Gate E: GO for soft alpha (5-10 testers). 5 keys issued.</span></li>
           </ul>
         </div>
 
@@ -1064,24 +1066,31 @@
         <div class="phase">
           <div class="phase-top">
             <div>
-              <div class="phase-name">Phase 5</div>
-              <div class="phase-meta">Alpha hardening + UX depth + curation foundations</div>
+              <div class="phase-name">Phase 5 — Week 1</div>
+              <div class="phase-meta">Alpha hardening, UX depth, instrumentation, ops readiness</div>
             </div>
             <span class="status-badge">in progress</span>
           </div>
           <ul>
-            <li><span class="tick done">✓</span><span>Day 1-6 complete: SLO baseline, filtered-query hardening, track-level credits, search IA upgrade, telemetry, alpha ops gate</span></li>
-            <li><span class="tick todo">•</span><span>Day 7: soft-alpha invites + first 24h triage loop</span></li>
-            <li><span class="tick todo">•</span><span>Media embeds spike planned for release/version pages (version-first, release-level fallback) — <code>docs/media-embeds-release-version-plan.md</code></span></li>
+            <li><span class="tick done">✓</span><span><strong>Day 1 — SLO Baseline:</strong> Froze alpha SLO table (p50/p95/p99/timeout/error rates). Load tested c100 across artist FTS, broad release FTS, filtered queries. GO threshold explicit per search class.</span></li>
+            <li><span class="tick done">✓</span><span><strong>Day 2 — Filtered Query Hardening:</strong> Zero 5xx under c100 filtered load. Zero timeouts post-fix. All filtered paths return <code>degraded_reason: "filtered_capped"</code>.</span></li>
+            <li><span class="tick done">✓</span><span><strong>Day 3 — Track-Level Credits UX:</strong> Always-visible per-track credits grouped by role (Written-By, Mixed By, Vocals, etc.). Artist links where IDs available. Mobile-responsive at 480px breakpoint.</span></li>
+            <li><span class="tick done">✓</span><span><strong>Day 4 — Search IA Upgrade:</strong> SQL-level exact/prefix name boost, FK-based dedup (replaces fuzzy title+year), per-type result cap, <code>is_main_release</code> signal. "Prince" now surfaces correctly. Before/after documented.</span></li>
+            <li><span class="tick done">✓</span><span><strong>Day 5 — Product Instrumentation:</strong> 5 event types live (<code>search_submitted</code>, <code>search_result_clicked</code>, <code>release_page_viewed</code>, <code>version_page_viewed</code>, <code>outbound_discogs_clicked</code>). Structured JSON to Fly logs. Schema documented.</span></li>
+            <li><span class="tick done">✓</span><span><strong>Day 6 — Alpha Ops Pack:</strong> Events rate limiting (30 req/min per IP). GitHub issue templates (bug + feature request). Ops runbook updated. 10/10 pre-launch gate items GO.</span></li>
+            <li><span class="tick done">✓</span><span><strong>Day 7 — UX Polish:</strong> Version list shows format (CD/Vinyl/File) + country (UK/US/Europe) tags. Artist aliases collapsible ("+N more" toggle for large alias sets like Bowie's 60+).</span></li>
+            <li><span class="tick progress">◐</span><span><strong>Day 7 — Soft Alpha:</strong> Invites ready to send. 5 keys issued. First 24h monitoring + triage loop pending.</span></li>
+            <li><span class="tick done">✓</span><span>Media embeds spike planning + M1 audit complete for release/version pages — <code>docs/media-embeds-release-version-plan.md</code>, <code>docs/media-embeds-audit.md</code></span></li>
             <li><span class="tick todo">•</span><span>User auth + collections remain post-alpha scope</span></li>
           </ul>
         </div>
       </div>
       <div class="notes">
-        <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 584k artists — full Discogs CC0 February 2026 dump, now live on Fly.io. Disk: 156GB / 300GB.<br>
-        <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) for all entity types + <code>pg_trgm</code> fuzzy for artist/label/master. Release fuzzy disabled in v1. Run 8: 7/7 warm SLOs pass.<br>
-        <strong>Live:</strong> <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE) + <a href="https://dig-web.fly.dev" style="color:var(--accent-light)">dig-web.fly.dev</a> (frontend, Fly.io). Full corpus serving. Cover art live via CAA. DNS cutover to <code>app.dig.baby</code> pending.<br>
-        <strong>Next milestone:</strong> Wider alpha rollout (Gate E broader), enrichment data ingest, search refinement.
+        <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 584k artists — full Discogs CC0 February 2026 dump, live on Fly.io. Disk: 156GB / 300GB.<br>
+        <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) with exact/prefix name boosting, <code>pg_trgm</code> fuzzy for artist/label/master, FK-based dedup, per-type result caps. Run 8: 7/7 warm SLOs pass.<br>
+        <strong>Live:</strong> <a href="https://app.dig.baby" style="color:var(--accent-light)">app.dig.baby</a> (search UI) + <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE). Full corpus serving. Cover art via CAA (1.77M releases). Telemetry: 5 event types logged.<br>
+        <strong>UX:</strong> Release pages with tracklist + per-track credits + cover art. Version pages with pressing details. Versions list shows format + country. Artist aliases collapsible. Mobile-responsive.<br>
+        <strong>Next milestone:</strong> Soft alpha live (invites sent), first 24h monitoring, media embeds spike, enrichment data ingest.
       </div>
     </section>
   </main>
