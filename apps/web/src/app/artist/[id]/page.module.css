@@ -70,6 +70,21 @@
   padding: 0.16rem 0.45rem;
 }
 
+.pillLink {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--warm-mid);
+  padding: 0.16rem 0.45rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.pillLink:hover {
+  color: var(--accent-light);
+  border-color: var(--accent-light);
+}
+
 .row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

@@ -61,7 +61,9 @@ export function ReleaseHero({ release, coverUrl }: Props) {
         )}
         {release.labels.map((l) => (
           <span key={l.discogs_id} className={styles.detail}>
-            {l.name}
+            <Link href={`/label/${l.discogs_id}`} className={styles.labelLink}>
+              {l.name}
+            </Link>
             {l.catalog_number && ` [${l.catalog_number}]`}
           </span>
         ))}

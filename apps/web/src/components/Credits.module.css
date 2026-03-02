@@ -30,3 +30,12 @@
   color: var(--cream);
   line-height: 1.5;
 }
+
+.artistLink {
+  color: var(--cream);
+  transition: color 0.15s;
+}
+
+.artistLink:hover {
+  color: var(--accent-light);
+}

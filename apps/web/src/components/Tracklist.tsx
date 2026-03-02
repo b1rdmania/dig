@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Track } from "@/lib/types";
 import { formatDuration } from "@/lib/format";
 import styles from "./Tracklist.module.css";
@@ -24,16 +25,25 @@ export function Tracklist({ tracks }: Props) {
           {track.credits.length > 0 && (
             <div className={styles.credits}>
               {Object.entries(
-                track.credits.reduce<Record<string, string[]>>((acc, credit) => {
+                track.credits.reduce<Record<string, Array<{ name: string; id: number }>>>((acc, credit) => {
                   const role = credit.role || "Other";
                   acc[role] = acc[role] || [];
-                  acc[role].push(credit.artist_name);
+                  acc[role].push({ name: credit.artist_name, id: credit.artist_discogs_id });
                   return acc;
                 }, {}),
-              ).map(([role, names]) => (
+              ).map(([role, artists]) => (
                 <div key={`${track.position_raw}-${role}`} className={styles.creditRow}>
                   <span className={styles.creditRole}>{role}</span>
-                  <span className={styles.creditNames}>{names.join(", ")}</span>
+                  <span className={styles.creditNames}>
+                    {artists.map((artist, j) => (
+                      <span key={`${artist.id}-${j}`}>
+                        <Link href={`/artist/${artist.id}`} className={styles.creditLink}>
+                          {artist.name}
+                        </Link>
+                        {j < artists.length - 1 ? ", " : ""}
+                      </span>
+                    ))}
+                  </span>
                 </div>
               ))}
             </div>

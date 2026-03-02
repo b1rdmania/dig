@@ -82,14 +82,70 @@ export default async function ArtistPage({ params }: Props) {
           <section className={styles.section}>
             <h2 className={styles.heading}>Aliases and Name Variations</h2>
             <div className={styles.list}>
-              {artist.aliases.map((alias) => (
-                <span className={styles.pill} key={`alias-${alias.discogs_id || alias.name}`}>
-                  {alias.name}
-                </span>
-              ))}
+              {artist.aliases.map((alias) =>
+                alias.discogs_id ? (
+                  <Link
+                    href={`/artist/${alias.discogs_id}`}
+                    className={styles.pillLink}
+                    key={`alias-${alias.discogs_id}`}
+                  >
+                    {alias.name}
+                  </Link>
+                ) : (
+                  <span className={styles.pill} key={`alias-${alias.name}`}>
+                    {alias.name}
+                  </span>
+                ),
+              )}
               {artist.name_variations.map((nv) => (
                 <span className={styles.pill} key={`nv-${nv}`}>{nv}</span>
               ))}
+            </div>
+          </section>
+        )}
+
+        {artist.members.length > 0 && (
+          <section className={styles.section}>
+            <h2 className={styles.heading}>Members</h2>
+            <div className={styles.list}>
+              {artist.members.map((member) =>
+                member.discogs_id ? (
+                  <Link
+                    href={`/artist/${member.discogs_id}`}
+                    className={styles.pillLink}
+                    key={`member-${member.discogs_id}`}
+                  >
+                    {member.name}
+                  </Link>
+                ) : (
+                  <span className={styles.pill} key={`member-${member.name}`}>
+                    {member.name}
+                  </span>
+                ),
+              )}
+            </div>
+          </section>
+        )}
+
+        {artist.groups.length > 0 && (
+          <section className={styles.section}>
+            <h2 className={styles.heading}>Groups</h2>
+            <div className={styles.list}>
+              {artist.groups.map((group) =>
+                group.discogs_id ? (
+                  <Link
+                    href={`/artist/${group.discogs_id}`}
+                    className={styles.pillLink}
+                    key={`group-${group.discogs_id}`}
+                  >
+                    {group.name}
+                  </Link>
+                ) : (
+                  <span className={styles.pill} key={`group-${group.name}`}>
+                    {group.name}
+                  </span>
+                ),
+              )}
             </div>
           </section>
         )}

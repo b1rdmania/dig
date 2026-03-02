@@ -80,3 +80,12 @@
   font-size: 0.78rem;
   color: var(--cream);
 }
+
+.creditLink {
+  color: var(--cream);
+  transition: color 0.15s;
+}
+
+.creditLink:hover {
+  color: var(--accent-light);
+}

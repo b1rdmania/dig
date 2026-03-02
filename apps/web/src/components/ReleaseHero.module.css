@@ -132,6 +132,15 @@
   margin-top: 0.9rem;
 }
 
+.labelLink {
+  color: var(--warm-mid);
+  transition: color 0.15s;
+}
+
+.labelLink:hover {
+  color: var(--accent-light);
+}
+
 .link {
   font-family: var(--font-mono);
   font-size: 0.62rem;
