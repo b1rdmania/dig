@@ -127,11 +127,14 @@ Tasks:
 1. Send invites
 2. Monitor first 24h of traffic and errors
 3. Ship top two fixes from real usage feedback
+4. Kick off media embed spike plan (Release/Version pages)
 
 Done criteria:
 1. First user behavior data captured
 2. First alpha patch deployed
 3. Next-week priorities ranked by evidence
+4. Media embed plan + audit queries published:
+   - `docs/media-embeds-release-version-plan.md`
 
 ## Constraints (Do Not Violate)
 

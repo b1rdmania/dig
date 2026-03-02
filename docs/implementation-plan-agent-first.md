@@ -857,6 +857,9 @@ Add differentiated human and agent-compounding layer.
 - Spotify / Apple Music / Bandcamp: **curated/manual links only in v1**
 - Display with "where available" qualifier
 
+Reference rollout plan:
+- [Media Embeds Plan (Release + Version Pages)](media-embeds-release-version-plan.md)
+
 #### 15.7 Minimal editorial tooling
 
 - Create/edit/publish crate
