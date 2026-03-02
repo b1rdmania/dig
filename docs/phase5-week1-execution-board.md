@@ -1,6 +1,6 @@
 # Phase 5 Week 1 Execution Board
 
-Status: in-progress (Day 2 complete)
+Status: in-progress (Day 3 complete)
 Scope: execute immediate post-Phase 4 priorities without changing Phase 0-4 architecture decisions.
 
 This board is an execution layer on top of:
@@ -55,9 +55,9 @@ Tasks:
 3. Link credited people/entities where IDs are available
 
 Done criteria:
-1. Track rows expose performer/engineer/writer-style credits
-2. Mobile renders cleanly at 375px width
-3. Route behavior remains consistent (`/release`, `/version`)
+1. ~~Track rows expose performer/engineer/writer-style credits~~ ✅ Always-visible inline credits grouped by role (Written-By, Mixed By, Vocals, etc.)
+2. ~~Mobile renders cleanly at 375px width~~ ✅ 480px breakpoint with stacked credit rows, narrower position column
+3. ~~Route behavior remains consistent (`/release`, `/version`)~~ ✅ All routes return 200, both `/release/[id]` and `/version/[id]` render track credits via shared Tracklist component
 
 ### Day 4: Search IA Upgrade (P1)
 
