@@ -1,5 +1,4 @@
 import type { SearchResponse } from "@/lib/types";
-import { normalizedTitle } from "@/lib/format";
 import { ResultCard } from "./ResultCard";
 import styles from "./SearchResults.module.css";
 
@@ -13,20 +12,19 @@ export function SearchResults({ data }: Props) {
   const labels = data.results.filter((r) => r.type === "label");
   const releases = data.results.filter((r) => r.type === "release");
 
-  // Master-first dedupe: collapse release duplicates where a matching master exists.
-  const masterKeys = new Set(
-    masters.map((m) => `${normalizedTitle(m.title || "")}|${m.year || ""}`),
-  );
+  // Master-first dedupe: collapse releases whose master already appears in results.
+  // Use exact FK match (master_discogs_id) for reliable dedup.
+  const masterIds = new Set(masters.map((m) => m.discogs_id));
   const dedupedReleases = releases.filter((r) => {
-    const key = `${normalizedTitle(r.title || "")}|${r.year || ""}`;
-    return !masterKeys.has(key);
+    if (r.master_discogs_id && masterIds.has(r.master_discogs_id)) return false;
+    return true;
   });
   const collapsedReleaseCount = releases.length - dedupedReleases.length;
 
   const sections: Array<{ title: string; items: typeof data.results }> = [
     { title: "Artists", items: artists },
-    { title: "Masters", items: masters },
-    { title: "Releases", items: dedupedReleases },
+    { title: "Releases", items: masters },
+    { title: "Versions", items: dedupedReleases },
     { title: "Labels", items: labels },
   ].filter((s) => s.items.length > 0);
 
@@ -46,20 +44,30 @@ export function SearchResults({ data }: Props) {
       )}
       {collapsedReleaseCount > 0 && (
         <div className={styles.collapsed}>
-          Collapsed {collapsedReleaseCount} duplicate release matches under master releases.
+          {collapsedReleaseCount} version{collapsedReleaseCount !== 1 ? "s" : ""} collapsed under matching releases.
         </div>
       )}
-      {sections.map((section) => (
-        <section key={section.title} className={styles.section}>
-          <h2 className={styles.sectionHeading}>
-            {section.title}
-            <span className={styles.sectionCount}>{section.items.length}</span>
-          </h2>
-          {section.items.map((r) => (
-            <ResultCard key={`${r.type}-${r.discogs_id}`} result={r} />
-          ))}
-        </section>
-      ))}
+      {sections.map((section) => {
+        const MAX_PER_SECTION = 5;
+        const shown = section.items.slice(0, MAX_PER_SECTION);
+        const overflow = section.items.length - shown.length;
+        return (
+          <section key={section.title} className={styles.section}>
+            <h2 className={styles.sectionHeading}>
+              {section.title}
+              <span className={styles.sectionCount}>{section.items.length}</span>
+            </h2>
+            {shown.map((r) => (
+              <ResultCard key={`${r.type}-${r.discogs_id}`} result={r} />
+            ))}
+            {overflow > 0 && (
+              <div className={styles.overflow}>
+                +{overflow} more
+              </div>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 # Phase 5 Week 1 Execution Board
 
-Status: in-progress (Day 3 complete)
+Status: in-progress (Day 4 complete)
 Scope: execute immediate post-Phase 4 priorities without changing Phase 0-4 architecture decisions.
 
 This board is an execution layer on top of:
@@ -67,9 +67,9 @@ Tasks:
 3. Improve quick context shown in results (type, artist, year signal)
 
 Done criteria:
-1. Relevance regression checks pass on benchmark suite
-2. Duplicate-heavy queries show materially cleaner results
-3. No latency regression beyond agreed SLO envelope
+1. ~~Relevance regression checks pass on benchmark suite~~ ✅ Before/after captured in `docs/day4-search-ia-upgrade.md`. Exact matches now surface correctly (Prince artist #1, Coltrane's Blue Train appears, DSOTM masters visible).
+2. ~~Duplicate-heavy queries show materially cleaner results~~ ✅ FK-based dedup replaces fuzzy title+year. Per-type cap prevents single-type flooding. Frontend caps sections at 5 with "+N more".
+3. ~~No latency regression beyond agreed SLO envelope~~ ✅ All queries within SLO: prince 90ms, miles davis 34ms, love 392ms, filtered 904ms.
 
 ### Day 5: Product Instrumentation (P1)
 

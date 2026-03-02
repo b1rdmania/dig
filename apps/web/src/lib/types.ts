@@ -17,6 +17,7 @@ export interface SearchResult {
   country: string | null;
   data_quality: string;
   relevance: number;
+  is_main_release?: boolean;
   provenance: Provenance;
 }
 

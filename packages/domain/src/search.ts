@@ -49,6 +49,7 @@ export interface SearchResult {
   country: string | null;
   data_quality: string;
   relevance: number;
+  is_main_release: boolean;
   provenance: {
     source: "discogs";
     dump_date: string;
@@ -289,14 +290,22 @@ async function searchRanked(
     ] as any[])
     .where("batch_id" as any, "=", batchId);
 
-  // FTS ranking
+  // FTS ranking with exact/prefix name boosting in SQL.
+  // This ensures exact matches survive the per-type LIMIT instead of being
+  // pushed out by newer records with the same FTS rank.
   if (params.q) {
     const tsqueryFn = type === "release"
       ? sql`websearch_to_tsquery('english', ${params.q})`
       : sql`plainto_tsquery('english', ${params.q})`;
+    const qLower = params.q.toLowerCase().trim();
     query = query
       .where(sql`search_vector @@ ${tsqueryFn}` as any)
-      .select(sql`ts_rank_cd(search_vector, ${tsqueryFn})`.as("rank") as any)
+      .select(sql`(
+        ts_rank_cd(search_vector, ${tsqueryFn})
+        + CASE WHEN lower(${sql.ref(nameCol)}) = ${qLower} THEN 10
+               WHEN lower(${sql.ref(nameCol)}) LIKE ${qLower + '%'} THEN 2
+               ELSE 0 END
+      )`.as("rank") as any)
       .where(sql`ts_rank_cd(search_vector, ${tsqueryFn}) > ${MIN_RANK_THRESHOLD}` as any);
   } else {
     query = query.select(sql`0`.as("rank") as any);
@@ -306,8 +315,7 @@ async function searchRanked(
   if (type === "master") {
     query = query.select("year" as any);
   } else if (type === "release") {
-    query = query.select(["release_year as year", "country"] as any[]);
-    query = query.select("master_discogs_id" as any);
+    query = query.select(["release_year as year", "country", "master_discogs_id", "is_main_release"] as any[]);
   }
 
   // Apply filters (for non-release types — masters can have genre/style)
@@ -371,6 +379,7 @@ async function searchRanked(
       country: row.country ?? null,
       data_quality: row.data_quality,
       relevance: row.rank ? Math.min(1, Math.max(0, Number(row.rank))) : 0,
+      is_main_release: type === "release" ? !!row.is_main_release : false,
       provenance: {
         source: "discogs" as const,
         dump_date: dumpDate,
@@ -479,6 +488,7 @@ async function searchGuardedRelease(
       country: row.country ?? null,
       data_quality: row.data_quality,
       relevance: 0,
+      is_main_release: false,
       provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: row.discogs_id },
     })),
     hasMore,
@@ -582,6 +592,7 @@ async function searchGuardedMultiFilter(
       country: row.country ?? null,
       data_quality: row.data_quality,
       relevance: 0,
+      is_main_release: false,
       provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: row.discogs_id },
     })),
     hasMore,
@@ -678,6 +689,7 @@ async function searchFilteredCappedRelease(
       country: row.country ?? null,
       data_quality: row.data_quality,
       relevance: 0,
+      is_main_release: false,
       provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: row.discogs_id },
     })),
     hasMore: hasMore || filteredRows.length > limit,
@@ -729,6 +741,7 @@ async function fuzzyFallback(
     country: null,
     data_quality: row.data_quality,
     relevance: Number(row.sim),
+    is_main_release: false,
     provenance: {
       source: "discogs" as const,
       dump_date: dumpDate,
@@ -739,13 +752,27 @@ async function fuzzyFallback(
 
 function scoreSearchResult(result: SearchResult, rawQuery: string, explicitType?: SearchEntityType): number {
   const relevanceScore = result.relevance * 100;
-  if (explicitType) return relevanceScore;
 
+  // Single-type searches: use FTS rank with name-match bonuses
+  if (explicitType) {
+    const display = (result.name || result.title || "").toLowerCase();
+    const q = rawQuery.trim().toLowerCase();
+    let bonus = 0;
+    if (q.length > 0 && display.length > 0) {
+      if (display === q) bonus += 500;
+      else if (display.startsWith(q)) bonus += 100;
+    }
+    if (result.is_main_release) bonus += 50;
+    return relevanceScore + bonus;
+  }
+
+  // Tighter type weights: small enough that name-match bonuses dominate.
+  // Prevents non-matching artists from flooding above relevant masters.
   const typeWeight: Record<SearchEntityType, number> = {
-    artist: 400,
-    master: 300,
-    release: 200,
-    label: 100,
+    artist: 150,
+    master: 120,
+    release: 80,
+    label: 40,
   };
 
   const display = (result.name || result.title || "").toLowerCase();
@@ -754,7 +781,11 @@ function scoreSearchResult(result: SearchResult, rawQuery: string, explicitType?
   if (q.length > 0 && display.length > 0) {
     if (display === q) bonus += 1200;
     else if (display.startsWith(q)) bonus += 220;
+    // Substring match: query appears within the name/title
+    else if (display.includes(q)) bonus += 80;
   }
+  // Main releases (canonical pressings) rank above variants
+  if (result.is_main_release) bonus += 50;
   return typeWeight[result.type] + relevanceScore + bonus;
 }
 
@@ -809,6 +840,10 @@ export async function search(
         ? [params.type]
         : ["artist", "label", "master", "release"];
 
+      // Multi-type: cap per-type to prevent one type flooding results.
+      // Single-type: use full limit.
+      const perTypeLimit = params.type ? limit : Math.max(5, Math.ceil(limit * 0.4));
+
       let allResults: SearchResult[] = [];
       let hasMore = false;
       let hint: string | null = null;
@@ -824,7 +859,7 @@ export async function search(
             // index which reads tens of thousands of heap pages.
             await sql`SET enable_bitmapscan = off`.execute(conn);
             const { results, hasMore: typeHasMore } = await searchGuardedRelease(
-              conn, params, batchId, dumpDate, limit, cursorData,
+              conn, params, batchId, dumpDate, perTypeLimit, cursorData,
             );
             await sql`RESET enable_bitmapscan`.execute(conn);
             allResults.push(...results);
@@ -850,7 +885,7 @@ export async function search(
 
             if (filterCount >= 2 || hasGenreOrStyle) {
               const capped = await searchFilteredCappedRelease(
-                conn, params, batchId, dumpDate, limit, cursorData,
+                conn, params, batchId, dumpDate, perTypeLimit, cursorData,
               );
               allResults.push(...capped.results);
               if (capped.hasMore) hasMore = true;
@@ -865,7 +900,7 @@ export async function search(
             await sql`SET statement_timeout = '1500ms'`.execute(conn);
             await sql`SET enable_bitmapscan = off`.execute(conn);
             const { results, hasMore: typeHasMore, capped } = await searchGuardedRelease(
-              conn, params, batchId, dumpDate, limit, cursorData,
+              conn, params, batchId, dumpDate, perTypeLimit, cursorData,
             );
             await sql`RESET enable_bitmapscan`.execute(conn);
             await sql`SET statement_timeout = '3s'`.execute(conn);
@@ -881,7 +916,7 @@ export async function search(
 
           // Path A: Ranked search (default)
           const { results, hasMore: typeHasMore } = await searchRanked(
-            conn, entityType, params, batchId, dumpDate, limit, cursorData,
+            conn, entityType, params, batchId, dumpDate, perTypeLimit, cursorData,
           );
           allResults.push(...results);
           if (typeHasMore) hasMore = true;
@@ -895,7 +930,7 @@ export async function search(
               // Restore timeout for capped fallback (it uses structured filters only, fast)
               await sql`SET statement_timeout = '3s'`.execute(conn);
               const capped = await searchFilteredCappedRelease(
-                conn, params, batchId, dumpDate, limit, cursorData,
+                conn, params, batchId, dumpDate, perTypeLimit, cursorData,
               );
               allResults.push(...capped.results);
               if (capped.hasMore) hasMore = true;

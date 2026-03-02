@@ -53,3 +53,10 @@
   border: 1px solid var(--line);
   border-radius: 999px;
 }
+
+.overflow {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--warm-mid);
+  padding: 0.4rem 0;
+}
