@@ -10,6 +10,7 @@ import {
 import { discogsUrl } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
+import { CollapsibleList } from "@/components/CollapsibleList";
 import styles from "./page.module.css";
 
 interface Props {
@@ -81,7 +82,7 @@ export default async function ArtistPage({ params }: Props) {
         {(artist.aliases.length > 0 || artist.name_variations.length > 0) && (
           <section className={styles.section}>
             <h2 className={styles.heading}>Aliases and Name Variations</h2>
-            <div className={styles.list}>
+            <CollapsibleList maxVisible={8} className={styles.list}>
               {artist.aliases.map((alias) =>
                 alias.discogs_id ? (
                   <Link
@@ -100,7 +101,7 @@ export default async function ArtistPage({ params }: Props) {
               {artist.name_variations.map((nv) => (
                 <span className={styles.pill} key={`nv-${nv}`}>{nv}</span>
               ))}
-            </div>
+            </CollapsibleList>
           </section>
         )}
 

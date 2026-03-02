@@ -189,19 +189,15 @@ async function MasterAsRelease({ master: masterData, id }: { master: MasterRespo
           <div className={styles.small}>No versions found.</div>
         )}
         {releasesData.links.map((link) => (
-          <div key={link.discogs_id} className={styles.row}>
+          <div key={link.discogs_id} className={styles.versionRow}>
             <Link href={`/version/${link.discogs_id}`} className={styles.releaseTitle}>
               {link.title || `Version ${link.discogs_id}`}
             </Link>
-            <span className={styles.small}>{link.year || "—"}</span>
-            <a
-              href={discogsUrl("release", link.discogs_id)}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.small}
-            >
-              Discogs
-            </a>
+            <span className={styles.versionMeta}>
+              {link.format && <span className={styles.versionTag}>{link.format}</span>}
+              {link.country && <span className={styles.versionTag}>{link.country}</span>}
+              <span>{link.year || "—"}</span>
+            </span>
           </div>
         ))}
       </section>

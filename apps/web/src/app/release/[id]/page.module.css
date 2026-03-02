@@ -181,3 +181,35 @@
   font-size: 0.65rem;
   color: var(--warm-mid);
 }
+
+.versionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.versionRow:last-child {
+  border-bottom: 0;
+}
+
+.versionMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--warm-mid);
+}
+
+.versionTag {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

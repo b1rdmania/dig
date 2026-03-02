@@ -197,6 +197,8 @@ export interface TraversalLink {
   title?: string;
   year?: number | null;
   role?: string | null;
+  country?: string | null;
+  format?: string | null;
   provenance: Provenance;
 }
 

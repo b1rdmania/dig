@@ -9,7 +9,7 @@
  * - release → credits (via release_credits)
  */
 
-import type { Kysely } from "kysely";
+import { type Kysely, sql } from "kysely";
 import type { Database } from "@dig/db";
 
 export interface TraversalLink {
@@ -19,6 +19,8 @@ export interface TraversalLink {
   title?: string;
   year?: number | null;
   role?: string | null;
+  country?: string | null;
+  format?: string | null;
   provenance: { source: "discogs"; dump_date: string; discogs_id: number };
 }
 
@@ -250,7 +252,20 @@ export async function getMasterReleases(
 
   let query = db
     .selectFrom("catalog.releases")
-    .select(["discogs_id", "title", "release_year as year"])
+    .select([
+      "discogs_id",
+      "title",
+      "release_year as year",
+      "country",
+    ])
+    .select(
+      sql<string | null>`(
+        SELECT f.name FROM catalog.release_formats f
+        WHERE f.release_discogs_id = catalog.releases.discogs_id
+          AND f.batch_id = catalog.releases.batch_id
+        ORDER BY f.position LIMIT 1
+      )`.as("format"),
+    )
     .where("master_discogs_id", "=", masterDiscogsId)
     .where("batch_id", "=", batchId)
     .orderBy("discogs_id", "asc")
@@ -270,6 +285,8 @@ export async function getMasterReleases(
       discogs_id: r.discogs_id,
       title: r.title,
       year: r.year,
+      country: (r as any).country ?? null,
+      format: (r as any).format ?? null,
       provenance: { source: "discogs", dump_date: dumpDate, discogs_id: r.discogs_id },
     })),
     pagination: {
