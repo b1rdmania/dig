@@ -4,6 +4,9 @@ Status: draft for implementation
 Phase: 4B (Enrichment Gate EN-B)  
 Scope: additive relationship edges and artist context lookup backed by `enrich.*` crosswalks.
 
+Execution checklist:
+- [EN-B Implementation Checklist](en-b-implementation-checklist.md)
+
 ## 1. Contract Principles
 
 1. Discogs remains canonical.
