@@ -41,3 +41,14 @@ export {
   type MasterVideosResponse,
   type MasterVideo,
 } from "./traversal.js";
+export {
+  getArtistRelationships,
+  getArtistContext,
+  parseEnrichmentParams,
+  validateEnrichmentParams,
+  type RelationshipsResponse,
+  type ContextResponse,
+  type EnrichmentParams,
+  type RelationshipEdge,
+  type ContextBlock,
+} from "./enrichment.js";

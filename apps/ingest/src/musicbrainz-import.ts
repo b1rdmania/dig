@@ -8,6 +8,7 @@
  *   pnpm --filter @dig/ingest musicbrainz -- --file ./mbdump.tar.bz2
  *   pnpm --filter @dig/ingest musicbrainz -- --file ./mbdump.tar.bz2 --entity artists
  *   pnpm --filter @dig/ingest musicbrainz -- --file ./mbdump.tar.bz2 --entity releases
+ *   pnpm --filter @dig/ingest musicbrainz -- --file ./mbdump.tar.bz2 --entity artists --include-edges
  *
  * The dump can be downloaded from:
  *   https://metabrainz.org/datasets/postgres-dumps
@@ -39,12 +40,14 @@ const DISCOGS_RELEASE_LINK_TYPE_GID = "4a78823c-1c53-4176-a5f3-58026c76f2bc";
 const DISCOGS_ARTIST_LINK_TYPE_GID = "04a5b104-a4c2-4bac-99a1-7b837c37d9e4";
 const WIKIDATA_ARTIST_LINK_TYPE_GID = "689870a4-a1e4-4912-b17f-7b2664215698";
 
-function parseArgs(): { file: string; databaseUrl: string; entity: EntityMode } {
+function parseArgs(): { file: string; databaseUrl: string; entity: EntityMode; includeEdges: boolean } {
   const args = process.argv.slice(2).filter((a) => a !== "--");
   let file = "";
   let entity: EntityMode = "all";
+  let includeEdges = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--file" && args[i + 1]) file = args[++i];
+    if (args[i] === "--include-edges") includeEdges = true;
     if (args[i] === "--entity" && args[i + 1]) {
       const v = args[++i];
       if (v === "releases" || v === "artists" || v === "all") entity = v;
@@ -55,7 +58,7 @@ function parseArgs(): { file: string; databaseUrl: string; entity: EntityMode } 
     }
   }
   if (!file) {
-    console.error("Usage: pnpm --filter @dig/ingest musicbrainz -- --file ./mbdump.tar.bz2 [--entity releases|artists|all]");
+    console.error("Usage: pnpm --filter @dig/ingest musicbrainz -- --file ./mbdump.tar.bz2 [--entity releases|artists|all] [--include-edges]");
     process.exit(1);
   }
   const databaseUrl = process.env.DATABASE_URL;
@@ -63,14 +66,16 @@ function parseArgs(): { file: string; databaseUrl: string; entity: EntityMode } 
     console.error("Error: DATABASE_URL env var required");
     process.exit(1);
   }
-  return { file, databaseUrl, entity };
+  return { file, databaseUrl, entity, includeEdges };
 }
 
-function computeTablesNeeded(entity: EntityMode): string[] {
+function computeTablesNeeded(entity: EntityMode, includeEdges: boolean): string[] {
   const base = ["link_type", "link", "url"];
-  if (entity === "releases") return [...base, "release", "l_release_url"];
-  if (entity === "artists") return [...base, "artist", "l_artist_url"];
-  return [...base, "release", "l_release_url", "artist", "l_artist_url"];
+  const tables = [...base];
+  if (entity === "releases" || entity === "all") tables.push("release", "l_release_url");
+  if (entity === "artists" || entity === "all") tables.push("artist", "l_artist_url");
+  if (includeEdges) tables.push("l_artist_artist");
+  return tables;
 }
 
 async function createBatch(db: ReturnType<typeof createDb>, batchKey: string): Promise<number | null> {
@@ -98,13 +103,13 @@ async function finalizeBatch(db: ReturnType<typeof createDb>, batchId: number | 
 }
 
 async function main() {
-  const { file, databaseUrl, entity } = parseArgs();
+  const { file, databaseUrl, entity, includeEdges } = parseArgs();
   const db = createDb(databaseUrl);
-  const tablesNeeded = computeTablesNeeded(entity);
+  const tablesNeeded = computeTablesNeeded(entity, includeEdges);
   const doReleases = entity === "releases" || entity === "all";
   const doArtists = entity === "artists" || entity === "all";
 
-  console.log(`[mb-import] Starting import from ${file} (entity: ${entity})`);
+  console.log(`[mb-import] Starting import from ${file} (entity: ${entity}, edges: ${includeEdges})`);
   console.log(`[mb-import] Tables needed: ${tablesNeeded.join(", ")}`);
   const t0 = Date.now();
 
@@ -129,6 +134,13 @@ async function main() {
   // Triples: [linkId, entityId, urlId]
   const relUrlTriples: Array<[number, number, number]> = [];
   const artUrlTriples: Array<[number, number, number]> = [];
+
+  // Artist-artist relationship triples: [linkId, entity0(artist), entity1(artist)]
+  const artArtTriples: Array<[number, number, number]> = [];
+  // link_type.id → link_type name (for artist-artist edge types)
+  const linkTypeIdToName = new Map<number, string>();
+  // link_type IDs that are artist-artist relationships
+  const artistArtistLinkTypeIds = new Set<number>();
 
   const filesProcessed = new Set<string>();
 
@@ -161,6 +173,10 @@ async function main() {
           case "link_type": {
             const gid = f[3];
             const id = parseInt(f[0], 10);
+            // MB link_type cols: id, parent, child_order, gid, entity_type0, entity_type1, name, ...
+            const entityType0 = f[4];
+            const entityType1 = f[5];
+            const ltName = f[6];
             if (gid === DISCOGS_RELEASE_LINK_TYPE_GID) {
               discogsReleaseLinkTypeId = id;
               console.log(`[mb-import] Discogs release link_type id: ${id}`);
@@ -172,6 +188,11 @@ async function main() {
             if (gid === WIKIDATA_ARTIST_LINK_TYPE_GID) {
               wikidataArtistLinkTypeId = id;
               console.log(`[mb-import] Wikidata artist link_type id: ${id}`);
+            }
+            // Collect all artist-artist link types for edge extraction
+            if (includeEdges && entityType0 === "artist" && entityType1 === "artist" && ltName) {
+              artistArtistLinkTypeIds.add(id);
+              linkTypeIdToName.set(id, ltName.replace(/ /g, "_"));
             }
             break;
           }
@@ -225,6 +246,15 @@ async function main() {
               parseInt(f[1], 10), // link id
               parseInt(f[2], 10), // artist.id (MB internal)
               parseInt(f[3], 10), // url.id
+            ]);
+            break;
+          }
+          case "l_artist_artist": {
+            // columns: id, link, entity0(artist), entity1(artist), ...
+            artArtTriples.push([
+              parseInt(f[1], 10), // link id
+              parseInt(f[2], 10), // entity0 (artist.id)
+              parseInt(f[3], 10), // entity1 (artist.id)
             ]);
             break;
           }
@@ -446,6 +476,117 @@ async function main() {
         written,
       });
       console.log(`[mb-import] Artist crosswalks done: ${written.toLocaleString()} (${wdMatched.toLocaleString()} with Wikidata QID)`);
+    }
+  }
+
+  // ========================
+  // RELATIONSHIP EDGES (artist-artist)
+  // ========================
+  if (includeEdges && artArtTriples.length > 0) {
+    console.log(`[mb-import] Processing ${artArtTriples.length.toLocaleString()} artist-artist triples...`);
+    console.log(`[mb-import] Artist-artist link types found: ${artistArtistLinkTypeIds.size}`);
+
+    // We need mbArtistIdToDiscogsId — rebuild if not already available from artist crosswalk phase
+    // If we ran --entity artists, it's already built. Otherwise build it now.
+    let edgeLookup: Map<number, number>;
+    if (doArtists) {
+      // Reuse from artist crosswalk phase — mbArtistIdToDiscogsId already populated
+      // But we need a reference in this scope. Since it's declared in the if(doArtists) block,
+      // rebuild a simpler one from artUrlTriples for the general case.
+      edgeLookup = new Map<number, number>();
+      // Build from urlIdToDiscogsArtistId + artUrlTriples with discogs link type
+      const discogsArtistLinkIds2 = new Set<number>();
+      for (const [linkId, linkType] of linkIdToLinkType) {
+        if (discogsArtistLinkTypeId !== null && linkType === discogsArtistLinkTypeId) discogsArtistLinkIds2.add(linkId);
+      }
+      for (const [linkId, artistId, urlId] of artUrlTriples) {
+        if (!discogsArtistLinkIds2.has(linkId)) continue;
+        const discogsId = urlIdToDiscogsArtistId.get(urlId);
+        if (discogsId !== undefined && discogsId <= 2_147_483_647) {
+          edgeLookup.set(artistId, discogsId);
+        }
+      }
+    } else {
+      edgeLookup = new Map<number, number>();
+      console.log("[mb-import] Warning: edges require artist crosswalks for ID mapping. Run with --entity artists or --entity all.");
+    }
+
+    console.log(`[mb-import] MB artist → Discogs ID lookup: ${edgeLookup.size.toLocaleString()} entries`);
+
+    // Build artist-artist link IDs from link table
+    const artArtLinkIds = new Map<number, number>(); // link.id → link_type.id (only artist-artist types)
+    for (const [linkId, linkType] of linkIdToLinkType) {
+      if (artistArtistLinkTypeIds.has(linkType)) artArtLinkIds.set(linkId, linkType);
+    }
+    console.log(`[mb-import] Artist-artist link IDs: ${artArtLinkIds.size.toLocaleString()}`);
+
+    // Join: resolve both sides to discogs IDs
+    interface EdgeRow {
+      edgeType: string;
+      sourceDiscogsId: number;
+      targetDiscogsId: number;
+      edgeKey: string;
+    }
+    const edges: EdgeRow[] = [];
+    const seenEdgeKeys = new Set<string>();
+    let edgeSkipped = 0;
+
+    for (const [linkId, entity0, entity1] of artArtTriples) {
+      const linkTypeId = artArtLinkIds.get(linkId);
+      if (linkTypeId === undefined) { edgeSkipped++; continue; }
+      const sourceDiscogsId = edgeLookup.get(entity0);
+      const targetDiscogsId = edgeLookup.get(entity1);
+      if (!sourceDiscogsId || !targetDiscogsId) { edgeSkipped++; continue; }
+      const edgeType = linkTypeIdToName.get(linkTypeId) ?? "related_to";
+      const edgeKey = `mb:artist:${sourceDiscogsId}:artist:${targetDiscogsId}:${edgeType}`;
+      if (seenEdgeKeys.has(edgeKey)) continue;
+      seenEdgeKeys.add(edgeKey);
+      edges.push({ edgeType, sourceDiscogsId, targetDiscogsId, edgeKey });
+    }
+
+    console.log(`[mb-import] Edges resolved: ${edges.length.toLocaleString()} (skipped: ${edgeSkipped.toLocaleString()})`);
+
+    if (edges.length > 0) {
+      const batchKey = `musicbrainz-edges-${new Date().toISOString().slice(0, 7)}`;
+      const batchId = await createBatch(db, batchKey);
+
+      console.log(`[mb-import] Writing ${edges.length.toLocaleString()} relationship edges...`);
+      let written = 0;
+
+      for (let i = 0; i < edges.length; i += BATCH_SIZE) {
+        const chunk = edges.slice(i, i + BATCH_SIZE);
+        const values = chunk.map((e) => sql`(
+          'artist', ${e.sourceDiscogsId},
+          'artist', ${e.targetDiscogsId}, NULL,
+          ${e.edgeType}, 'musicbrainz', ${e.edgeKey},
+          0.900, 'deterministic_metadata',
+          NULL, NULL,
+          ${batchId}, ${e.edgeKey}
+        )`);
+
+        await sql`
+          INSERT INTO enrich.relationship_edges
+            (source_entity_type, source_discogs_id,
+             target_entity_type, target_discogs_id, target_external_id,
+             edge_type, edge_source, edge_source_id,
+             confidence, match_method,
+             valid_from, valid_to,
+             source_batch_id, edge_key)
+          VALUES ${sql.join(values, sql`, `)}
+          ON CONFLICT (edge_key) DO UPDATE SET
+            confidence = EXCLUDED.confidence,
+            match_method = EXCLUDED.match_method,
+            source_batch_id = EXCLUDED.source_batch_id
+        `.execute(db);
+
+        written += chunk.length;
+        if (written % 50_000 === 0 || written === edges.length) {
+          console.log(`[mb-import] Edges: ${written.toLocaleString()} / ${edges.length.toLocaleString()}`);
+        }
+      }
+
+      await finalizeBatch(db, batchId, { total_edges: edges.length, written });
+      console.log(`[mb-import] Relationship edges done: ${written.toLocaleString()}`);
     }
   }
 

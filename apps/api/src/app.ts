@@ -21,6 +21,7 @@ import { registerEntityRoutes } from "./routes/v1/entities.js";
 import { registerTraversalRoutes } from "./routes/v1/traversal.js";
 import { registerCoverRoutes } from "./routes/v1/covers.js";
 import { registerEventRoutes } from "./routes/v1/events.js";
+import { registerEnrichmentRoutes } from "./routes/v1/enrichment.js";
 
 export interface AppDeps {
   databaseUrl: string;
@@ -187,6 +188,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerTraversalRoutes(app, db);
   registerCoverRoutes(app, db, redis);
   registerEventRoutes(app);
+  registerEnrichmentRoutes(app, db);
 
   return { app, db };
 }
