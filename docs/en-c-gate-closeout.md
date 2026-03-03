@@ -13,10 +13,10 @@ Related docs:
 - Date: 2026-03-03
 - Commit(s): `a77b120` (importer + tests + frontend), pending final commit with closeout
 - Environment: Fly staging
-- Decision: `GO WITH CAVEATS`
+- Decision: `GO`
 - Owner: Claude Code (Opus 4.6)
 
-One-line rationale: Wikidata context import running (200K artists), API + frontend live and verified, 10/10 quality sample correct. Import still in progress — final counts will increase.
+One-line rationale: Wikidata context import complete (200,218 artists → 543,134 context rows, 99.4% hit rate), API + frontend live and verified, 20/20 quality sample correct, 3 transient errors all recovered.
 
 ---
 
@@ -41,22 +41,22 @@ Notes:
 
 ### 2.1 Table-level counts
 
-**Note: Import in progress (~32% of 200,368 artists). Final counts will be ~3x these values.**
+**Import complete. 200,218 of 200,368 artists processed. Verified from DB.**
 
 | Metric | Value |
 |---|---:|
-| `enrich.entity_context` total rows | 181,494 (partial) |
-| Distinct artists with context | 65,977 (partial) |
-| Rows where `entity_type='artist'` | 181,494 |
-| Rows where `source='wikidata'` | 181,494 |
+| `enrich.entity_context` total rows | 543,134 |
+| Distinct artists with context | 199,084 |
+| Rows where `entity_type='artist'` | 543,134 |
+| Rows where `source='wikidata'` | 543,134 |
 
-### 2.2 Context-type breakdown
+### 2.2 Context-type breakdown (verified from DB)
 
 | context_type | Rows | Distinct artists |
 |---|---:|---:|
-| `bio` | 65,900 | 65,900 |
-| `location` | 62,614 | 62,614 |
-| `timeline_note` | 53,115 | 53,115 |
+| `bio` | 197,650 | 197,650 |
+| `location` | 185,513 | 185,513 |
+| `timeline_note` | 159,971 | 159,971 |
 
 ### 2.3 Spot-check table
 
@@ -151,16 +151,16 @@ Note: Enriched was slightly faster than canonical (noise), confirming negligible
 - [x] Ingest batch recorded in `enrich.ingest_batches`
 - [x] Batch status transitions correct (`importing -> active`)
 - [x] Batch stats captured (`total_qids`, `artists_updated`, `context_rows_written`, `errors`)
-- [x] Idempotency: upsert on `context_key` (ON CONFLICT DO UPDATE). Test batch of 50 verified — rerun produces same row count.
+- [x] Idempotency: upsert on `context_key` (ON CONFLICT DO UPDATE). Full dataset verified — re-ran 100 artists (259 context rows), total count stayed at 543,134 (zero inflation).
 
 ---
 
 ## 8) Risks and Caveats
 
 Non-blocking issues:
-1. Import still in progress (~32% at time of closeout). Final coverage ~200K artists / ~540K context rows.
-2. Location context stores Wikidata QIDs, not resolved human-readable labels. Frontend hides location until label resolution pass.
-3. Aphex Twin (discogs 45) has no Wikidata QID in MB crosswalk — known gap in MB's link coverage.
+1. ~~Location context stores Wikidata QIDs~~ — RESOLVED. Bulk label resolution complete (24,503 QIDs → human-readable labels, 185,495/185,513 location rows updated).
+2. Aphex Twin (discogs 45) has no Wikidata QID in MB crosswalk — known gap in MB's link coverage.
+3. 3 transient Wikidata API errors during import (all recovered automatically, no data loss).
 
 Blocking issues:
 1. None
@@ -169,11 +169,10 @@ Blocking issues:
 
 ## 9) Gate Decision
 
-- Decision: `GO WITH CAVEATS`
-- Required follow-up actions:
-  1. Wait for full import to complete (~200K artists), update final coverage numbers
-  2. Run location QID label resolution pass (`--resolve-labels` flag already implemented)
-  3. Re-verify idempotency with full dataset (rerun should produce 0 new rows)
+- Decision: `GO`
+- Follow-up actions completed:
+  1. ~~Run location QID label resolution~~ — DONE. Bulk resolve via temp table join. 24,503/24,762 QIDs resolved (99%). 313,136 field updates. Spot-checked: Radiohead→"United Kingdom"/"Abingdon-on-Thames", Bowie→"Brixton"/"United Kingdom", Beatles→"United Kingdom"/"Liverpool".
+  2. ~~Re-verify idempotency~~ — DONE. Re-ran 100 artists (259 context rows), total stayed at 543,134. Zero row inflation.
 
 Sign-off:
 - Engineering: Claude Code (Opus 4.6)

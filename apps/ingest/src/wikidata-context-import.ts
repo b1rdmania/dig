@@ -315,17 +315,20 @@ function parseArgs(): {
   limit: number;
   offset: number;
   resolveLabels: boolean;
+  resolveLabelsOnly: boolean;
 } {
   const args = process.argv.slice(2).filter((a) => a !== "--");
   let limit = 0; // 0 = all
   let offset = 0;
   let resolveLabels = false;
+  let resolveLabelsOnly = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--limit" && args[i + 1]) limit = parseInt(args[++i], 10);
     if (args[i] === "--offset" && args[i + 1])
       offset = parseInt(args[++i], 10);
     if (args[i] === "--resolve-labels") resolveLabels = true;
+    if (args[i] === "--resolve-labels-only") resolveLabelsOnly = true;
   }
 
   const databaseUrl = process.env.DATABASE_URL;
@@ -334,14 +337,125 @@ function parseArgs(): {
     process.exit(1);
   }
 
-  return { databaseUrl, limit, offset, resolveLabels };
+  return { databaseUrl, limit, offset, resolveLabels, resolveLabelsOnly };
 }
 
 // --- Main ---
 
+/** Bulk label resolution: fetch labels, load temp table, join-update. */
+async function bulkResolveLabels(db: ReturnType<typeof createDb>) {
+  console.log("=== Bulk Resolve Location QID Labels (EN-C) ===");
+
+  // 1. Extract all distinct QIDs from location context rows
+  const { rows } = await sql<{ content_json: Record<string, string> }>`
+    SELECT content_json FROM enrich.entity_context
+    WHERE context_type = 'location' AND source = 'wikidata'
+  `.execute(db);
+
+  const qidSet = new Set<string>();
+  for (const row of rows) {
+    for (const [key, val] of Object.entries(row.content_json)) {
+      if (typeof val === "string" && val.startsWith("Q") && key.endsWith("_qid")) {
+        qidSet.add(val);
+      }
+    }
+  }
+
+  console.log(`Found ${qidSet.size} distinct location QIDs across ${rows.length} location rows`);
+
+  // 2. Resolve labels via Wikidata API
+  const allQids = [...qidSet];
+  const labels = new Map<string, string>();
+  for (let i = 0; i < allQids.length; i += BATCH_SIZE) {
+    const batch = allQids.slice(i, i + BATCH_SIZE);
+    try {
+      const entities = await fetchWikidataEntities(batch);
+      for (const [qid, entity] of Object.entries(entities)) {
+        const label = getEnLabel(entity);
+        if (label) labels.set(qid, label);
+      }
+    } catch (err) {
+      console.error(`  Error fetching batch at ${i}: ${err instanceof Error ? err.message : err}`);
+    }
+    if (i + BATCH_SIZE < allQids.length) await sleep(DELAY_MS);
+    if (((i / BATCH_SIZE) % 100) === 0) {
+      console.log(`  Fetched ${Math.min(i + BATCH_SIZE, allQids.length)}/${allQids.length} QIDs...`);
+    }
+  }
+  console.log(`Resolved ${labels.size} labels from Wikidata`);
+
+  // 3. Create temp table and bulk insert labels
+  await sql`CREATE TEMP TABLE IF NOT EXISTS tmp_wikidata_labels (qid text PRIMARY KEY, label text NOT NULL)`.execute(db);
+  await sql`TRUNCATE tmp_wikidata_labels`.execute(db);
+
+  const entries = [...labels.entries()];
+  for (let i = 0; i < entries.length; i += WRITE_BATCH) {
+    const chunk = entries.slice(i, i + WRITE_BATCH);
+    const values = chunk.map(([qid, label]) => sql`(${qid}, ${label})`);
+    await sql`
+      INSERT INTO tmp_wikidata_labels (qid, label) VALUES ${sql.join(values, sql`, `)}
+      ON CONFLICT (qid) DO UPDATE SET label = EXCLUDED.label
+    `.execute(db);
+  }
+  console.log(`Loaded ${labels.size} labels into temp table`);
+
+  // 4. Bulk UPDATE — one per QID field type
+  const QID_FIELDS = [
+    "country_of_origin_qid",
+    "country_of_citizenship_qid",
+    "location_of_formation_qid",
+    "place_of_birth_qid",
+  ];
+
+  let totalUpdated = 0;
+  for (const field of QID_FIELDS) {
+    const labelField = field.replace(/_qid$/, "");
+    const result = await sql`
+      UPDATE enrich.entity_context ec
+      SET content_json = jsonb_set(ec.content_json, ${`{${labelField}}`}::text[], to_jsonb(t.label), true),
+          updated_at = now()
+      FROM tmp_wikidata_labels t
+      WHERE ec.context_type = 'location'
+        AND ec.source = 'wikidata'
+        AND ec.content_json ? ${field}
+        AND ec.content_json->>${ field} = t.qid
+    `.execute(db);
+    const count = Number((result as any).numAffectedRows ?? 0);
+    totalUpdated += count;
+    console.log(`  ${labelField}: ${count} rows updated`);
+  }
+
+  // 5. Clean up any _label_Q* keys from partial previous run
+  await sql`
+    UPDATE enrich.entity_context
+    SET content_json = (
+      SELECT jsonb_object_agg(key, value)
+      FROM jsonb_each(content_json)
+      WHERE key NOT LIKE '_label_%'
+    ),
+    updated_at = now()
+    WHERE context_type = 'location'
+      AND source = 'wikidata'
+      AND content_json::text LIKE '%_label_%'
+  `.execute(db);
+  console.log(`  Cleaned up _label_ keys from partial run`);
+
+  await sql`DROP TABLE IF EXISTS tmp_wikidata_labels`.execute(db);
+
+  console.log(`\n=== Bulk Label Resolution Complete ===`);
+  console.log(`  QIDs resolved: ${labels.size}`);
+  console.log(`  Total field updates: ${totalUpdated}`);
+}
+
 async function main() {
   const config = parseArgs();
   const db = createDb(config.databaseUrl);
+
+  if (config.resolveLabelsOnly) {
+    await bulkResolveLabels(db);
+    await db.destroy();
+    return;
+  }
 
   console.log("=== Wikidata Context Import (EN-C) ===");
 
