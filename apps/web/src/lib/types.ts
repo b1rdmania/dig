@@ -259,6 +259,25 @@ export interface RelationshipsResponse {
   };
 }
 
+// Context (EN-C)
+export interface ContextBlock {
+  context_type: string;
+  content_json: unknown;
+  provenance: EnrichmentProvenance;
+}
+
+export interface ContextResponse {
+  context: ContextBlock[];
+  meta: {
+    source_type: string;
+    source_discogs_id: number;
+    elapsed_ms: number;
+    enrichment_included: boolean;
+    enrichment_sources: string[];
+    enrichment_edge_count: number;
+  };
+}
+
 // Error
 export interface ApiError {
   error: {
@@ -315,6 +334,12 @@ export function isRelationshipsResponse(data: unknown): data is RelationshipsRes
   if (!data || typeof data !== "object") return false;
   const d = data as Record<string, unknown>;
   return Array.isArray(d.edges) && d.meta !== undefined;
+}
+
+export function isContextResponse(data: unknown): data is ContextResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return Array.isArray(d.context) && d.meta !== undefined;
 }
 
 export function isApiError(data: unknown): data is ApiError {

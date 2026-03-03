@@ -115,6 +115,16 @@
   color: var(--warm-mid);
 }
 
+.contextSource {
+  margin-top: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--warm-mid);
+  opacity: 0.6;
+}
+
 .row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

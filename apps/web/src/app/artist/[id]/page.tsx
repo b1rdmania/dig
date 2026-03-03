@@ -5,9 +5,11 @@ import {
   isArtistResponse,
   isTraversalResponse,
   isRelationshipsResponse,
+  isContextResponse,
   type ArtistResponse,
   type TraversalResponse,
   type RelationshipsResponse,
+  type ContextResponse,
 } from "@/lib/types";
 import { discogsUrl } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
@@ -35,6 +37,36 @@ function formatEdgeLabel(edgeType: string, direction: "outbound" | "inbound"): s
   // Fallback: humanize the edge_type
   const humanized = edgeType.replace(/_/g, " ");
   return direction === "inbound" ? `Has ${humanized}` : humanized;
+}
+
+/** Render context blocks from Wikidata enrichment. */
+function ArtistContext({ context }: { context: Array<{ context_type: string; content_json: unknown; provenance: { source: string } }> }) {
+  const bio = context.find((c) => c.context_type === "bio");
+  const timeline = context.find((c) => c.context_type === "timeline_note");
+
+  const bioJson = bio?.content_json as Record<string, unknown> | undefined;
+  const tlJson = timeline?.content_json as Record<string, string> | undefined;
+
+  const details: string[] = [];
+  if (bioJson?.summary) details.push(String(bioJson.summary));
+  if (tlJson?.formed) details.push(`Formed: ${tlJson.formed}`);
+  if (tlJson?.born) details.push(`Born: ${tlJson.born}`);
+  if (tlJson?.dissolved) details.push(`Dissolved: ${tlJson.dissolved}`);
+  if (tlJson?.died) details.push(`Died: ${tlJson.died}`);
+
+  if (details.length === 0) return null;
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>About</h2>
+      {details.map((d, i) => (
+        <p key={i} className={styles.copy} style={i > 0 ? { marginTop: "0.3rem", fontSize: "0.82rem" } : undefined}>
+          {d}
+        </p>
+      ))}
+      <div className={styles.contextSource}>Source: Wikidata</div>
+    </section>
+  );
 }
 
 interface Props {
@@ -70,8 +102,12 @@ export default async function ArtistPage({ params }: Props) {
       pagination: { cursor: null, has_more: false, total_estimate: null },
       meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
     };
+    const defaultContext: ContextResponse = {
+      context: [],
+      meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
+    };
 
-    const [artistData, mastersData, relData] = await Promise.all([
+    const [artistData, mastersData, relData, ctxData] = await Promise.all([
       digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }),
       digFetch<TraversalResponse>(`/v1/artists/${id}/masters?limit=30`, { revalidate: 300 })
         .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
@@ -79,6 +115,9 @@ export default async function ArtistPage({ params }: Props) {
       digFetch<RelationshipsResponse>(`/v1/artists/${id}/relationships?include_enrichment=true&limit=50`, { revalidate: 3600 })
         .then((d) => (isRelationshipsResponse(d) ? d : defaultRelationships))
         .catch(() => defaultRelationships),
+      digFetch<ContextResponse>(`/v1/artists/${id}/context?include_enrichment=true`, { revalidate: 3600 })
+        .then((d) => (isContextResponse(d) ? d : defaultContext))
+        .catch(() => defaultContext),
     ]);
 
     if (!isArtistResponse(artistData)) {
@@ -110,6 +149,8 @@ export default async function ArtistPage({ params }: Props) {
             <p className={styles.copy}>{artist.profile}</p>
           </section>
         )}
+
+        {ctxData.context.length > 0 && <ArtistContext context={ctxData.context} />}
 
         {(artist.aliases.length > 0 || artist.name_variations.length > 0) && (
           <section className={styles.section}>
