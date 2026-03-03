@@ -15,6 +15,28 @@ import { Provenance } from "@/components/Provenance";
 import { CollapsibleList } from "@/components/CollapsibleList";
 import styles from "./page.module.css";
 
+/** Format edge type + direction into a human-readable label. */
+function formatEdgeLabel(edgeType: string, direction: "outbound" | "inbound"): string {
+  const LABELS: Record<string, [string, string]> = {
+    // [outbound, inbound]
+    member_of_band: ["Member of", "Has member"],
+    subgroup: ["Subgroup of", "Has subgroup"],
+    collaboration: ["Collaborated with", "Collaborated with"],
+    is_person: ["Is person", "Has alias"],
+    supporting_musician: ["Supporting musician for", "Supported by"],
+    vocal_supporting_musician: ["Vocal support for", "Vocal support from"],
+    instrumental_supporting_musician: ["Instrumental support for", "Instrumental support from"],
+    conductor_position: ["Conductor of", "Conducted by"],
+    founder: ["Founded", "Founded by"],
+    artistic_director: ["Artistic director of", "Led by"],
+  };
+  const pair = LABELS[edgeType];
+  if (pair) return direction === "outbound" ? pair[0] : pair[1];
+  // Fallback: humanize the edge_type
+  const humanized = edgeType.replace(/_/g, " ");
+  return direction === "inbound" ? `Has ${humanized}` : humanized;
+}
+
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -167,7 +189,7 @@ export default async function ArtistPage({ params }: Props) {
             <div className={styles.relatedList}>
               {relData.edges.map((edge) => {
                 const target = edge.target_entity;
-                const label = edge.edge_type.replace(/_/g, " ");
+                const label = formatEdgeLabel(edge.edge_type, edge.edge_direction);
                 return (
                   <div className={styles.relatedRow} key={edge.provenance.source_id}>
                     {target.discogs_id ? (

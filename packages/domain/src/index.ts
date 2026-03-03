@@ -49,6 +49,7 @@ export {
   type RelationshipsResponse,
   type ContextResponse,
   type EnrichmentParams,
+  type EdgeDirection,
   type RelationshipEdge,
   type ContextBlock,
 } from "./enrichment.js";

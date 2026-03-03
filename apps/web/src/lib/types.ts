@@ -238,6 +238,7 @@ export interface EnrichmentProvenance {
 
 export interface RelationshipEdge {
   edge_type: string;
+  edge_direction: "outbound" | "inbound";
   source_entity: { entity_type: string; discogs_id: number; name: string | null };
   target_entity: { entity_type: string; discogs_id: number | null; external_id: string | null; name: string | null };
   valid_from: string | null;

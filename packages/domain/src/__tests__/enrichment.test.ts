@@ -15,6 +15,7 @@ describe("RelationshipEdge shape", () => {
   it("matches response contract", () => {
     const edge: RelationshipEdge = {
       edge_type: "member_of",
+      edge_direction: "outbound",
       source_entity: {
         entity_type: "artist",
         discogs_id: 3840,
@@ -37,6 +38,7 @@ describe("RelationshipEdge shape", () => {
     };
 
     expect(edge.edge_type).toBe("member_of");
+    expect(edge.edge_direction).toBe("outbound");
     expect(edge.source_entity.entity_type).toBe("artist");
     expect(edge.source_entity.discogs_id).toBe(3840);
     expect(edge.target_entity.discogs_id).toBe(12345);
@@ -48,6 +50,7 @@ describe("RelationshipEdge shape", () => {
   it("supports external_id without discogs_id", () => {
     const edge: RelationshipEdge = {
       edge_type: "wikidata_link",
+      edge_direction: "outbound",
       source_entity: { entity_type: "artist", discogs_id: 45, name: "Aphex Twin" },
       target_entity: {
         entity_type: "artist",
@@ -69,6 +72,22 @@ describe("RelationshipEdge shape", () => {
     expect(edge.target_entity.external_id).toBe("Q207304");
     expect(edge.valid_from).toBe("1991");
   });
+
+  it("supports inbound direction", () => {
+    const edge: RelationshipEdge = {
+      edge_type: "member_of_band",
+      edge_direction: "inbound",
+      source_entity: { entity_type: "artist", discogs_id: 3840, name: "Radiohead" },
+      target_entity: { entity_type: "artist", discogs_id: 200816, external_id: null, name: "Thom Yorke" },
+      valid_from: null,
+      valid_to: null,
+      provenance: { source: "musicbrainz", source_id: "rel:2", confidence: 0.9, match_method: "deterministic_metadata" },
+    };
+
+    expect(edge.edge_direction).toBe("inbound");
+    expect(edge.source_entity.discogs_id).toBe(3840);
+    expect(edge.target_entity.discogs_id).toBe(200816);
+  });
 });
 
 describe("RelationshipsResponse shape", () => {
@@ -77,6 +96,7 @@ describe("RelationshipsResponse shape", () => {
       edges: [
         {
           edge_type: "member_of",
+          edge_direction: "outbound",
           source_entity: { entity_type: "artist", discogs_id: 3840, name: "Radiohead" },
           target_entity: { entity_type: "artist", discogs_id: 12345, external_id: null, name: "On A Friday" },
           valid_from: null,

@@ -21,8 +21,11 @@ export interface EnrichmentProvenance {
   match_method: string;
 }
 
+export type EdgeDirection = "outbound" | "inbound";
+
 export interface RelationshipEdge {
   edge_type: string;
+  edge_direction: EdgeDirection;
   source_entity: {
     entity_type: string;
     discogs_id: number;
@@ -152,9 +155,16 @@ export async function getArtistRelationships(
   const lim = params.limit;
   const afterId = params.cursor ? decodeCursor(params.cursor) : null;
 
-  let query = sql<{
+  // Query both directions: outbound (artist is source) and inbound (artist is target).
+  // UNION ALL, deterministic sort (confidence DESC, edge_source_id ASC, id ASC) for
+  // stable cursor pagination. Dedup by composite key in application code as safety net.
+  const sourceFilter = params.sources ? sql`AND edge_source IN (${sql.join(params.sources.map(s => sql`${s}`), sql`, `)})` : sql``;
+  const cursorFilter = afterId !== null ? sql`AND id > ${afterId}` : sql``;
+
+  const { rows: rawRows } = await sql<{
     id: number;
     edge_type: string;
+    direction: string;
     source_entity_type: string;
     source_discogs_id: number;
     target_entity_type: string;
@@ -167,36 +177,55 @@ export async function getArtistRelationships(
     valid_from: string | null;
     valid_to: string | null;
   }>`
-    SELECT id, edge_type, source_entity_type, source_discogs_id,
-           target_entity_type, target_discogs_id, target_external_id,
-           edge_source, edge_source_id, confidence::float, match_method,
-           valid_from::text, valid_to::text
-    FROM enrich.relationship_edges
-    WHERE source_entity_type = 'artist'
-      AND source_discogs_id = ${discogsId}
-      AND confidence >= ${params.minConfidence}
-      ${params.sources ? sql`AND edge_source IN (${sql.join(params.sources.map(s => sql`${s}`), sql`, `)})` : sql``}
-      ${afterId !== null ? sql`AND id > ${afterId}` : sql``}
-    ORDER BY id ASC
+    SELECT * FROM (
+      SELECT id, edge_type, 'outbound' AS direction,
+             source_entity_type, source_discogs_id,
+             target_entity_type, target_discogs_id, target_external_id,
+             edge_source, edge_source_id, confidence::float, match_method,
+             valid_from::text, valid_to::text
+      FROM enrich.relationship_edges
+      WHERE source_entity_type = 'artist'
+        AND source_discogs_id = ${discogsId}
+        AND confidence >= ${params.minConfidence}
+        ${sourceFilter} ${cursorFilter}
+      UNION ALL
+      SELECT id, edge_type, 'inbound' AS direction,
+             source_entity_type, source_discogs_id,
+             target_entity_type, target_discogs_id, target_external_id,
+             edge_source, edge_source_id, confidence::float, match_method,
+             valid_from::text, valid_to::text
+      FROM enrich.relationship_edges
+      WHERE target_entity_type = 'artist'
+        AND target_discogs_id = ${discogsId}
+        AND confidence >= ${params.minConfidence}
+        ${sourceFilter} ${cursorFilter}
+    ) combined
+    ORDER BY confidence DESC, edge_source_id ASC, id ASC
     LIMIT ${lim + 1}
-  `;
+  `.execute(db);
 
-  const { rows } = await query.execute(db);
+  // Dedup by composite key: (edge_source, edge_source_id, source, target, type, direction)
+  const seen = new Set<string>();
+  const rows = rawRows.filter((r) => {
+    const key = `${r.edge_source}:${r.edge_source_id}:${r.source_discogs_id}:${r.target_discogs_id}:${r.edge_type}:${r.direction}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 
   const hasMore = rows.length > lim;
   const resultRows = hasMore ? rows.slice(0, lim) : rows;
 
   // Collect unique discogs IDs to resolve names
-  const sourceIds = new Set<number>();
-  const targetIds = new Set<number>();
+  const idsToResolve = new Set<number>();
   for (const r of resultRows) {
-    sourceIds.add(r.source_discogs_id);
-    if (r.target_discogs_id) targetIds.add(r.target_discogs_id);
+    idsToResolve.add(r.source_discogs_id);
+    if (r.target_discogs_id) idsToResolve.add(r.target_discogs_id);
   }
 
   // Resolve names from catalog if we have edges
   const nameMap = new Map<number, string>();
-  const allIds = [...sourceIds, ...targetIds];
+  const allIds = [...idsToResolve];
   if (allIds.length > 0) {
     const { rows: nameRows } = await sql<{ discogs_id: number; name: string }>`
       SELECT discogs_id, name FROM catalog.artists
@@ -209,18 +238,28 @@ export async function getArtistRelationships(
   const usedSources = new Set<string>();
   const edges: RelationshipEdge[] = resultRows.map((r) => {
     usedSources.add(r.edge_source);
+    const direction = r.direction as EdgeDirection;
+
+    // For inbound edges, the queried artist is the target — swap presentation so
+    // source_entity = queried artist, target_entity = the other side.
+    const isInbound = direction === "inbound";
+    const displaySourceId = isInbound ? r.target_discogs_id! : r.source_discogs_id;
+    const displayTargetId = isInbound ? r.source_discogs_id : r.target_discogs_id;
+    const displayTargetType = isInbound ? r.source_entity_type : r.target_entity_type;
+
     return {
       edge_type: r.edge_type,
+      edge_direction: direction,
       source_entity: {
-        entity_type: r.source_entity_type,
-        discogs_id: r.source_discogs_id,
-        name: nameMap.get(r.source_discogs_id) ?? null,
+        entity_type: "artist",
+        discogs_id: displaySourceId,
+        name: nameMap.get(displaySourceId) ?? null,
       },
       target_entity: {
-        entity_type: r.target_entity_type,
-        discogs_id: r.target_discogs_id,
-        external_id: r.target_external_id,
-        name: r.target_discogs_id ? (nameMap.get(r.target_discogs_id) ?? null) : null,
+        entity_type: displayTargetType,
+        discogs_id: displayTargetId,
+        external_id: isInbound ? null : r.target_external_id,
+        name: displayTargetId ? (nameMap.get(displayTargetId) ?? null) : null,
       },
       valid_from: r.valid_from,
       valid_to: r.valid_to,

@@ -17,6 +17,7 @@ describe("enrichment route contracts", () => {
         edges: [
           {
             edge_type: "member_of",
+            edge_direction: "outbound",
             source_entity: { entity_type: "artist", discogs_id: 3840, name: "Radiohead" },
             target_entity: { entity_type: "artist", discogs_id: 12345, external_id: null, name: "On A Friday" },
             valid_from: null,
@@ -41,6 +42,7 @@ describe("enrichment route contracts", () => {
       };
 
       expect(response.edges).toHaveLength(1);
+      expect(response.edges[0].edge_direction).toBe("outbound");
       expect(response.edges[0].provenance.source).toBe("musicbrainz");
       expect(response.edges[0].provenance.confidence).toBeGreaterThanOrEqual(0);
       expect(response.edges[0].provenance.confidence).toBeLessThanOrEqual(1);
