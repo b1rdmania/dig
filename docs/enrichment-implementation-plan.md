@@ -96,6 +96,9 @@ Create a dedicated `enrich` schema. Keep `catalog.*` unchanged.
 
 All tools must return structured payloads aligned with `phase2-response-contracts.md` conventions.
 
+API contract draft for EN-B implementation:
+- [EN-B API Contract](en-b-api-contract.md)
+
 ---
 
 ## 4. Rollout Plan (Phased)
