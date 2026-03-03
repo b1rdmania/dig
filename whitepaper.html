@@ -579,39 +579,39 @@
 </nav>
 
 <section class="what" id="what-dig-is">
-  <div class="section-label">What Dig is</div>
+  <div class="section-label">What's live now</div>
   <div class="what-editorial">
     <div class="what-lead">
-      <h2 class="what-heading">The retrieval core for music search.<br><em>Humans and agents hit the same answer.</em></h2>
-      <p class="what-intro">Built on the Discogs public catalog - monthly XML dumps, CC0 licensed, full catalog depth. Every artist, label, release, pressing, format, credit, identifier, and the relationships between all of them. Normalised, indexed, served through a REST API and a fully open MCP server.</p>
+      <h2 class="what-heading">Built and running.<br><em>Not a concept deck.</em></h2>
+      <p class="what-intro">Dig is live in soft alpha on the full Discogs public catalog. Search, release/version pages, API, and MCP all run on the same retrieval core, so humans and agents hit the same answer.</p>
     </div>
     <div class="what-body">
       <div class="what-block">
         <span class="what-block-num">01</span>
         <div>
-          <h3>Open by default</h3>
-          <p>No keys. No signup. Any agent, any workflow. Point at it.</p>
+          <h3>Catalog and pages live</h3>
+          <p>18.9M releases with release/version routing, credits, and linked navigation.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">02</span>
         <div>
-          <h3>Deterministic MCP</h3>
-          <p>The MCP tools are deterministic. Every response includes provenance - why a record matched, where the data came from, where confidence drops. Agents get structured facts, not vibes.</p>
+          <h3>REST + MCP live</h3>
+          <p>Deterministic tool calls with provenance, confidence, and no hidden writes.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">03</span>
         <div>
-          <h3>Shared retrieval core</h3>
-          <p>The same retrieval services power the human-facing web app, so what users see and what agents get is always the same answer.</p>
+          <h3>Media and relationships live</h3>
+          <p>YouTube media embeds and Related Artists are already in production.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">04</span>
         <div>
-          <h3>Retrieval, not generation</h3>
-          <p>Dig doesn't generate, recommend, or invent. It retrieves. The AI sits on top. Dig is what the AI uses when it can't afford to guess.</p>
+          <h3>Enrichment in progress</h3>
+          <p>Release, artist, and label crosswalks are loaded; relationship graph is active.</p>
         </div>
       </div>
     </div>
@@ -619,24 +619,24 @@
 </section>
 
 <section class="agent" id="why-agents">
-  <div class="section-label">Why agents will reach for it</div>
-  <p class="agent-intro">The open MCP layer is a deliberate choice. Dig doesn't gate access because the goal isn't to monetise queries - it's to become the default tool agents reach for.</p>
+  <div class="section-label">What's proving out</div>
+  <p class="agent-intro">The alpha is proving the core thesis: reliable retrieval beats generated guesses for music data workflows.</p>
   <div class="query-list" style="max-width: 1100px;">
     <div class="query-item">
       <span class="query-prompt">01</span>
-      <span class="query-text">Right now there is no canonical music data layer for LLM workflows. When Dig exists and is open, the agent calls Dig, gets structured facts, returns a good answer. Every time.</span>
+      <span class="query-text">Search and retrieval are fast enough for real alpha usage on full-corpus data.</span>
     </div>
     <div class="query-item">
       <span class="query-prompt">02</span>
-      <span class="query-text">That's how infrastructure gets adopted. You make it reliable, you make it open, and the ecosystem routes to it because it's the best answer to the tool call.</span>
+      <span class="query-text">Relationship edges are live and now powering artist-page discovery.</span>
     </div>
     <div class="query-item">
       <span class="query-prompt">03</span>
-      <span class="query-text">Developers building music agents find it, it works, they keep using it. The MCP layer is distribution that compounds without effort.</span>
+      <span class="query-text">Telemetry is live, so product decisions are now evidence-driven, not intuition-driven.</span>
     </div>
     <div class="query-item">
       <span class="query-prompt">04</span>
-      <span class="query-text">The human product - search, record pages, crates - sits on top of the same retrieval core. It gives Dig a face. It's where curators and DJs live. But the durable asset is the retrieval graph and the trust that agents place in it.</span>
+      <span class="query-text">The same retrieval layer powers both the app and agent interfaces, keeping outputs aligned.</span>
     </div>
   </div>
 </section>
@@ -650,51 +650,54 @@
     <ul class="pain-list">
       <li>
         <span class="pain-num">01</span>
-        <span>The Discogs dumps are deep. Getting them is easy. Normalising them correctly is where projects like this fail.</span>
+        <span>Discogs dumps are deep; the failure mode is bad normalisation, not missing files.</span>
       </li>
       <li>
         <span class="pain-num">02</span>
-        <span>The XML has decades of accumulated edge cases - inconsistent credit role encoding, multiple track position formats, artist name variations, a master/release relationship more complex than it looks. Get the normalisation wrong and every downstream system inherits the errors. Search, matching, agent queries - all of it breaks quietly.</span>
+        <span>Edge cases in credits, track positions, and master/release linkage can silently poison downstream search and agent responses.</span>
       </li>
       <li>
         <span class="pain-num">03</span>
-        <span>Dig treats normalisation as a design phase, not an implementation detail. Real dump samples are profiled before a line of importer code is written. A normalisation dictionary documents every decision. Raw payloads are staged before normalisation so canonical tables can be re-derived as the schema evolves.</span>
-      </li>
-      <li>
-        <span class="pain-num">04</span>
-        <span>Not glamorous work. The work that makes everything else trustworthy.</span>
+        <span>Raw staging + documented normalisation decisions are what keep the system trustworthy over time.</span>
       </li>
     </ul>
   </div>
 </section>
 
 <section class="what" id="why-buildable">
-  <div class="section-label">Why it's buildable</div>
+  <div class="section-label">What's next (6 weeks)</div>
   <div class="what-editorial">
     <div class="what-lead">
-      <h2 class="what-heading">Small-team architecture on purpose.<br><em>Cheap until usage forces it to grow.</em></h2>
-      <p class="what-intro">Deliberately simple stack for a small team. Modular monolith. Postgres as canonical source of truth. Full text search with <code>pg_trgm</code> to start - no search cluster until the metrics justify one. Redis for jobs and caching. One codebase powering the web app, the API, and the MCP server from the same domain services.</p>
+      <h2 class="what-heading">Tight iteration loop.<br><em>Alpha feedback drives the roadmap.</em></h2>
+      <p class="what-intro">The focus is now product depth, enrichment quality, and reliability under load, not expanding scope.</p>
     </div>
     <div class="what-body">
       <div class="what-block">
         <span class="what-block-num">01</span>
         <div>
-          <h3>No LLM inference in the retrieval path</h3>
-          <p>The MCP layer serves structured database queries, not LLM inference. No expensive compute behind every agent call.</p>
+          <h3>EN-C context import</h3>
+          <p>Populate artist context from Wikidata so `/context` returns meaningful results.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">02</span>
         <div>
-          <h3>Open data + open interface</h3>
-          <p>The data is open. The interface is open. The cost is manageable.</p>
+          <h3>Relationship quality pass</h3>
+          <p>Bidirectional edge handling, naming fallbacks, and confidence tuning.</p>
         </div>
       </div>
       <div class="what-block">
         <span class="what-block-num">03</span>
         <div>
-          <h3>Distribution is already there</h3>
-          <p>The relationships to bring it to the right people are already there.</p>
+          <h3>Media coverage improvements</h3>
+          <p>Release/version media quality improvements while keeping provenance explicit.</p>
+        </div>
+      </div>
+      <div class="what-block">
+        <span class="what-block-num">04</span>
+        <div>
+          <h3>Alpha fix loop</h3>
+          <p>Weekly deploy cadence from real telemetry and tester feedback.</p>
         </div>
       </div>
     </div>
@@ -704,7 +707,7 @@
 <section class="paper-final" id="appendix">
   <div class="section-label">Technical appendix</div>
   <div class="paper-copy">
-    <p>Architecture, ingestion pipeline, and API/MCP interface details are below. This is the technical layer the product and agent workflows both sit on top of.</p>
+    <p>Architecture, ingestion pipeline, and live API/MCP interfaces are below. Items marked planned are not in production yet.</p>
   </div>
 
   <div class="paper-code">
@@ -785,27 +788,23 @@ flowchart LR
   </div>
   <div class="spec-grid" style="margin-top:28px;">
     <div class="spec-col">
-      <h3>Core retrieval API (REST)</h3>
+      <h3>Core retrieval API (REST, live)</h3>
       <ul>
-        <li><strong>GET</strong> <code>/search</code> (catalog entities + filters)</li>
-        <li><strong>GET</strong> <code>/artists/:id</code></li>
-        <li><strong>GET</strong> <code>/labels/:id</code></li>
-        <li><strong>GET</strong> <code>/masters/:id</code></li>
-        <li><strong>GET</strong> <code>/releases/:id</code></li>
-        <li><strong>GET</strong> <code>/releases/:id/media-links</code></li>
-        <li><strong>GET</strong> <code>/curators/:slug</code>, <code>/lists/:slug</code></li>
+        <li><strong>GET</strong> <code>/v1/search</code></li>
+        <li><strong>GET</strong> <code>/v1/artists/:id</code>, <code>/v1/labels/:id</code>, <code>/v1/masters/:id</code>, <code>/v1/releases/:id</code></li>
+        <li><strong>GET</strong> <code>/v1/masters/:id/releases</code>, <code>/v1/masters/:id/videos</code></li>
+        <li><strong>GET</strong> <code>/v1/releases/:id/cover</code>, <code>/v1/releases/:id/credits</code></li>
+        <li><strong>GET</strong> <code>/v1/artists/:id/relationships</code>, <code>/v1/artists/:id/context</code></li>
       </ul>
     </div>
     <div class="spec-col">
-      <h3>LLM-facing MCP tools</h3>
+      <h3>LLM-facing MCP tools (live)</h3>
       <ul>
         <li><code>search_catalog</code></li>
-        <li><code>get_release</code>, <code>get_master_release</code></li>
+        <li><code>get_release</code>, <code>get_master</code></li>
         <li><code>get_artist</code>, <code>get_label</code></li>
-        <li><code>get_related_releases</code></li>
-        <li><code>get_media_links</code></li>
-        <li><code>create_crate_draft</code></li>
-        <li><code>explain_relationships</code></li>
+        <li><code>traverse_links</code></li>
+        <li><span style="opacity:.7;">Planned: enrichment/context tools</span></li>
       </ul>
     </div>
   </div>
@@ -813,6 +812,9 @@ flowchart LR
 
 <section class="access" id="defaults">
   <div class="section-label">Defaults</div>
+  <div class="paper-copy" style="margin-bottom:12px;">
+    <p><strong>Current stage</strong> — Soft alpha, active iteration, additive enrichment.</p>
+  </div>
   <div class="paper-code" style="margin-top:0; background: rgba(10,10,10,0.02); border-color: rgba(10,10,10,0.12);">
     <pre>Architecture — Modular monolith
 Search v1 — Postgres FTS + pg_trgm
