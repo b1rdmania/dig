@@ -863,6 +863,13 @@
   </div>
 </section>
 
+<!-- Status -->
+<section class="what" id="status">
+  <div class="manifesto-simple" style="max-width: 860px;">
+    <p class="what-intro">Dig is an experimental music data project in active alpha. Right now it gives you fast catalog search, release/version pages, credits, and open API/MCP access. Over time it becomes the open music data layer for humans and agents: deeper relationships, richer context, and better linking across where music lives.</p>
+  </div>
+</section>
+
 <!-- Agent First -->
 <section class="what" id="agent-first">
   <div class="section-label">Agent first</div>
@@ -928,76 +935,27 @@
   </div>
 </section>
 
-<!-- Who -->
-<section class="who" id="who">
-  <div class="section-label">Who</div>
-  <div class="who-grid">
-    <div class="who-card">
-      <div class="who-role">Developers & agents</div>
-      <p class="who-desc">Fully open MCP and REST. Structured facts, not hallucinations.</p>
-    </div>
-    <div class="who-card">
-      <div class="who-role">DJs & selectors</div>
-      <p class="who-desc">Build crates. Share them. Export when you need to. The prep you've been doing in a notes app since forever.</p>
-    </div>
-    <div class="who-card">
-      <div class="who-role">Collectors</div>
-      <p class="who-desc">Search pressings, formats, credits. Fast. No marketplace in the way. Find it here, buy it elsewhere.</p>
-    </div>
-    <div class="who-card">
-      <div class="who-role">Radio & editorial</div>
-      <p class="who-desc">Publish what you know. Findable, linkable, permanent.</p>
-    </div>
-  </div>
-</section>
-
 <!-- Early Access -->
 <section class="access" id="access">
   <div class="section-label">CTA</div>
   <h2 class="access-heading">Start<br><em>digging.</em></h2>
-  <p class="access-sub">Small group of DJs, curators, radio people, and developers get in first. Tell us who you are.</p>
+  <p class="access-sub">Small group of DJs, curators, radio people, and developers get in first.</p>
 
-  <div class="form-tabs">
-    <button class="tab active" onclick="setTab(this, 'curator')">Curator / DJ</button>
-    <button class="tab" onclick="setTab(this, 'developer')">Developer</button>
-    <button class="tab" onclick="setTab(this, 'partner')">Label / Radio</button>
+  <div class="form-row">
+    <input class="form-input" type="text" placeholder="Your name">
+    <input class="form-input" type="email" placeholder="Email address">
   </div>
-
-  <div id="form-curator">
-    <div class="form-row">
-      <input class="form-input" type="text" placeholder="Your name">
-      <input class="form-input" type="email" placeholder="Email address">
-    </div>
-    <div class="form-row">
-      <input class="form-input" type="text" placeholder="Your mix / radio show / social (optional)" style="flex: 2">
-      <button class="btn-submit">Request access →</button>
-    </div>
-    <p class="form-note">No spam. We'll reach out when access opens.</p>
+  <div class="form-row">
+    <select class="form-input" style="max-width: 280px;">
+      <option>I am: DJ / Curator</option>
+      <option>I am: Developer</option>
+      <option>I am: Label / Radio</option>
+      <option>I am: Collector</option>
+    </select>
+    <input class="form-input" type="text" placeholder="Link or note (optional)" style="flex: 2">
+    <button class="btn-submit">Request access →</button>
   </div>
-
-  <div id="form-developer" style="display:none">
-    <div class="form-row">
-      <input class="form-input" type="text" placeholder="Your name">
-      <input class="form-input" type="email" placeholder="Email address">
-    </div>
-    <div class="form-row">
-      <input class="form-input" type="text" placeholder="What are you building? (optional)" style="flex: 2">
-      <button class="btn-submit">Request API access →</button>
-    </div>
-    <p class="form-note">API and MCP docs go to developers first.</p>
-  </div>
-
-  <div id="form-partner" style="display:none">
-    <div class="form-row">
-      <input class="form-input" type="text" placeholder="Your name">
-      <input class="form-input" type="email" placeholder="Email address">
-    </div>
-    <div class="form-row">
-      <input class="form-input" type="text" placeholder="Your collective / label / station" style="flex: 2">
-      <button class="btn-submit">Get in touch →</button>
-    </div>
-    <p class="form-note">A few editorial partners. That's it for now.</p>
-  </div>
+  <p class="form-note">No spam. We'll reach out when access opens.</p>
 </section>
 
 <!-- Footer -->
@@ -1007,14 +965,6 @@
 </footer>
 
 <script>
-  function setTab(btn, tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    ['curator','developer','partner'].forEach(t => {
-      document.getElementById('form-' + t).style.display = t === tab ? 'block' : 'none';
-    });
-  }
-
   // Subtle scroll fade-in for sections
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!prefersReducedMotion && 'IntersectionObserver' in window) {
