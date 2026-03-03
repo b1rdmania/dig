@@ -185,6 +185,12 @@ Gate closeout format:
 - [ ] End-to-end MCP enrichment tools validated in two clients
 - [ ] Alpha docs updated with enrichment semantics and caveats
 
+Execution checklist:
+- [EN-D Spike Checklist](en-d-spike-checklist.md)
+
+Gate closeout:
+- `docs/en-d-spike-results.md` (coverage, latency, quality, decision)
+
 ---
 
 ## 6. Legal and Compliance Checks
