@@ -41,20 +41,22 @@ export function Nav() {
           DIG
         </Link>
       </div>
-      <form className={styles.searchForm} onSubmit={onSearchSubmit}>
-        <input
-          className={styles.searchInput}
-          type="search"
-          placeholder="Search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          autoCorrect="off"
-          autoCapitalize="off"
-        />
-        <button className={styles.searchBtn} type="submit">
-          Search
-        </button>
-      </form>
+      {pathname !== "/" ? (
+        <form className={styles.searchForm} onSubmit={onSearchSubmit}>
+          <input
+            className={styles.searchInput}
+            type="search"
+            placeholder="Search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            autoCorrect="off"
+            autoCapitalize="off"
+          />
+          <button className={styles.searchBtn} type="submit">
+            Search
+          </button>
+        </form>
+      ) : null}
       <ul className={styles.links}>
         <li>
           <Link
