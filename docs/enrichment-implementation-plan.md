@@ -176,6 +176,9 @@ Gate closeout format:
 Execution checklist:
 - [EN-C Implementation Checklist](en-c-implementation-checklist.md)
 
+Gate closeout format:
+- [EN-C Gate Closeout Template](en-c-gate-closeout-template.md)
+
 ### Gate EN-D (after 4D)
 
 - [ ] Setlist timeline integrated with source attribution
