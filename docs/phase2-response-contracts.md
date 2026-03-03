@@ -208,7 +208,111 @@ GET /v1/releases/:discogs_id
 }
 ```
 
-## 3. Traversal Links Response
+## 3. Enrichment Endpoints (EN-B, Additive)
+
+These endpoints are additive — they do not modify canonical entity responses. Enrichment data is opt-in via `include_enrichment=true`.
+
+### Common query parameters
+
+| Param | Type | Default | Notes |
+|-------|------|---------|-------|
+| `include_enrichment` | boolean | `false` | Must be `true` for non-empty enrichment data |
+| `min_confidence` | number | `0.7` | Range 0.0–1.0, filters edges/context below threshold |
+| `sources` | csv | all | Allowed: `musicbrainz`, `wikidata`, `setlistfm` |
+| `limit` | int | `20` | 1–100, for paginated edge lists |
+| `cursor` | string | — | Opaque token from previous response |
+
+### 3a. Artist Relationships
+
+```
+GET /v1/artists/:discogs_id/relationships?include_enrichment=true&sources=musicbrainz
+```
+
+```jsonc
+{
+  "edges": [
+    {
+      "edge_type": "member_of",
+      "source_entity": {
+        "entity_type": "artist",
+        "discogs_id": 3840,
+        "name": "Radiohead"
+      },
+      "target_entity": {
+        "entity_type": "artist",
+        "discogs_id": 12345,
+        "external_id": null,       // non-Discogs ID when target is external
+        "name": "On A Friday"
+      },
+      "valid_from": null,
+      "valid_to": null,
+      "provenance": {
+        "source": "musicbrainz",
+        "source_id": "mb:artist:3840:artist:12345:member_of",
+        "confidence": 0.90,
+        "match_method": "deterministic_metadata"
+      }
+    }
+  ],
+  "pagination": {
+    "cursor": "opaque",           // base64url-encoded, null when no more
+    "has_more": false,
+    "total_estimate": null
+  },
+  "meta": {
+    "source_type": "artist",
+    "source_discogs_id": 3840,
+    "elapsed_ms": 41,
+    "enrichment_included": true,
+    "enrichment_sources": ["musicbrainz"],
+    "enrichment_edge_count": 1
+  }
+}
+```
+
+### 3b. Artist Context
+
+```
+GET /v1/artists/:discogs_id/context?include_enrichment=true&sources=wikidata
+```
+
+```jsonc
+{
+  "context": [
+    {
+      "context_type": "bio",
+      "content_json": {
+        "summary": "English rock band formed in Abingdon..."
+      },
+      "provenance": {
+        "source": "wikidata",
+        "source_id": "Q1299",
+        "confidence": 0.93,
+        "match_method": "artist_crosswalk"
+      }
+    }
+  ],
+  "meta": {
+    "source_type": "artist",
+    "source_discogs_id": 3840,
+    "elapsed_ms": 19,
+    "enrichment_included": true,
+    "enrichment_sources": ["wikidata"],
+    "enrichment_edge_count": 0
+  }
+}
+```
+
+### Enrichment response rules
+
+- When `include_enrichment=false` (default): `edges`/`context` are empty arrays, `meta.enrichment_included` is `false`.
+- Unmapped artists (no crosswalk): return `200` with empty `edges`/`context`, not `404`.
+- Every enrichment object includes full `provenance` (source, source_id, confidence, match_method).
+- `min_confidence` filters out edges/context blocks below the threshold.
+- Invalid `sources` returns `400 INVALID_REQUEST`.
+- Invalid `min_confidence` (outside 0–1) returns `400 INVALID_REQUEST`.
+
+## 4. Traversal Links Response (was §3)
 
 For navigating the entity graph. All traversal endpoints return paginated lists.
 
@@ -256,7 +360,7 @@ GET /v1/releases/:discogs_id/credits?limit=20&cursor=...
 - All traversal endpoints use cursor-based pagination with the same `limit`/`cursor` contract as search.
 - `total_estimate` may be `null`.
 
-## 4. Error Response
+## 5. Error Response
 
 All error responses use this shape. No exceptions.
 
@@ -288,7 +392,7 @@ All error responses use this shape. No exceptions.
 - `error.details` is `null` or a JSON object with additional context (never a string).
 - Error responses never include a `results` or entity key — only `error`.
 
-## 5. MCP Tool Contracts
+## 6. MCP Tool Contracts
 
 MCP tools return the same JSON payloads as REST, wrapped in MCP `content` blocks. Error taxonomy is identical.
 

@@ -2,7 +2,7 @@
 
 Dig is a music data layer built on the Discogs CC0 catalog. Search 24M+ records, retrieve entity details, and traverse the artist/label/release graph — via REST or MCP.
 
-> **Staging alpha.** Full artists (584k), labels (2.3M), masters (2.5M), but only 50k releases (out of 18.9M). If a release isn't found, it's likely not in the sample.
+> **Staging alpha.** Full corpus: artists (584k), labels (2.3M), masters (2.5M), releases (18.9M). Enrichment: 1.2M artist crosswalks (MB+Wikidata), 423K relationship edges.
 
 ## Base URLs
 
@@ -241,6 +241,64 @@ curl "https://dig-api.fly.dev/v1/releases/1/credits"
 
 ---
 
+## Enrichment (EN-B)
+
+Query artist relationships and context from MusicBrainz crosswalks. Enrichment is opt-in — pass `include_enrichment=true` to get data.
+
+```bash
+# Artist relationships (member_of, collaboration, etc.)
+curl "https://dig-api.fly.dev/v1/artists/3840/relationships?include_enrichment=true"
+
+# Filter by source and confidence
+curl "https://dig-api.fly.dev/v1/artists/3840/relationships?include_enrichment=true&sources=musicbrainz&min_confidence=0.9"
+
+# Artist context blocks (bio, etc.)
+curl "https://dig-api.fly.dev/v1/artists/3840/context?include_enrichment=true&sources=wikidata"
+
+# Paginate relationships
+curl "https://dig-api.fly.dev/v1/artists/3840/relationships?include_enrichment=true&limit=10&cursor=eyJpZCI6MTIzfQ"
+```
+
+### Query parameters
+
+| Param | Type | Default | Notes |
+|-------|------|---------|-------|
+| `include_enrichment` | boolean | `false` | Required `true` for non-empty enrichment data |
+| `min_confidence` | number | `0.7` | Range 0.0–1.0 |
+| `sources` | csv | all | `musicbrainz`, `wikidata`, `setlistfm` |
+| `limit` | int | `20` | 1–100 |
+| `cursor` | string | — | Opaque pagination token |
+
+### Response shape (relationships)
+
+```jsonc
+{
+  "edges": [
+    {
+      "edge_type": "member_of",
+      "source_entity": { "entity_type": "artist", "discogs_id": 3840, "name": "Radiohead" },
+      "target_entity": { "entity_type": "artist", "discogs_id": 12345, "external_id": null, "name": "On A Friday" },
+      "valid_from": null,
+      "valid_to": null,
+      "provenance": { "source": "musicbrainz", "source_id": "...", "confidence": 0.9, "match_method": "deterministic_metadata" }
+    }
+  ],
+  "pagination": { "cursor": null, "has_more": false, "total_estimate": null },
+  "meta": {
+    "source_type": "artist",
+    "source_discogs_id": 3840,
+    "elapsed_ms": 41,
+    "enrichment_included": true,
+    "enrichment_sources": ["musicbrainz"],
+    "enrichment_edge_count": 1
+  }
+}
+```
+
+Unmapped artists return `200` with empty `edges`/`context` — not `404`.
+
+---
+
 ## MCP Setup
 
 Dig exposes the same functionality as MCP tools for AI agents.
@@ -312,6 +370,6 @@ All data comes from the [Discogs CC0 monthly data dump](https://discogs-data-dum
 
 Every response includes `provenance` with `source: "discogs"` and `dump_date` so you always know where the data came from and how fresh it is.
 
-**Staging limitations:**
-- Full: 584k artists, 2.3M labels, 2.5M masters
-- Sample: 50k releases (of 18.9M total). Full releases coming in Phase 4
+**Current data:**
+- Full corpus: 584k artists, 2.3M labels, 2.5M masters, 18.9M releases
+- Enrichment: 1.2M artist crosswalks (MusicBrainz + Wikidata), 1.8M release crosswalks, 423K relationship edges
