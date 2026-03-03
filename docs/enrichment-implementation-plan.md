@@ -173,6 +173,9 @@ Gate closeout format:
 - [ ] Context quality sample meets target (>= 90% accepted)
 - [ ] No canonical field conflicts introduced
 
+Execution checklist:
+- [EN-C Implementation Checklist](en-c-implementation-checklist.md)
+
 ### Gate EN-D (after 4D)
 
 - [ ] Setlist timeline integrated with source attribution
