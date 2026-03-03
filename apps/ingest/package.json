@@ -13,7 +13,8 @@
     "transform": "tsx src/transform-cli.ts",
     "qa": "tsx src/qa-report.ts",
     "musicbrainz": "tsx src/musicbrainz-import.ts",
-    "wikidata-context": "tsx src/wikidata-context-import.ts"
+    "wikidata-context": "tsx src/wikidata-context-import.ts",
+    "setlistfm-import": "tsx src/setlistfm-import.ts"
   },
   "dependencies": {
     "@dig/db": "workspace:*",

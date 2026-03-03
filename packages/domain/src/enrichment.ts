@@ -77,6 +77,28 @@ export interface ContextResponse {
   };
 }
 
+export interface TimelineEvent {
+  event_date: string;
+  venue_name: string | null;
+  city_name: string | null;
+  country_name: string | null;
+  country_code: string | null;
+  tour_name: string | null;
+  song_count: number;
+  setlistfm_url: string;
+}
+
+export interface TimelineResponse {
+  events: TimelineEvent[];
+  meta: {
+    source_type: "artist";
+    source_discogs_id: number;
+    elapsed_ms: number;
+    enrichment_included: boolean;
+    total_events: number;
+  };
+}
+
 export interface EnrichmentParams {
   includeEnrichment: boolean;
   minConfidence: number;
@@ -354,6 +376,63 @@ export async function getArtistContext(
       enrichment_included: true,
       enrichment_sources: [...usedSources],
       enrichment_edge_count: 0,
+    },
+  };
+}
+
+export async function getArtistTimeline(
+  db: Kysely<Database>,
+  discogsId: number,
+  params: EnrichmentParams,
+): Promise<TimelineResponse> {
+  const start = Date.now();
+
+  if (!params.includeEnrichment) {
+    return {
+      events: [],
+      meta: {
+        source_type: "artist",
+        source_discogs_id: discogsId,
+        elapsed_ms: Date.now() - start,
+        enrichment_included: false,
+        total_events: 0,
+      },
+    };
+  }
+
+  const { rows } = await sql<{
+    event_date: string;
+    venue_name: string | null;
+    city_name: string | null;
+    country_name: string | null;
+    country_code: string | null;
+    tour_name: string | null;
+    song_count: number;
+    setlistfm_url: string;
+  }>`
+    SELECT event_date::text, venue_name, city_name, country_name, country_code,
+           tour_name, song_count, setlistfm_url
+    FROM enrich.performance_events
+    WHERE discogs_artist_id = ${discogsId}
+    ORDER BY event_date DESC
+    LIMIT ${params.limit}
+  `.execute(db);
+
+  // Get total count for meta
+  const { rows: countRows } = await sql<{ total: string }>`
+    SELECT COUNT(*)::text AS total
+    FROM enrich.performance_events
+    WHERE discogs_artist_id = ${discogsId}
+  `.execute(db);
+
+  return {
+    events: rows,
+    meta: {
+      source_type: "artist",
+      source_discogs_id: discogsId,
+      elapsed_ms: Date.now() - start,
+      enrichment_included: true,
+      total_events: parseInt(countRows[0]?.total ?? "0", 10),
     },
   };
 }

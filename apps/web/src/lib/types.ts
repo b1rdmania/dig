@@ -278,6 +278,35 @@ export interface ContextResponse {
   };
 }
 
+// Timeline (EN-D)
+export interface TimelineEvent {
+  event_date: string;
+  venue_name: string | null;
+  city_name: string | null;
+  country_name: string | null;
+  country_code: string | null;
+  tour_name: string | null;
+  song_count: number;
+  setlistfm_url: string;
+}
+
+export interface TimelineResponse {
+  events: TimelineEvent[];
+  meta: {
+    source_type: string;
+    source_discogs_id: number;
+    elapsed_ms: number;
+    enrichment_included: boolean;
+    total_events: number;
+  };
+}
+
+export function isTimelineResponse(data: unknown): data is TimelineResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return Array.isArray(d.events) && d.meta !== undefined;
+}
+
 // Error
 export interface ApiError {
   error: {

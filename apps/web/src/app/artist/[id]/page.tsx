@@ -6,10 +6,13 @@ import {
   isTraversalResponse,
   isRelationshipsResponse,
   isContextResponse,
+  isTimelineResponse,
   type ArtistResponse,
   type TraversalResponse,
   type RelationshipsResponse,
   type ContextResponse,
+  type TimelineResponse,
+  type TimelineEvent,
 } from "@/lib/types";
 import { discogsUrl } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
@@ -69,6 +72,28 @@ function ArtistContext({ context }: { context: Array<{ context_type: string; con
   );
 }
 
+/** Render performance timeline from setlist.fm enrichment. */
+function ArtistTimeline({ events, total }: { events: TimelineEvent[]; total: number }) {
+  if (events.length === 0) return null;
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>Live Performances{total > events.length ? ` (${total} total)` : ""}</h2>
+      {events.map((e) => (
+        <div className={styles.row} key={e.setlistfm_url}>
+          <a href={e.setlistfm_url} target="_blank" rel="noreferrer" className={styles.item}>
+            {e.venue_name || "Unknown venue"}{e.city_name ? `, ${e.city_name}` : ""}{e.country_code ? ` (${e.country_code})` : ""}
+          </a>
+          <span className={styles.small}>{e.event_date?.slice(0, 10) || "—"}</span>
+        </div>
+      ))}
+      <div className={styles.contextSource}>
+        Source: <a href="https://www.setlist.fm" target="_blank" rel="noreferrer">setlist.fm</a>
+      </div>
+    </section>
+  );
+}
+
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -106,8 +131,12 @@ export default async function ArtistPage({ params }: Props) {
       context: [],
       meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
     };
+    const defaultTimeline: TimelineResponse = {
+      events: [],
+      meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, total_events: 0 },
+    };
 
-    const [artistData, mastersData, relData, ctxData] = await Promise.all([
+    const [artistData, mastersData, relData, ctxData, tlData] = await Promise.all([
       digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }),
       digFetch<TraversalResponse>(`/v1/artists/${id}/masters?limit=30`, { revalidate: 300 })
         .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
@@ -118,6 +147,9 @@ export default async function ArtistPage({ params }: Props) {
       digFetch<ContextResponse>(`/v1/artists/${id}/context?include_enrichment=true`, { revalidate: 3600 })
         .then((d) => (isContextResponse(d) ? d : defaultContext))
         .catch(() => defaultContext),
+      digFetch<TimelineResponse>(`/v1/artists/${id}/timeline?include_enrichment=true&limit=20`, { revalidate: 3600 })
+        .then((d) => (isTimelineResponse(d) ? d : defaultTimeline))
+        .catch(() => defaultTimeline),
     ]);
 
     if (!isArtistResponse(artistData)) {
@@ -151,6 +183,8 @@ export default async function ArtistPage({ params }: Props) {
         )}
 
         {ctxData.context.length > 0 && <ArtistContext context={ctxData.context} />}
+
+        {tlData.events.length > 0 && <ArtistTimeline events={tlData.events} total={tlData.meta.total_events} />}
 
         {(artist.aliases.length > 0 || artist.name_variations.length > 0) && (
           <section className={styles.section}>

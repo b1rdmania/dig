@@ -44,10 +44,13 @@ export {
 export {
   getArtistRelationships,
   getArtistContext,
+  getArtistTimeline,
   parseEnrichmentParams,
   validateEnrichmentParams,
   type RelationshipsResponse,
   type ContextResponse,
+  type TimelineResponse,
+  type TimelineEvent,
   type EnrichmentParams,
   type EdgeDirection,
   type RelationshipEdge,
