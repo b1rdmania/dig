@@ -164,6 +164,9 @@ Done criteria:
 - [ ] Crosswalk precision sample meets target (>= 95% on reviewed sample)
 - [ ] Traversal latency impact acceptable (p95 delta <= 20% with enrichment enabled)
 
+Gate closeout format:
+- [EN-B Gate Closeout Template](en-b-gate-closeout-template.md)
+
 ### Gate EN-C (after 4C)
 
 - [ ] Wikidata context provenance complete
