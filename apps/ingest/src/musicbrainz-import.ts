@@ -26,19 +26,22 @@ import { spawn } from "node:child_process";
 import { createDb, sql } from "@dig/db";
 import * as tar from "tar-stream";
 
-type EntityMode = "releases" | "artists" | "all";
+type EntityMode = "releases" | "artists" | "labels" | "all";
 
 const BATCH_SIZE = 500;
 
 // URL regex patterns
 const DISCOGS_RELEASE_URL_RE = /\/release\/(\d+)/;
 const DISCOGS_ARTIST_URL_RE = /\/artist\/(\d+)/;
+const DISCOGS_LABEL_URL_RE = /\/label\/(\d+)/;
 const WIKIDATA_URL_RE = /wikidata\.org\/(?:wiki\/|entity\/)(Q\d+)/;
 
 // MusicBrainz link_type GIDs (stable, documented at https://musicbrainz.org/relationships)
 const DISCOGS_RELEASE_LINK_TYPE_GID = "4a78823c-1c53-4176-a5f3-58026c76f2bc";
 const DISCOGS_ARTIST_LINK_TYPE_GID = "04a5b104-a4c2-4bac-99a1-7b837c37d9e4";
+const DISCOGS_LABEL_LINK_TYPE_GID = "5b987f87-25bc-4a2d-b3f1-3618795b8207";
 const WIKIDATA_ARTIST_LINK_TYPE_GID = "689870a4-a1e4-4912-b17f-7b2664215698";
+const WIKIDATA_LABEL_LINK_TYPE_GID = "75d87e83-d927-4580-ba63-44dc76256f98";
 
 function parseArgs(): { file: string; databaseUrl: string; entity: EntityMode; includeEdges: boolean } {
   const args = process.argv.slice(2).filter((a) => a !== "--");
@@ -50,15 +53,15 @@ function parseArgs(): { file: string; databaseUrl: string; entity: EntityMode; i
     if (args[i] === "--include-edges") includeEdges = true;
     if (args[i] === "--entity" && args[i + 1]) {
       const v = args[++i];
-      if (v === "releases" || v === "artists" || v === "all") entity = v;
+      if (v === "releases" || v === "artists" || v === "labels" || v === "all") entity = v;
       else {
-        console.error("Invalid --entity value. Use: releases | artists | all");
+        console.error("Invalid --entity value. Use: releases | artists | labels | all");
         process.exit(1);
       }
     }
   }
   if (!file) {
-    console.error("Usage: pnpm --filter @dig/ingest musicbrainz -- --file ./mbdump.tar.bz2 [--entity releases|artists|all] [--include-edges]");
+    console.error("Usage: pnpm --filter @dig/ingest musicbrainz -- --file ./mbdump.tar.bz2 [--entity releases|artists|labels|all] [--include-edges]");
     process.exit(1);
   }
   const databaseUrl = process.env.DATABASE_URL;
@@ -74,6 +77,7 @@ function computeTablesNeeded(entity: EntityMode, includeEdges: boolean): string[
   const tables = [...base];
   if (entity === "releases" || entity === "all") tables.push("release", "l_release_url");
   if (entity === "artists" || entity === "all") tables.push("artist", "l_artist_url");
+  if (entity === "labels" || entity === "all") tables.push("label", "l_label_url");
   if (includeEdges) tables.push("l_artist_artist");
   return tables;
 }
@@ -108,6 +112,7 @@ async function main() {
   const tablesNeeded = computeTablesNeeded(entity, includeEdges);
   const doReleases = entity === "releases" || entity === "all";
   const doArtists = entity === "artists" || entity === "all";
+  const doLabels = entity === "labels" || entity === "all";
 
   console.log(`[mb-import] Starting import from ${file} (entity: ${entity}, edges: ${includeEdges})`);
   console.log(`[mb-import] Tables needed: ${tablesNeeded.join(", ")}`);
@@ -117,7 +122,9 @@ async function main() {
   // link_type GID → link_type internal ID (discovered during parse)
   let discogsReleaseLinkTypeId: number | null = null;
   let discogsArtistLinkTypeId: number | null = null;
+  let discogsLabelLinkTypeId: number | null = null;
   let wikidataArtistLinkTypeId: number | null = null;
+  let wikidataLabelLinkTypeId: number | null = null;
 
   // link.id → link.link_type
   const linkIdToLinkType = new Map<number, number>();
@@ -125,15 +132,18 @@ async function main() {
   // URL maps
   const urlIdToDiscogsReleaseId = new Map<number, number>();
   const urlIdToDiscogsArtistId = new Map<number, number>();
+  const urlIdToDiscogsLabelId = new Map<number, number>();
   const urlIdToWikidataQid = new Map<number, string>();
 
   // Entity maps
   const releaseIdToMbid = new Map<number, string>();
   const artistIdToMbid = new Map<number, string>();
+  const labelIdToMbid = new Map<number, string>();
 
   // Triples: [linkId, entityId, urlId]
   const relUrlTriples: Array<[number, number, number]> = [];
   const artUrlTriples: Array<[number, number, number]> = [];
+  const lblUrlTriples: Array<[number, number, number]> = [];
 
   // Artist-artist relationship triples: [linkId, entity0(artist), entity1(artist)]
   const artArtTriples: Array<[number, number, number]> = [];
@@ -185,9 +195,17 @@ async function main() {
               discogsArtistLinkTypeId = id;
               console.log(`[mb-import] Discogs artist link_type id: ${id}`);
             }
+            if (gid === DISCOGS_LABEL_LINK_TYPE_GID) {
+              discogsLabelLinkTypeId = id;
+              console.log(`[mb-import] Discogs label link_type id: ${id}`);
+            }
             if (gid === WIKIDATA_ARTIST_LINK_TYPE_GID) {
               wikidataArtistLinkTypeId = id;
               console.log(`[mb-import] Wikidata artist link_type id: ${id}`);
+            }
+            if (gid === WIKIDATA_LABEL_LINK_TYPE_GID) {
+              wikidataLabelLinkTypeId = id;
+              console.log(`[mb-import] Wikidata label link_type id: ${id}`);
             }
             // Collect all artist-artist link types for edge extraction
             if (includeEdges && entityType0 === "artist" && entityType1 === "artist" && ltName) {
@@ -211,7 +229,11 @@ async function main() {
               const m = url.match(DISCOGS_ARTIST_URL_RE);
               if (m) urlIdToDiscogsArtistId.set(parseInt(f[0], 10), parseInt(m[1], 10));
             }
-            if (doArtists && url.includes("wikidata.org/")) {
+            if (doLabels && url.includes("discogs.com/label/")) {
+              const m = url.match(DISCOGS_LABEL_URL_RE);
+              if (m) urlIdToDiscogsLabelId.set(parseInt(f[0], 10), parseInt(m[1], 10));
+            }
+            if ((doArtists || doLabels) && url.includes("wikidata.org/")) {
               const m = url.match(WIKIDATA_URL_RE);
               if (m) urlIdToWikidataQid.set(parseInt(f[0], 10), m[1]);
             }
@@ -245,6 +267,22 @@ async function main() {
             artUrlTriples.push([
               parseInt(f[1], 10), // link id
               parseInt(f[2], 10), // artist.id (MB internal)
+              parseInt(f[3], 10), // url.id
+            ]);
+            break;
+          }
+          case "label": {
+            const gid = f[1];
+            if (gid && gid.length === 36) {
+              labelIdToMbid.set(parseInt(f[0], 10), gid);
+            }
+            break;
+          }
+          case "l_label_url": {
+            // columns: id, link, entity0(label), entity1(url), ...
+            lblUrlTriples.push([
+              parseInt(f[1], 10), // link id
+              parseInt(f[2], 10), // label.id (MB internal)
               parseInt(f[3], 10), // url.id
             ]);
             break;
@@ -300,6 +338,11 @@ async function main() {
     console.log(`  Wikidata URLs: ${urlIdToWikidataQid.size.toLocaleString()}`);
     console.log(`  MB artists: ${artistIdToMbid.size.toLocaleString()}`);
     console.log(`  l_artist_url triples: ${artUrlTriples.length.toLocaleString()}`);
+  }
+  if (doLabels) {
+    console.log(`  Discogs label URLs: ${urlIdToDiscogsLabelId.size.toLocaleString()}`);
+    console.log(`  MB labels: ${labelIdToMbid.size.toLocaleString()}`);
+    console.log(`  l_label_url triples: ${lblUrlTriples.length.toLocaleString()}`);
   }
 
   // ========================
@@ -476,6 +519,114 @@ async function main() {
         written,
       });
       console.log(`[mb-import] Artist crosswalks done: ${written.toLocaleString()} (${wdMatched.toLocaleString()} with Wikidata QID)`);
+    }
+  }
+
+  // ========================
+  // LABEL CROSSWALKS
+  // ========================
+  if (doLabels) {
+    if (discogsLabelLinkTypeId === null) {
+      console.error("[mb-import] Discogs label link_type not found in dump");
+      process.exit(1);
+    }
+
+    // Build link ID sets for label-discogs and label-wikidata
+    const discogsLabelLinkIds = new Set<number>();
+    const wikidataLabelLinkIds = new Set<number>();
+    for (const [linkId, linkType] of linkIdToLinkType) {
+      if (linkType === discogsLabelLinkTypeId) discogsLabelLinkIds.add(linkId);
+      if (wikidataLabelLinkTypeId !== null && linkType === wikidataLabelLinkTypeId) wikidataLabelLinkIds.add(linkId);
+    }
+    console.log(`[mb-import] Discogs label link IDs: ${discogsLabelLinkIds.size.toLocaleString()}`);
+    console.log(`[mb-import] Wikidata label link IDs: ${wikidataLabelLinkIds.size.toLocaleString()}`);
+
+    // Phase 1: Build discogsLabelId → mbid from l_label_url (discogs links)
+    console.log("[mb-import] Joining label crosswalks (discogs)...");
+    const labelMappings = new Map<number, { discogsId: number; mbid: string }>();
+    const seenLblMbid = new Set<string>();
+    const mbLabelIdToDiscogsId = new Map<number, number>();
+    let skLblUrl = 0, skLblMbid = 0;
+
+    for (const [linkId, labelId, urlId] of lblUrlTriples) {
+      if (!discogsLabelLinkIds.has(linkId)) continue;
+      const discogsId = urlIdToDiscogsLabelId.get(urlId);
+      if (discogsId === undefined) { skLblUrl++; continue; }
+      if (discogsId > 2_147_483_647) continue;
+      const mbid = labelIdToMbid.get(labelId);
+      if (!mbid) { skLblMbid++; continue; }
+      if (labelMappings.has(discogsId)) continue;
+      if (seenLblMbid.has(mbid)) continue;
+      seenLblMbid.add(mbid);
+      labelMappings.set(discogsId, { discogsId, mbid });
+      mbLabelIdToDiscogsId.set(labelId, discogsId);
+    }
+
+    console.log(`[mb-import] Label discogs matches: ${labelMappings.size.toLocaleString()}`);
+    console.log(`  Skipped (no URL): ${skLblUrl.toLocaleString()}, (no MBID): ${skLblMbid.toLocaleString()}`);
+
+    // Phase 2: Enrich with Wikidata QIDs from l_label_url (wikidata links)
+    console.log("[mb-import] Resolving label Wikidata QIDs...");
+    const wikidataByLabelDiscogsId = new Map<number, string>();
+    const seenLblQid = new Set<string>();
+    let wdLblMatched = 0, wdLblSkipped = 0;
+
+    for (const [linkId, labelId, urlId] of lblUrlTriples) {
+      if (!wikidataLabelLinkIds.has(linkId)) continue;
+      const qid = urlIdToWikidataQid.get(urlId);
+      if (!qid) continue;
+      const discogsId = mbLabelIdToDiscogsId.get(labelId);
+      if (discogsId === undefined) { wdLblSkipped++; continue; }
+      if (seenLblQid.has(qid)) { wdLblSkipped++; continue; }
+      if (wikidataByLabelDiscogsId.has(discogsId)) continue;
+      seenLblQid.add(qid);
+      wikidataByLabelDiscogsId.set(discogsId, qid);
+      wdLblMatched++;
+    }
+
+    console.log(`[mb-import] Label Wikidata QIDs resolved: ${wdLblMatched.toLocaleString()} (skipped: ${wdLblSkipped.toLocaleString()})`);
+
+    if (labelMappings.size > 0) {
+      const batchKey = `musicbrainz-labels-${new Date().toISOString().slice(0, 7)}`;
+      const batchId = await createBatch(db, batchKey);
+
+      const labelRows = Array.from(labelMappings.values());
+      console.log(`[mb-import] Writing ${labelRows.length.toLocaleString()} label crosswalks...`);
+      let written = 0;
+
+      for (let i = 0; i < labelRows.length; i += BATCH_SIZE) {
+        const chunk = labelRows.slice(i, i + BATCH_SIZE);
+        const values = chunk.map((m) => {
+          const qid = wikidataByLabelDiscogsId.get(m.discogsId) ?? null;
+          return sql`(${m.discogsId}, ${m.mbid}, ${qid}, 1.000, 'musicbrainz_url', TRUE, ${batchId})`;
+        });
+
+        await sql`
+          INSERT INTO enrich.label_crosswalks
+            (discogs_label_id, mbid, wikidata_qid, confidence, match_method, is_verified, source_batch_id)
+          VALUES ${sql.join(values, sql`, `)}
+          ON CONFLICT (discogs_label_id) DO UPDATE SET
+            mbid = EXCLUDED.mbid,
+            wikidata_qid = COALESCE(EXCLUDED.wikidata_qid, enrich.label_crosswalks.wikidata_qid),
+            confidence = EXCLUDED.confidence,
+            match_method = EXCLUDED.match_method,
+            is_verified = EXCLUDED.is_verified,
+            source_batch_id = EXCLUDED.source_batch_id,
+            updated_at = now()
+        `.execute(db);
+
+        written += chunk.length;
+        if (written % 50_000 === 0 || written === labelRows.length) {
+          console.log(`[mb-import] Labels: ${written.toLocaleString()} / ${labelRows.length.toLocaleString()}`);
+        }
+      }
+
+      await finalizeBatch(db, batchId, {
+        total_label_mappings: labelMappings.size,
+        with_wikidata_qid: wdLblMatched,
+        written,
+      });
+      console.log(`[mb-import] Label crosswalks done: ${written.toLocaleString()} (${wdLblMatched.toLocaleString()} with Wikidata QID)`);
     }
   }
 

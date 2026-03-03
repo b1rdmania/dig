@@ -4,8 +4,10 @@ import { ApiRequestError, digFetch } from "@/lib/api";
 import {
   isArtistResponse,
   isTraversalResponse,
+  isRelationshipsResponse,
   type ArtistResponse,
   type TraversalResponse,
+  type RelationshipsResponse,
 } from "@/lib/types";
 import { discogsUrl } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
@@ -35,18 +37,26 @@ export default async function ArtistPage({ params }: Props) {
   const { id } = await params;
 
   try {
-    // Fetch artist detail and masters in parallel; masters fail-soft.
+    // Fetch artist detail, masters, and relationships in parallel; non-critical fail-soft.
     const defaultTraversal: TraversalResponse = {
       links: [],
       pagination: { cursor: null, has_more: false, total_estimate: null },
       meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "masters", elapsed_ms: 0 },
     };
+    const defaultRelationships: RelationshipsResponse = {
+      edges: [],
+      pagination: { cursor: null, has_more: false, total_estimate: null },
+      meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
+    };
 
-    const [artistData, mastersData] = await Promise.all([
+    const [artistData, mastersData, relData] = await Promise.all([
       digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }),
       digFetch<TraversalResponse>(`/v1/artists/${id}/masters?limit=30`, { revalidate: 300 })
         .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
         .catch(() => defaultTraversal),
+      digFetch<RelationshipsResponse>(`/v1/artists/${id}/relationships?include_enrichment=true&limit=50`, { revalidate: 3600 })
+        .then((d) => (isRelationshipsResponse(d) ? d : defaultRelationships))
+        .catch(() => defaultRelationships),
     ]);
 
     if (!isArtistResponse(artistData)) {
@@ -147,6 +157,30 @@ export default async function ArtistPage({ params }: Props) {
                   </span>
                 ),
               )}
+            </div>
+          </section>
+        )}
+
+        {relData.edges.length > 0 && (
+          <section className={styles.section}>
+            <h2 className={styles.heading}>Related Artists</h2>
+            <div className={styles.relatedList}>
+              {relData.edges.map((edge) => {
+                const target = edge.target_entity;
+                const label = edge.edge_type.replace(/_/g, " ");
+                return (
+                  <div className={styles.relatedRow} key={edge.provenance.source_id}>
+                    {target.discogs_id ? (
+                      <Link href={`/artist/${target.discogs_id}`} className={styles.relatedName}>
+                        {target.name || `Artist ${target.discogs_id}`}
+                      </Link>
+                    ) : (
+                      <span className={styles.relatedName}>{target.name || "Unknown"}</span>
+                    )}
+                    <span className={styles.relatedType}>{label}</span>
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}

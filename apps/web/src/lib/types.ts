@@ -228,6 +228,36 @@ export interface MasterVideosResponse {
   };
 }
 
+// Enrichment
+export interface EnrichmentProvenance {
+  source: string;
+  source_id: string;
+  confidence: number;
+  match_method: string;
+}
+
+export interface RelationshipEdge {
+  edge_type: string;
+  source_entity: { entity_type: string; discogs_id: number; name: string | null };
+  target_entity: { entity_type: string; discogs_id: number | null; external_id: string | null; name: string | null };
+  valid_from: string | null;
+  valid_to: string | null;
+  provenance: EnrichmentProvenance;
+}
+
+export interface RelationshipsResponse {
+  edges: RelationshipEdge[];
+  pagination: Pagination;
+  meta: {
+    source_type: string;
+    source_discogs_id: number;
+    elapsed_ms: number;
+    enrichment_included: boolean;
+    enrichment_sources: string[];
+    enrichment_edge_count: number;
+  };
+}
+
 // Error
 export interface ApiError {
   error: {
@@ -278,6 +308,12 @@ export function isLabelResponse(data: unknown): data is LabelResponse {
   if (!data || typeof data !== "object") return false;
   const d = data as Record<string, unknown>;
   return d.label !== undefined && typeof d.label === "object";
+}
+
+export function isRelationshipsResponse(data: unknown): data is RelationshipsResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return Array.isArray(d.edges) && d.meta !== undefined;
 }
 
 export function isApiError(data: unknown): data is ApiError {

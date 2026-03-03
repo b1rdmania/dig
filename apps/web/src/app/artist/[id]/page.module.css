@@ -85,6 +85,36 @@
   border-color: var(--accent-light);
 }
 
+.relatedList {
+  display: flex;
+  flex-direction: column;
+}
+
+.relatedRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.relatedRow:last-child {
+  border-bottom: 0;
+}
+
+.relatedName {
+  color: var(--off-white);
+  font-size: 0.88rem;
+}
+
+.relatedType {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--warm-mid);
+}
+
 .row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
