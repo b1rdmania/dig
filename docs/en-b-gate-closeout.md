@@ -53,6 +53,45 @@ Spot checks:
 | 82730 | The Beatles | Has crosswalk + Q1299 | crosswalk present, wikidata_qid=Q1299 |
 | 1 | Planet E (label) | Has label crosswalk | mbid + wikidata_qid=Q3391420 |
 
+### 2.1 Crosswalk Precision (>=95% required)
+
+20 random artist crosswalks sampled from `enrich.artist_crosswalks`, verified against MusicBrainz API (`/ws/2/artist/{mbid}?inc=url-rels`). Each crosswalk was checked by confirming the MBID resolves to an artist whose Discogs URL contains the matching `discogs_artist_id`.
+
+| # | Discogs ID | Discogs Name | MB Name | Result |
+|---|---:|---|---|---|
+| 1 | 239864 | E-Max (2) | E-Max | CORRECT |
+| 2 | 38347 | Phil Stumpf | Phil Stumpf | CORRECT |
+| 3 | 213075 | Penny Rimbaud | Penny Rimbaud | CORRECT |
+| 4 | 133269 | S.A.P. | S.A.P. | CORRECT |
+| 5 | 234296 | W.A.S.T.E. | W.A.S.T.E. | CORRECT |
+| 6 | 4819 | Lemon Jelly | Lemon Jelly | CORRECT |
+| 7 | 118793 | Jason Hamish | Jason Hamish | CORRECT |
+| 8 | 57605 | Guarana Cupana | Guarana Cupana | CORRECT |
+| 9 | 244500 | Century (2) | Century | CORRECT |
+| 10 | 121805 | DJ X-Cess | DJ X-Cess | CORRECT |
+| 11 | 153814 | Computer Soup | Computer Soup | CORRECT |
+| 12 | 57393 | Freedom Williams | Freedom Williams | CORRECT |
+| 13 | 338033 | Darcel | Darcel | CORRECT |
+| 14 | 308276 | Oratory | Oratory | CORRECT |
+| 15 | 48428 | Rhythm Heritage | Rhythm Heritage | CORRECT |
+| 16 | 365353 | Vincent Ferrand | Vincent Ferrand | CORRECT |
+| 17 | 320210 | Siegfried Möhle | Siegfried Möhle | CORRECT |
+| 18 | 354854 | City Of Worms | City of Worms | CORRECT |
+| 19 | 130333 | Giles Reaves | Giles Reaves | CORRECT |
+| 20 | 176850 | Red Spyda | Red Spyda | CORRECT |
+
+**Precision: 20/20 = 100%** (sample_n=20, correct=20, incorrect=0)
+
+### 2.2 Ingest Idempotency Evidence
+
+Label crosswalk import rerun on identical input (same `mbdump.tar.bz2`):
+
+| Table | Before rerun | After rerun | Delta |
+|---|---:|---:|---|
+| `enrich.label_crosswalks` | 156,603 | 156,603 | 0 (ON CONFLICT upsert, no duplicates) |
+
+Importer uses `ON CONFLICT (discogs_*_id) DO UPDATE SET ...` — reruns produce identical row counts. Relationship edges use `ON CONFLICT (edge_key) DO UPDATE SET ...` with deterministic `edge_key` format `mb:artist:{source}:artist:{target}:{type}`.
+
 ---
 
 ## 3) Contract Compliance Evidence
@@ -116,14 +155,25 @@ Full test suite: 104/104 pass across all packages.
 
 Target: p95 latency delta <= 20% with enrichment enabled.
 
-Benchmark: 5 requests each, internet round-trip from local machine to Fly iad.
+Benchmark: 50 requests per variant, random artist IDs (1-10000), internet round-trip from local machine to Fly iad.
 
-| Endpoint | p95 canonical (ms) | p95 enriched (ms) | Delta | Pass/Fail |
-|---|---:|---:|---:|---|
-| Artist relationships | ~130 | ~155 | +19% | Pass |
-| Artist context | ~125 | ~135 | +8% | Pass |
+### Relationships endpoint
 
-Both within the 20% delta threshold. DB query overhead is minimal (~2-30ms) — most latency is internet round-trip.
+| Metric | Canonical | Enriched | Delta |
+|---|---:|---:|---:|
+| p50 | 120ms | 126ms | +4.4% |
+| p95 | 145ms | 155ms | **+6.6%** |
+| n | 50 | 50 | — |
+
+### Context endpoint
+
+| Metric | Canonical | Enriched | Delta |
+|---|---:|---:|---:|
+| p50 | 119ms | 117ms | -1.6% |
+| p95 | 127ms | 140ms | **+10.4%** |
+| n | 50 | 50 | — |
+
+**Both endpoints pass the <=20% p95 delta threshold.** DB query overhead is ~5-15ms — the majority of measured latency is internet round-trip (~110ms baseline).
 
 ---
 
