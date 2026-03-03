@@ -8,6 +8,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 18px;
 }
 
 .nav::after {
@@ -16,6 +17,31 @@
   inset: 0;
   background: linear-gradient(to bottom, rgba(10, 10, 10, 0.9) 0%, transparent 100%);
   z-index: -1;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.backBtn {
+  border: 1px solid rgba(168, 144, 112, 0.35);
+  border-radius: var(--radius);
+  background: rgba(20, 16, 12, 0.8);
+  color: var(--warm-mid);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.backBtn:hover {
+  color: var(--off-white);
+  border-color: var(--accent);
 }
 
 .logo {
@@ -32,10 +58,62 @@
   text-decoration: none;
 }
 
+.searchForm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: min(460px, 45vw);
+}
+
+.searchInput {
+  width: 100%;
+  min-width: 120px;
+  padding: 8px 10px;
+  border: 1px solid rgba(168, 144, 112, 0.35);
+  border-radius: var(--radius);
+  background: rgba(242, 236, 224, 0.08);
+  color: var(--off-white);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 300;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+}
+
+.searchInput::placeholder {
+  color: var(--warm-mid);
+  opacity: 0.7;
+}
+
+.searchBtn {
+  flex-shrink: 0;
+  border: 1px solid rgba(168, 144, 112, 0.35);
+  border-radius: var(--radius);
+  background: rgba(139, 94, 60, 0.2);
+  color: var(--off-white);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.searchBtn:hover {
+  border-color: var(--accent);
+  background: rgba(139, 94, 60, 0.32);
+}
+
 .links {
   display: flex;
-  gap: 32px;
+  gap: 20px;
   list-style: none;
+  flex-shrink: 0;
 }
 
 .link {
@@ -60,16 +138,43 @@
 @media (max-width: 768px) {
   .nav {
     padding: 16px 20px;
+    gap: 10px;
+  }
+
+  .left {
+    gap: 8px;
+  }
+
+  .backBtn {
+    padding: 7px 8px;
+    font-size: 9px;
+  }
+
+  .searchForm {
+    width: min(280px, 52vw);
+    gap: 4px;
+  }
+
+  .searchInput {
+    padding: 7px 8px;
+    font-size: 13px;
+    min-width: 88px;
+  }
+
+  .searchBtn {
+    padding: 7px 8px;
+    font-size: 9px;
   }
 
   .links {
-    gap: 16px;
+    gap: 10px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    max-width: 36vw;
   }
 
   .link {
-    font-size: 10px;
+    font-size: 9px;
     white-space: nowrap;
   }
 }

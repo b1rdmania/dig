@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Playfair_Display, DM_Mono, DM_Sans } from "next/font/google";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -46,7 +47,9 @@ export default function RootLayout({
       className={`${playfair.variable} ${dmMono.variable} ${dmSans.variable}`}
     >
       <body>
-        <Nav />
+        <Suspense fallback={null}>
+          <Nav />
+        </Suspense>
         <main>
           {children}
         </main>

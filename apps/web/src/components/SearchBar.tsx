@@ -1,57 +1,48 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./SearchBar.module.css";
-
-const DEBOUNCE_MS = 350;
 
 export function SearchBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const pushParams = useCallback(
-    (q: string) => {
-      const params = new URLSearchParams();
-      if (q.trim()) params.set("q", q.trim());
-      // Preserve existing filters (type, genre, etc.)
-      for (const [key, val] of searchParams.entries()) {
-        if (key !== "q" && key !== "cursor") {
-          params.set(key, val);
-        }
-      }
-      router.push(`/?${params.toString()}`);
-    },
-    [router, searchParams],
-  );
-
-  useEffect(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      pushParams(query);
-    }, DEBOUNCE_MS);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [query, pushParams]);
 
   // Sync from URL on back/forward navigation
   useEffect(() => {
     setQuery(searchParams.get("q") || "");
   }, [searchParams]);
 
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    const trimmed = query.trim();
+    if (trimmed) params.set("q", trimmed);
+    // Preserve existing filters (type, genre, etc.) when submitting from results page.
+    for (const [key, val] of searchParams.entries()) {
+      if (key !== "q" && key !== "cursor") {
+        params.set(key, val);
+      }
+    }
+    const qs = params.toString();
+    router.push(qs ? `/?${qs}` : "/");
+  };
+
   return (
-    <div className={styles.wrapper}>
+    <form className={styles.wrapper} onSubmit={onSubmit}>
       <input
         className={styles.input}
         type="search"
         placeholder="Search artists, labels, releases..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        autoFocus
+        autoCorrect="off"
+        autoCapitalize="off"
       />
-    </div>
+      <button className={styles.submit} type="submit">
+        Search
+      </button>
+    </form>
   );
 }
