@@ -203,15 +203,21 @@ async function evaluateLinkout(row: LinkoutRow): Promise<CheckResult> {
   // Handle consistency check
   const extractedHandle = finalUrl ? extractHandleFromUrl(row.provider, finalUrl) : null;
   if (extractedHandle && row.handle && extractedHandle !== row.handle) {
-    evidence.extracted_handle = extractedHandle;
-    evidence.stored_handle = row.handle;
-    return {
-      id: row.id,
-      check_status: "needs_review",
-      check_method: "handle_consistency",
-      check_evidence: { ...evidence, notes: `Handle mismatch: stored=${row.handle}, actual=${extractedHandle}` },
-      check_score: 0.5,
-    };
+    // Instagram redirects logged-out users to /accounts/login/ — not a real mismatch
+    const isInstagramLoginRedirect = row.provider === "instagram" && extractedHandle === "accounts";
+    if (!isInstagramLoginRedirect) {
+      evidence.extracted_handle = extractedHandle;
+      evidence.stored_handle = row.handle;
+      return {
+        id: row.id,
+        check_status: "needs_review",
+        check_method: "handle_consistency",
+        check_evidence: { ...evidence, notes: `Handle mismatch: stored=${row.handle}, actual=${extractedHandle}` },
+        check_score: 0.5,
+      };
+    }
+    // Login redirect — domain matched, URL is valid, just can't verify handle
+    evidence.notes = "Instagram login redirect — URL valid, handle unverifiable without auth";
   }
 
   // All checks pass — verified
@@ -224,13 +230,36 @@ async function evaluateLinkout(row: LinkoutRow): Promise<CheckResult> {
   };
 }
 
+/**
+ * Create a DB, run a callback, then destroy. Retries on connection error.
+ */
+async function withDb<T>(databaseUrl: string, fn: (db: ReturnType<typeof createDb>) => Promise<T>, retries = 3): Promise<T> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const db = createDb(databaseUrl);
+    try {
+      const result = await fn(db);
+      await db.destroy();
+      return result;
+    } catch (err: unknown) {
+      await db.destroy().catch(() => {});
+      const isConnErr = err instanceof Error && (err.message.includes("ECONNRESET") || err.message.includes("ECONNREFUSED") || err.message.includes("connection"));
+      if (isConnErr && attempt < retries) {
+        console.log(`[linkout-verify] DB connection error (attempt ${attempt}/${retries}), retrying in 5s...`);
+        await sleep(5000);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("unreachable");
+}
+
 async function main() {
   const args = parseArgs();
-  const db = createDb(args.databaseUrl);
   const t0 = Date.now();
 
-  try {
-    // Fetch pending linkouts (low confidence first)
+  // Fetch pending linkouts (low confidence first)
+  const rows = await withDb(args.databaseUrl, async (db) => {
     const { rows } = await sql<LinkoutRow>`
       SELECT id, discogs_label_id, provider, url, handle, confidence
       FROM enrich.label_linkouts
@@ -238,48 +267,57 @@ async function main() {
       ORDER BY confidence ASC, discogs_label_id ASC
       LIMIT ${args.limit}
     `.execute(db);
+    return rows;
+  });
 
-    console.log(`[linkout-verify] ${rows.length} pending linkouts to check`);
+  console.log(`[linkout-verify] ${rows.length} pending linkouts to check`);
 
-    if (rows.length === 0) {
-      console.log("[linkout-verify] nothing to do");
-      return;
-    }
-
-    const counts = { verified: 0, needs_review: 0, invalid: 0 };
-    let processed = 0;
-
-    for (const row of rows) {
-      const result = await evaluateLinkout(row);
-      counts[result.check_status]++;
-
-      if (!args.dryRun) {
-        await sql`
-          UPDATE enrich.label_linkouts
-          SET check_status = ${result.check_status},
-              checked_at = now(),
-              check_method = ${result.check_method},
-              check_evidence = ${JSON.stringify(result.check_evidence)}::jsonb,
-              check_score = ${result.check_score}
-          WHERE id = ${result.id}
-        `.execute(db);
-      }
-
-      processed++;
-      if (processed % 100 === 0 || processed === rows.length) {
-        console.log(`[linkout-verify] [${processed}/${rows.length}] verified=${counts.verified} needs_review=${counts.needs_review} invalid=${counts.invalid}`);
-      }
-
-      // Rate-limit HTTP checks
-      if (processed < rows.length) await sleep(args.delay);
-    }
-
-    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-    console.log(`\n[linkout-verify] done in ${elapsed}s (dry-run=${args.dryRun})`);
-    console.log(`[linkout-verify] verified=${counts.verified} needs_review=${counts.needs_review} invalid=${counts.invalid}`);
-  } finally {
-    await db.destroy();
+  if (rows.length === 0) {
+    console.log("[linkout-verify] nothing to do");
+    return;
   }
+
+  const counts = { verified: 0, needs_review: 0, invalid: 0 };
+  let processed = 0;
+  let batch: CheckResult[] = [];
+  const BATCH_SIZE = 50;
+
+  for (const row of rows) {
+    const result = await evaluateLinkout(row);
+    counts[result.check_status]++;
+    batch.push(result);
+    processed++;
+
+    // Flush batch to DB periodically (fresh connection each time)
+    if (!args.dryRun && (batch.length >= BATCH_SIZE || processed === rows.length)) {
+      const toWrite = [...batch];
+      batch = [];
+      await withDb(args.databaseUrl, async (db) => {
+        for (const r of toWrite) {
+          await sql`
+            UPDATE enrich.label_linkouts
+            SET check_status = ${r.check_status},
+                checked_at = now(),
+                check_method = ${r.check_method},
+                check_evidence = ${JSON.stringify(r.check_evidence)}::jsonb,
+                check_score = ${r.check_score}
+            WHERE id = ${r.id}
+          `.execute(db);
+        }
+      });
+    }
+
+    if (processed % 100 === 0 || processed === rows.length) {
+      console.log(`[linkout-verify] [${processed}/${rows.length}] verified=${counts.verified} needs_review=${counts.needs_review} invalid=${counts.invalid}`);
+    }
+
+    // Rate-limit HTTP checks
+    if (processed < rows.length) await sleep(args.delay);
+  }
+
+  const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+  console.log(`\n[linkout-verify] done in ${elapsed}s (dry-run=${args.dryRun})`);
+  console.log(`[linkout-verify] verified=${counts.verified} needs_review=${counts.needs_review} invalid=${counts.invalid}`);
 }
 
 main().catch((err) => {

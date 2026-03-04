@@ -5,15 +5,36 @@ import {
   isLabelResponse,
   isTraversalResponse,
   isLinkoutsResponse,
+  isArtistResponse,
   type LabelResponse,
   type TraversalResponse,
   type LabelLinkoutsResponse,
   type LabelLinkout,
+  type ArtistResponse,
 } from "@/lib/types";
 import { discogsUrl } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
+import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import styles from "../../artist/[id]/page.module.css";
+
+function BandcampIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 512 512" fill="currentColor" style={{ verticalAlign: "-2px" }}>
+      <path d="M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256 256-114.6 256-256S397.4 0 256 0zm-38.3 352H104l86.3-192h113.7L217.7 352z" />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "-2px" }}>
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 
 function LabelLinkouts({ linkouts }: { linkouts: LabelLinkout[] }) {
   if (linkouts.length === 0) return null;
@@ -30,6 +51,8 @@ function LabelLinkouts({ linkouts }: { linkouts: LabelLinkout[] }) {
             rel="noreferrer"
             className={styles.pillLink}
           >
+            {l.provider === "bandcamp" ? <BandcampIcon /> : <InstagramIcon />}
+            {" "}
             {l.provider === "bandcamp" ? "Bandcamp" : "Instagram"}
             {l.handle ? ` (@${l.handle})` : ""}
           </a>
@@ -37,6 +60,30 @@ function LabelLinkouts({ linkouts }: { linkouts: LabelLinkout[] }) {
       </div>
     </section>
   );
+}
+
+/** Resolve Discogs profile [aXXX]/[lXXX] refs to display names */
+async function resolveProfileNames(profile: string): Promise<Record<string, string>> {
+  const refs = extractProfileRefs(profile);
+  const names: Record<string, string> = {};
+
+  const fetches = [
+    ...refs.artists.map(async (id) => {
+      try {
+        const data = await digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 3600 });
+        if (isArtistResponse(data)) names[`a${id}`] = data.artist.name;
+      } catch { /* skip */ }
+    }),
+    ...refs.labels.map(async (id) => {
+      try {
+        const data = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 3600 });
+        if (isLabelResponse(data)) names[`l${id}`] = data.label.name;
+      } catch { /* skip */ }
+    }),
+  ];
+
+  await Promise.all(fetches);
+  return names;
 }
 
 interface Props {
@@ -87,6 +134,9 @@ export default async function LabelPage({ params }: Props) {
 
     const label = labelData.label;
 
+    // Resolve [aXXX]/[lXXX] refs in profile text to display names
+    const profileNames = label.profile ? await resolveProfileNames(label.profile) : {};
+
     return (
       <div className={styles.page}>
         <section className={styles.hero}>
@@ -115,7 +165,7 @@ export default async function LabelPage({ params }: Props) {
         {label.profile && (
           <section className={styles.section}>
             <h2 className={styles.heading}>Profile</h2>
-            <p className={styles.copy}>{label.profile}</p>
+            <DiscogsProfile text={label.profile} className={styles.copy} names={profileNames} />
           </section>
         )}
 

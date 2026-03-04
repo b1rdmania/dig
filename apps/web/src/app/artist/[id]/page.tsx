@@ -18,6 +18,7 @@ import { discogsUrl } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { CollapsibleList } from "@/components/CollapsibleList";
+import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import styles from "./page.module.css";
 
 /** Format edge type + direction into a human-readable label. */
@@ -158,6 +159,42 @@ export default async function ArtistPage({ params }: Props) {
 
     const artist = artistData.artist;
 
+    // Collect all artist IDs that need name resolution:
+    // 1. Profile markup refs [aXXX]/[lXXX]
+    // 2. Related artist edges with missing names
+    const artistIdsToResolve = new Set<number>();
+    const labelIdsToResolve = new Set<number>();
+
+    if (artist.profile) {
+      const refs = extractProfileRefs(artist.profile);
+      refs.artists.forEach((id) => artistIdsToResolve.add(id));
+      refs.labels.forEach((id) => labelIdsToResolve.add(id));
+    }
+
+    for (const edge of relData.edges) {
+      if (edge.target_entity.discogs_id && !edge.target_entity.name) {
+        artistIdsToResolve.add(edge.target_entity.discogs_id);
+      }
+    }
+
+    // Batch-resolve all names in parallel (internal network, ~1ms each)
+    const resolvedNames: Record<string, string> = {};
+    const fetches = [
+      ...[...artistIdsToResolve].map(async (aid) => {
+        try {
+          const d = await digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 });
+          if (isArtistResponse(d)) resolvedNames[`a${aid}`] = d.artist.name;
+        } catch { /* skip */ }
+      }),
+      ...[...labelIdsToResolve].map(async (lid) => {
+        try {
+          const d = await digFetch<import("@/lib/types").LabelResponse>(`/v1/labels/${lid}`, { revalidate: 3600 });
+          if ((d as any)?.label?.name) resolvedNames[`l${lid}`] = (d as any).label.name;
+        } catch { /* skip */ }
+      }),
+    ];
+    await Promise.all(fetches);
+
     return (
       <div className={styles.page}>
         <section className={styles.hero}>
@@ -178,7 +215,7 @@ export default async function ArtistPage({ params }: Props) {
         {artist.profile && (
           <section className={styles.section}>
             <h2 className={styles.heading}>Profile</h2>
-            <p className={styles.copy}>{artist.profile}</p>
+            <DiscogsProfile text={artist.profile} className={styles.copy} names={resolvedNames} />
           </section>
         )}
 
@@ -269,7 +306,7 @@ export default async function ArtistPage({ params }: Props) {
                   <div className={styles.relatedRow} key={edge.provenance.source_id}>
                     {target.discogs_id ? (
                       <Link href={`/artist/${target.discogs_id}`} className={styles.relatedName}>
-                        {target.name || `Artist ${target.discogs_id}`}
+                        {target.name || resolvedNames[`a${target.discogs_id}`] || `Artist ${target.discogs_id}`}
                       </Link>
                     ) : (
                       <span className={styles.relatedName}>{target.name || "Unknown"}</span>
