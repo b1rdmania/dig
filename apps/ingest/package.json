@@ -14,7 +14,8 @@
     "qa": "tsx src/qa-report.ts",
     "musicbrainz": "tsx src/musicbrainz-import.ts",
     "wikidata-context": "tsx src/wikidata-context-import.ts",
-    "setlistfm-import": "tsx src/setlistfm-import.ts"
+    "setlistfm-import": "tsx src/setlistfm-import.ts",
+    "label-linkouts": "tsx src/label-linkouts-import.ts"
   },
   "dependencies": {
     "@dig/db": "workspace:*",

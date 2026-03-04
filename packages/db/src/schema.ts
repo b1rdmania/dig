@@ -307,6 +307,22 @@ export interface TrackCreditsTable {
   batch_id: string;
 }
 
+// --- Enrich ---
+
+export interface EnrichLabelLinkoutsTable {
+  id: Generated<number>;
+  discogs_label_id: number;
+  provider: "bandcamp" | "instagram";
+  url: string;
+  handle: string | null;
+  confidence: number;
+  match_method: string;
+  is_verified: boolean;
+  source_batch_id: number | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 // --- Database interface ---
 
 export interface Database {
@@ -354,4 +370,7 @@ export interface Database {
   // Catalog: tracks
   "catalog.tracks": TracksTable;
   "catalog.track_credits": TrackCreditsTable;
+
+  // Enrich
+  "enrich.label_linkouts": EnrichLabelLinkoutsTable;
 }

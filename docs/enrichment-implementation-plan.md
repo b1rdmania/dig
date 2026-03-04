@@ -148,6 +148,17 @@ Done criteria:
 - Clear source/terms attribution present
 - No effect on canonical release search correctness
 
+## 4E. Label Linkouts (Bandcamp + Instagram)
+
+- Extract deterministic linkouts from `catalog.label_urls`
+- Persist to `enrich.label_linkouts` with provider + confidence + provenance batch
+- Expose as optional label profile linkouts in API/UI
+
+Done criteria:
+- Linkout import is idempotent
+- High-confidence-only defaults are enforced
+- No low-confidence fuzzy matches auto-published
+
 ---
 
 ## 5. Quality Gates
@@ -235,3 +246,4 @@ Gate closeout:
 4. Run quality sampling and lock Gate EN-B
 5. Add Wikidata context for mapped entities
 6. Add Setlist timeline as separate enrichment stream
+7. Add deterministic label linkouts from Discogs URLs ([runbook](label-linkouts-bandcamp-instagram.md))
