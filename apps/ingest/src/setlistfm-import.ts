@@ -20,6 +20,8 @@ import { createDb, sql } from "@dig/db";
 const DELAY_MS = 2000; // 2s between API calls (conservative for 1,400/day)
 const ITEMS_PER_PAGE = 20; // setlist.fm default
 const WRITE_BATCH = 100;
+const MAX_RETRIES = 3; // retry network errors
+const RETRY_BACKOFF_MS = 5000; // 5s backoff between retries
 const USER_AGENT = "DigBabyBot/1.0 (https://dig.baby; andy@dig.baby)";
 
 // --- Types ---
@@ -53,37 +55,50 @@ async function fetchArtistSetlists(
 ): Promise<{ setlists: any[]; total: number; page: number }> {
   const url = `https://api.setlist.fm/rest/1.0/artist/${mbid}/setlists?p=${page}`;
 
-  const resp = await fetch(url, {
-    headers: {
-      "x-api-key": apiKey,
-      Accept: "application/json",
-      "User-Agent": USER_AGENT,
-    },
-  });
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const resp = await fetch(url, {
+        headers: {
+          "x-api-key": apiKey,
+          Accept: "application/json",
+          "User-Agent": USER_AGENT,
+        },
+        signal: AbortSignal.timeout(15000), // 15s timeout
+      });
 
-  if (resp.status === 404) {
-    return { setlists: [], total: 0, page };
+      if (resp.status === 404) {
+        return { setlists: [], total: 0, page };
+      }
+
+      if (resp.status === 429) {
+        throw new Error("RATE_LIMITED");
+      }
+
+      if (!resp.ok) {
+        throw new Error(`Setlist.fm API error: ${resp.status} ${resp.statusText}`);
+      }
+
+      const data = (await resp.json()) as {
+        setlist?: any[];
+        total?: number;
+        page?: number;
+      };
+
+      return {
+        setlists: data.setlist || [],
+        total: data.total || 0,
+        page: data.page || page,
+      };
+    } catch (err) {
+      if (err instanceof Error && err.message === "RATE_LIMITED") throw err;
+      if (attempt === MAX_RETRIES) throw err;
+      // Network error — retry with backoff
+      await sleep(RETRY_BACKOFF_MS * attempt);
+    }
   }
 
-  if (resp.status === 429) {
-    throw new Error("RATE_LIMITED");
-  }
-
-  if (!resp.ok) {
-    throw new Error(`Setlist.fm API error: ${resp.status} ${resp.statusText}`);
-  }
-
-  const data = (await resp.json()) as {
-    setlist?: any[];
-    total?: number;
-    page?: number;
-  };
-
-  return {
-    setlists: data.setlist || [],
-    total: data.total || 0,
-    page: data.page || page,
-  };
+  // Unreachable, but satisfies TS
+  throw new Error("Max retries exceeded");
 }
 
 // --- Parse setlist into event ---
@@ -183,12 +198,14 @@ function parseArgs(): {
   offset: number;
   pages: number;
   delayMs: number;
+  skipExisting: boolean;
 } {
   const args = process.argv.slice(2).filter((a) => a !== "--");
   let limit = 1000; // default cohort size
   let offset = 0;
   let pages = 1; // pages per artist
   let delayMs = DELAY_MS;
+  let skipExisting = true; // default: skip artists already in performance_events
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--limit" && args[i + 1]) limit = parseInt(args[++i], 10);
@@ -197,6 +214,7 @@ function parseArgs(): {
     if (args[i] === "--pages" && args[i + 1]) pages = parseInt(args[++i], 10);
     if (args[i] === "--delay" && args[i + 1])
       delayMs = parseInt(args[++i], 10);
+    if (args[i] === "--no-skip-existing") skipExisting = false;
   }
 
   const databaseUrl = process.env.DATABASE_URL;
@@ -211,7 +229,7 @@ function parseArgs(): {
     process.exit(1);
   }
 
-  return { databaseUrl, apiKey, limit, offset, pages, delayMs };
+  return { databaseUrl, apiKey, limit, offset, pages, delayMs, skipExisting };
 }
 
 // --- Cohort selection ---
@@ -243,15 +261,34 @@ async function main() {
   const db = createDb(config.databaseUrl);
 
   console.log("=== Setlist.fm Performance Event Import (EN-D Spike) ===");
-  console.log(`  Cohort size: ${config.limit}, Pages per artist: ${config.pages}, Delay: ${config.delayMs}ms`);
+  console.log(`  Cohort size: ${config.limit}, Pages per artist: ${config.pages}, Delay: ${config.delayMs}ms, Skip existing: ${config.skipExisting}`);
 
   // 1. Select cohort
   console.log("\nSelecting artist cohort...");
-  const cohort = await selectCohort(db, config.limit, config.offset);
-  console.log(`  Selected ${cohort.length} artists (3-band activity split)`);
+  let cohort = await selectCohort(db, config.limit, config.offset);
+  console.log(`  Selected ${cohort.length} artists from crosswalks`);
 
   if (cohort.length === 0) {
     console.log("No artists found. Check crosswalks.");
+    await db.destroy();
+    return;
+  }
+
+  // 1b. Filter out artists already in performance_events
+  if (config.skipExisting && cohort.length > 0) {
+    const { rows: existingRows } = await sql<{ discogs_artist_id: number }>`
+      SELECT DISTINCT discogs_artist_id
+      FROM enrich.performance_events
+      WHERE discogs_artist_id = ANY(${cohort.map((c) => c.discogs_artist_id)}::int[])
+    `.execute(db);
+    const existingSet = new Set(existingRows.map((r) => r.discogs_artist_id));
+    const before = cohort.length;
+    cohort = cohort.filter((c) => !existingSet.has(c.discogs_artist_id));
+    console.log(`  Skipping ${before - cohort.length} artists with existing events, ${cohort.length} remaining`);
+  }
+
+  if (cohort.length === 0) {
+    console.log("All artists already imported. Nothing to do.");
     await db.destroy();
     return;
   }
