@@ -10,9 +10,9 @@ import type { Database } from "@dig/db";
 
 // --- Types ---
 
-export type EnrichmentSource = "musicbrainz" | "wikidata" | "setlistfm";
+export type EnrichmentSource = "musicbrainz" | "wikidata" | "setlistfm" | "linkout";
 
-const VALID_SOURCES = new Set<string>(["musicbrainz", "wikidata", "setlistfm"]);
+const VALID_SOURCES = new Set<string>(["musicbrainz", "wikidata", "setlistfm", "linkout"]);
 
 export interface EnrichmentProvenance {
   source: string;
@@ -433,6 +433,74 @@ export async function getArtistTimeline(
       elapsed_ms: Date.now() - start,
       enrichment_included: true,
       total_events: parseInt(countRows[0]?.total ?? "0", 10),
+    },
+  };
+}
+
+// --- Label linkouts ---
+
+export interface LabelLinkout {
+  provider: "bandcamp" | "instagram";
+  url: string;
+  handle: string | null;
+  confidence: number;
+  is_verified: boolean;
+}
+
+export interface LabelLinkoutsResponse {
+  linkouts: LabelLinkout[];
+  meta: {
+    source_type: "label";
+    source_discogs_id: number;
+    elapsed_ms: number;
+    enrichment_included: boolean;
+    enrichment_sources: string[];
+  };
+}
+
+export async function getLabelLinkouts(
+  db: Kysely<Database>,
+  discogsId: number,
+  params: EnrichmentParams,
+): Promise<LabelLinkoutsResponse> {
+  const start = Date.now();
+
+  if (!params.includeEnrichment) {
+    return {
+      linkouts: [],
+      meta: {
+        source_type: "label",
+        source_discogs_id: discogsId,
+        elapsed_ms: Date.now() - start,
+        enrichment_included: false,
+        enrichment_sources: [],
+      },
+    };
+  }
+
+  const { rows } = await sql<{
+    provider: "bandcamp" | "instagram";
+    url: string;
+    handle: string | null;
+    confidence: number;
+    is_verified: boolean;
+  }>`
+    SELECT provider, url, handle, confidence::float, is_verified
+    FROM enrich.label_linkouts
+    WHERE discogs_label_id = ${discogsId}
+      AND check_status IN ('verified', 'pending')
+      AND confidence >= ${params.minConfidence}
+    ORDER BY provider
+  `.execute(db);
+
+  return {
+    linkouts: rows,
+    meta: {
+      source_type: "label",
+      source_discogs_id: discogsId,
+      elapsed_ms: Date.now() - start,
+      enrichment_included: true,
+      enrichment_sources: rows.length > 0 ? ["linkout"] : [],
     },
   };
 }

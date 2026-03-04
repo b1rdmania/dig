@@ -307,6 +307,32 @@ export function isTimelineResponse(data: unknown): data is TimelineResponse {
   return Array.isArray(d.events) && d.meta !== undefined;
 }
 
+// Label linkouts (EN-E)
+export interface LabelLinkout {
+  provider: "bandcamp" | "instagram";
+  url: string;
+  handle: string | null;
+  confidence: number;
+  is_verified: boolean;
+}
+
+export interface LabelLinkoutsResponse {
+  linkouts: LabelLinkout[];
+  meta: {
+    source_type: "label";
+    source_discogs_id: number;
+    elapsed_ms: number;
+    enrichment_included: boolean;
+    enrichment_sources: string[];
+  };
+}
+
+export function isLinkoutsResponse(data: unknown): data is LabelLinkoutsResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return Array.isArray(d.linkouts) && d.meta !== undefined;
+}
+
 // Error
 export interface ApiError {
   error: {

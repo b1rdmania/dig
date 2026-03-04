@@ -15,7 +15,8 @@
     "musicbrainz": "tsx src/musicbrainz-import.ts",
     "wikidata-context": "tsx src/wikidata-context-import.ts",
     "setlistfm-import": "tsx src/setlistfm-import.ts",
-    "label-linkouts": "tsx src/label-linkouts-import.ts"
+    "label-linkouts": "tsx src/label-linkouts-import.ts",
+    "linkout-verify": "tsx src/linkout-verify.ts"
   },
   "dependencies": {
     "@dig/db": "workspace:*",

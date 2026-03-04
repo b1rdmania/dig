@@ -4,13 +4,40 @@ import { ApiRequestError, digFetch } from "@/lib/api";
 import {
   isLabelResponse,
   isTraversalResponse,
+  isLinkoutsResponse,
   type LabelResponse,
   type TraversalResponse,
+  type LabelLinkoutsResponse,
+  type LabelLinkout,
 } from "@/lib/types";
 import { discogsUrl } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import styles from "../../artist/[id]/page.module.css";
+
+function LabelLinkouts({ linkouts }: { linkouts: LabelLinkout[] }) {
+  if (linkouts.length === 0) return null;
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>Store &amp; Social</h2>
+      <div className={styles.list}>
+        {linkouts.map((l) => (
+          <a
+            key={`${l.provider}-${l.handle}`}
+            href={l.url}
+            target="_blank"
+            rel="noreferrer"
+            className={styles.pillLink}
+          >
+            {l.provider === "bandcamp" ? "Bandcamp" : "Instagram"}
+            {l.handle ? ` (@${l.handle})` : ""}
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -39,12 +66,19 @@ export default async function LabelPage({ params }: Props) {
       pagination: { cursor: null, has_more: false, total_estimate: null },
       meta: { source_type: "label", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
     };
+    const defaultLinkouts: LabelLinkoutsResponse = {
+      linkouts: [],
+      meta: { source_type: "label", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [] },
+    };
 
-    const [labelData, releasesData] = await Promise.all([
+    const [labelData, releasesData, linkoutsData] = await Promise.all([
       digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 }),
       digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=30`, { revalidate: 300 })
         .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
         .catch(() => defaultTraversal),
+      digFetch<LabelLinkoutsResponse>(`/v1/labels/${id}/linkouts?include_enrichment=true`, { revalidate: 3600 })
+        .then((d) => (isLinkoutsResponse(d) ? d : defaultLinkouts))
+        .catch(() => defaultLinkouts),
     ]);
 
     if (!isLabelResponse(labelData)) {
@@ -84,6 +118,8 @@ export default async function LabelPage({ params }: Props) {
             <p className={styles.copy}>{label.profile}</p>
           </section>
         )}
+
+        {linkoutsData.linkouts.length > 0 && <LabelLinkouts linkouts={linkoutsData.linkouts} />}
 
         <section className={styles.section}>
           <h2 className={styles.heading}>Releases</h2>

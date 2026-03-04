@@ -319,6 +319,11 @@ export interface EnrichLabelLinkoutsTable {
   match_method: string;
   is_verified: boolean;
   source_batch_id: number | null;
+  check_status: Generated<"pending" | "verified" | "needs_review" | "invalid">;
+  checked_at: Date | null;
+  check_method: string | null;
+  check_evidence: unknown | null;
+  check_score: number | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
