@@ -502,7 +502,7 @@
         <div class="meta-grid">
           <div class="meta">
             <div class="k">Current focus</div>
-            <div class="v">Phase 5 — Soft alpha live. Week 1 execution complete (Days 1-7). Search IA, telemetry, credits UX, ops pack all shipped.</div>
+            <div class="v">Phase 5 — Enrichment pipeline live. MusicBrainz crosswalks (1.2M artists, 1.8M releases), relationship edges (423K), label linkouts (53K Bandcamp/Instagram), setlist.fm timeline. Full artist re-ingest in progress (~9.8M).</div>
           </div>
           <div class="meta">
             <div class="k">Latest milestone commit</div>
@@ -533,8 +533,13 @@
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate D — GO (staging)</span><span class="state">closed</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 4 — Data + search UI</span><span class="state">done</span></div>
           <div class="phase-pill"><span class="dot done"></span><span class="label">Gate E — GO (soft alpha)</span><span class="state">closed</span></div>
-          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 5 — Alpha hardening</span><span class="state">week 1 done</span></div>
-          <div class="phase-pill"><span class="dot warn"></span><span class="label">Phase 4A — Enrichment (EN-A)</span><span class="state">schema applied</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">Phase 5 — Alpha hardening</span><span class="state">week 1 done</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">EN-A — Enrichment schema</span><span class="state">done</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">EN-B — Enrichment API</span><span class="state">done</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">EN-C — MusicBrainz import</span><span class="state">done</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">EN-D — Setlist.fm timeline</span><span class="state">done</span></div>
+          <div class="phase-pill"><span class="dot done"></span><span class="label">EN-E — Label linkouts</span><span class="state">done</span></div>
+          <div class="phase-pill"><span class="dot warn"></span><span class="label">Full artist catalog re-ingest</span><span class="state">in progress</span></div>
         </div>
       </aside>
     </section>
@@ -1048,18 +1053,36 @@
         <div class="phase">
           <div class="phase-top">
             <div>
-              <div class="phase-name">Phase 4A (EN-A)</div>
+              <div class="phase-name">Enrichment Pipeline (EN-A → EN-E)</div>
               <div class="phase-meta">Knowledge-graph enrichment layer. Discogs stays canonical; MB/Wikidata/Setlist are additive with provenance + confidence.</div>
             </div>
-            <span class="status-badge">planned</span>
+            <span class="status-badge" style="color:var(--ok);border-color:rgba(156,207,146,0.45)">complete</span>
           </div>
           <ul>
-            <li><span class="tick done">✓</span><span><strong>Step 1 — Plan locked:</strong> scope, non-goals, gates EN-A→EN-D, and source trust policy documented (<code>docs/enrichment-implementation-plan.md</code>).</span></li>
-            <li><span class="tick done">✓</span><span><strong>Step 2 — Schema spec ready:</strong> EN-A DDL with keys, indexes, constraints, and upsert strategy drafted (<code>docs/enrichment-migration-spec-en-a.md</code>).</span></li>
-            <li><span class="tick done">✓</span><span><strong>Step 3 — Staged prep complete:</strong> source manifests, field mappings, crosswalk candidate templates, and parser/adaptor skeletons are in repo.</span></li>
-            <li><span class="tick done">✓</span><span><strong>Step 4 — Migration applied:</strong> <code>006_enrich_schema.ts</code> — 8 tables in <code>enrich.*</code> schema, applied local + Fly staging.</span></li>
-            <li><span class="tick todo">•</span><span><strong>Step 5 — Sample ingest:</strong> load a small MB/Wikidata slice into <code>enrich.*</code>, generate crosswalks, and verify additive-only behavior (no <code>catalog.*</code> overwrite).</span></li>
-            <li><span class="tick todo">•</span><span><strong>Step 6 — EN-A gate:</strong> pass precision sampling + latency delta checks, then enable enrichment in traversal behind <code>include_enrichment</code> and <code>min_confidence</code>.</span></li>
+            <li><span class="tick done">✓</span><span><strong>EN-A — Schema:</strong> <code>enrich.*</code> schema (8 tables) applied local + Fly. Crosswalks, edges, context, linkouts, events.</span></li>
+            <li><span class="tick done">✓</span><span><strong>EN-B — API:</strong> Enrichment endpoints live — <code>/artists/:id/relationships</code>, <code>/artists/:id/context</code>, <code>/artists/:id/timeline</code>, <code>/labels/:id/linkouts</code>. Query params: <code>include_enrichment</code>, <code>min_confidence</code>, <code>sources</code>.</span></li>
+            <li><span class="tick done">✓</span><span><strong>EN-C — MusicBrainz:</strong> 1.77M release crosswalks, 1.21M artist crosswalks (200K with Wikidata QIDs), 423K relationship edges (23 edge types). All imported from MB dump.</span></li>
+            <li><span class="tick done">✓</span><span><strong>EN-D — Setlist.fm:</strong> Timeline pipeline live. 1,778 events across 208 artists. API endpoint + frontend display on artist pages.</span></li>
+            <li><span class="tick done">✓</span><span><strong>EN-E — Label linkouts:</strong> 53,233 label linkouts (34K Bandcamp, 19K Instagram). Verification queue with URL health checks. 6,808 verified, displayed on label pages with brand icons.</span></li>
+          </ul>
+        </div>
+
+        <div class="phase">
+          <div class="phase-top">
+            <div>
+              <div class="phase-name">Frontend + UX Polish</div>
+              <div class="phase-meta">Search UI, entity pages, Discogs profile markup, cover art, navigation</div>
+            </div>
+            <span class="status-badge" style="color:var(--ok);border-color:rgba(156,207,146,0.45)">shipped</span>
+          </div>
+          <ul>
+            <li><span class="tick done">✓</span><span><strong>Discogs profile parsing:</strong> <code>[aXXX]</code>/<code>[lXXX]</code> refs rendered as clickable links on artist + label pages. Name resolution via API with Discogs fallback.</span></li>
+            <li><span class="tick done">✓</span><span><strong>Label linkout display:</strong> Bandcamp + Instagram pills with brand SVG icons on label pages.</span></li>
+            <li><span class="tick done">✓</span><span><strong>Related artists:</strong> MusicBrainz relationship edges displayed with human-readable labels (Member of, Collaborated with, etc.).</span></li>
+            <li><span class="tick done">✓</span><span><strong>External URLs:</strong> Domain name display (Bandcamp, SoundCloud, etc.) instead of raw URLs.</span></li>
+            <li><span class="tick done">✓</span><span><strong>Nav cleanup:</strong> Simplified navigation, reliable back link, clean search on sub-pages.</span></li>
+            <li><span class="tick done">✓</span><span><strong>Media embeds:</strong> YouTube/video embeds on release pages from Discogs video data.</span></li>
+            <li><span class="tick progress">◐</span><span><strong>Artist catalog gap:</strong> Full artist re-ingest in progress (~9.8M from Discogs dump). Currently have 289K of ~9.8M. Ingest running with fixed backpressure parser.</span></li>
           </ul>
         </div>
 
@@ -1086,11 +1109,12 @@
         </div>
       </div>
       <div class="notes">
-        <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 584k artists — full Discogs CC0 February 2026 dump, live on Fly.io. Disk: 156GB / 300GB.<br>
-        <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) with exact/prefix name boosting, <code>pg_trgm</code> fuzzy for artist/label/master, FK-based dedup, per-type result caps. Run 8: 7/7 warm SLOs pass.<br>
-        <strong>Live:</strong> <a href="https://app.dig.baby" style="color:var(--accent-light)">app.dig.baby</a> (search UI) + <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE). Full corpus serving. Cover art via CAA (1.77M releases). Telemetry: 5 event types logged.<br>
-        <strong>UX:</strong> Release pages with tracklist + per-track credits + cover art. Version pages with pressing details. Versions list shows format + country. Artist aliases collapsible. Mobile-responsive.<br>
-        <strong>Next milestone:</strong> Soft alpha live (invites sent), first 24h monitoring, media embeds spike, enrichment data ingest.
+        <strong>Data layer:</strong> 18.9M releases + 2.5M masters + 2.3M labels + 289K artists (full re-ingest in progress → 9.8M). Discogs CC0 February 2026 dump on Fly.io. Disk: 158GB / 300GB.<br>
+        <strong>Enrichment:</strong> 1.77M release crosswalks + 1.21M artist crosswalks + 423K relationship edges + 53K label linkouts + 1.8K setlist events. MusicBrainz, Wikidata, setlist.fm, Bandcamp, Instagram.<br>
+        <strong>Search:</strong> Postgres FTS (<code>tsvector</code>) with exact/prefix name boosting, <code>pg_trgm</code> fuzzy, FK-based dedup, per-type result caps. Run 8: 7/7 warm SLOs pass.<br>
+        <strong>Live:</strong> <a href="https://app.dig.baby" style="color:var(--accent-light)">app.dig.baby</a> (search UI) + <a href="https://dig-api.fly.dev/v1/health" style="color:var(--accent-light)">dig-api.fly.dev</a> (REST) + <a href="https://dig-mcp.fly.dev/sse" style="color:var(--accent-light)">dig-mcp.fly.dev</a> (MCP SSE). Cover art via CAA (1.77M releases). Enrichment API live.<br>
+        <strong>UX:</strong> Release pages with tracklist + credits + cover art + media embeds. Discogs profile markup parsed. Label pages with Bandcamp/Instagram linkouts. Artist pages with related artists + timeline. Mobile-responsive.<br>
+        <strong>Next milestone:</strong> Complete artist re-ingest (9.8M), transform to catalog, waitlist live on dig.baby.
       </div>
     </section>
   </main>
