@@ -14,7 +14,7 @@ import {
   type TimelineResponse,
   type TimelineEvent,
 } from "@/lib/types";
-import { discogsUrl } from "@/lib/format";
+import { discogsUrl, urlLabel } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { CollapsibleList } from "@/components/CollapsibleList";
@@ -339,8 +339,8 @@ export default async function ArtistPage({ params }: Props) {
             <h2 className={styles.heading}>External Links</h2>
             <div className={styles.list}>
               {artist.urls.slice(0, 10).map((url) => (
-                <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.pill}>
-                  {url}
+                <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.pillLink}>
+                  {urlLabel(url)}
                 </a>
               ))}
             </div>

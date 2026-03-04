@@ -15,14 +15,6 @@ export function Nav() {
     setQ(searchParams.get("q") || "");
   }, [searchParams]);
 
-  const goBack = () => {
-    if (window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.push("/");
-  };
-
   const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const params = new URLSearchParams();
@@ -31,17 +23,21 @@ export function Nav() {
     router.push(params.toString() ? `/?${params.toString()}` : "/");
   };
 
+  const isSubpage = pathname !== "/";
+
   return (
     <nav className={styles.nav}>
       <div className={styles.left}>
-        <button type="button" onClick={goBack} className={styles.backBtn}>
-          Back
-        </button>
+        {isSubpage && (
+          <Link href="/" className={styles.backBtn}>
+            &larr;
+          </Link>
+        )}
         <Link href="/" className={styles.logo}>
           DIG
         </Link>
       </div>
-      {pathname !== "/" ? (
+      {isSubpage ? (
         <form className={styles.searchForm} onSubmit={onSearchSubmit}>
           <input
             className={styles.searchInput}
@@ -59,26 +55,8 @@ export function Nav() {
       ) : null}
       <ul className={styles.links}>
         <li>
-          <Link
-            href="/"
-            className={`${styles.link} ${pathname === "/" ? styles.linkActive : ""}`}
-          >
-            Search
-          </Link>
-        </li>
-        <li>
           <a href="https://dig.baby/" className={styles.link}>
-            Home
-          </a>
-        </li>
-        <li>
-          <a href="https://dig.baby/whitepaper" className={styles.link}>
-            Tech Paper
-          </a>
-        </li>
-        <li>
-          <a href="https://dig.baby/progress" className={styles.link}>
-            Progress
+            About
           </a>
         </li>
       </ul>

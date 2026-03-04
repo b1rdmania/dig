@@ -8,6 +8,7 @@ import { MediaSection } from "@/components/MediaSection";
 import { Provenance } from "@/components/Provenance";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { PageViewTracker } from "@/components/PageViewTracker";
+import styles from "../../release/[id]/page.module.css";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -50,29 +51,16 @@ export default async function VersionPage({ params }: Props) {
     const coverUrl = coverData?.cover?.url ?? null;
 
     return (
-      <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
+      <div className={styles.page}>
         <PageViewTracker type="version" entityId={release.discogs_id} title={release.title} />
         <ReleaseHero release={release} coverUrl={coverUrl} />
         <Tracklist tracks={release.tracks} />
         <Credits credits={release.credits} />
         <MediaSection videos={release.videos} />
         {release.notes && (
-          <section style={{ padding: "1.25rem 0", borderBottom: "1px solid var(--line)" }}>
-            <h2
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.65rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "var(--warm-mid)",
-                marginBottom: "0.5rem",
-              }}
-            >
-              Notes
-            </h2>
-            <p style={{ fontSize: "0.85rem", color: "var(--cream)", whiteSpace: "pre-wrap" }}>
-              {release.notes}
-            </p>
+          <section className={styles.section}>
+            <h2 className={styles.heading}>Notes</h2>
+            <p className={styles.copy}>{release.notes}</p>
           </section>
         )}
         <Provenance provenance={release.provenance} />

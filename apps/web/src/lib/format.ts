@@ -32,7 +32,45 @@ export function discogsUrl(type: "artist" | "master" | "release" | "label", disc
 export function normalizedTitle(input: string): string {
   return input
     .toLowerCase()
-    .replace(/['’]/g, "")
+    .replace(/[‘’]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+/** Extract a short display label from a URL (e.g. "bandcamp.com", "Instagram"). */
+export function urlLabel(url: string): string {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    const KNOWN: Record<string, string> = {
+      "bandcamp.com": "Bandcamp",
+      "instagram.com": "Instagram",
+      "facebook.com": "Facebook",
+      "twitter.com": "Twitter",
+      "x.com": "X",
+      "soundcloud.com": "SoundCloud",
+      "youtube.com": "YouTube",
+      "wikipedia.org": "Wikipedia",
+      "en.wikipedia.org": "Wikipedia",
+      "myspace.com": "Myspace",
+      "last.fm": "Last.fm",
+      "rateyourmusic.com": "RYM",
+      "wikidata.org": "Wikidata",
+      "spotify.com": "Spotify",
+      "open.spotify.com": "Spotify",
+      "music.apple.com": "Apple Music",
+      "tidal.com": "Tidal",
+    };
+    // Check exact match first, then try parent domain
+    if (KNOWN[host]) return KNOWN[host];
+    const parts = host.split(".");
+    if (parts.length > 2) {
+      const parent = parts.slice(-2).join(".");
+      if (KNOWN[parent]) return KNOWN[parent];
+    }
+    // For bandcamp subdomains like "label.bandcamp.com"
+    if (host.endsWith(".bandcamp.com")) return "Bandcamp";
+    return host;
+  } catch {
+    return url;
+  }
 }

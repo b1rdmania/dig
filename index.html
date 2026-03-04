@@ -918,27 +918,22 @@
   </div>
 </section>
 
-<!-- Early Access -->
+<!-- Waitlist -->
 <section class="access" id="access">
-  <div class="section-label">CTA</div>
+  <div class="section-label">Waitlist</div>
   <h2 class="access-heading">Start<br><em>digging.</em></h2>
-  <p class="access-sub">Small group of DJs, curators, radio people, and developers get in first.</p>
+  <p class="access-sub">Drop your email. We'll let you in.</p>
 
-  <div class="form-row">
-    <input class="form-input" type="text" placeholder="Your name">
-    <input class="form-input" type="email" placeholder="Email address">
-  </div>
-  <div class="form-row">
-    <select class="form-input" style="max-width: 280px;">
-      <option>I am: DJ / Curator</option>
-      <option>I am: Developer</option>
-      <option>I am: Label / Radio</option>
-      <option>I am: Collector</option>
-    </select>
-    <input class="form-input" type="text" placeholder="Link or note (optional)" style="flex: 2">
-    <button class="btn-submit">Request access →</button>
-  </div>
-  <p class="form-note">No spam. We'll reach out when access opens.</p>
+  <form id="waitlist-form" class="waitlist-form" onsubmit="return submitWaitlist(event)">
+    <div class="form-row">
+      <input class="form-input" type="email" id="wl-email" placeholder="Email address" required>
+      <button class="btn-submit" type="submit">Get early access →</button>
+    </div>
+    <div class="form-row">
+      <input class="form-input" type="text" id="wl-note" placeholder="What are you building? (optional)">
+    </div>
+  </form>
+  <p class="form-note" id="wl-status">No spam. We'll reach out when access opens.</p>
 </section>
 
 <!-- Footer -->
@@ -948,6 +943,49 @@
 </footer>
 
 <script>
+  // ── Waitlist form → Google Form ──
+  // Replace FORM_ID, EMAIL_ENTRY, and NOTE_ENTRY with your Google Form values.
+  // To find them: open the form, click "Get pre-filled link", inspect the URL params.
+  const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSejJIyLGFA3uD1xvpijTHPCF4hvqJp077my5CC7SJJiL26o9g/formResponse';
+  const EMAIL_ENTRY = 'entry.639005748';
+  const NOTE_ENTRY = 'entry.1822459734';
+
+  function submitWaitlist(e) {
+    e.preventDefault();
+    const email = document.getElementById('wl-email').value.trim();
+    const note = document.getElementById('wl-note').value.trim();
+    const status = document.getElementById('wl-status');
+    const btn = e.target.querySelector('.btn-submit');
+
+    if (!email) return false;
+
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+
+    const body = new URLSearchParams();
+    body.append(EMAIL_ENTRY, email);
+    if (note) body.append(NOTE_ENTRY, note);
+
+    fetch(GOOGLE_FORM_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    }).then(() => {
+      status.textContent = "You're on the list. We'll be in touch.";
+      status.style.color = 'var(--accent)';
+      btn.textContent = 'Done ✓';
+      document.getElementById('wl-email').value = '';
+      document.getElementById('wl-note').value = '';
+    }).catch(() => {
+      status.textContent = "You're on the list. We'll be in touch.";
+      status.style.color = 'var(--accent)';
+      btn.textContent = 'Done ✓';
+    });
+
+    return false;
+  }
+
   // Subtle scroll fade-in for sections
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!prefersReducedMotion && 'IntersectionObserver' in window) {

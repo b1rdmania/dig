@@ -131,7 +131,9 @@ Tasks:
 
 Done criteria:
 1. First user behavior data captured
-2. First alpha patch deployed
+2. ~~First alpha patch deployed~~ ✅ Two UX fixes shipped from self-review (before tester feedback):
+   - Version list now shows format (CD/Vinyl/File) + country as tags
+   - Artist aliases collapsible (8 visible, "+N more" toggle)
 3. Next-week priorities ranked by evidence
 4. Media embed plan + audit published:
    - `docs/media-embeds-release-version-plan.md`

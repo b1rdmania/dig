@@ -39,6 +39,7 @@ export function SearchBar() {
         onChange={(e) => setQuery(e.target.value)}
         autoCorrect="off"
         autoCapitalize="off"
+        autoFocus
       />
       <button className={styles.submit} type="submit">
         Search

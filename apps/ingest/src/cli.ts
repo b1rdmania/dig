@@ -181,11 +181,14 @@ async function main() {
       totalWritten += batch.length;
     }
 
-    // Parse and ingest
+    // Parse and ingest with backpressure — parser now awaits the callback,
+    // which pauses the stream while we flush to the DB.
     console.log(`[ingest] Parsing ${args.type} from ${path.basename(args.file)}...`);
 
     const stream = createReadStream(args.file).pipe(createGunzip());
     const startTime = Date.now();
+
+    const FLUSH_THRESHOLD = args.batchSize;
 
     const { entityCount } = await parseXmlDump(args.type, stream, async (entity) => {
       const discogsId = extractDiscogsId(entity);
@@ -201,7 +204,7 @@ async function main() {
         raw_payload: JSON.stringify(entity.data),
       });
 
-      if (buffer.length >= args.batchSize) {
+      if (buffer.length >= FLUSH_THRESHOLD) {
         await flushBuffer();
       }
     });

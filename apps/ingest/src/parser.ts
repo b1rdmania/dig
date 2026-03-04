@@ -133,100 +133,107 @@ export async function parseXmlDump(
   let lastLogAt = 0;
   const LOG_INTERVAL = 10_000;
 
-  return new Promise((resolve, reject) => {
-    parser.on("opentag", (node) => {
-      if (!insideEntity) {
-        if (node.name === rootElement) {
-          insideEntity = true;
-          // Push the root entity node onto the stack
-          nodeStack.length = 0;
-          nodeStack.push({
-            name: node.name,
-            attributes: Object.fromEntries(
-              Object.entries(node.attributes).map(([k, v]) => [k, String(v)])
-            ),
-            text: "",
-            children: [],
-          });
-        }
-        return;
-      }
+  // Collect entities from each chunk, then await callback between chunks
+  // for natural backpressure (stream pauses while we flush).
+  let pendingEntities: RawEntity[] = [];
 
-      // Push a new child node
-      nodeStack.push({
-        name: node.name,
-        attributes: Object.fromEntries(
-          Object.entries(node.attributes).map(([k, v]) => [k, String(v)])
-        ),
-        text: "",
-        children: [],
-      });
-    });
-
-    parser.on("text", (text) => {
-      if (!insideEntity || nodeStack.length === 0) return;
-      // Append text to the current (top-of-stack) node
-      nodeStack[nodeStack.length - 1].text += text;
-    });
-
-    parser.on("closetag", (tag) => {
-      if (!insideEntity) return;
-
-      if (tag.name === rootElement && nodeStack.length === 1) {
-        // Closed the root entity element
-        insideEntity = false;
-        entityCount++;
-
-        if (entityCount - lastLogAt >= LOG_INTERVAL) {
-          console.log(`[ingest] parsed ${entityCount.toLocaleString()} ${type}`);
-          lastLogAt = entityCount;
-        }
-
-        const rootNode = nodeStack[0];
+  parser.on("opentag", (node) => {
+    if (!insideEntity) {
+      if (node.name === rootElement) {
+        insideEntity = true;
         nodeStack.length = 0;
-
-        try {
-          const data = buildNodeToXml(rootNode);
-          void onEntity({ type, data });
-        } catch (err) {
-          errorCount++;
-          if (errorCount <= 10) {
-            console.error(`[ingest] error converting entity #${entityCount}:`, err);
-          }
-        }
-        return;
+        nodeStack.push({
+          name: node.name,
+          attributes: Object.fromEntries(
+            Object.entries(node.attributes).map(([k, v]) => [k, String(v)])
+          ),
+          text: "",
+          children: [],
+        });
       }
+      return;
+    }
 
-      // Pop the current node and attach it as a child of its parent
-      if (nodeStack.length > 1) {
-        const completed = nodeStack.pop()!;
-        nodeStack[nodeStack.length - 1].children.push(completed);
-      }
+    nodeStack.push({
+      name: node.name,
+      attributes: Object.fromEntries(
+        Object.entries(node.attributes).map(([k, v]) => [k, String(v)])
+      ),
+      text: "",
+      children: [],
     });
-
-    // --- Stream plumbing ---
-
-    stream.on("data", (chunk: Buffer) => {
-      try {
-        parser.write(chunk.toString("utf8"));
-      } catch (err) {
-        reject(err);
-      }
-    });
-
-    stream.on("end", () => {
-      try {
-        parser.close();
-        console.log(
-          `[ingest] done — total ${entityCount.toLocaleString()} ${type}` +
-          (errorCount > 0 ? ` (${errorCount} errors)` : "")
-        );
-        resolve({ entityCount });
-      } catch (err) {
-        reject(err);
-      }
-    });
-
-    stream.on("error", reject);
   });
+
+  parser.on("text", (text) => {
+    if (!insideEntity || nodeStack.length === 0) return;
+    nodeStack[nodeStack.length - 1].text += text;
+  });
+
+  parser.on("closetag", (tag) => {
+    if (!insideEntity) return;
+
+    if (tag.name === rootElement && nodeStack.length === 1) {
+      insideEntity = false;
+      entityCount++;
+
+      if (entityCount - lastLogAt >= LOG_INTERVAL) {
+        console.log(`[ingest] parsed ${entityCount.toLocaleString()} ${type}`);
+        lastLogAt = entityCount;
+      }
+
+      const rootNode = nodeStack[0];
+      nodeStack.length = 0;
+
+      try {
+        const data = buildNodeToXml(rootNode);
+        pendingEntities.push({ type, data });
+      } catch (err) {
+        errorCount++;
+        if (errorCount <= 10) {
+          console.error(`[ingest] error converting entity #${entityCount}:`, err);
+        }
+      }
+      return;
+    }
+
+    if (nodeStack.length > 1) {
+      const completed = nodeStack.pop()!;
+      nodeStack[nodeStack.length - 1].children.push(completed);
+    }
+  });
+
+  // Use for-await over the stream for natural backpressure:
+  // each chunk is fully parsed, entities are flushed via callback,
+  // and only then does the next chunk arrive.
+  try {
+    for await (const chunk of stream) {
+      parser.write(typeof chunk === "string" ? chunk : (chunk as Buffer).toString("utf8"));
+
+      // Flush any entities collected from this chunk
+      if (pendingEntities.length > 0) {
+        const batch = pendingEntities;
+        pendingEntities = [];
+        for (const entity of batch) {
+          await onEntity(entity);
+        }
+      }
+    }
+
+    parser.close();
+    // Flush any remaining entities after stream ends
+    if (pendingEntities.length > 0) {
+      for (const entity of pendingEntities) {
+        await onEntity(entity);
+      }
+      pendingEntities = [];
+    }
+
+    console.log(
+      `[ingest] done — total ${entityCount.toLocaleString()} ${type}` +
+      (errorCount > 0 ? ` (${errorCount} errors)` : "")
+    );
+    return { entityCount };
+  } catch (err) {
+    throw err;
+  }
 }

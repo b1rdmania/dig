@@ -1,24 +1,34 @@
+import Link from "next/link";
+import styles from "./Empty.module.css";
+
+const SUGGESTIONS = [
+  { q: "Aphex Twin", label: "Aphex Twin" },
+  { q: "Blue Note", label: "Blue Note" },
+  { q: "Radiohead OK Computer", label: "OK Computer" },
+  { q: "Warp Records", label: "Warp Records" },
+  { q: "Miles Davis", label: "Miles Davis" },
+  { q: "Burial Untrue", label: "Burial — Untrue" },
+];
+
 export function Empty({ message }: { message?: string }) {
-  if (!message) return null;
+  if (message) {
+    return (
+      <div className={styles.wrapper}>
+        <p className={styles.message}>{message}</p>
+      </div>
+    );
+  }
 
   return (
-    <div
-      style={{
-        textAlign: "center",
-        padding: "4rem 1rem",
-        maxWidth: "var(--max-width)",
-        margin: "0 auto",
-      }}
-    >
-      <p
-        style={{
-          fontFamily: "var(--font-heading)",
-          fontSize: "1.2rem",
-          color: "var(--warm-mid)",
-        }}
-      >
-        {message}
-      </p>
+    <div className={styles.wrapper}>
+      <div className={styles.suggestions}>
+        <span className={styles.tryLabel}>Try</span>
+        {SUGGESTIONS.map((s) => (
+          <Link key={s.q} href={`/?q=${encodeURIComponent(s.q)}`} className={styles.chip}>
+            {s.label}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

@@ -12,7 +12,7 @@ import {
   type LabelLinkout,
   type ArtistResponse,
 } from "@/lib/types";
-import { discogsUrl } from "@/lib/format";
+import { discogsUrl, urlLabel } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
@@ -178,7 +178,7 @@ export default async function LabelPage({ params }: Props) {
           )}
           {releasesData.links.map((link) => (
             <div className={styles.row} key={link.discogs_id}>
-              <Link href={`/version/${link.discogs_id}`} className={styles.item}>
+              <Link href={`/release/${link.discogs_id}`} className={styles.item}>
                 {link.title || `Release ${link.discogs_id}`}
               </Link>
               <span className={styles.small}>{link.year || "—"}</span>
@@ -191,8 +191,8 @@ export default async function LabelPage({ params }: Props) {
             <h2 className={styles.heading}>External Links</h2>
             <div className={styles.list}>
               {label.urls.slice(0, 10).map((url) => (
-                <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.pill}>
-                  {url}
+                <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.pillLink}>
+                  {urlLabel(url)}
                 </a>
               ))}
             </div>
