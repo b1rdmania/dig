@@ -58,9 +58,28 @@ async function SearchContent({
 
 export default async function SearchPage({ searchParams }: Props) {
   const resolved = await searchParams;
+  const hasQuery =
+    typeof resolved.q === "string" && resolved.q.trim().length > 0;
 
   return (
     <>
+      {!hasQuery && (
+        <h1
+          style={{
+            fontFamily: "var(--font-heading)",
+            fontSize: "clamp(3.5rem, 10vw, 7rem)",
+            fontWeight: 400,
+            color: "var(--off-white)",
+            textAlign: "center",
+            margin: "0 auto",
+            padding: "2rem 0 1.5rem",
+            letterSpacing: "-0.02em",
+            lineHeight: 1,
+          }}
+        >
+          Dig.
+        </h1>
+      )}
       <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
         <Suspense>
           <SearchBar />
