@@ -186,23 +186,25 @@ async function main() {
             : r.raw_payload) as XmlNode,
         }));
 
-        // Call the appropriate transform
-        let result: Record<string, number>;
-        switch (entityType) {
-          case "artist":
-            result = { ...await transformArtists(db, args.batchId, rows) };
-            break;
-          case "label":
-            result = { ...await transformLabels(db, args.batchId, rows) };
-            break;
-          case "master":
-            result = { ...await transformMasters(db, args.batchId, rows) };
-            break;
-          case "release":
-            result = { ...await transformReleases(db, args.batchId, rows) };
-            break;
-        }
-        const counts = result;
+        // Call the appropriate transform inside a transaction (fewer round trips)
+        const counts = await db.transaction().execute(async (trx) => {
+          let result: Record<string, number>;
+          switch (entityType) {
+            case "artist":
+              result = { ...await transformArtists(trx, args.batchId, rows) };
+              break;
+            case "label":
+              result = { ...await transformLabels(trx, args.batchId, rows) };
+              break;
+            case "master":
+              result = { ...await transformMasters(trx, args.batchId, rows) };
+              break;
+            case "release":
+              result = { ...await transformReleases(trx, args.batchId, rows) };
+              break;
+          }
+          return result;
+        });
 
         // Accumulate counts
         for (const [key, val] of Object.entries(counts)) {

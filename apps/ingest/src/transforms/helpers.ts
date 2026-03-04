@@ -12,7 +12,7 @@ import type { XmlNode } from "../parser.js";
  * Max rows per INSERT to stay under Postgres 65535 parameter limit.
  * Conservative: 500 rows × up to 12 cols = 6000 params (well under limit).
  */
-const CHUNK_SIZE = 500;
+const CHUNK_SIZE = 2000;
 
 /**
  * Chunked bulk insert that stays under Postgres parameter limits.

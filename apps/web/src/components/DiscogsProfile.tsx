@@ -12,13 +12,15 @@ export function DiscogsProfile({
   text,
   className,
   names,
+  style,
 }: {
   text: string;
   className?: string;
   /** Optional map of discogs IDs to display names for inline refs */
   names?: Record<string, string>;
+  style?: React.CSSProperties;
 }) {
-  return <p className={className}>{parseDiscogsMarkup(text, names)}</p>;
+  return <p className={className} style={style}>{parseDiscogsMarkup(text, names)}</p>;
 }
 
 /** Extract all entity IDs referenced in profile text */

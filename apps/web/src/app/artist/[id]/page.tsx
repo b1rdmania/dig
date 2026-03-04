@@ -195,11 +195,33 @@ export default async function ArtistPage({ params }: Props) {
     ];
     await Promise.all(fetches);
 
+    // Gather "about" details into a compact summary line
+    const aboutParts: string[] = [];
+    const bioCtx = ctxData.context.find((c) => c.context_type === "bio");
+    const tlCtx = ctxData.context.find((c) => c.context_type === "timeline_note");
+    const tlJson = tlCtx?.content_json as Record<string, string> | undefined;
+    if (tlJson?.born) aboutParts.push(`Born: ${tlJson.born}`);
+    if (tlJson?.formed) aboutParts.push(`Formed: ${tlJson.formed}`);
+    if (tlJson?.dissolved) aboutParts.push(`Dissolved: ${tlJson.dissolved}`);
+    if (tlJson?.died) aboutParts.push(`Died: ${tlJson.died}`);
+    const bioSummary = (bioCtx?.content_json as Record<string, unknown>)?.summary as string | undefined;
+
+    const hasAboutSection = artist.profile || bioSummary || aboutParts.length > 0;
+    const hasSecondaryInfo = (artist.aliases.length + artist.name_variations.length > 0)
+      || artist.members.length > 0
+      || artist.groups.length > 0
+      || relData.edges.length > 0
+      || tlData.events.length > 0
+      || artist.urls.length > 0;
+
     return (
       <div className={styles.page}>
         <section className={styles.hero}>
           <h1 className={styles.title}>{artist.name}</h1>
           {artist.real_name && <div className={styles.subtitle}>Real name: {artist.real_name}</div>}
+          {aboutParts.length > 0 && (
+            <div className={styles.subtitle}>{aboutParts.join(" · ")}</div>
+          )}
           <div className={styles.links}>
             <a
               href={discogsUrl("artist", artist.discogs_id)}
@@ -209,118 +231,17 @@ export default async function ArtistPage({ params }: Props) {
             >
               Open on Discogs
             </a>
+            {artist.urls.slice(0, 4).map((url) => (
+              <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.link}>
+                {urlLabel(url)}
+              </a>
+            ))}
           </div>
         </section>
 
-        {artist.profile && (
-          <section className={styles.section}>
-            <h2 className={styles.heading}>Profile</h2>
-            <DiscogsProfile text={artist.profile} className={styles.copy} names={resolvedNames} />
-          </section>
-        )}
-
-        {ctxData.context.length > 0 && <ArtistContext context={ctxData.context} />}
-
-        {tlData.events.length > 0 && <ArtistTimeline events={tlData.events} total={tlData.meta.total_events} />}
-
-        {(artist.aliases.length > 0 || artist.name_variations.length > 0) && (
-          <section className={styles.section}>
-            <h2 className={styles.heading}>Aliases and Name Variations</h2>
-            <CollapsibleList maxVisible={8} className={styles.list}>
-              {artist.aliases.map((alias) =>
-                alias.discogs_id ? (
-                  <Link
-                    href={`/artist/${alias.discogs_id}`}
-                    className={styles.pillLink}
-                    key={`alias-${alias.discogs_id}`}
-                  >
-                    {alias.name}
-                  </Link>
-                ) : (
-                  <span className={styles.pill} key={`alias-${alias.name}`}>
-                    {alias.name}
-                  </span>
-                ),
-              )}
-              {artist.name_variations.map((nv) => (
-                <span className={styles.pill} key={`nv-${nv}`}>{nv}</span>
-              ))}
-            </CollapsibleList>
-          </section>
-        )}
-
-        {artist.members.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.heading}>Members</h2>
-            <div className={styles.list}>
-              {artist.members.map((member) =>
-                member.discogs_id ? (
-                  <Link
-                    href={`/artist/${member.discogs_id}`}
-                    className={styles.pillLink}
-                    key={`member-${member.discogs_id}`}
-                  >
-                    {member.name}
-                  </Link>
-                ) : (
-                  <span className={styles.pill} key={`member-${member.name}`}>
-                    {member.name}
-                  </span>
-                ),
-              )}
-            </div>
-          </section>
-        )}
-
-        {artist.groups.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.heading}>Groups</h2>
-            <div className={styles.list}>
-              {artist.groups.map((group) =>
-                group.discogs_id ? (
-                  <Link
-                    href={`/artist/${group.discogs_id}`}
-                    className={styles.pillLink}
-                    key={`group-${group.discogs_id}`}
-                  >
-                    {group.name}
-                  </Link>
-                ) : (
-                  <span className={styles.pill} key={`group-${group.name}`}>
-                    {group.name}
-                  </span>
-                ),
-              )}
-            </div>
-          </section>
-        )}
-
-        {relData.edges.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.heading}>Related Artists</h2>
-            <div className={styles.relatedList}>
-              {relData.edges.map((edge) => {
-                const target = edge.target_entity;
-                const label = formatEdgeLabel(edge.edge_type, edge.edge_direction);
-                return (
-                  <div className={styles.relatedRow} key={edge.provenance.source_id}>
-                    {target.discogs_id ? (
-                      <Link href={`/artist/${target.discogs_id}`} className={styles.relatedName}>
-                        {target.name || resolvedNames[`a${target.discogs_id}`] || `Artist ${target.discogs_id}`}
-                      </Link>
-                    ) : (
-                      <span className={styles.relatedName}>{target.name || "Unknown"}</span>
-                    )}
-                    <span className={styles.relatedType}>{label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
+        {/* ── Releases first — this is the main content ── */}
         <section className={styles.section}>
-          <h2 className={styles.heading}>Releases</h2>
+          <h2 className={styles.heading}>Releases ({mastersData.links.length})</h2>
           {mastersData.links.length === 0 && (
             <div className={styles.small}>No releases found.</div>
           )}
@@ -334,17 +255,124 @@ export default async function ArtistPage({ params }: Props) {
           ))}
         </section>
 
-        {artist.urls.length > 0 && (
+        {/* ── About section: bio + Wikidata context ── */}
+        {hasAboutSection && (
           <section className={styles.section}>
-            <h2 className={styles.heading}>External Links</h2>
-            <div className={styles.list}>
-              {artist.urls.slice(0, 10).map((url) => (
-                <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.pillLink}>
-                  {urlLabel(url)}
-                </a>
-              ))}
-            </div>
+            <h2 className={styles.heading}>About</h2>
+            {bioSummary && <p className={styles.copy}>{bioSummary}</p>}
+            {artist.profile && (
+              <DiscogsProfile
+                text={artist.profile}
+                className={styles.copy}
+                names={resolvedNames}
+                style={bioSummary ? { marginTop: "0.5rem", fontSize: "0.82rem", opacity: 0.8 } : undefined}
+              />
+            )}
+            {bioSummary && <div className={styles.contextSource}>Source: Wikidata</div>}
           </section>
+        )}
+
+        {/* ── Secondary info: aliases, members, groups, related, timeline ── */}
+        {hasSecondaryInfo && (
+          <>
+            {(artist.aliases.length > 0 || artist.name_variations.length > 0) && (
+              <section className={styles.section}>
+                <h2 className={styles.heading}>Aliases</h2>
+                <CollapsibleList maxVisible={8} className={styles.list}>
+                  {artist.aliases.map((alias) =>
+                    alias.discogs_id ? (
+                      <Link
+                        href={`/artist/${alias.discogs_id}`}
+                        className={styles.pillLink}
+                        key={`alias-${alias.discogs_id}`}
+                      >
+                        {alias.name}
+                      </Link>
+                    ) : (
+                      <span className={styles.pill} key={`alias-${alias.name}`}>
+                        {alias.name}
+                      </span>
+                    ),
+                  )}
+                  {artist.name_variations.map((nv) => (
+                    <span className={styles.pill} key={`nv-${nv}`}>{nv}</span>
+                  ))}
+                </CollapsibleList>
+              </section>
+            )}
+
+            {artist.members.length > 0 && (
+              <section className={styles.section}>
+                <h2 className={styles.heading}>Members</h2>
+                <div className={styles.list}>
+                  {artist.members.map((member) =>
+                    member.discogs_id ? (
+                      <Link
+                        href={`/artist/${member.discogs_id}`}
+                        className={styles.pillLink}
+                        key={`member-${member.discogs_id}`}
+                      >
+                        {member.name}
+                      </Link>
+                    ) : (
+                      <span className={styles.pill} key={`member-${member.name}`}>
+                        {member.name}
+                      </span>
+                    ),
+                  )}
+                </div>
+              </section>
+            )}
+
+            {artist.groups.length > 0 && (
+              <section className={styles.section}>
+                <h2 className={styles.heading}>Groups</h2>
+                <div className={styles.list}>
+                  {artist.groups.map((group) =>
+                    group.discogs_id ? (
+                      <Link
+                        href={`/artist/${group.discogs_id}`}
+                        className={styles.pillLink}
+                        key={`group-${group.discogs_id}`}
+                      >
+                        {group.name}
+                      </Link>
+                    ) : (
+                      <span className={styles.pill} key={`group-${group.name}`}>
+                        {group.name}
+                      </span>
+                    ),
+                  )}
+                </div>
+              </section>
+            )}
+
+            {relData.edges.length > 0 && (
+              <section className={styles.section}>
+                <h2 className={styles.heading}>Related Artists</h2>
+                <div className={styles.relatedList}>
+                  {relData.edges.map((edge) => {
+                    const target = edge.target_entity;
+                    const label = formatEdgeLabel(edge.edge_type, edge.edge_direction);
+                    return (
+                      <div className={styles.relatedRow} key={edge.provenance.source_id}>
+                        {target.discogs_id ? (
+                          <Link href={`/artist/${target.discogs_id}`} className={styles.relatedName}>
+                            {target.name || resolvedNames[`a${target.discogs_id}`] || `Artist ${target.discogs_id}`}
+                          </Link>
+                        ) : (
+                          <span className={styles.relatedName}>{target.name || "Unknown"}</span>
+                        )}
+                        <span className={styles.relatedType}>{label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {tlData.events.length > 0 && <ArtistTimeline events={tlData.events} total={tlData.meta.total_events} />}
+          </>
         )}
 
         <Provenance provenance={artist.provenance} />
