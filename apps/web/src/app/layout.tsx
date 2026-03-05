@@ -5,11 +5,11 @@ import { Footer } from "@/components/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dig — Music Data Layer",
+  title: "dig",
   description: "Search 24M+ records from the Discogs CC0 dataset",
   metadataBase: new URL("https://app.dig.baby"),
   openGraph: {
-    siteName: "Dig",
+    siteName: "dig",
     locale: "en_US",
   },
   twitter: {

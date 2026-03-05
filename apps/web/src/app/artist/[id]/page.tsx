@@ -293,12 +293,12 @@ export async function generateMetadata({ params }: Props) {
   const { id } = await params;
   try {
     const data = await digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 });
-    if (!isArtistResponse(data)) return { title: "Artist — Dig" };
+    if (!isArtistResponse(data)) return { title: "Artist — dig" };
     const a = data.artist;
-    const desc = a.real_name ? `Artist page: ${a.name} (${a.real_name}).` : `Artist page: ${a.name}.`;
-    return entityMetadata({ title: `Artist: ${a.name}`, description: desc, path: `/artist/${id}`, type: "artist" });
+    const desc = a.real_name ? `${a.name} (${a.real_name})` : a.name;
+    return entityMetadata({ title: a.name, description: desc, path: `/artist/${id}`, type: "artist" });
   } catch {
-    return { title: "Artist — Dig" };
+    return { title: "Artist — dig" };
   }
 }
 

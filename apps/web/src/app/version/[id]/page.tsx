@@ -20,19 +20,19 @@ export async function generateMetadata({ params }: Props) {
   const { id } = await params;
   try {
     const data = await digFetch<ReleaseResponse>(`/v1/releases/${id}`, { revalidate: 300 });
-    if (!isReleaseResponse(data)) return { title: "Version — Dig" };
+    if (!isReleaseResponse(data)) return { title: "Version — dig" };
     const r = data.release;
     const artist = r.artists[0]?.name || "Unknown";
     const title = `${r.title} — ${artist}`;
-    const desc = [r.title, "by", artist, r.genres.join(", "), r.release_year ? String(r.release_year) : ""].filter(Boolean).join(". ").trim();
+    const desc = [r.title, "by", artist, r.genres.join(", "), r.release_year ? String(r.release_year) : ""].filter(Boolean).join(". ");
 
     const coverUrl = await digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${id}/cover`, { revalidate: 3600 })
       .then((d) => d?.cover?.url ?? null)
       .catch(() => null);
 
-    return entityMetadata({ title, description: `${desc}.`, path: `/version/${id}`, type: "version", coverUrl, videos: r.videos });
+    return entityMetadata({ title, description: desc, path: `/version/${id}`, type: "version", coverUrl, videos: r.videos });
   } catch {
-    return { title: "Version — Dig" };
+    return { title: "Version — dig" };
   }
 }
 
