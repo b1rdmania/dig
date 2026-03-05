@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
-import { sql } from "kysely";
+import { sql } from "@dig/db";
 import {
   getArtistReleases,
   getArtistMasters,
