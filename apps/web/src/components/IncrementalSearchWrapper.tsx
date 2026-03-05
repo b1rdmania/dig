@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useIncrementalSearch } from "@/hooks/useIncrementalSearch";
 import { SearchResults } from "./SearchResults";
 import { Empty } from "./Empty";
@@ -100,6 +100,8 @@ export function IncrementalSearchWrapper({ children }: Props) {
   );
 }
 
+const SPINNER_DELAY_MS = 150;
+
 function IncrementalResults({
   results,
   status,
@@ -113,10 +115,26 @@ function IncrementalResults({
   isStale: boolean;
   query: string;
 }) {
+  // Delay showing the spinner to avoid flicker on fast responses.
+  const [showSpinner, setShowSpinner] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (status === "loading") {
+      timerRef.current = setTimeout(() => setShowSpinner(true), SPINNER_DELAY_MS);
+    } else {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setShowSpinner(false);
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [status]);
+
   return (
     <>
-      {/* Loading indicator — subtle, doesn't blank the list */}
-      {status === "loading" && (
+      {/* Loading indicator — only shown after 150ms to avoid flicker */}
+      {showSpinner && (
         <div
           style={{
             maxWidth: "var(--max-width)",
