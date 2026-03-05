@@ -1,8 +1,6 @@
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
 
-export const runtime = "edge";
-
 const TYPE_LABELS: Record<string, string> = {
   artist: "Artist",
   release: "Release",
@@ -10,16 +8,31 @@ const TYPE_LABELS: Record<string, string> = {
   label: "Label",
 };
 
+// Cache font data at module level so it's fetched once per cold start
+let fontCache: ArrayBuffer | null = null;
+
+async function loadFont(): Promise<ArrayBuffer | null> {
+  if (fontCache) return fontCache;
+  try {
+    const res = await fetch(
+      "https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.ttf",
+    );
+    if (!res.ok) return null;
+    fontCache = await res.arrayBuffer();
+    return fontCache;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const title = searchParams.get("title") || "Dig";
   const type = searchParams.get("type") || "";
   const badge = TYPE_LABELS[type] || "";
 
-  // Load Playfair Display for the title
-  const fontData = await fetch(
-    "https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.ttf",
-  ).then((r) => r.arrayBuffer());
+  const fontData = await loadFont();
+  const fontFamily = fontData ? "Playfair Display" : "Georgia";
 
   return new ImageResponse(
     (
@@ -71,7 +84,7 @@ export async function GET(req: NextRequest) {
           style={{
             color: "#f2ece0",
             fontSize: title.length > 40 ? "48px" : "64px",
-            fontFamily: "Playfair Display",
+            fontFamily,
             textAlign: "center",
             lineHeight: 1.2,
             maxWidth: "900px",
@@ -101,14 +114,18 @@ export async function GET(req: NextRequest) {
     {
       width: 1200,
       height: 630,
-      fonts: [
-        {
-          name: "Playfair Display",
-          data: fontData,
-          style: "normal",
-          weight: 400,
-        },
-      ],
+      ...(fontData
+        ? {
+            fonts: [
+              {
+                name: "Playfair Display",
+                data: fontData,
+                style: "normal" as const,
+                weight: 400 as const,
+              },
+            ],
+          }
+        : {}),
     },
   );
 }
