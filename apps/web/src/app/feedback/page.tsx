@@ -8,10 +8,10 @@ import styles from "./page.module.css";
 // 1. Create a Google Form with fields: Type, Description, Email
 // 2. Get the form action URL from "Get pre-filled link" → replace /viewform with /formResponse
 // 3. Replace the entry IDs below with your actual field entry IDs
-const GOOGLE_FORM_ACTION = "https://docs.google.com/forms/d/e/TODO_REPLACE_FORM_ID/formResponse";
-const FIELD_TYPE = "entry.TODO_TYPE";
-const FIELD_DESCRIPTION = "entry.TODO_DESCRIPTION";
-const FIELD_EMAIL = "entry.TODO_EMAIL";
+const GOOGLE_FORM_ACTION = "https://docs.google.com/forms/d/e/1FAIpQLSePe6R5VBfqkR8HQ6Q0ctK0Iv-QOdxdLmUnAvJzyWC5cDmLqQ/formResponse";
+const FIELD_TYPE = "entry.1507367897";
+const FIELD_DESCRIPTION = "entry.1135993400";
+const FIELD_EMAIL = "entry.998456675";
 // ──────────────────────────────────────────────────────────────────────────
 
 type FormState = "idle" | "submitting" | "success" | "error";
