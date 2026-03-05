@@ -10,7 +10,7 @@
 .input {
   width: calc(100% - 90px);
   padding: 0.5rem 0.6rem;
-  background: #fff;
+  background: var(--bg);
   color: var(--fg);
   border: 1px solid var(--fg);
   border-radius: var(--radius);
@@ -33,7 +33,7 @@
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--fg);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--bg);
   color: var(--fg);
   font-size: 0.8rem;
   cursor: pointer;

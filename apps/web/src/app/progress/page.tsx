@@ -80,6 +80,7 @@ export default function ProgressPage() {
             </div>
           ))}
         </div>
+        <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -102,6 +103,7 @@ export default function ProgressPage() {
             ))}
           </tbody>
         </table>
+        </div>
         <div className={styles.notes}>
           Full-corpus restore complete. Run 8 benchmark passed (7/7 warm SLOs).
           Phase 5 Week 1 shipped: search IA upgrade, track-level credits,
@@ -119,6 +121,7 @@ export default function ProgressPage() {
             queries × 2 runs, 0 errors
           </div>
         </div>
+        <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -147,6 +150,7 @@ export default function ProgressPage() {
             ))}
           </tbody>
         </table>
+        </div>
         <div className={styles.scorecard}>
           <div className={styles.scorecardItem}>
             <div className={`${styles.scorecardVal} ${styles.scorecardValGood}`}>
@@ -390,6 +394,7 @@ export default function ProgressPage() {
             2026-03-05 — Live API (Fly.io, shared-cpu-1x), mixed query workload
           </div>
         </div>
+        <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -422,6 +427,7 @@ export default function ProgressPage() {
             ))}
           </tbody>
         </table>
+        </div>
         <div className={styles.notes}>
           Mixed workload: search (FTS, fuzzy, filtered, cross-entity), entity retrieval, and traversal queries in random rotation.
           Zero application errors at both pressure levels. Rate limiting (429) is expected at c100 — triggered correctly after ~300 keyed req/min.
