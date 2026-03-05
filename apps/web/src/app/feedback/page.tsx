@@ -1,18 +1,7 @@
 "use client";
 
-import type { Metadata } from "next";
 import { useState } from "react";
 import styles from "./page.module.css";
-
-// ─── Google Forms config ───────────────────────────────────────────────────
-// 1. Create a Google Form with fields: Type, Description, Email
-// 2. Get the form action URL from "Get pre-filled link" → replace /viewform with /formResponse
-// 3. Replace the entry IDs below with your actual field entry IDs
-const GOOGLE_FORM_ACTION = "https://docs.google.com/forms/d/e/1FAIpQLSePe6R5VBfqkR8HQ6Q0ctK0Iv-QOdxdLmUnAvJzyWC5cDmLqQ/formResponse";
-const FIELD_TYPE = "entry.1507367897";
-const FIELD_DESCRIPTION = "entry.1135993400";
-const FIELD_EMAIL = "entry.998456675";
-// ──────────────────────────────────────────────────────────────────────────
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
@@ -28,15 +17,17 @@ export default function FeedbackPage() {
 
     setState("submitting");
 
-    const body = new URLSearchParams();
-    body.append(FIELD_TYPE, type);
-    body.append(FIELD_DESCRIPTION, description.trim());
-    if (email.trim()) body.append(FIELD_EMAIL, email.trim());
-
     try {
-      // no-cors: Google Forms requires application/x-www-form-urlencoded (URLSearchParams).
-      await fetch(GOOGLE_FORM_ACTION, { method: "POST", body, mode: "no-cors" });
-      setState("success");
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, description: description.trim(), email: email.trim() }),
+      });
+      if (res.ok) {
+        setState("success");
+      } else {
+        setState("error");
+      }
     } catch {
       setState("error");
     }
