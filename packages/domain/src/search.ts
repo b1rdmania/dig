@@ -23,6 +23,7 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import type { Database } from "@dig/db";
+import { getBatchForTable } from "./batch.js";
 
 export type SearchEntityType = "artist" | "label" | "master" | "release";
 
@@ -252,14 +253,40 @@ function isEmptyTsquery(q: string): boolean {
   return tokens.every(t => ENGLISH_STOP_WORDS.has(t));
 }
 
-async function getBatchInfo(db: Kysely<Database>): Promise<{ batchId: string; dumpDate: string }> {
-  const batch = await db
-    .selectFrom("ingest.dump_batches")
-    .select(["id", "dump_date"])
-    .where("status", "in", ["active", "qa"])
-    .orderBy("created_at", "desc")
-    .executeTakeFirstOrThrow();
-  return { batchId: batch.id, dumpDate: batch.dump_date };
+/** Table mapping for per-entity-type batch resolution */
+const ENTITY_TABLE: Record<SearchEntityType, string> = {
+  artist: "catalog.artists",
+  label: "catalog.labels",
+  master: "catalog.masters",
+  release: "catalog.releases",
+};
+
+/**
+ * Resolve batches for all needed entity types, cached per request.
+ * Returns a Map so each entity type gets its own batchId/dumpDate.
+ */
+async function getBatchMap(
+  db: Kysely<Database>,
+  types: SearchEntityType[],
+): Promise<Map<SearchEntityType, { batchId: string; dumpDate: string }>> {
+  const map = new Map<SearchEntityType, { batchId: string; dumpDate: string }>();
+  // Deduplicate table lookups (e.g. if two types share a batch)
+  const seen = new Map<string, { batchId: string; dumpDate: string }>();
+  for (const t of types) {
+    const table = ENTITY_TABLE[t];
+    if (seen.has(table)) {
+      map.set(t, seen.get(table)!);
+      continue;
+    }
+    try {
+      const info = await getBatchForTable(db, table);
+      seen.set(table, info);
+      map.set(t, info);
+    } catch {
+      // No batch for this entity type — skip it
+    }
+  }
+  return map;
 }
 
 // --- Path A: Ranked search (fast path) ---
@@ -826,8 +853,6 @@ export async function search(
     await sql`SET statement_timeout = '3s'`.execute(conn);
 
     try {
-      const { batchId, dumpDate } = await getBatchInfo(conn);
-
       const filtersApplied: Record<string, string | number> = {};
       if (params.genre) filtersApplied.genre = params.genre;
       if (params.style) filtersApplied.style = params.style;
@@ -840,6 +865,9 @@ export async function search(
         ? [params.type]
         : ["artist", "label", "master", "release"];
 
+      // Resolve per-entity-type batches (cached in map for this request)
+      const batchMap = await getBatchMap(conn, types);
+
       // Multi-type: cap per-type to prevent one type flooding results.
       // Single-type: use full limit.
       const perTypeLimit = params.type ? limit : Math.max(5, Math.ceil(limit * 0.4));
@@ -851,6 +879,10 @@ export async function search(
       let degradedReason: string | null = null;
 
       for (const entityType of types) {
+        const batchInfo = batchMap.get(entityType);
+        if (!batchInfo) continue; // no batch for this entity type
+        const { batchId, dumpDate } = batchInfo;
+
         try {
           // Path B: Broad release queries — degraded fast path
           if (broad && entityType === "release") {
@@ -957,8 +989,10 @@ export async function search(
             hint = hint ?? "Try a different spelling";
             continue;
           }
+          const fuzzyBatch = batchMap.get(entityType);
+          if (!fuzzyBatch) continue;
           try {
-            const fuzzyResults = await fuzzyFallback(conn, entityType, params.q, batchId, dumpDate);
+            const fuzzyResults = await fuzzyFallback(conn, entityType, params.q, fuzzyBatch.batchId, fuzzyBatch.dumpDate);
             allResults.push(...fuzzyResults);
             trackRequest(`${entityType}_fuzzy`, false);
           } catch (err: any) {

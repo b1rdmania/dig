@@ -7,6 +7,7 @@
  */
 
 export { healthCheck } from "./health.js";
+export { getBatchForTable } from "./batch.js";
 export {
   search,
   validateSearchParams,

@@ -1,17 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
-import { getArtist, getLabel, getMaster, getRelease } from "@dig/domain";
-
-async function getBatchInfo(db: Kysely<Database>): Promise<{ batchId: string; dumpDate: string }> {
-  const batch = await db
-    .selectFrom("ingest.dump_batches" as any)
-    .select(["id", "dump_date"] as any[])
-    .where("status" as any, "in", ["active", "qa"])
-    .orderBy("created_at" as any, "desc")
-    .executeTakeFirstOrThrow();
-  return { batchId: (batch as any).id, dumpDate: (batch as any).dump_date };
-}
+import { getArtist, getLabel, getMaster, getRelease, getBatchForTable } from "@dig/domain";
 
 function parseDiscogsId(raw: string): number | null {
   const id = parseInt(raw, 10);
@@ -26,7 +16,7 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
         error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
       });
     }
-    const { batchId, dumpDate } = await getBatchInfo(db);
+    const { batchId, dumpDate } = await getBatchForTable(db, "catalog.artists");
     const artist = await getArtist(db, discogsId, batchId, dumpDate);
     if (!artist) {
       return reply.status(404).send({
@@ -43,7 +33,7 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
         error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
       });
     }
-    const { batchId, dumpDate } = await getBatchInfo(db);
+    const { batchId, dumpDate } = await getBatchForTable(db, "catalog.labels");
     const label = await getLabel(db, discogsId, batchId, dumpDate);
     if (!label) {
       return reply.status(404).send({
@@ -60,7 +50,7 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
         error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
       });
     }
-    const { batchId, dumpDate } = await getBatchInfo(db);
+    const { batchId, dumpDate } = await getBatchForTable(db, "catalog.masters");
     const master = await getMaster(db, discogsId, batchId, dumpDate);
     if (!master) {
       return reply.status(404).send({
@@ -77,7 +67,7 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
         error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
       });
     }
-    const { batchId, dumpDate } = await getBatchInfo(db);
+    const { batchId, dumpDate } = await getBatchForTable(db, "catalog.releases");
     const release = await getRelease(db, discogsId, batchId, dumpDate);
     if (!release) {
       return reply.status(404).send({

@@ -1,7 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
-import { sql } from "@dig/db";
 import {
   getArtistReleases,
   getArtistMasters,
@@ -9,6 +8,7 @@ import {
   getMasterReleases,
   getMasterVideos,
   getReleaseCredits,
+  getBatchForTable,
 } from "@dig/domain";
 
 type TraversalScope =
@@ -19,41 +19,17 @@ type TraversalScope =
   | "master_videos"
   | "release_credits";
 
-async function getTraversalBatchInfo(
-  db: Kysely<Database>,
-  scope: TraversalScope,
-): Promise<{ batchId: string; dumpDate: string }> {
-  const scopeTable: Record<TraversalScope, string> = {
-    artist_releases: "catalog.release_artists",
-    artist_masters: "catalog.master_artists",
-    label_releases: "catalog.release_labels",
-    master_releases: "catalog.releases",
-    master_videos: "catalog.release_videos",
-    release_credits: "catalog.release_credits",
-  };
+const SCOPE_TABLE: Record<TraversalScope, string> = {
+  artist_releases: "catalog.release_artists",
+  artist_masters: "catalog.master_artists",
+  label_releases: "catalog.release_labels",
+  master_releases: "catalog.releases",
+  master_videos: "catalog.release_videos",
+  release_credits: "catalog.release_credits",
+};
 
-  const table = scopeTable[scope];
-
-  const result = await sql<{ id: string; dump_date: string }>`
-    SELECT b.id, b.dump_date
-    FROM ingest.dump_batches b
-    WHERE b.status IN ('active', 'qa')
-      AND EXISTS (
-        SELECT 1
-        FROM ${sql.table(table)} t
-        WHERE t.batch_id = b.id
-        LIMIT 1
-      )
-    ORDER BY b.created_at DESC
-    LIMIT 1
-  `.execute(db);
-
-  const row = result.rows[0];
-  if (!row) {
-    throw new Error(`No active/qa batch found with rows in ${table}`);
-  }
-
-  return { batchId: row.id, dumpDate: row.dump_date };
+function getTraversalBatchInfo(db: Kysely<Database>, scope: TraversalScope) {
+  return getBatchForTable(db, SCOPE_TABLE[scope]);
 }
 
 function parseDiscogsId(raw: string): number | null {
