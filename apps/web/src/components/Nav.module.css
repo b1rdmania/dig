@@ -9,7 +9,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  background: #fff;
+  background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
 
@@ -23,7 +23,7 @@
 .backBtn {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--bg);
   color: var(--fg);
   font-size: 11px;
   padding: 4px 8px;
@@ -64,7 +64,7 @@
   padding: 4px 8px;
   border: 1px solid var(--fg);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--bg);
   color: var(--fg);
   font-size: 14px;
   outline: none;
@@ -84,7 +84,7 @@
   flex-shrink: 0;
   border: 1px solid var(--fg);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--bg);
   color: var(--fg);
   font-size: 11px;
   padding: 4px 8px;
