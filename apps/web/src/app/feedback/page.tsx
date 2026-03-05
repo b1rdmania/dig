@@ -28,13 +28,13 @@ export default function FeedbackPage() {
 
     setState("submitting");
 
-    const body = new FormData();
+    const body = new URLSearchParams();
     body.append(FIELD_TYPE, type);
     body.append(FIELD_DESCRIPTION, description.trim());
     if (email.trim()) body.append(FIELD_EMAIL, email.trim());
 
     try {
-      // no-cors: Google Forms doesn't allow cross-origin reads, but the POST goes through.
+      // no-cors: Google Forms requires application/x-www-form-urlencoded (URLSearchParams).
       await fetch(GOOGLE_FORM_ACTION, { method: "POST", body, mode: "no-cors" });
       setState("success");
     } catch {
