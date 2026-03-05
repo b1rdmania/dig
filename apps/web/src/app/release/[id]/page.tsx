@@ -14,6 +14,7 @@ import {
 } from "@/lib/types";
 import { discogsUrl } from "@/lib/format";
 import { entityMetadata } from "@/lib/seo";
+import { firstYoutubeThumb } from "@/lib/media";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Tracklist } from "@/components/Tracklist";
 import { Credits } from "@/components/Credits";
@@ -99,7 +100,7 @@ export default async function ReleasePage({ params }: Props) {
             <div className={styles.cover}>
               {/* Cover streams in via ReleaseDetails; show placeholder initially */}
               <Suspense fallback={<CoverPlaceholder />}>
-                <ReleaseCover id={id} mainReleaseId={master.main_release_discogs_id} title={master.title} />
+                <ReleaseCover id={id} mainReleaseId={master.main_release_discogs_id} title={master.title} videos={master.videos} />
               </Suspense>
             </div>
             <div className={styles.info}>
@@ -182,25 +183,41 @@ function CoverPlaceholder() {
   );
 }
 
-/** Cover art: fetches cover for main release, shows image or placeholder. */
-async function ReleaseCover({ id, mainReleaseId, title }: { id: string; mainReleaseId: number | null; title: string }) {
-  if (!mainReleaseId) return <CoverPlaceholder />;
+/** Cover art: fetches cover for main release, falls back to YouTube thumbnail, then placeholder. */
+async function ReleaseCover({ id, mainReleaseId, title, videos }: { id: string; mainReleaseId: number | null; title: string; videos?: Array<{ url?: string | null }> }) {
+  let coverUrl: string | null = null;
 
-  const coverData = await digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${mainReleaseId}/cover`, { revalidate: 3600 })
-    .catch(() => null);
+  if (mainReleaseId) {
+    const coverData = await digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${mainReleaseId}/cover`, { revalidate: 3600 })
+      .catch(() => null);
+    coverUrl = coverData?.cover?.url ?? null;
+  }
 
-  const coverUrl = coverData?.cover?.url ?? null;
+  if (coverUrl) {
+    return (
+      <img
+        src={coverUrl}
+        alt={`${title} cover art`}
+        className={styles.coverImg}
+        loading="eager"
+      />
+    );
+  }
 
-  if (!coverUrl) return <CoverPlaceholder />;
+  // Fallback: YouTube thumbnail from master videos
+  const thumbUrl = firstYoutubeThumb(videos);
+  if (thumbUrl) {
+    return (
+      <img
+        src={thumbUrl}
+        alt={`${title} preview`}
+        className={styles.coverImg}
+        loading="eager"
+      />
+    );
+  }
 
-  return (
-    <img
-      src={coverUrl}
-      alt={`${title} cover art`}
-      className={styles.coverImg}
-      loading="eager"
-    />
-  );
+  return <CoverPlaceholder />;
 }
 
 /** Tracklist + Credits + Notes from the main release. */

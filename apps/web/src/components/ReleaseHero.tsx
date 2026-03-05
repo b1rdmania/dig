@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Release } from "@/lib/types";
 import { formatDescriptions, discogsUrl } from "@/lib/format";
+import { firstYoutubeThumb } from "@/lib/media";
 import { OutboundLink } from "./OutboundLink";
 import styles from "./ReleaseHero.module.css";
 
@@ -10,16 +11,17 @@ interface Props {
 }
 
 export function ReleaseHero({ release, coverUrl }: Props) {
+  const heroImage = coverUrl || firstYoutubeThumb(release.videos);
   const format = release.formats[0];
 
   return (
     <section className={styles.hero}>
       <div className={styles.heroContent}>
         <div className={styles.cover}>
-          {coverUrl ? (
+          {heroImage ? (
             <img
-              src={coverUrl}
-              alt={`${release.title} cover art`}
+              src={heroImage}
+              alt={`${release.title} ${coverUrl ? "cover art" : "preview"}`}
               className={styles.coverImg}
               loading="eager"
             />
