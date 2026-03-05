@@ -199,6 +199,8 @@ export interface TraversalLink {
   role?: string | null;
   country?: string | null;
   format?: string | null;
+  release_type?: "album" | "single_ep" | "compilation" | "other";
+  release_type_label?: "LP" | "EP" | "Single" | "Comp" | "Other";
   provenance: Provenance;
 }
 

@@ -37,10 +37,17 @@ function parseDiscogsId(raw: string): number | null {
   return isNaN(id) || id < 1 ? null : id;
 }
 
+const VALID_SORTS = ["newest", "oldest"] as const;
+const VALID_RELEASE_TYPES = ["album", "single_ep", "compilation", "other", "all"] as const;
+
 function parseTraversalQuery(query: Record<string, string | undefined>) {
   return {
     limit: query.limit ? Math.min(Math.max(parseInt(query.limit, 10), 1), 100) : 20,
     cursor: query.cursor,
+    sort: VALID_SORTS.includes(query.sort as any) ? (query.sort as "newest" | "oldest") : "newest",
+    releaseType: VALID_RELEASE_TYPES.includes(query.release_type as any)
+      ? (query.release_type as "album" | "single_ep" | "compilation" | "other" | "all")
+      : "all",
   };
 }
 
@@ -65,8 +72,8 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
       });
     }
     const { batchId, dumpDate } = await getTraversalBatchInfo(db, "artist_masters");
-    const { limit, cursor } = parseTraversalQuery(req.query as any);
-    return reply.send(await getArtistMasters(db, discogsId, batchId, dumpDate, limit, cursor));
+    const { limit, cursor, sort, releaseType } = parseTraversalQuery(req.query as any);
+    return reply.send(await getArtistMasters(db, discogsId, batchId, dumpDate, limit, cursor, sort, releaseType));
   });
 
   app.get("/v1/labels/:discogs_id/releases", async (req, reply) => {

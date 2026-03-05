@@ -285,8 +285,17 @@ async function ArtistConnections({
 
 /* ── Main page ── */
 
+const RELEASE_FILTERS = [
+  { value: "all", label: "All" },
+  { value: "album", label: "Albums / LPs" },
+  { value: "single_ep", label: "Singles / EPs" },
+  { value: "compilation", label: "Compilations" },
+  { value: "other", label: "Other" },
+] as const;
+
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -302,8 +311,12 @@ export async function generateMetadata({ params }: Props) {
   }
 }
 
-export default async function ArtistPage({ params }: Props) {
+export default async function ArtistPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const sp = await searchParams;
+  const releaseType = typeof sp.release_type === "string" && ["album", "single_ep", "compilation", "other"].includes(sp.release_type)
+    ? sp.release_type
+    : "all";
 
   try {
     // Only fetch artist + masters for the hero and releases (the main content).
@@ -314,9 +327,11 @@ export default async function ArtistPage({ params }: Props) {
       meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "masters", elapsed_ms: 0 },
     };
 
+    const mastersUrl = `/v1/artists/${id}/masters?limit=30&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
+
     const [artistData, mastersData] = await Promise.all([
       digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }),
-      digFetch<TraversalResponse>(`/v1/artists/${id}/masters?limit=30`, { revalidate: 300 })
+      digFetch<TraversalResponse>(mastersUrl, { revalidate: 300 })
         .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
         .catch(() => defaultTraversal),
     ]);
@@ -351,7 +366,20 @@ export default async function ArtistPage({ params }: Props) {
 
         {/* ── Releases: renders immediately ── */}
         <section className={styles.section}>
-          <h2 className={styles.heading}>Releases ({mastersData.links.length})</h2>
+          <h2 className={styles.heading}>
+            Releases{mastersData.pagination.total_estimate != null ? ` (${mastersData.pagination.total_estimate})` : mastersData.links.length > 0 ? ` (${mastersData.links.length})` : ""}
+          </h2>
+          <div className={styles.filterChips}>
+            {RELEASE_FILTERS.map((f) => (
+              <Link
+                key={f.value}
+                href={f.value === "all" ? `/artist/${id}` : `/artist/${id}?release_type=${f.value}`}
+                className={releaseType === f.value ? styles.chipActive : styles.chip}
+              >
+                {f.label}
+              </Link>
+            ))}
+          </div>
           {mastersData.links.length === 0 && (
             <div className={styles.small}>No releases found.</div>
           )}
@@ -360,7 +388,12 @@ export default async function ArtistPage({ params }: Props) {
               <Link href={`/release/${link.discogs_id}`} className={styles.item}>
                 {link.title || `Release ${link.discogs_id}`}
               </Link>
-              <span className={styles.small}>{link.year || "—"}</span>
+              <span className={styles.releaseRight}>
+                {link.release_type_label && (
+                  <span className={styles.badge}>{link.release_type_label}</span>
+                )}
+                <span className={styles.small}>{link.year || "—"}</span>
+              </span>
             </div>
           ))}
         </section>

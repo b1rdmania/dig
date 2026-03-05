@@ -29,9 +29,9 @@ export function Nav() {
     <nav className={styles.nav}>
       <div className={styles.left}>
         {isSubpage && (
-          <Link href="/" className={styles.backBtn}>
+          <button type="button" onClick={() => router.back()} className={styles.backBtn}>
             &larr;
-          </Link>
+          </button>
         )}
         <Link href="/" className={styles.logo}>
           DIG <span className={styles.beta}>[beta]</span>

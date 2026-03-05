@@ -37,10 +37,13 @@ export {
   getMasterReleases,
   getMasterVideos,
   getReleaseCredits,
+  classifyReleaseType,
   type TraversalResponse,
   type TraversalLink,
   type MasterVideosResponse,
   type MasterVideo,
+  type ReleaseType,
+  type ReleaseTypeLabel,
 } from "./traversal.js";
 export {
   getArtistRelationships,

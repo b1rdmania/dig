@@ -12,6 +12,9 @@
 import { type Kysely, sql } from "kysely";
 import type { Database } from "@dig/db";
 
+export type ReleaseType = "album" | "single_ep" | "compilation" | "other";
+export type ReleaseTypeLabel = "LP" | "EP" | "Single" | "Comp" | "Other";
+
 export interface TraversalLink {
   type: "artist" | "label" | "master" | "release";
   discogs_id: number;
@@ -21,6 +24,8 @@ export interface TraversalLink {
   role?: string | null;
   country?: string | null;
   format?: string | null;
+  release_type?: ReleaseType;
+  release_type_label?: ReleaseTypeLabel;
   provenance: { source: "discogs"; dump_date: string; discogs_id: number };
 }
 
@@ -58,6 +63,43 @@ export interface MasterVideosResponse {
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
+const MASTERS_FETCH_CAP = 500;
+
+/** Deterministic release-type classifier from format descriptions. */
+export function classifyReleaseType(
+  descriptions: string[],
+  title?: string | null,
+): { release_type: ReleaseType; release_type_label: ReleaseTypeLabel } {
+  const lower = descriptions.map((d) => d.toLowerCase());
+  const titleLower = (title || "").toLowerCase();
+
+  // Priority 1: Album / LP
+  if (lower.some((d) => d === "album" || d === "lp")) {
+    return { release_type: "album", release_type_label: "LP" };
+  }
+
+  // Priority 2: Single / 7"
+  if (lower.some((d) => d === "single" || d === '7"')) {
+    return { release_type: "single_ep", release_type_label: "Single" };
+  }
+
+  // Priority 3: EP / 12"
+  if (lower.some((d) => d === "ep" || d === '12"')) {
+    return { release_type: "single_ep", release_type_label: "EP" };
+  }
+
+  // Priority 4: Compilation
+  if (
+    lower.some((d) => d === "compilation") ||
+    titleLower.includes("greatest hits") ||
+    titleLower.includes("best of") ||
+    titleLower.includes("anthology")
+  ) {
+    return { release_type: "compilation", release_type_label: "Comp" };
+  }
+
+  return { release_type: "other", release_type_label: "Other" };
+}
 
 function encodeCursor(discogsId: number): string {
   return Buffer.from(JSON.stringify({ discogs_id: discogsId })).toString("base64url");
@@ -140,12 +182,16 @@ export async function getArtistMasters(
   dumpDate: string,
   limit = DEFAULT_LIMIT,
   cursor?: string,
+  sort: "newest" | "oldest" = "newest",
+  releaseType: ReleaseType | "all" = "all",
 ): Promise<TraversalResponse> {
   const start = Date.now();
   const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
   const afterId = cursor ? decodeCursor(cursor) : null;
 
-  let query = db
+  // Fetch all masters with aggregated format descriptions via subquery.
+  // Most artists have <200 masters so fetching all is fine for classification + filtering.
+  const rows = await db
     .selectFrom("catalog.master_artists")
     .innerJoin("catalog.masters", (join) =>
       join
@@ -157,33 +203,67 @@ export async function getArtistMasters(
       "catalog.masters.title",
       "catalog.masters.year",
     ])
+    .select(
+      sql<string[] | null>`(
+        SELECT array_agg(DISTINCT d)
+        FROM catalog.release_formats rf,
+             unnest(rf.descriptions) AS d
+        WHERE rf.release_discogs_id = catalog.masters.main_release_discogs_id
+          AND rf.batch_id = ${batchId}
+      )`.as("format_descriptions"),
+    )
     .where("catalog.master_artists.artist_discogs_id", "=", artistDiscogsId)
     .where("catalog.master_artists.batch_id", "=", batchId)
-    .orderBy("catalog.masters.discogs_id", "asc")
-    .limit(lim + 1);
+    .limit(MASTERS_FETCH_CAP)
+    .execute();
 
+  // Classify each master
+  const classified = rows.map((r) => {
+    const descs = (r as any).format_descriptions as string[] | null;
+    const { release_type, release_type_label } = classifyReleaseType(descs ?? [], r.title);
+    return { discogs_id: r.discogs_id, title: r.title, year: r.year, release_type, release_type_label };
+  });
+
+  // Filter by release type
+  const filtered = releaseType === "all"
+    ? classified
+    : classified.filter((r) => r.release_type === releaseType);
+
+  // Sort
+  filtered.sort((a, b) => {
+    const dir = sort === "newest" ? -1 : 1;
+    const ya = a.year ?? (sort === "newest" ? -Infinity : Infinity);
+    const yb = b.year ?? (sort === "newest" ? -Infinity : Infinity);
+    if (ya !== yb) return (ya - yb) * dir;
+    return (a.discogs_id - b.discogs_id) * dir;
+  });
+
+  // Paginate using cursor (discogs_id)
+  let startIdx = 0;
   if (afterId !== null) {
-    query = query.where("catalog.masters.discogs_id", ">", afterId);
+    const cursorIdx = filtered.findIndex((r) => r.discogs_id === afterId);
+    startIdx = cursorIdx >= 0 ? cursorIdx + 1 : 0;
   }
 
-  const rows = await query.execute();
-  const hasMore = rows.length > lim;
-  const resultRows = hasMore ? rows.slice(0, lim) : rows;
+  const page = filtered.slice(startIdx, startIdx + lim);
+  const hasMore = startIdx + lim < filtered.length;
 
   return {
-    links: resultRows.map((r) => ({
-      type: "master",
+    links: page.map((r) => ({
+      type: "master" as const,
       discogs_id: r.discogs_id,
       title: r.title,
       year: r.year,
-      provenance: { source: "discogs", dump_date: dumpDate, discogs_id: r.discogs_id },
+      release_type: r.release_type,
+      release_type_label: r.release_type_label,
+      provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: r.discogs_id },
     })),
     pagination: {
-      cursor: hasMore && resultRows.length > 0
-        ? encodeCursor(resultRows[resultRows.length - 1].discogs_id)
+      cursor: hasMore && page.length > 0
+        ? encodeCursor(page[page.length - 1].discogs_id)
         : null,
       has_more: hasMore,
-      total_estimate: null,
+      total_estimate: filtered.length,
     },
     meta: {
       source_type: "artist",
