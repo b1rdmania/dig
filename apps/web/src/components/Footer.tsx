@@ -5,8 +5,8 @@ export function Footer() {
     <footer className={styles.footer}>
       <div className={styles.logo}>Dig</div>
       <div className={styles.note}>
-        Early stage. Building in public. dig.baby{" · "}
-        <a href="https://dig.baby/whitepaper">Technical white paper</a>
+        Early stage. Building in public.{" "}
+        <a href="https://dig.baby/">dig.baby</a>
       </div>
     </footer>
   );
