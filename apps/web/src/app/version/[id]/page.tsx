@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props) {
       .then((d) => d?.cover?.url ?? null)
       .catch(() => null);
 
-    return entityMetadata({ title, description: `${desc}.`, path: `/version/${id}`, type: "version", coverUrl });
+    return entityMetadata({ title, description: `${desc}.`, path: `/version/${id}`, type: "version", coverUrl, videos: r.videos });
   } catch {
     return { title: "Version — Dig" };
   }

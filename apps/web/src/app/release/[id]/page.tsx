@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props) {
           .catch(() => null);
       }
 
-      return entityMetadata({ title, description: `${parts.join(". ")}.`, path: `/release/${id}`, type: "release", coverUrl });
+      return entityMetadata({ title, description: `${parts.join(". ")}.`, path: `/release/${id}`, type: "release", coverUrl, videos: m.videos });
     }
   } catch {
     // Not a master — try release
@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: Props) {
         const r = data.release;
         const artist = r.artists[0]?.name || "Unknown";
         const title = `${r.title} — ${artist}`;
-        return entityMetadata({ title, description: `${r.title} by ${artist}.`, path: `/release/${id}`, type: "release" });
+        return entityMetadata({ title, description: `${r.title} by ${artist}.`, path: `/release/${id}`, type: "release", videos: r.videos });
       }
     } catch {
       // Fall through
