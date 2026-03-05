@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApiRequestError, digFetch } from "@/lib/api";
@@ -16,6 +17,7 @@ import { discogsUrl, urlLabel } from "@/lib/format";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
+import { SectionSkeleton } from "@/components/SectionSkeleton";
 import styles from "../../artist/[id]/page.module.css";
 
 function BandcampIcon() {
@@ -62,30 +64,6 @@ function LabelLinkouts({ linkouts }: { linkouts: LabelLinkout[] }) {
   );
 }
 
-/** Resolve Discogs profile [aXXX]/[lXXX] refs to display names */
-async function resolveProfileNames(profile: string): Promise<Record<string, string>> {
-  const refs = extractProfileRefs(profile);
-  const names: Record<string, string> = {};
-
-  const fetches = [
-    ...refs.artists.map(async (id) => {
-      try {
-        const data = await digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 3600 });
-        if (isArtistResponse(data)) names[`a${id}`] = data.artist.name;
-      } catch { /* skip */ }
-    }),
-    ...refs.labels.map(async (id) => {
-      try {
-        const data = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 3600 });
-        if (isLabelResponse(data)) names[`l${id}`] = data.label.name;
-      } catch { /* skip */ }
-    }),
-  ];
-
-  await Promise.all(fetches);
-  return names;
-}
-
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -113,19 +91,14 @@ export default async function LabelPage({ params }: Props) {
       pagination: { cursor: null, has_more: false, total_estimate: null },
       meta: { source_type: "label", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
     };
-    const defaultLinkouts: LabelLinkoutsResponse = {
-      linkouts: [],
-      meta: { source_type: "label", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [] },
-    };
 
-    const [labelData, releasesData, linkoutsData] = await Promise.all([
+    // Fetch label + releases for hero + releases list (main content).
+    // Profile name resolution + linkouts stream in via Suspense.
+    const [labelData, releasesData] = await Promise.all([
       digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 }),
       digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=30`, { revalidate: 300 })
         .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
         .catch(() => defaultTraversal),
-      digFetch<LabelLinkoutsResponse>(`/v1/labels/${id}/linkouts?include_enrichment=true`, { revalidate: 3600 })
-        .then((d) => (isLinkoutsResponse(d) ? d : defaultLinkouts))
-        .catch(() => defaultLinkouts),
     ]);
 
     if (!isLabelResponse(labelData)) {
@@ -134,11 +107,9 @@ export default async function LabelPage({ params }: Props) {
 
     const label = labelData.label;
 
-    // Resolve [aXXX]/[lXXX] refs in profile text to display names
-    const profileNames = label.profile ? await resolveProfileNames(label.profile) : {};
-
     return (
       <div className={styles.page}>
+        {/* ── Hero: renders immediately ── */}
         <section className={styles.hero}>
           <h1 className={styles.title}>{label.name}</h1>
           {label.parent_label?.name && (
@@ -162,15 +133,7 @@ export default async function LabelPage({ params }: Props) {
           </div>
         </section>
 
-        {label.profile && (
-          <section className={styles.section}>
-            <h2 className={styles.heading}>Profile</h2>
-            <DiscogsProfile text={label.profile} className={styles.copy} names={profileNames} />
-          </section>
-        )}
-
-        {linkoutsData.linkouts.length > 0 && <LabelLinkouts linkouts={linkoutsData.linkouts} />}
-
+        {/* ── Releases: renders immediately ── */}
         <section className={styles.section}>
           <h2 className={styles.heading}>Releases</h2>
           {releasesData.links.length === 0 && (
@@ -186,18 +149,10 @@ export default async function LabelPage({ params }: Props) {
           ))}
         </section>
 
-        {label.urls.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.heading}>External Links</h2>
-            <div className={styles.list}>
-              {label.urls.slice(0, 10).map((url) => (
-                <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.pillLink}>
-                  {urlLabel(url)}
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* ── Profile + Linkouts: stream in (name resolution + enrichment fetch) ── */}
+        <Suspense fallback={<SectionSkeleton lines={3} />}>
+          <LabelDetails id={id} profile={label.profile} urls={label.urls} />
+        </Suspense>
 
         <Provenance provenance={label.provenance} />
       </div>
@@ -207,4 +162,75 @@ export default async function LabelPage({ params }: Props) {
     if (err instanceof ApiRequestError) return <ErrorMessage code={err.code} message={err.message} />;
     return <ErrorMessage message="Failed to load label" />;
   }
+}
+
+/* ── Async streamed section ── */
+
+/** Profile + linkouts + external links: fetches linkouts and resolves profile names. */
+async function LabelDetails({ id, profile, urls }: { id: string; profile: string | null; urls: string[] }) {
+  const defaultLinkouts: LabelLinkoutsResponse = {
+    linkouts: [],
+    meta: { source_type: "label", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [] },
+  };
+
+  // Fetch linkouts + resolve profile names in parallel
+  const [linkoutsData, profileNames] = await Promise.all([
+    digFetch<LabelLinkoutsResponse>(`/v1/labels/${id}/linkouts?include_enrichment=true`, { revalidate: 3600 })
+      .then((d) => (isLinkoutsResponse(d) ? d : defaultLinkouts))
+      .catch(() => defaultLinkouts),
+    profile ? resolveProfileNames(profile) : Promise.resolve({}),
+  ]);
+
+  const hasContent = profile || linkoutsData.linkouts.length > 0 || urls.length > 0;
+  if (!hasContent) return null;
+
+  return (
+    <>
+      {profile && (
+        <section className={styles.section}>
+          <h2 className={styles.heading}>Profile</h2>
+          <DiscogsProfile text={profile} className={styles.copy} names={profileNames} />
+        </section>
+      )}
+
+      {linkoutsData.linkouts.length > 0 && <LabelLinkouts linkouts={linkoutsData.linkouts} />}
+
+      {urls.length > 0 && (
+        <section className={styles.section}>
+          <h2 className={styles.heading}>External Links</h2>
+          <div className={styles.list}>
+            {urls.slice(0, 10).map((url) => (
+              <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.pillLink}>
+                {urlLabel(url)}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
+/** Resolve Discogs profile [aXXX]/[lXXX] refs to display names */
+async function resolveProfileNames(profile: string): Promise<Record<string, string>> {
+  const refs = extractProfileRefs(profile);
+  const names: Record<string, string> = {};
+
+  const fetches = [
+    ...refs.artists.map(async (aid) => {
+      try {
+        const data = await digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 });
+        if (isArtistResponse(data)) names[`a${aid}`] = data.artist.name;
+      } catch { /* skip */ }
+    }),
+    ...refs.labels.map(async (lid) => {
+      try {
+        const data = await digFetch<LabelResponse>(`/v1/labels/${lid}`, { revalidate: 3600 });
+        if (isLabelResponse(data)) names[`l${lid}`] = data.label.name;
+      } catch { /* skip */ }
+    }),
+  ];
+
+  await Promise.all(fetches);
+  return names;
 }

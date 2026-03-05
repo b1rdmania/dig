@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { digFetch, ApiRequestError } from "@/lib/api";
 import { isReleaseResponse, type ReleaseResponse } from "@/lib/types";
@@ -38,22 +39,21 @@ export default async function VersionPage({ params }: Props) {
   if (!/^\d+$/.test(id)) notFound();
 
   try {
-    const [data, coverData] = await Promise.all([
-      digFetch<ReleaseResponse>(`/v1/releases/${id}`, { revalidate: 300 }),
-      digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${id}/cover`, { revalidate: 3600 }).catch(() => null),
-    ]);
+    // Fetch release data (needed for everything). Cover streams in separately.
+    const data = await digFetch<ReleaseResponse>(`/v1/releases/${id}`, { revalidate: 300 });
 
     if (!isReleaseResponse(data)) {
       return <ErrorMessage message="Unexpected API response format" />;
     }
 
     const release = data.release;
-    const coverUrl = coverData?.cover?.url ?? null;
 
     return (
       <div className={styles.page}>
         <PageViewTracker type="version" entityId={release.discogs_id} title={release.title} />
-        <ReleaseHero release={release} coverUrl={coverUrl} />
+        <Suspense fallback={<ReleaseHero release={release} coverUrl={null} />}>
+          <VersionHeroWithCover release={release} id={id} />
+        </Suspense>
         <Tracklist tracks={release.tracks} />
         <Credits credits={release.credits} />
         <MediaSection videos={release.videos} />
@@ -75,4 +75,14 @@ export default async function VersionPage({ params }: Props) {
     }
     return <ErrorMessage message="Failed to load version" />;
   }
+}
+
+/** Hero with cover art streamed in. */
+async function VersionHeroWithCover({ release, id }: { release: ReleaseResponse["release"]; id: string }) {
+  const coverData = await digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${id}/cover`, { revalidate: 3600 })
+    .catch(() => null);
+
+  const coverUrl = coverData?.cover?.url ?? null;
+
+  return <ReleaseHero release={release} coverUrl={coverUrl} />;
 }

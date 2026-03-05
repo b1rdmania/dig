@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApiRequestError, digFetch } from "@/lib/api";
@@ -19,12 +20,13 @@ import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { CollapsibleList } from "@/components/CollapsibleList";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
+import { SectionSkeleton } from "@/components/SectionSkeleton";
 import styles from "./page.module.css";
 
-/** Format edge type + direction into a human-readable label. */
+/* ── Helpers ── */
+
 function formatEdgeLabel(edgeType: string, direction: "outbound" | "inbound"): string {
   const LABELS: Record<string, [string, string]> = {
-    // [outbound, inbound]
     member_of_band: ["Member of", "Has member"],
     subgroup: ["Subgroup of", "Has subgroup"],
     collaboration: ["Collaborated with", "Collaborated with"],
@@ -38,45 +40,12 @@ function formatEdgeLabel(edgeType: string, direction: "outbound" | "inbound"): s
   };
   const pair = LABELS[edgeType];
   if (pair) return direction === "outbound" ? pair[0] : pair[1];
-  // Fallback: humanize the edge_type
   const humanized = edgeType.replace(/_/g, " ");
   return direction === "inbound" ? `Has ${humanized}` : humanized;
 }
 
-/** Render context blocks from Wikidata enrichment. */
-function ArtistContext({ context }: { context: Array<{ context_type: string; content_json: unknown; provenance: { source: string } }> }) {
-  const bio = context.find((c) => c.context_type === "bio");
-  const timeline = context.find((c) => c.context_type === "timeline_note");
-
-  const bioJson = bio?.content_json as Record<string, unknown> | undefined;
-  const tlJson = timeline?.content_json as Record<string, string> | undefined;
-
-  const details: string[] = [];
-  if (bioJson?.summary) details.push(String(bioJson.summary));
-  if (tlJson?.formed) details.push(`Formed: ${tlJson.formed}`);
-  if (tlJson?.born) details.push(`Born: ${tlJson.born}`);
-  if (tlJson?.dissolved) details.push(`Dissolved: ${tlJson.dissolved}`);
-  if (tlJson?.died) details.push(`Died: ${tlJson.died}`);
-
-  if (details.length === 0) return null;
-
-  return (
-    <section className={styles.section}>
-      <h2 className={styles.heading}>About</h2>
-      {details.map((d, i) => (
-        <p key={i} className={styles.copy} style={i > 0 ? { marginTop: "0.3rem", fontSize: "0.82rem" } : undefined}>
-          {d}
-        </p>
-      ))}
-      <div className={styles.contextSource}>Source: Wikidata</div>
-    </section>
-  );
-}
-
-/** Render performance timeline from setlist.fm enrichment. */
 function ArtistTimeline({ events, total }: { events: TimelineEvent[]; total: number }) {
   if (events.length === 0) return null;
-
   return (
     <section className={styles.section}>
       <h2 className={styles.heading}>Live Performances{total > events.length ? ` (${total} total)` : ""}</h2>
@@ -94,6 +63,205 @@ function ArtistTimeline({ events, total }: { events: TimelineEvent[]; total: num
     </section>
   );
 }
+
+/* ── Async streamed sections ── */
+
+/** About section: fetches context + resolves profile names, then renders. */
+async function ArtistAbout({ id, profile }: { id: string; profile: string | null }) {
+  const defaultContext: ContextResponse = {
+    context: [],
+    meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
+  };
+
+  const ctxData = await digFetch<ContextResponse>(`/v1/artists/${id}/context?include_enrichment=true`, { revalidate: 3600 })
+    .then((d) => (isContextResponse(d) ? d : defaultContext))
+    .catch(() => defaultContext);
+
+  // Resolve profile names
+  const resolvedNames: Record<string, string> = {};
+  if (profile) {
+    const refs = extractProfileRefs(profile);
+    const fetches = [
+      ...refs.artists.map(async (aid) => {
+        try {
+          const d = await digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 });
+          if (isArtistResponse(d)) resolvedNames[`a${aid}`] = d.artist.name;
+        } catch { /* skip */ }
+      }),
+      ...refs.labels.map(async (lid) => {
+        try {
+          const d = await digFetch<import("@/lib/types").LabelResponse>(`/v1/labels/${lid}`, { revalidate: 3600 });
+          if ((d as any)?.label?.name) resolvedNames[`l${lid}`] = (d as any).label.name;
+        } catch { /* skip */ }
+      }),
+    ];
+    await Promise.all(fetches);
+  }
+
+  const bioCtx = ctxData.context.find((c) => c.context_type === "bio");
+  const bioSummary = (bioCtx?.content_json as Record<string, unknown>)?.summary as string | undefined;
+  const hasContent = profile || bioSummary;
+
+  if (!hasContent) return null;
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>About</h2>
+      {bioSummary && <p className={styles.copy}>{bioSummary}</p>}
+      {profile && (
+        <DiscogsProfile
+          text={profile}
+          className={styles.copy}
+          names={resolvedNames}
+          style={bioSummary ? { marginTop: "0.5rem", fontSize: "0.82rem", opacity: 0.8 } : undefined}
+        />
+      )}
+      {bioSummary && <div className={styles.contextSource}>Source: Wikidata</div>}
+    </section>
+  );
+}
+
+/** Connections section: fetches relationships + timeline + resolves edge names. */
+async function ArtistConnections({
+  id,
+  artist,
+}: {
+  id: string;
+  artist: {
+    aliases: Array<{ name: string; discogs_id: number | null }>;
+    name_variations: string[];
+    members: Array<{ name: string; discogs_id: number | null }>;
+    groups: Array<{ name: string; discogs_id: number | null }>;
+  };
+}) {
+  const defaultRelationships: RelationshipsResponse = {
+    edges: [],
+    pagination: { cursor: null, has_more: false, total_estimate: null },
+    meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
+  };
+  const defaultTimeline: TimelineResponse = {
+    events: [],
+    meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, total_events: 0 },
+  };
+
+  const [relData, tlData] = await Promise.all([
+    digFetch<RelationshipsResponse>(`/v1/artists/${id}/relationships?include_enrichment=true&limit=50`, { revalidate: 3600 })
+      .then((d) => (isRelationshipsResponse(d) ? d : defaultRelationships))
+      .catch(() => defaultRelationships),
+    digFetch<TimelineResponse>(`/v1/artists/${id}/timeline?include_enrichment=true&limit=20`, { revalidate: 3600 })
+      .then((d) => (isTimelineResponse(d) ? d : defaultTimeline))
+      .catch(() => defaultTimeline),
+  ]);
+
+  // Resolve edge names
+  const resolvedNames: Record<string, string> = {};
+  const idsToResolve = relData.edges
+    .filter((e) => e.target_entity.discogs_id && !e.target_entity.name)
+    .map((e) => e.target_entity.discogs_id!);
+
+  if (idsToResolve.length > 0) {
+    await Promise.all(
+      [...new Set(idsToResolve)].map(async (aid) => {
+        try {
+          const d = await digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 });
+          if (isArtistResponse(d)) resolvedNames[`a${aid}`] = d.artist.name;
+        } catch { /* skip */ }
+      }),
+    );
+  }
+
+  const hasAliases = artist.aliases.length > 0 || artist.name_variations.length > 0;
+  const hasContent = hasAliases || artist.members.length > 0 || artist.groups.length > 0
+    || relData.edges.length > 0 || tlData.events.length > 0;
+
+  if (!hasContent) return null;
+
+  return (
+    <>
+      {hasAliases && (
+        <section className={styles.section}>
+          <h2 className={styles.heading}>Aliases</h2>
+          <CollapsibleList maxVisible={8} className={styles.list}>
+            {artist.aliases.map((alias) =>
+              alias.discogs_id ? (
+                <Link href={`/artist/${alias.discogs_id}`} className={styles.pillLink} key={`alias-${alias.discogs_id}`}>
+                  {alias.name}
+                </Link>
+              ) : (
+                <span className={styles.pill} key={`alias-${alias.name}`}>{alias.name}</span>
+              ),
+            )}
+            {artist.name_variations.map((nv) => (
+              <span className={styles.pill} key={`nv-${nv}`}>{nv}</span>
+            ))}
+          </CollapsibleList>
+        </section>
+      )}
+
+      {artist.members.length > 0 && (
+        <section className={styles.section}>
+          <h2 className={styles.heading}>Members</h2>
+          <div className={styles.list}>
+            {artist.members.map((member) =>
+              member.discogs_id ? (
+                <Link href={`/artist/${member.discogs_id}`} className={styles.pillLink} key={`member-${member.discogs_id}`}>
+                  {member.name}
+                </Link>
+              ) : (
+                <span className={styles.pill} key={`member-${member.name}`}>{member.name}</span>
+              ),
+            )}
+          </div>
+        </section>
+      )}
+
+      {artist.groups.length > 0 && (
+        <section className={styles.section}>
+          <h2 className={styles.heading}>Groups</h2>
+          <div className={styles.list}>
+            {artist.groups.map((group) =>
+              group.discogs_id ? (
+                <Link href={`/artist/${group.discogs_id}`} className={styles.pillLink} key={`group-${group.discogs_id}`}>
+                  {group.name}
+                </Link>
+              ) : (
+                <span className={styles.pill} key={`group-${group.name}`}>{group.name}</span>
+              ),
+            )}
+          </div>
+        </section>
+      )}
+
+      {relData.edges.length > 0 && (
+        <section className={styles.section}>
+          <h2 className={styles.heading}>Related Artists</h2>
+          <div className={styles.relatedList}>
+            {relData.edges.map((edge) => {
+              const target = edge.target_entity;
+              const label = formatEdgeLabel(edge.edge_type, edge.edge_direction);
+              return (
+                <div className={styles.relatedRow} key={edge.provenance.source_id}>
+                  {target.discogs_id ? (
+                    <Link href={`/artist/${target.discogs_id}`} className={styles.relatedName}>
+                      {target.name || resolvedNames[`a${target.discogs_id}`] || `Artist ${target.discogs_id}`}
+                    </Link>
+                  ) : (
+                    <span className={styles.relatedName}>{target.name || "Unknown"}</span>
+                  )}
+                  <span className={styles.relatedType}>{label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {tlData.events.length > 0 && <ArtistTimeline events={tlData.events} total={tlData.meta.total_events} />}
+    </>
+  );
+}
+
+/* ── Main page ── */
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -117,40 +285,19 @@ export default async function ArtistPage({ params }: Props) {
   const { id } = await params;
 
   try {
-    // Fetch artist detail, masters, and relationships in parallel; non-critical fail-soft.
+    // Only fetch artist + masters for the hero and releases (the main content).
+    // Enrichment (context, relationships, timeline) streams in via Suspense.
     const defaultTraversal: TraversalResponse = {
       links: [],
       pagination: { cursor: null, has_more: false, total_estimate: null },
       meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "masters", elapsed_ms: 0 },
     };
-    const defaultRelationships: RelationshipsResponse = {
-      edges: [],
-      pagination: { cursor: null, has_more: false, total_estimate: null },
-      meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
-    };
-    const defaultContext: ContextResponse = {
-      context: [],
-      meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
-    };
-    const defaultTimeline: TimelineResponse = {
-      events: [],
-      meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, total_events: 0 },
-    };
 
-    const [artistData, mastersData, relData, ctxData, tlData] = await Promise.all([
+    const [artistData, mastersData] = await Promise.all([
       digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }),
       digFetch<TraversalResponse>(`/v1/artists/${id}/masters?limit=30`, { revalidate: 300 })
         .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
         .catch(() => defaultTraversal),
-      digFetch<RelationshipsResponse>(`/v1/artists/${id}/relationships?include_enrichment=true&limit=50`, { revalidate: 3600 })
-        .then((d) => (isRelationshipsResponse(d) ? d : defaultRelationships))
-        .catch(() => defaultRelationships),
-      digFetch<ContextResponse>(`/v1/artists/${id}/context?include_enrichment=true`, { revalidate: 3600 })
-        .then((d) => (isContextResponse(d) ? d : defaultContext))
-        .catch(() => defaultContext),
-      digFetch<TimelineResponse>(`/v1/artists/${id}/timeline?include_enrichment=true&limit=20`, { revalidate: 3600 })
-        .then((d) => (isTimelineResponse(d) ? d : defaultTimeline))
-        .catch(() => defaultTimeline),
     ]);
 
     if (!isArtistResponse(artistData)) {
@@ -159,76 +306,13 @@ export default async function ArtistPage({ params }: Props) {
 
     const artist = artistData.artist;
 
-    // Collect all artist IDs that need name resolution:
-    // 1. Profile markup refs [aXXX]/[lXXX]
-    // 2. Related artist edges with missing names
-    const artistIdsToResolve = new Set<number>();
-    const labelIdsToResolve = new Set<number>();
-
-    if (artist.profile) {
-      const refs = extractProfileRefs(artist.profile);
-      refs.artists.forEach((id) => artistIdsToResolve.add(id));
-      refs.labels.forEach((id) => labelIdsToResolve.add(id));
-    }
-
-    for (const edge of relData.edges) {
-      if (edge.target_entity.discogs_id && !edge.target_entity.name) {
-        artistIdsToResolve.add(edge.target_entity.discogs_id);
-      }
-    }
-
-    // Batch-resolve all names in parallel (internal network, ~1ms each)
-    const resolvedNames: Record<string, string> = {};
-    const fetches = [
-      ...[...artistIdsToResolve].map(async (aid) => {
-        try {
-          const d = await digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 });
-          if (isArtistResponse(d)) resolvedNames[`a${aid}`] = d.artist.name;
-        } catch { /* skip */ }
-      }),
-      ...[...labelIdsToResolve].map(async (lid) => {
-        try {
-          const d = await digFetch<import("@/lib/types").LabelResponse>(`/v1/labels/${lid}`, { revalidate: 3600 });
-          if ((d as any)?.label?.name) resolvedNames[`l${lid}`] = (d as any).label.name;
-        } catch { /* skip */ }
-      }),
-    ];
-    await Promise.all(fetches);
-
-    // Gather "about" details into a compact summary line
-    const aboutParts: string[] = [];
-    const bioCtx = ctxData.context.find((c) => c.context_type === "bio");
-    const tlCtx = ctxData.context.find((c) => c.context_type === "timeline_note");
-    const tlJson = tlCtx?.content_json as Record<string, string> | undefined;
-    if (tlJson?.born) aboutParts.push(`Born: ${tlJson.born}`);
-    if (tlJson?.formed) aboutParts.push(`Formed: ${tlJson.formed}`);
-    if (tlJson?.dissolved) aboutParts.push(`Dissolved: ${tlJson.dissolved}`);
-    if (tlJson?.died) aboutParts.push(`Died: ${tlJson.died}`);
-    const bioSummary = (bioCtx?.content_json as Record<string, unknown>)?.summary as string | undefined;
-
-    const hasAboutSection = artist.profile || bioSummary || aboutParts.length > 0;
-    const hasSecondaryInfo = (artist.aliases.length + artist.name_variations.length > 0)
-      || artist.members.length > 0
-      || artist.groups.length > 0
-      || relData.edges.length > 0
-      || tlData.events.length > 0
-      || artist.urls.length > 0;
-
     return (
       <div className={styles.page}>
         <section className={styles.hero}>
           <h1 className={styles.title}>{artist.name}</h1>
           {artist.real_name && <div className={styles.subtitle}>Real name: {artist.real_name}</div>}
-          {aboutParts.length > 0 && (
-            <div className={styles.subtitle}>{aboutParts.join(" · ")}</div>
-          )}
           <div className={styles.links}>
-            <a
-              href={discogsUrl("artist", artist.discogs_id)}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.link}
-            >
+            <a href={discogsUrl("artist", artist.discogs_id)} target="_blank" rel="noreferrer" className={styles.link}>
               Open on Discogs
             </a>
             {artist.urls.slice(0, 4).map((url) => (
@@ -239,7 +323,7 @@ export default async function ArtistPage({ params }: Props) {
           </div>
         </section>
 
-        {/* ── Releases first — this is the main content ── */}
+        {/* ── Releases first — renders immediately ── */}
         <section className={styles.section}>
           <h2 className={styles.heading}>Releases ({mastersData.links.length})</h2>
           {mastersData.links.length === 0 && (
@@ -255,125 +339,23 @@ export default async function ArtistPage({ params }: Props) {
           ))}
         </section>
 
-        {/* ── About section: bio + Wikidata context ── */}
-        {hasAboutSection && (
-          <section className={styles.section}>
-            <h2 className={styles.heading}>About</h2>
-            {bioSummary && <p className={styles.copy}>{bioSummary}</p>}
-            {artist.profile && (
-              <DiscogsProfile
-                text={artist.profile}
-                className={styles.copy}
-                names={resolvedNames}
-                style={bioSummary ? { marginTop: "0.5rem", fontSize: "0.82rem", opacity: 0.8 } : undefined}
-              />
-            )}
-            {bioSummary && <div className={styles.contextSource}>Source: Wikidata</div>}
-          </section>
-        )}
+        {/* ── About: streams in (context fetch + name resolution) ── */}
+        <Suspense fallback={<SectionSkeleton lines={4} />}>
+          <ArtistAbout id={id} profile={artist.profile} />
+        </Suspense>
 
-        {/* ── Secondary info: aliases, members, groups, related, timeline ── */}
-        {hasSecondaryInfo && (
-          <>
-            {(artist.aliases.length > 0 || artist.name_variations.length > 0) && (
-              <section className={styles.section}>
-                <h2 className={styles.heading}>Aliases</h2>
-                <CollapsibleList maxVisible={8} className={styles.list}>
-                  {artist.aliases.map((alias) =>
-                    alias.discogs_id ? (
-                      <Link
-                        href={`/artist/${alias.discogs_id}`}
-                        className={styles.pillLink}
-                        key={`alias-${alias.discogs_id}`}
-                      >
-                        {alias.name}
-                      </Link>
-                    ) : (
-                      <span className={styles.pill} key={`alias-${alias.name}`}>
-                        {alias.name}
-                      </span>
-                    ),
-                  )}
-                  {artist.name_variations.map((nv) => (
-                    <span className={styles.pill} key={`nv-${nv}`}>{nv}</span>
-                  ))}
-                </CollapsibleList>
-              </section>
-            )}
-
-            {artist.members.length > 0 && (
-              <section className={styles.section}>
-                <h2 className={styles.heading}>Members</h2>
-                <div className={styles.list}>
-                  {artist.members.map((member) =>
-                    member.discogs_id ? (
-                      <Link
-                        href={`/artist/${member.discogs_id}`}
-                        className={styles.pillLink}
-                        key={`member-${member.discogs_id}`}
-                      >
-                        {member.name}
-                      </Link>
-                    ) : (
-                      <span className={styles.pill} key={`member-${member.name}`}>
-                        {member.name}
-                      </span>
-                    ),
-                  )}
-                </div>
-              </section>
-            )}
-
-            {artist.groups.length > 0 && (
-              <section className={styles.section}>
-                <h2 className={styles.heading}>Groups</h2>
-                <div className={styles.list}>
-                  {artist.groups.map((group) =>
-                    group.discogs_id ? (
-                      <Link
-                        href={`/artist/${group.discogs_id}`}
-                        className={styles.pillLink}
-                        key={`group-${group.discogs_id}`}
-                      >
-                        {group.name}
-                      </Link>
-                    ) : (
-                      <span className={styles.pill} key={`group-${group.name}`}>
-                        {group.name}
-                      </span>
-                    ),
-                  )}
-                </div>
-              </section>
-            )}
-
-            {relData.edges.length > 0 && (
-              <section className={styles.section}>
-                <h2 className={styles.heading}>Related Artists</h2>
-                <div className={styles.relatedList}>
-                  {relData.edges.map((edge) => {
-                    const target = edge.target_entity;
-                    const label = formatEdgeLabel(edge.edge_type, edge.edge_direction);
-                    return (
-                      <div className={styles.relatedRow} key={edge.provenance.source_id}>
-                        {target.discogs_id ? (
-                          <Link href={`/artist/${target.discogs_id}`} className={styles.relatedName}>
-                            {target.name || resolvedNames[`a${target.discogs_id}`] || `Artist ${target.discogs_id}`}
-                          </Link>
-                        ) : (
-                          <span className={styles.relatedName}>{target.name || "Unknown"}</span>
-                        )}
-                        <span className={styles.relatedType}>{label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {tlData.events.length > 0 && <ArtistTimeline events={tlData.events} total={tlData.meta.total_events} />}
-          </>
-        )}
+        {/* ── Connections: streams in (relationships + timeline fetch + name resolution) ── */}
+        <Suspense fallback={<SectionSkeleton lines={3} />}>
+          <ArtistConnections
+            id={id}
+            artist={{
+              aliases: artist.aliases,
+              name_variations: artist.name_variations,
+              members: artist.members,
+              groups: artist.groups,
+            }}
+          />
+        </Suspense>
 
         <Provenance provenance={artist.provenance} />
       </div>
