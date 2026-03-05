@@ -74,7 +74,7 @@ apps/ingest/           — Discogs XML import pipeline (CLI)
 packages/db/           — Kysely DB layer, migrations, schema types
 packages/domain/       — Shared domain services (health, search, retrieval, traversal)
 docs/                  — Implementation plan, specs, strategy docs
-docs/phase3-gate.md    — Phase 3 gate checklist + evidence
+docs/LEGAL.md          — Legal notices (Discogs CC0, MusicBrainz, setlist.fm)
 docs/phase2-response-contracts.md — Locked JSON response shapes
 docs/rate-limit-policy.md — Rate-limit tiers + headers
 Dockerfile             — Shared monorepo Docker build (API + MCP)
@@ -112,7 +112,7 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 12. [x] **Cover Art Archive integration** — MusicBrainz crosswalk import (1,768,376 mappings), cover proxy endpoint (`/v1/releases/:id/cover`), Redis cache (7-day TTL), frontend display with vinyl placeholder fallback
 13. [x] **Master page perf fix** — migration `008_release_master_index.ts` for master→releases traversal. Page load: 10.3s → 0.9s
 14. **Gate E status**: GO with caveat for soft alpha (5-10 testers). NOT GO for broader/public (filtered p99 still high under heavy contention)
-15. See `docs/phase4-prerequisites.md` and `docs/enrichment-implementation-plan.md`
+15. See `docs/enrichment-implementation-plan.md`
 
 ## MCP Tools
 | Tool | Description |
@@ -128,10 +128,8 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 - [Implementation Plan](docs/implementation-plan-agent-first.md) — canonical build plan
 - [Quickstart](docs/quickstart.md) — API + MCP reference with curl examples
 - [Response Contracts](docs/phase2-response-contracts.md) — locked JSON shapes
-- [Phase 3 Gate](docs/phase3-gate.md) — deployment checklist + evidence
 - [Ops Runbook](docs/ops-runbook.md) — incident triage, deployment, rollback
 - [Alpha Invite](docs/alpha-invite.md) — staging limitations, usage policy
-- [Phase 4 Prerequisites](docs/phase4-prerequisites.md) — migration, capacity, costs
 - [Enrichment Plan](docs/enrichment-implementation-plan.md) — MusicBrainz + Wikidata + Setlist rollout
 - [Rate-Limit Policy](docs/rate-limit-policy.md) — tier definitions
 - [Operator Guide](docs/OPERATOR.md) — how Claude Code runs this project
