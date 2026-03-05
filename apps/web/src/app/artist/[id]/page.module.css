@@ -131,7 +131,7 @@
   border: 1px solid var(--line);
   border-radius: 2px;
   color: var(--fg-muted);
-  padding: 0.15rem 0.4rem;
+  padding: 0.3rem 0.5rem;
   text-decoration: none;
 }
 
@@ -146,7 +146,7 @@
   border-radius: 2px;
   background: var(--fg);
   color: var(--bg, #fff);
-  padding: 0.15rem 0.4rem;
+  padding: 0.3rem 0.5rem;
   text-decoration: none;
 }
 

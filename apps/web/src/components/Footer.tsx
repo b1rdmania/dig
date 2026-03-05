@@ -9,7 +9,7 @@ export function Footer() {
         <span className={styles.note}>Early stage. Building in public.</span>
       </div>
       <div className={styles.links}>
-        <a href="#" className={styles.link}>About</a>
+        <Link href="/about" className={styles.link}>About</Link>
         <Link href="/progress" className={styles.link}>How we built</Link>
       </div>
     </footer>
