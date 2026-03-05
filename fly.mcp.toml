@@ -13,6 +13,12 @@ primary_region = "iad"
 [env]
   PORT = "3001"
   NODE_ENV = "production"
+  MCP_ANON_PER_MIN = "10"
+  MCP_ANON_PER_DAY = "50"
+  MCP_KEY_PER_MIN = "300"
+  MCP_KEY_PER_DAY = "10000"
+  MCP_SPEND_PCT = "0"
+  MCP_BETA_CAPACITY_MODE = "off"
 
 [processes]
   app = "pnpm --filter @dig/mcp dev"

@@ -42,9 +42,12 @@ if (!DATABASE_URL) {
 
 const db = createDb(DATABASE_URL);
 const MCP_REQUIRE_API_KEY = process.env.MCP_REQUIRE_API_KEY === "true";
-const MCP_RATE_LIMIT_WINDOW_MS = Number(process.env.MCP_RATE_LIMIT_WINDOW_MS ?? 60000);
-const MCP_RATE_LIMIT_IP = Number(process.env.MCP_RATE_LIMIT_IP ?? 120);
-const MCP_RATE_LIMIT_KEY = Number(process.env.MCP_RATE_LIMIT_KEY ?? 600);
+const MCP_ANON_PER_MIN = Number(process.env.MCP_ANON_PER_MIN ?? 10);
+const MCP_ANON_PER_DAY = Number(process.env.MCP_ANON_PER_DAY ?? 50);
+const MCP_KEY_PER_MIN = Number(process.env.MCP_KEY_PER_MIN ?? 300);
+const MCP_KEY_PER_DAY = Number(process.env.MCP_KEY_PER_DAY ?? 10000);
+const MCP_SPEND_PCT = Number(process.env.MCP_SPEND_PCT ?? 0);
+const MCP_BETA_CAPACITY_MODE = process.env.MCP_BETA_CAPACITY_MODE === "on";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -90,13 +93,15 @@ type RateCounter = {
   resetAt: number;
 };
 
-const ipRateCounters = new Map<string, RateCounter>();
-const keyRateCounters = new Map<string, RateCounter>();
+const ipMinuteCounters = new Map<string, RateCounter>();
+const ipDayCounters = new Map<string, RateCounter>();
+const keyMinuteCounters = new Map<string, RateCounter>();
+const keyDayCounters = new Map<string, RateCounter>();
 
-function applyRateWindow(counters: Map<string, RateCounter>, key: string, limit: number, now: number) {
+function applyRateWindow(counters: Map<string, RateCounter>, key: string, limit: number, now: number, windowMs: number) {
   const existing = counters.get(key);
   if (!existing || now >= existing.resetAt) {
-    const resetAt = now + MCP_RATE_LIMIT_WINDOW_MS;
+    const resetAt = now + windowMs;
     const next = { count: 1, resetAt };
     counters.set(key, next);
     return { allowed: true, remaining: Math.max(0, limit - 1), resetAt };
@@ -129,6 +134,28 @@ function rateLimitMiddleware(req: express.Request, res: express.Response, next: 
   const apiKey = req.header("X-API-Key")?.trim() ?? "";
   const ip = req.ip || req.socket.remoteAddress || "unknown";
   const now = Date.now();
+  const dayWindowMs = 24 * 60 * 60 * 1000;
+
+  let anonPerMin = MCP_ANON_PER_MIN;
+  let anonPerDay = MCP_ANON_PER_DAY;
+  let protectMode: "off" | "soft" | "hard" | "lock" = "off";
+
+  // Spend-pressure protect mode.
+  if (MCP_SPEND_PCT >= 100 || MCP_BETA_CAPACITY_MODE) {
+    protectMode = "lock";
+    anonPerMin = 0;
+    anonPerDay = 0;
+  } else if (MCP_SPEND_PCT >= 90) {
+    protectMode = "hard";
+    anonPerMin = Math.min(anonPerMin, 2);
+    anonPerDay = Math.min(anonPerDay, 10);
+  } else if (MCP_SPEND_PCT >= 80) {
+    protectMode = "soft";
+    anonPerMin = Math.min(anonPerMin, 5);
+    anonPerDay = Math.min(anonPerDay, 20);
+  }
+
+  res.setHeader("X-Beta-Protect-Mode", protectMode);
 
   if (MCP_REQUIRE_API_KEY && !apiKey) {
     res.status(401).json({
@@ -137,30 +164,75 @@ function rateLimitMiddleware(req: express.Request, res: express.Response, next: 
     return;
   }
 
-  const ipLimitState = applyRateWindow(ipRateCounters, ip, MCP_RATE_LIMIT_IP, now);
-  if (!ipLimitState.allowed) {
-    setRateHeaders(res, MCP_RATE_LIMIT_IP, 0, ipLimitState.resetAt, "ip");
-    res.setHeader("Retry-After", String(Math.max(0, Math.ceil((ipLimitState.resetAt - now) / 1000))));
-    res.status(429).json({
-      error: { code: "RATE_LIMITED", message: "Rate limit exceeded", details: { bucket: "ip" } },
+  if (apiKey) {
+    const minute = applyRateWindow(keyMinuteCounters, apiKey, MCP_KEY_PER_MIN, now, 60_000);
+    if (!minute.allowed) {
+      setRateHeaders(res, MCP_KEY_PER_MIN, 0, minute.resetAt, "key");
+      res.setHeader("Retry-After", String(Math.max(0, Math.ceil((minute.resetAt - now) / 1000))));
+      res.status(429).json({
+        error: { code: "RATE_LIMITED", message: "Rate limit exceeded", details: { bucket: "key_minute" } },
+      });
+      return;
+    }
+
+    const day = applyRateWindow(keyDayCounters, apiKey, MCP_KEY_PER_DAY, now, dayWindowMs);
+    if (!day.allowed) {
+      setRateHeaders(res, MCP_KEY_PER_DAY, 0, day.resetAt, "key");
+      res.setHeader("Retry-After", String(Math.max(0, Math.ceil((day.resetAt - now) / 1000))));
+      res.status(429).json({
+        error: { code: "RATE_LIMITED", message: "Daily key quota exceeded", details: { bucket: "key_day" } },
+      });
+      return;
+    }
+
+    setRateHeaders(res, MCP_KEY_PER_MIN, minute.remaining, minute.resetAt, "key");
+    res.setHeader("X-RateLimit-Day-Limit", String(MCP_KEY_PER_DAY));
+    res.setHeader("X-RateLimit-Day-Remaining", String(day.remaining));
+    res.setHeader("X-RateLimit-Day-Reset", String(Math.max(0, Math.ceil((day.resetAt - now) / 1000))));
+    next();
+    return;
+  }
+
+  if (protectMode === "lock") {
+    res.status(503).json({
+      error: {
+        code: "BETA_CAPACITY",
+        message: "Dig MCP beta is at temporary capacity. Please try again soon or request an API key.",
+        details: { upgrade_url: "https://dig.baby", phase: "beta" },
+      },
     });
     return;
   }
 
-  if (apiKey) {
-    const keyLimitState = applyRateWindow(keyRateCounters, apiKey, MCP_RATE_LIMIT_KEY, now);
-    if (!keyLimitState.allowed) {
-      setRateHeaders(res, MCP_RATE_LIMIT_KEY, 0, keyLimitState.resetAt, "key");
-      res.setHeader("Retry-After", String(Math.max(0, Math.ceil((keyLimitState.resetAt - now) / 1000))));
-      res.status(429).json({
-        error: { code: "RATE_LIMITED", message: "Rate limit exceeded", details: { bucket: "key" } },
-      });
-      return;
-    }
-    setRateHeaders(res, MCP_RATE_LIMIT_KEY, keyLimitState.remaining, keyLimitState.resetAt, "key");
-  } else {
-    setRateHeaders(res, MCP_RATE_LIMIT_IP, ipLimitState.remaining, ipLimitState.resetAt, "ip");
+  const ipMinute = applyRateWindow(ipMinuteCounters, ip, anonPerMin, now, 60_000);
+  if (!ipMinute.allowed) {
+    setRateHeaders(res, anonPerMin, 0, ipMinute.resetAt, "ip");
+    res.setHeader("Retry-After", String(Math.max(0, Math.ceil((ipMinute.resetAt - now) / 1000))));
+    res.status(429).json({
+      error: { code: "RATE_LIMITED", message: "Per-minute anonymous limit reached", details: { bucket: "ip_minute" } },
+    });
+    return;
   }
+
+  const ipDay = applyRateWindow(ipDayCounters, ip, anonPerDay, now, dayWindowMs);
+  if (!ipDay.allowed) {
+    res.setHeader("X-RateLimit-Day-Limit", String(anonPerDay));
+    res.setHeader("X-RateLimit-Day-Remaining", "0");
+    res.setHeader("X-RateLimit-Day-Reset", String(Math.max(0, Math.ceil((ipDay.resetAt - now) / 1000))));
+    res.status(429).json({
+      error: {
+        code: "RATE_LIMITED",
+        message: "Daily anonymous beta quota reached. Please try later or request an API key.",
+        details: { bucket: "ip_day", upgrade_url: "https://dig.baby" },
+      },
+    });
+    return;
+  }
+
+  setRateHeaders(res, anonPerMin, ipMinute.remaining, ipMinute.resetAt, "ip");
+  res.setHeader("X-RateLimit-Day-Limit", String(anonPerDay));
+  res.setHeader("X-RateLimit-Day-Remaining", String(ipDay.remaining));
+  res.setHeader("X-RateLimit-Day-Reset", String(Math.max(0, Math.ceil((ipDay.resetAt - now) / 1000))));
 
   next();
 }
