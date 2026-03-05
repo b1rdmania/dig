@@ -30,7 +30,7 @@ export function entityMetadata(meta: EntityMeta): Metadata {
       images: [{ url: imageUrl, width: 1200, height: 630 }],
     },
     twitter: {
-      card: meta.coverUrl ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: fullTitle,
       description: meta.description,
       images: [imageUrl],
