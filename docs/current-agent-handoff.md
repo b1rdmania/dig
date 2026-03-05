@@ -15,6 +15,7 @@ This file is the single execution brief for the next agent. It removes historica
 5. `docs/enrichment-migration-spec-en-a.md` (already-applied EN-A schema design)
 6. `docs/ops-runbook.md` (includes pg_prewarm warmup procedure)
 7. `docs/alpha-invite.md` (alpha invite brief + issued keys)
+8. `docs/post-fix-validation-suite.md` (mandatory post-fix API/search/dead-page validation)
 
 ### What is already done
 
