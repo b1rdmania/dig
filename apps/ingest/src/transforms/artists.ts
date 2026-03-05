@@ -3,6 +3,7 @@
  */
 
 import type { Kysely, Database } from "@dig/db";
+import { sql } from "@dig/db";
 import type { XmlNode } from "../parser.js";
 import { children, childText, attr, parseInt_safe, chunkedInsert } from "./helpers.js";
 
@@ -45,6 +46,16 @@ export async function transformArtists(
       )
       .execute();
     artistCount = artistRows.length;
+
+    // Populate search_vector for the inserted/updated rows
+    const ids = artistRows.map((r) => r.discogs_id);
+    await sql`
+      UPDATE catalog.artists
+      SET search_vector = to_tsvector('english', COALESCE(name, '') || ' ' || COALESCE(real_name, ''))
+      WHERE batch_id = ${batchId}
+        AND discogs_id = ANY(${sql.raw(`ARRAY[${ids.join(",")}]`)}::int[])
+        AND search_vector IS NULL
+    `.execute(db);
   }
 
   // Collect child rows across all entities in this batch
