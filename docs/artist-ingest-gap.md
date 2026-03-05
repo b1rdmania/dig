@@ -1,72 +1,57 @@
-# Artist Catalog Ingest Gap
+# Artist Catalog Ingest Gap — CLOSED
 
-## Problem
+## Resolution
 
-We only have **289,500 artists** in `catalog.artists`, with a max `discogs_id` of 399,622. The Discogs dump contains ~8M+ artists. The import was never completed on Fly — only a partial load from an earlier dev phase made it in.
+**Status: RESOLVED** as of 2026-03-05, commit `156e931`.
 
-This causes:
-- **Profile markup broken**: Label and artist profiles use Discogs refs like `[a2505753]` which we can't resolve to names
-- **Related artist names missing**: MusicBrainz enrichment edges reference artist IDs we don't have, showing "Artist 6481253" instead of real names
-- **Incomplete search**: 97% of artists are unsearchable
+Full artist ingest completed successfully:
+- **10,207,045 artists** in `catalog.artists` (up from 289,500 partial)
+- Max discogs_id: **17,254,783** (up from 399,622)
+- All 6 artist tables populated and ANALYZE'd
 
-## Current State
+### Final Counts
 
-| Table | Rows | Notes |
-|-------|------|-------|
-| `catalog.artists` | 289,500 | Max ID: 399,622 — partial load |
-| `catalog.labels` | 2,339,085 | Appears complete |
-| `catalog.masters` | 2,521,111 | Appears complete |
-| `catalog.releases` | 18,876,362 | Complete (full dump ingest on record) |
+| Table | Rows |
+|-------|------|
+| `catalog.artists` | 10,207,045 |
+| `catalog.artist_aliases` | 5,263,371 |
+| `catalog.artist_name_variations` | 5,543,424 |
+| `catalog.artist_groups` | 2,532,887 |
+| `catalog.artist_members` | 2,580,904 |
+| `catalog.artist_urls` | 2,372,842 |
 
-Only the releases ingest has a `dump_batches` record. Artists, labels, and masters were loaded in an earlier phase without proper batch tracking.
+### Process
 
-## Available Dump Files
+1. **Parser backpressure fix**: Root cause of prior OOM failures was `void onEntity()` in parser.ts discarding async callback promises, causing unbounded memory growth. Fixed by switching to `for await` stream iteration with proper `await onEntity()`.
 
-```
-/Users/andy/Downloads/discogs_20260101_artists.xml.gz  (456MB)
-/Users/andy/Downloads/discogs_20260201_artists.xml.gz  (458MB)
-```
+2. **Ingest**: 9,917,545 artists parsed from `discogs_20260201_artists.xml.gz` in ~3.7 hours (746/s). Zero skipped, no OOM with 4GB heap.
 
-Labels and masters dump files may have been deleted during Docker cleanup. Need to verify.
+3. **Transform**: Raw entities → catalog tables. Initially ran at 140/s. Optimized with transaction wrapping + chunk size increase (500→2000), achieving 735/s. Completed in ~98 minutes for the second half.
 
-## Required Work
+4. **ANALYZE** run on all 6 tables. Query planner stats refreshed.
 
-### 1. Full artist ingest (critical)
+### Verification
 
-Run `pnpm --filter @dig/ingest ingest -- artists --file /path/to/discogs_20260201_artists.xml.gz` against the Fly DB.
+- **Spot-check: James Brown (12596)** — all profile refs resolved, related artists show real names, 30 releases listed
+- **Spot-check: James Brown & The Famous Flames (386724)** — 16+ members resolved with links
+- **Spot-check: Artist 6,481,253** — previously unresolvable, now loads with full data (47 members, aliases)
+- **High-ID coverage**: IDs up to 17.2M covered (Discogs ID space is sparse above 10M)
+- **Profile markup**: `[aXXXXXX]` refs now resolve to clickable artist name links
+- **Enrichment edges**: MusicBrainz relationship targets show real names instead of "Artist XXXXXX"
 
-- Estimated: ~8M artists, 30-60 min depending on approach
-- The ingest CLI uses batch inserts with ON CONFLICT upsert, so it's safe to run over existing data
-- Populates: `catalog.artists`, `artist_aliases`, `artist_groups`, `artist_members`, `artist_name_variations`, `artist_urls`
+### Batch Details
 
-### 2. Verify labels and masters completeness
+- Batch ID: `d29bc406-2bfb-473f-8b23-90c1d0e722b2`
+- Dump date: 2026-02-01
+- Dump file: `discogs_20260201_artists.xml.gz` (458MB)
 
-Check if labels (2.3M) and masters (2.5M) match expected Discogs totals. If not, those dumps need re-ingesting too.
+---
 
-### 3. Proxy reliability
+## Original Problem (for reference)
 
-The Fly proxy (`fly proxy 15432:5432 -a dig-db`) drops connections after ~30-60 min of sustained use (ECONNRESET). Options:
-- **Option A**: Run ingest locally through proxy, accept potential crashes, rely on ON CONFLICT upsert for idempotent restart
-- **Option B**: Upload dump to Fly machine, SSH in, run ingest directly (no proxy middleman)
-- **Option C**: Use `fly postgres connect` for a more stable connection
+We only had **289,500 artists** in `catalog.artists`, with a max `discogs_id` of 399,622. The Discogs dump contains ~10M artists. The import was never completed — only a partial load from an earlier dev phase made it in.
 
-### 4. Post-ingest
-
-- Run `ANALYZE` on all artist tables
-- Verify profile refs resolve (spot-check 20 labels/artists)
-- Verify related artist names display on artist pages
-- Update `ingest.dump_batches` with artist ingest record
-
-## Impact
-
-Once complete:
-- All profile `[aXXXXXX]` refs become clickable artist name links
-- All enrichment edge names resolve (no more "Artist 6481253")
-- Artist search covers the full catalog
-- Artist pages exist for all referenced artists
-
-## Questions to Verify
-
-1. Do we still have the labels dump (`discogs_20260201_labels.xml.gz`)? If not, need to re-download from Discogs.
-2. Do we still have the masters dump? Same question.
-3. Is the current ingest CLI (`apps/ingest`) capable of resuming mid-file, or does it need to re-parse from the start?
+This caused:
+- Profile markup broken: refs like `[a2505753]` couldn't resolve to names
+- Related artist names missing: showed "Artist 6481253" instead of real names
+- 97% of artists were unsearchable

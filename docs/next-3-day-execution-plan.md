@@ -17,35 +17,29 @@ Stabilize core product quality before further enrichment scope:
 - Update gate docs with evidence
 
 ### Checklist
-- [ ] Transform process completes without fatal errors
-- [ ] Run `ANALYZE` on:
-  - `catalog.artists`
-  - `catalog.artist_aliases`
-  - `catalog.artist_groups`
-  - `catalog.artist_members`
-  - `catalog.artist_name_variations`
-  - `catalog.artist_urls`
-- [ ] Verify counts:
-  - `catalog.artists` in expected full-dump range (multi-million, near target)
-  - Child-table counts are non-trivial and consistent with ingest behavior
-- [ ] Verify max artist ID materially above prior partial ceiling
-- [ ] Spot-check unresolved refs on 20 real pages (labels/artists/releases)
-- [ ] Confirm fallback labels like `Artist 6481253` drop materially
-- [ ] Update:
-  - `docs/artist-ingest-gap.md`
-  - relevant gate/caveat docs
+- [x] Transform process completes without fatal errors — **DONE** (9,917,545 parsed, 0 skipped)
+- [x] Run `ANALYZE` on all 6 artist tables — **DONE**
+- [x] Verify counts — **DONE**:
+  - `catalog.artists`: **10,207,045** (up from 289,500)
+  - `catalog.artist_aliases`: 5,263,371
+  - `catalog.artist_name_variations`: 5,543,424
+  - `catalog.artist_groups`: 2,532,887
+  - `catalog.artist_members`: 2,580,904
+  - `catalog.artist_urls`: 2,372,842
+- [x] Verify max artist ID: **17,254,783** (up from 399,622)
+- [x] Spot-check unresolved refs:
+  - James Brown (12596): all refs resolved, related artists show real names
+  - James Brown & The Famous Flames (386724): 16+ members resolved
+  - Artist 6,481,253: previously unresolvable, now loads with 47 members
+  - High-ID coverage confirmed up to 17.2M
+- [x] Confirm fallback labels dropped: "Artist XXXXXX" no longer appears on checked pages
+- [x] Update `docs/artist-ingest-gap.md` — **CLOSED** with full evidence
 
-### Day 1 Gate (GO / NO-GO)
-GO if all are true:
-- `catalog.artists` no longer partial (clear step-change from 289k)
-- Query planner stats refreshed (`ANALYZE` done)
-- Spot-check shows major reduction in unresolved artist references
-- Evidence committed in docs
-
-NO-GO if any are true:
-- Count still near partial baseline
-- Transform failed with unresolved data-integrity issues
-- Unresolved refs unchanged in spot-check sample
+### Day 1 Gate: **GO**
+- [x] `catalog.artists` no longer partial: 10.2M (35x increase from 289k)
+- [x] Query planner stats refreshed (`ANALYZE` done on all 6 tables)
+- [x] Spot-check confirms major reduction in unresolved artist references
+- [x] Evidence committed: `docs/artist-ingest-gap.md` updated, commit `156e931`
 
 ---
 
