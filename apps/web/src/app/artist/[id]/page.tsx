@@ -104,17 +104,38 @@ async function ArtistAbout({ id, profile }: { id: string; profile: string | null
 
   if (!hasContent) return null;
 
+  const combined = [bioSummary, profile].filter(Boolean).join("\n\n");
+  const shouldCollapse = combined.length > 520;
+  const preview = shouldCollapse ? `${combined.slice(0, 520).trimEnd()}…` : combined;
+
   return (
     <section className={styles.section}>
       <h2 className={styles.heading}>About</h2>
-      {bioSummary && <p className={styles.copy}>{bioSummary}</p>}
-      {profile && (
+      {!shouldCollapse && bioSummary && <p className={styles.copy}>{bioSummary}</p>}
+      {!shouldCollapse && profile && (
         <DiscogsProfile
           text={profile}
           className={styles.copy}
           names={resolvedNames}
           style={bioSummary ? { marginTop: "0.5rem", fontSize: "0.82rem", opacity: 0.8 } : undefined}
         />
+      )}
+      {shouldCollapse && (
+        <>
+          <p className={styles.copy}>{preview}</p>
+          <details className={styles.expandBlock}>
+            <summary className={styles.expandToggle}>More info</summary>
+            {bioSummary && <p className={styles.copy}>{bioSummary}</p>}
+            {profile && (
+              <DiscogsProfile
+                text={profile}
+                className={styles.copy}
+                names={resolvedNames}
+                style={bioSummary ? { marginTop: "0.5rem", fontSize: "0.82rem", opacity: 0.8 } : undefined}
+              />
+            )}
+          </details>
+        </>
       )}
       {bioSummary && <div className={styles.contextSource}>Source: Wikidata</div>}
     </section>
@@ -323,7 +344,12 @@ export default async function ArtistPage({ params }: Props) {
           </div>
         </section>
 
-        {/* ── Releases first — renders immediately ── */}
+        {/* ── About first: streams in (context fetch + name resolution) ── */}
+        <Suspense fallback={<SectionSkeleton lines={4} />}>
+          <ArtistAbout id={id} profile={artist.profile} />
+        </Suspense>
+
+        {/* ── Releases: renders immediately ── */}
         <section className={styles.section}>
           <h2 className={styles.heading}>Releases ({mastersData.links.length})</h2>
           {mastersData.links.length === 0 && (
@@ -338,11 +364,6 @@ export default async function ArtistPage({ params }: Props) {
             </div>
           ))}
         </section>
-
-        {/* ── About: streams in (context fetch + name resolution) ── */}
-        <Suspense fallback={<SectionSkeleton lines={4} />}>
-          <ArtistAbout id={id} profile={artist.profile} />
-        </Suspense>
 
         {/* ── Connections: streams in (relationships + timeline fetch + name resolution) ── */}
         <Suspense fallback={<SectionSkeleton lines={3} />}>

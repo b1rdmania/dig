@@ -55,6 +55,19 @@
   white-space: pre-wrap;
 }
 
+.expandBlock {
+  margin-top: 0.5rem;
+}
+
+.expandToggle {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-light);
+  cursor: pointer;
+}
+
 .list {
   display: flex;
   flex-wrap: wrap;
