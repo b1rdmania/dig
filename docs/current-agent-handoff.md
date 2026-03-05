@@ -16,6 +16,7 @@ This file is the single execution brief for the next agent. It removes historica
 6. `docs/ops-runbook.md` (includes pg_prewarm warmup procedure)
 7. `docs/alpha-invite.md` (alpha invite brief + issued keys)
 8. `docs/post-fix-validation-suite.md` (mandatory post-fix API/search/dead-page validation)
+9. `docs/batch-resolution-metadata-design.md` (planned replacement for planner-coercion batch lookup)
 
 ### What is already done
 
