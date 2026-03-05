@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "dig",
-  description: "Search 24M+ records from the Discogs CC0 dataset",
+  description: "music search, fixed.",
   metadataBase: new URL("https://app.dig.baby"),
   openGraph: {
     siteName: "dig",
