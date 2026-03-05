@@ -40,14 +40,30 @@ fly deploy --config fly.api.toml --remote-only
 # Deploy MCP
 fly deploy --config fly.mcp.toml --remote-only
 
+# Deploy Frontend
+fly deploy --config fly.web.toml --remote-only
+
 # Check deployment status
 fly status -a dig-api
 fly status -a dig-mcp
+fly status -a dig-web
 
 # View recent logs
 fly logs -a dig-api
 fly logs -a dig-mcp
 ```
+
+**Post-deploy checklist:**
+1. Verify health: `curl -s https://dig-api.fly.dev/v1/health | jq`
+2. If DB was restarted: run `pg_prewarm` (see Search Warmup section below)
+3. Fire warm-up queries to populate batch cache on both API machines:
+   ```bash
+   # Hit each machine (2 requests to cover both via round-robin)
+   for i in 1 2; do
+     curl -sS "https://dig-api.fly.dev/v1/search?q=test&limit=1" > /dev/null
+   done
+   ```
+4. Verify search returns all entity types: `curl -s "https://dig-api.fly.dev/v1/search?q=radiohead&limit=5" | jq '.results[].type'`
 
 ## Rollback
 
@@ -94,18 +110,23 @@ Expected: 47/47 assertions passing.
 
 ## Search Warmup (`pg_prewarm`)
 
-After a Postgres restart (deploy, OOM, Fly maintenance), search indexes are cold and the first queries against each index will be slow (1-6s instead of <200ms). Run this procedure to warm them.
+After a Postgres restart (deploy, OOM, Fly maintenance), search indexes and heap pages are cold. First queries will be slow (3-30s instead of <200ms). Run this procedure to warm them.
 
-**When to run:** After any Postgres restart, or whenever cold-start latency is observed.
+**When to run:** After any Postgres restart, after API deploy, or whenever cold-start latency is observed.
 
-### Step 1: Warm indexes
+**Cold-cache behavior:** The batch resolution cache (60s TTL, in-process) repopulates on first request per API machine. The first search request after deploy may take 1-2s extra for cache population. This is expected and resolves automatically.
+
+### Step 1: Warm indexes + releases table
 
 ```bash
 # Open proxy in one terminal
 fly proxy 15432:5432 -a dig-db
 
-# In another terminal, run pg_prewarm on all 8 search indexes (~2.5GB total)
+# In another terminal, run pg_prewarm (~3-5 min total)
 psql "postgresql://postgres:<password>@localhost:15432/dig" <<'SQL'
+-- Releases table heap pages (~5.5GB — may only partially fit in shared_buffers)
+SELECT 'catalog.releases' AS tbl, pg_prewarm('catalog.releases') AS blocks;
+
 -- FTS indexes (GIN on search_vector)
 SELECT 'idx_releases_search' AS idx, pg_prewarm('catalog.idx_releases_search') AS blocks;
 SELECT 'idx_artists_search' AS idx, pg_prewarm('catalog.idx_artists_search') AS blocks;
@@ -117,10 +138,16 @@ SELECT 'idx_artists_name_trgm' AS idx, pg_prewarm('catalog.idx_artists_name_trgm
 SELECT 'idx_labels_name_trgm' AS idx, pg_prewarm('catalog.idx_labels_name_trgm') AS blocks;
 SELECT 'idx_masters_title_trgm' AS idx, pg_prewarm('catalog.idx_masters_title_trgm') AS blocks;
 SELECT 'idx_releases_title_trgm' AS idx, pg_prewarm('catalog.idx_releases_title_trgm') AS blocks;
+
+-- ANALYZE for fresh planner stats
+ANALYZE catalog.releases;
+ANALYZE catalog.artists;
+ANALYZE catalog.masters;
+ANALYZE catalog.labels;
 SQL
 ```
 
-Expected output: 8 rows, each showing index name and block count. Total ~325k blocks (~2.5GB). Takes 10-30 seconds depending on disk speed.
+Expected: releases table ~709k blocks, indexes ~325k blocks total. Takes 3-5 minutes.
 
 ### Index sizes (reference)
 
@@ -274,6 +301,31 @@ SELECT usename, state, count(*) FROM pg_stat_activity GROUP BY usename, state;
   fly scale vm shared-cpu-4x --memory 2048 -a dig-db
   ```
 - **App-side**: Reduce pool size in Kysely config (currently defaults).
+
+---
+
+### 5. Batch mismatch (entity types 404 / empty search)
+
+**Symptom:** Masters, releases, or labels return 404 or empty search results, while artists work fine (or vice versa). Mixed search returns only some entity types.
+
+**Root cause (2026-03-05 incident):** Different entity types were ingested in different batches. A generic "latest batch" lookup returned the artist batch, making masters/releases/labels invisible.
+
+**Prevention:** All routes now use `getBatchForTable()` from `@dig/domain` which resolves the correct batch per table. Results cached 60s in-memory. Import boundary rule: always import `sql` from `@dig/db`, never directly from `kysely`.
+
+**Diagnosis:**
+```bash
+# Check which batches have data
+fly proxy 15432:5432 -a dig-db
+psql "postgresql://postgres:<password>@localhost:15432/dig" -c "
+  SELECT b.id, b.status, b.created_at::date,
+    EXISTS(SELECT 1 FROM catalog.artists WHERE batch_id=b.id LIMIT 1) as has_artists,
+    EXISTS(SELECT 1 FROM catalog.masters WHERE batch_id=b.id LIMIT 1) as has_masters,
+    EXISTS(SELECT 1 FROM catalog.releases WHERE batch_id=b.id LIMIT 1) as has_releases
+  FROM ingest.dump_batches b WHERE status IN ('active','qa') ORDER BY created_at DESC;
+"
+```
+
+**Resolution:** If a new ingest batch doesn't contain all entity types, this is expected — `getBatchForTable` handles it. If search or entity routes return empty despite data existing, check API logs for batch resolution errors.
 
 ---
 
