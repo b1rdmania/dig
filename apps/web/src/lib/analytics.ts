@@ -147,3 +147,15 @@ export function trackMediaShowMoreClicked(remainingCount: number): void {
     remaining_count: remainingCount,
   });
 }
+
+export function trackIncrementalSearch(
+  event: "started" | "completed" | "aborted" | "error",
+  properties: {
+    query_length: number;
+    elapsed_ms?: number;
+    result_count?: number;
+    timeout?: boolean;
+  },
+): void {
+  track(`search_incremental_${event}`, properties);
+}

@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import { digFetch, ApiRequestError } from "@/lib/api";
 import { isSearchResponse, type SearchResponse } from "@/lib/types";
-import { SearchBar } from "@/components/SearchBar";
 import { SearchResults } from "@/components/SearchResults";
 import { Empty } from "@/components/Empty";
 import { ErrorMessage } from "@/components/ErrorMessage";
+import { IncrementalSearchWrapper } from "@/components/IncrementalSearchWrapper";
 
 interface Props {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -78,14 +78,11 @@ export default async function SearchPage({ searchParams }: Props) {
           Dig.
         </h1>
       )}
-      <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
-        <Suspense>
-          <SearchBar />
-        </Suspense>
-      </div>
-      <div style={{ marginTop: "2rem" }}>
-        <SearchContent searchParams={resolved} />
-      </div>
+      <Suspense>
+        <IncrementalSearchWrapper>
+          <SearchContent searchParams={resolved} />
+        </IncrementalSearchWrapper>
+      </Suspense>
     </>
   );
 }
