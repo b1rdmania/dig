@@ -13,22 +13,23 @@
 }
 
 .logo {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--fg-faint);
 }
 
 .note {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--fg-faint);
 }
 
 .links {
   display: flex;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .link {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--fg-faint);
 }
 
