@@ -8,29 +8,7 @@
  * No live DB — we test the output format, not the data.
  */
 import { describe, it, expect } from "vitest";
-
-// ---------------------------------------------------------------------------
-// Re-implement the tool helpers here to test them in isolation.
-// These MUST match the helpers in server.ts exactly.
-// ---------------------------------------------------------------------------
-
-function toolResult(data: unknown) {
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-  };
-}
-
-function toolError(code: string, message: string) {
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify({ error: { code, message, details: null } }),
-      },
-    ],
-    isError: true,
-  };
-}
+import { toolResult, toolError } from "../contracts.js";
 
 function parseToolOutput(result: ReturnType<typeof toolResult>): unknown {
   expect(result.content).toHaveLength(1);
@@ -86,6 +64,8 @@ describe("MCP tool output contracts", () => {
       expect(result.content[0].type).toBe("text");
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.foo).toBe("bar");
+      expect(parsed._mcp).toBeDefined();
+      expect(parsed._mcp.contract_version).toBe("v1-alpha");
     });
 
     it("pretty-prints JSON", () => {
@@ -102,6 +82,8 @@ describe("MCP tool output contracts", () => {
       expect(parsed.error.code).toBe("NOT_FOUND");
       expect(parsed.error.message).toBe("Artist 999 not found");
       expect(parsed.error.details).toBeNull();
+      expect(parsed._mcp).toBeDefined();
+      expect(parsed._mcp.contract_version).toBe("v1-alpha");
     });
 
     it("uses consistent error codes", () => {

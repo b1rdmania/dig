@@ -47,6 +47,8 @@ async function main() {
   const sr = JSON.parse((searchResult.content as any)[0].text);
   assert(Array.isArray(sr.results), "results is array");
   assert(sr.results.length > 0, "has results");
+  assert(sr._mcp?.contract_version === "v1-alpha", "_mcp contract version present");
+  assert(typeof sr._mcp?.request_id === "string", "_mcp request_id present");
   assert(sr.results[0].provenance?.source === "discogs", "provenance.source = discogs");
   assert(typeof sr.meta.degraded === "boolean", "meta.degraded is boolean");
   assert("degraded_reason" in sr.meta, "meta.degraded_reason present");
@@ -89,6 +91,7 @@ async function main() {
   });
   assert(notFound.isError === true, "isError is true");
   const nf = JSON.parse((notFound.content as any)[0].text);
+  assert(typeof nf._mcp?.request_id === "string", "error _mcp request_id present");
   assert(nf.error.code === "NOT_FOUND", "error code is NOT_FOUND");
   assert(nf.error.details === null, "error details is null");
   console.log(`  Error: ${nf.error.code} — ${nf.error.message}`);

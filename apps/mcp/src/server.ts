@@ -14,6 +14,7 @@ import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 import { createDb } from "@dig/db";
 import {
   search,
@@ -29,6 +30,7 @@ import {
   getReleaseCredits,
   type SearchEntityType,
 } from "@dig/domain";
+import { toolError, toolResult } from "./contracts.js";
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -39,6 +41,10 @@ if (!DATABASE_URL) {
 }
 
 const db = createDb(DATABASE_URL);
+const MCP_REQUIRE_API_KEY = process.env.MCP_REQUIRE_API_KEY === "true";
+const MCP_RATE_LIMIT_WINDOW_MS = Number(process.env.MCP_RATE_LIMIT_WINDOW_MS ?? 60000);
+const MCP_RATE_LIMIT_IP = Number(process.env.MCP_RATE_LIMIT_IP ?? 120);
+const MCP_RATE_LIMIT_KEY = Number(process.env.MCP_RATE_LIMIT_KEY ?? 600);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -55,24 +61,108 @@ async function getBatchInfo(): Promise<{ batchId: string; dumpDate: string }> {
   return { batchId: (batch as any).id, dumpDate: (batch as any).dump_date };
 }
 
-/** Format a successful tool result with JSON content */
-function toolResult(data: unknown) {
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-  };
+function createRequestId(): string {
+  return randomUUID();
 }
 
-/** Format an error tool result matching REST error taxonomy */
-function toolError(code: string, message: string) {
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify({ error: { code, message, details: null } }),
-      },
-    ],
-    isError: true,
-  };
+function logToolInvocation(
+  requestId: string,
+  tool: string,
+  status: "ok" | "error",
+  elapsedMs: number,
+  errorCode: string | null,
+) {
+  console.log(
+    JSON.stringify({
+      kind: "mcp_tool_invocation",
+      request_id: requestId,
+      tool,
+      status,
+      elapsed_ms: elapsedMs,
+      error_code: errorCode,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}
+
+type RateCounter = {
+  count: number;
+  resetAt: number;
+};
+
+const ipRateCounters = new Map<string, RateCounter>();
+const keyRateCounters = new Map<string, RateCounter>();
+
+function applyRateWindow(counters: Map<string, RateCounter>, key: string, limit: number, now: number) {
+  const existing = counters.get(key);
+  if (!existing || now >= existing.resetAt) {
+    const resetAt = now + MCP_RATE_LIMIT_WINDOW_MS;
+    const next = { count: 1, resetAt };
+    counters.set(key, next);
+    return { allowed: true, remaining: Math.max(0, limit - 1), resetAt };
+  }
+
+  if (existing.count >= limit) {
+    return { allowed: false, remaining: 0, resetAt: existing.resetAt };
+  }
+
+  existing.count += 1;
+  counters.set(key, existing);
+  return { allowed: true, remaining: Math.max(0, limit - existing.count), resetAt: existing.resetAt };
+}
+
+function setRateHeaders(
+  res: express.Response,
+  limit: number,
+  remaining: number,
+  resetAt: number,
+  bucket: "ip" | "key",
+) {
+  const resetSeconds = Math.max(0, Math.ceil((resetAt - Date.now()) / 1000));
+  res.setHeader("X-RateLimit-Limit", String(limit));
+  res.setHeader("X-RateLimit-Remaining", String(remaining));
+  res.setHeader("X-RateLimit-Reset", String(resetSeconds));
+  res.setHeader("X-RateLimit-Bucket", bucket);
+}
+
+function rateLimitMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const apiKey = req.header("X-API-Key")?.trim() ?? "";
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+
+  if (MCP_REQUIRE_API_KEY && !apiKey) {
+    res.status(401).json({
+      error: { code: "UNAUTHORIZED", message: "Missing X-API-Key", details: null },
+    });
+    return;
+  }
+
+  const ipLimitState = applyRateWindow(ipRateCounters, ip, MCP_RATE_LIMIT_IP, now);
+  if (!ipLimitState.allowed) {
+    setRateHeaders(res, MCP_RATE_LIMIT_IP, 0, ipLimitState.resetAt, "ip");
+    res.setHeader("Retry-After", String(Math.max(0, Math.ceil((ipLimitState.resetAt - now) / 1000))));
+    res.status(429).json({
+      error: { code: "RATE_LIMITED", message: "Rate limit exceeded", details: { bucket: "ip" } },
+    });
+    return;
+  }
+
+  if (apiKey) {
+    const keyLimitState = applyRateWindow(keyRateCounters, apiKey, MCP_RATE_LIMIT_KEY, now);
+    if (!keyLimitState.allowed) {
+      setRateHeaders(res, MCP_RATE_LIMIT_KEY, 0, keyLimitState.resetAt, "key");
+      res.setHeader("Retry-After", String(Math.max(0, Math.ceil((keyLimitState.resetAt - now) / 1000))));
+      res.status(429).json({
+        error: { code: "RATE_LIMITED", message: "Rate limit exceeded", details: { bucket: "key" } },
+      });
+      return;
+    }
+    setRateHeaders(res, MCP_RATE_LIMIT_KEY, keyLimitState.remaining, keyLimitState.resetAt, "key");
+  } else {
+    setRateHeaders(res, MCP_RATE_LIMIT_IP, ipLimitState.remaining, ipLimitState.resetAt, "ip");
+  }
+
+  next();
 }
 
 // ---------------------------------------------------------------------------
@@ -109,6 +199,10 @@ server.tool(
     cursor: z.string().optional().describe("Pagination cursor from previous response"),
   },
   async ({ query, type, genre, style, year, year_min, year_max, country, limit, cursor }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
     const params = {
       q: query,
       type: type as SearchEntityType | undefined,
@@ -124,19 +218,40 @@ server.tool(
 
     const validationError = validateSearchParams(params);
     if (validationError) {
-      return toolError("INVALID_REQUEST", validationError.message);
+      status = "error";
+      errorCode = "INVALID_REQUEST";
+      logToolInvocation(requestId, "search_catalog", status, Date.now() - started, errorCode);
+      return toolError("INVALID_REQUEST", validationError.message, {
+        tool: "search_catalog",
+        requestId,
+      });
     }
 
     try {
       const result = await search(db, params);
-      return toolResult(result);
+      return toolResult(result, {
+        tool: "search_catalog",
+        requestId,
+      });
     } catch (err: any) {
       const pgCode = err.code ?? err.cause?.code;
       if (pgCode === "57014") {
-        return toolError("QUERY_TIMEOUT", "Search query exceeded timeout");
+        status = "error";
+        errorCode = "QUERY_TIMEOUT";
+        return toolError("QUERY_TIMEOUT", "Search query exceeded timeout", {
+          tool: "search_catalog",
+          requestId,
+        });
       }
       console.error("[mcp] search_catalog error:", err);
-      return toolError("INTERNAL_ERROR", "Internal server error");
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", {
+        tool: "search_catalog",
+        requestId,
+      });
+    } finally {
+      logToolInvocation(requestId, "search_catalog", status, Date.now() - started, errorCode);
     }
   },
 );
@@ -153,16 +268,26 @@ server.tool(
     discogs_id: z.number().int().min(1).describe("Discogs artist ID"),
   },
   async ({ discogs_id }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
     try {
       const { batchId, dumpDate } = await getBatchInfo();
       const artist = await getArtist(db, discogs_id, batchId, dumpDate);
       if (!artist) {
-        return toolError("NOT_FOUND", `Artist ${discogs_id} not found`);
+        status = "error";
+        errorCode = "NOT_FOUND";
+        return toolError("NOT_FOUND", `Artist ${discogs_id} not found`, { tool: "get_artist", requestId });
       }
-      return toolResult({ artist });
+      return toolResult({ artist }, { tool: "get_artist", requestId });
     } catch (err: any) {
       console.error("[mcp] get_artist error:", err);
-      return toolError("INTERNAL_ERROR", "Internal server error");
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_artist", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_artist", status, Date.now() - started, errorCode);
     }
   },
 );
@@ -179,16 +304,26 @@ server.tool(
     discogs_id: z.number().int().min(1).describe("Discogs label ID"),
   },
   async ({ discogs_id }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
     try {
       const { batchId, dumpDate } = await getBatchInfo();
       const label = await getLabel(db, discogs_id, batchId, dumpDate);
       if (!label) {
-        return toolError("NOT_FOUND", `Label ${discogs_id} not found`);
+        status = "error";
+        errorCode = "NOT_FOUND";
+        return toolError("NOT_FOUND", `Label ${discogs_id} not found`, { tool: "get_label", requestId });
       }
-      return toolResult({ label });
+      return toolResult({ label }, { tool: "get_label", requestId });
     } catch (err: any) {
       console.error("[mcp] get_label error:", err);
-      return toolError("INTERNAL_ERROR", "Internal server error");
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_label", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_label", status, Date.now() - started, errorCode);
     }
   },
 );
@@ -205,16 +340,26 @@ server.tool(
     discogs_id: z.number().int().min(1).describe("Discogs master release ID"),
   },
   async ({ discogs_id }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
     try {
       const { batchId, dumpDate } = await getBatchInfo();
       const master = await getMaster(db, discogs_id, batchId, dumpDate);
       if (!master) {
-        return toolError("NOT_FOUND", `Master ${discogs_id} not found`);
+        status = "error";
+        errorCode = "NOT_FOUND";
+        return toolError("NOT_FOUND", `Master ${discogs_id} not found`, { tool: "get_master", requestId });
       }
-      return toolResult({ master });
+      return toolResult({ master }, { tool: "get_master", requestId });
     } catch (err: any) {
       console.error("[mcp] get_master error:", err);
-      return toolError("INTERNAL_ERROR", "Internal server error");
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_master", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_master", status, Date.now() - started, errorCode);
     }
   },
 );
@@ -232,16 +377,26 @@ server.tool(
     discogs_id: z.number().int().min(1).describe("Discogs release ID"),
   },
   async ({ discogs_id }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
     try {
       const { batchId, dumpDate } = await getBatchInfo();
       const release = await getRelease(db, discogs_id, batchId, dumpDate);
       if (!release) {
-        return toolError("NOT_FOUND", `Release ${discogs_id} not found`);
+        status = "error";
+        errorCode = "NOT_FOUND";
+        return toolError("NOT_FOUND", `Release ${discogs_id} not found`, { tool: "get_release", requestId });
       }
-      return toolResult({ release });
+      return toolResult({ release }, { tool: "get_release", requestId });
     } catch (err: any) {
       console.error("[mcp] get_release error:", err);
-      return toolError("INTERNAL_ERROR", "Internal server error");
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_release", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_release", status, Date.now() - started, errorCode);
     }
   },
 );
@@ -272,6 +427,10 @@ server.tool(
     cursor: z.string().optional().describe("Pagination cursor from previous response"),
   },
   async ({ link_type, discogs_id, limit, cursor }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
     try {
       const { batchId, dumpDate } = await getBatchInfo();
 
@@ -285,14 +444,26 @@ server.tool(
 
       const handler = handlers[link_type];
       if (!handler) {
-        return toolError("INVALID_REQUEST", `Unknown link_type: ${link_type}`);
+        status = "error";
+        errorCode = "INVALID_REQUEST";
+        return toolError("INVALID_REQUEST", `Unknown link_type: ${link_type}`, {
+          tool: "traverse_links",
+          requestId,
+        });
       }
 
       const result = await handler();
-      return toolResult(result);
+      return toolResult(result, { tool: "traverse_links", requestId });
     } catch (err: any) {
       console.error(`[mcp] traverse_links error (${link_type}):`, err);
-      return toolError("INTERNAL_ERROR", "Internal server error");
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", {
+        tool: "traverse_links",
+        requestId,
+      });
+    } finally {
+      logToolInvocation(requestId, "traverse_links", status, Date.now() - started, errorCode);
     }
   },
 );
@@ -302,6 +473,7 @@ server.tool(
 // ---------------------------------------------------------------------------
 
 const app = express();
+app.use(rateLimitMiddleware);
 
 // One transport instance per SSE connection.
 const transports = new Map<string, SSEServerTransport>();

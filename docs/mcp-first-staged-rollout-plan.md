@@ -188,3 +188,31 @@ NO-GO if:
 - Any unannounced breaking contract change
 - Sustained timeout/error spikes without mitigation
 - On-call/incident process not keeping up
+
+---
+
+## Stage 1 Implementation Snapshot (2026-03-05)
+
+Implemented in `apps/mcp/src/server.ts`:
+- Structured MCP tool logs (`mcp_tool_invocation`) with:
+  - `request_id`
+  - `tool`
+  - `status`
+  - `elapsed_ms`
+  - `error_code`
+- Key + IP rate limiting on `/sse` and `/messages`
+  - Env vars:
+    - `MCP_REQUIRE_API_KEY` (default `false`)
+    - `MCP_RATE_LIMIT_WINDOW_MS` (default `60000`)
+    - `MCP_RATE_LIMIT_IP` (default `120`)
+    - `MCP_RATE_LIMIT_KEY` (default `600`)
+- Additive MCP response metadata:
+  - `_mcp.request_id`
+  - `_mcp.tool`
+  - `_mcp.contract_version` (`v1-alpha`)
+  - `_mcp.server_version`
+  - `_mcp.timestamp`
+
+Validation updates:
+- `apps/mcp/src/__tests__/tools-contract.test.ts` now validates `_mcp` metadata.
+- `apps/mcp/src/smoke-test.ts` checks `_mcp` presence on success/error responses.
