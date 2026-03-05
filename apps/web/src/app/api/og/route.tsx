@@ -8,31 +8,11 @@ const TYPE_LABELS: Record<string, string> = {
   label: "Label",
 };
 
-// Cache font data at module level so it's fetched once per cold start
-let fontCache: ArrayBuffer | null = null;
-
-async function loadFont(): Promise<ArrayBuffer | null> {
-  if (fontCache) return fontCache;
-  try {
-    const res = await fetch(
-      "https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.ttf",
-    );
-    if (!res.ok) return null;
-    fontCache = await res.arrayBuffer();
-    return fontCache;
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const title = searchParams.get("title") || "Dig";
   const type = searchParams.get("type") || "";
   const badge = TYPE_LABELS[type] || "";
-
-  const fontData = await loadFont();
-  const fontFamily = fontData ? "Playfair Display" : "Georgia";
 
   return new ImageResponse(
     (
@@ -44,88 +24,55 @@ export async function GET(req: NextRequest) {
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "#0d0a07",
+          backgroundColor: "#ffffff",
           padding: "60px 80px",
           position: "relative",
         }}
       >
-        {/* Accent line at top */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "4px",
-            backgroundColor: "#8b5e3c",
-          }}
-        />
-
-        {/* Type badge */}
         {badge && (
           <div
             style={{
               position: "absolute",
               top: "40px",
               left: "60px",
-              color: "#8b5e3c",
+              color: "#666666",
               fontSize: "18px",
-              fontFamily: "sans-serif",
-              letterSpacing: "3px",
+              fontFamily: "serif",
               textTransform: "uppercase",
+              letterSpacing: "2px",
             }}
           >
             {badge}
           </div>
         )}
 
-        {/* Title */}
         <div
           style={{
-            color: "#f2ece0",
+            color: "#000000",
             fontSize: title.length > 40 ? "48px" : "64px",
-            fontFamily,
+            fontFamily: "serif",
             textAlign: "center",
-            lineHeight: 1.2,
+            lineHeight: 1.3,
             maxWidth: "900px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
           }}
         >
           {title}
         </div>
 
-        {/* Site name */}
         <div
           style={{
             position: "absolute",
             bottom: "40px",
             right: "60px",
-            color: "#a89070",
+            color: "#999999",
             fontSize: "20px",
-            fontFamily: "sans-serif",
-            letterSpacing: "2px",
+            fontFamily: "serif",
           }}
         >
           dig.baby
         </div>
       </div>
     ),
-    {
-      width: 1200,
-      height: 630,
-      ...(fontData
-        ? {
-            fonts: [
-              {
-                name: "Playfair Display",
-                data: fontData,
-                style: "normal" as const,
-                weight: 400 as const,
-              },
-            ],
-          }
-        : {}),
-    },
+    { width: 1200, height: 630 },
   );
 }

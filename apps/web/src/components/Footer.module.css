@@ -1,6 +1,5 @@
 .footer {
-  background: var(--black);
-  padding: 40px;
+  padding: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -8,35 +7,27 @@
 }
 
 .logo {
-  font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--warm-mid);
+  color: var(--fg-faint);
 }
 
 .note {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: rgba(184, 176, 160, 0.3);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--fg-faint);
 }
 
 .note a {
-  color: inherit;
-  text-decoration: none;
+  color: var(--fg-faint);
 }
 
 .note a:hover {
-  color: var(--warm-mid);
-  text-decoration: none;
+  color: var(--fg-muted);
 }
 
 @media (max-width: 768px) {
   .footer {
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     text-align: center;
   }
 }

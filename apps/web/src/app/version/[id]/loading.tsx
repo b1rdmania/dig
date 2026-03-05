@@ -10,7 +10,6 @@ export default function VersionLoading() {
             width: 200,
             height: 200,
             flexShrink: 0,
-            borderRadius: "var(--radius)",
             background: "var(--surface)",
             border: "1px solid var(--line)",
           }}

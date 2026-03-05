@@ -1,5 +1,5 @@
 .hero {
-  padding: 1.5rem 0;
+  padding: 1rem 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -19,7 +19,6 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--radius);
   border: 1px solid var(--line);
 }
 
@@ -28,11 +27,10 @@
   height: 100%;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--warm-mid);
+  color: var(--fg-faint);
 }
 
 .vinylIcon {
@@ -74,77 +72,66 @@
 }
 
 .title {
-  font-family: var(--font-heading);
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   line-height: 1.2;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3rem;
 }
 
 .artists {
-  font-size: 1.1rem;
-  color: var(--cream);
-  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  color: var(--fg);
+  margin-bottom: 0.5rem;
 }
 
 .artistLink {
-  color: var(--accent-light);
+  color: var(--link);
 }
 
 .details {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--warm-mid);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  gap: 0.3rem 0.8rem;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
 }
 
 .detail {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.75rem;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
 }
 
 .tag {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--warm-mid);
+  font-size: 0.7rem;
+  color: var(--fg-muted);
   border: 1px solid var(--line);
-  padding: 0.15rem 0.5rem;
+  padding: 0.1rem 0.4rem;
   border-radius: 2px;
 }
 
 .links {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-top: 0.9rem;
+  gap: 0.8rem;
+  margin-top: 0.6rem;
 }
 
 .labelLink {
-  color: var(--warm-mid);
-  transition: color 0.15s;
+  color: var(--link);
 }
 
 .labelLink:hover {
-  color: var(--accent-light);
+  color: var(--link);
 }
 
 .link {
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--accent-light);
+  font-size: 0.75rem;
+  color: var(--link);
 }

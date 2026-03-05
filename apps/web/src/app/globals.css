@@ -1,22 +1,28 @@
 :root {
-  --black: #0d0a07;
-  --off-white: #f2ece0;
-  --cream: #e8dfc8;
-  --warm-mid: #a89070;
-  --accent: #8b5e3c;
-  --accent-light: #a8703f;
-  --groove: #160f08;
-  --line: rgba(168, 144, 112, 0.22);
-  --surface: #1a1510;
-  --surface-raised: #231d15;
-  --danger: #c0392b;
-
-  --font-heading: "Playfair Display", serif;
-  --font-mono: "DM Mono", monospace;
-  --font-body: "DM Sans", sans-serif;
-
+  --bg: #fff;
+  --fg: #000;
+  --fg-muted: #666;
+  --fg-faint: #999;
+  --line: #ccc;
+  --surface: #f5f5f5;
+  --link: #0000EE;
+  --link-visited: #551A8B;
   --radius: 4px;
   --max-width: 720px;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111;
+    --fg: #e0e0e0;
+    --fg-muted: #999;
+    --fg-faint: #666;
+    --line: #333;
+    --surface: #1a1a1a;
+    --link: #6e9eff;
+    --link-visited: #b89aff;
+  }
 }
 
 *,
@@ -29,41 +35,28 @@
 
 html {
   font-size: 16px;
-  scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
 body {
-  font-family: var(--font-body);
-  font-weight: 300;
-  background: var(--black);
-  color: var(--off-white);
+  font-family: "Times New Roman", Times, serif;
+  background: var(--bg);
+  color: var(--fg);
   line-height: 1.6;
   min-height: 100dvh;
-  overflow-x: hidden;
-}
-
-/* Grain overlay — matches marketing site (body::before) */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.4;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
 }
 
 a {
-  color: var(--accent-light);
-  text-decoration: none;
+  color: var(--link);
 }
 
 a:hover {
   text-decoration: underline;
+}
+
+a:visited {
+  color: var(--link-visited);
 }
 
 input,
@@ -73,24 +66,13 @@ button {
   font-size: inherit;
 }
 
-/* Main content area */
 main {
-  padding: 100px 40px 60px;
+  padding: 60px 20px 40px;
   min-height: calc(100vh - 120px);
 }
 
 @media (max-width: 768px) {
   main {
-    padding: 80px 20px 40px;
-  }
-}
-
-/* Skeleton animation */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
+    padding: 56px 16px 32px;
   }
 }

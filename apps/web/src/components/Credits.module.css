@@ -1,41 +1,36 @@
 .section {
-  padding: 1rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid var(--line);
 }
 
 .heading {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--warm-mid);
-  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--fg-muted);
+  margin-bottom: 0.4rem;
 }
 
 .group {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .role {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--accent);
-  margin-bottom: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: var(--fg-muted);
+  margin-bottom: 0.15rem;
 }
 
 .names {
   font-size: 0.85rem;
-  color: var(--cream);
+  color: var(--fg);
   line-height: 1.5;
 }
 
 .artistLink {
-  color: var(--cream);
-  transition: color 0.15s;
+  color: var(--link);
 }
 
 .artistLink:hover {
-  color: var(--accent-light);
+  color: var(--link);
 }

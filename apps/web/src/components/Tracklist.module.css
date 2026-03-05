@@ -1,15 +1,13 @@
 .section {
-  padding: 1rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid var(--line);
 }
 
 .heading {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--warm-mid);
-  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--fg-muted);
+  margin-bottom: 0.4rem;
 }
 
 .track {
@@ -24,15 +22,14 @@
   display: grid;
   grid-template-columns: 2.5rem 1fr auto;
   gap: 0.5rem;
-  padding: 0.4rem 0;
+  padding: 0.3rem 0;
   align-items: baseline;
   font-size: 0.9rem;
 }
 
 .position {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--warm-mid);
+  font-size: 0.8rem;
+  color: var(--fg-muted);
 }
 
 .title {
@@ -42,29 +39,25 @@
 }
 
 .duration {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--warm-mid);
+  font-size: 0.8rem;
+  color: var(--fg-muted);
 }
 
 .credits {
-  padding: 0 0 0.45rem 2.5rem;
+  padding: 0 0 0.3rem 2.5rem;
 }
 
 .creditRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15rem 0.4rem;
-  padding: 0.1rem 0;
+  gap: 0.1rem 0.3rem;
+  padding: 0.05rem 0;
   align-items: baseline;
 }
 
 .creditRole {
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.04em;
-  color: var(--warm-mid);
-  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--fg-muted);
   flex-shrink: 0;
 }
 
@@ -73,17 +66,16 @@
 }
 
 .creditNames {
-  font-size: 0.74rem;
-  color: var(--cream);
+  font-size: 0.8rem;
+  color: var(--fg);
 }
 
 .creditLink {
-  color: var(--cream);
-  transition: color 0.15s;
+  color: var(--link);
 }
 
 .creditLink:hover {
-  color: var(--accent-light);
+  color: var(--link);
 }
 
 @media (max-width: 480px) {
@@ -94,7 +86,7 @@
   }
 
   .position {
-    font-size: 0.68rem;
+    font-size: 0.72rem;
   }
 
   .credits {
@@ -107,6 +99,6 @@
   }
 
   .creditNames {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
   }
 }

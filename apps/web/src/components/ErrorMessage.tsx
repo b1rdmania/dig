@@ -17,18 +17,15 @@ export function ErrorMessage({
       {code && (
         <p
           style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.65rem",
-            color: "var(--danger)",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
+            fontSize: "0.75rem",
+            color: "red",
             marginBottom: "0.5rem",
           }}
         >
           {code}
         </p>
       )}
-      <p style={{ color: "var(--cream)", fontSize: "0.95rem" }}>{message}</p>
+      <p style={{ color: "var(--fg)", fontSize: "0.95rem" }}>{message}</p>
     </div>
   );
 }

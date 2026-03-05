@@ -12,9 +12,8 @@ export function Empty({ message }: { message?: string }) {
     >
       <p
         style={{
-          fontFamily: "var(--font-heading)",
           fontSize: "1.2rem",
-          color: "var(--warm-mid)",
+          color: "var(--fg-muted)",
         }}
       >
         {message}

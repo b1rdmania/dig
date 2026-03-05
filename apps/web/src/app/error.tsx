@@ -16,11 +16,8 @@ export default function Error({
         <button
           onClick={reset}
           style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.7rem",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-            color: "var(--accent-light)",
+            fontSize: "0.8rem",
+            color: "var(--link)",
             background: "var(--surface)",
             border: "1px solid var(--line)",
             borderRadius: "var(--radius)",

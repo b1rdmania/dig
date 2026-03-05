@@ -1,15 +1,13 @@
 .section {
-  padding: 1.1rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid var(--line);
 }
 
 .heading {
-  font-family: var(--font-mono);
-  color: var(--warm-mid);
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  margin-bottom: 0.7rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--fg-muted);
+  margin-bottom: 0.5rem;
 }
 
 .grid {
@@ -33,10 +31,9 @@
 .embed {
   position: relative;
   aspect-ratio: 16 / 9;
-  border-radius: var(--radius, 6px);
   overflow: hidden;
   border: 1px solid var(--line);
-  background: var(--surface, #111);
+  background: var(--surface);
   cursor: pointer;
 }
 
@@ -53,19 +50,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
-  transition: background 0.15s;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .embed:hover .playOverlay {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .playIcon {
   width: 48px;
   height: 48px;
   color: rgba(255, 255, 255, 0.9);
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
 }
 
 .iframe {
@@ -75,9 +70,9 @@
 }
 
 .videoTitle {
-  margin-top: 0.3rem;
-  font-size: 0.72rem;
-  color: var(--warm-mid);
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--fg-muted);
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -85,35 +80,31 @@
 }
 
 .moreList {
-  margin-top: 0.6rem;
+  margin-top: 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.2rem;
 }
 
 .moreLink {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  color: var(--warm-mid);
+  font-size: 0.75rem;
+  color: var(--link);
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .moreLink:hover {
-  color: var(--accent-light);
+  color: var(--link);
 }
 
 .showMore {
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--accent-light);
+  font-size: 0.7rem;
+  color: var(--link);
   border: 1px solid var(--line);
   border-radius: 2px;
-  padding: 0.16rem 0.55rem;
+  padding: 0.1rem 0.4rem;
   background: transparent;
   cursor: pointer;
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
 }

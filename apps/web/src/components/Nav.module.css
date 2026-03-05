@@ -4,57 +4,44 @@
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 20px 40px;
+  padding: 8px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 18px;
-}
-
-.nav::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(10, 10, 10, 0.9) 0%, transparent 100%);
-  z-index: -1;
+  gap: 12px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
 }
 
 .left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
 .backBtn {
-  border: 1px solid rgba(168, 144, 112, 0.35);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(20, 16, 12, 0.8);
-  color: var(--warm-mid);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 8px 10px;
+  background: #fff;
+  color: var(--fg);
+  font-size: 11px;
+  padding: 4px 8px;
   cursor: pointer;
 }
 
 .backBtn:hover {
-  color: var(--off-white);
-  border-color: var(--accent);
+  background: var(--surface);
 }
 
 .logo {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--warm-mid);
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--fg);
   text-decoration: none;
 }
 
 .logo:hover {
-  color: var(--off-white);
   text-decoration: none;
 }
 
@@ -62,119 +49,106 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  width: min(460px, 45vw);
+  width: min(400px, 40vw);
 }
 
 .searchInput {
   width: 100%;
-  min-width: 120px;
-  padding: 8px 10px;
-  border: 1px solid rgba(168, 144, 112, 0.35);
+  min-width: 100px;
+  padding: 4px 8px;
+  border: 1px solid var(--fg);
   border-radius: var(--radius);
-  background: rgba(242, 236, 224, 0.08);
-  color: var(--off-white);
-  font-family: var(--font-body);
+  background: #fff;
+  color: var(--fg);
   font-size: 14px;
-  font-weight: 300;
   outline: none;
   -webkit-appearance: none;
   appearance: none;
 }
 
 .searchInput:focus {
-  border-color: var(--accent);
+  border-color: var(--fg);
 }
 
 .searchInput::placeholder {
-  color: var(--warm-mid);
-  opacity: 0.7;
+  color: var(--fg-faint);
 }
 
 .searchBtn {
   flex-shrink: 0;
-  border: 1px solid rgba(168, 144, 112, 0.35);
+  border: 1px solid var(--fg);
   border-radius: var(--radius);
-  background: rgba(139, 94, 60, 0.2);
-  color: var(--off-white);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 8px 10px;
+  background: #fff;
+  color: var(--fg);
+  font-size: 11px;
+  padding: 4px 8px;
   cursor: pointer;
 }
 
 .searchBtn:hover {
-  border-color: var(--accent);
-  background: rgba(139, 94, 60, 0.32);
+  background: var(--surface);
 }
 
 .links {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   list-style: none;
   flex-shrink: 0;
 }
 
 .link {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--warm-mid);
-  text-decoration: none;
-  transition: color 0.2s;
+  font-size: 12px;
+  color: var(--link);
+  text-decoration: underline;
 }
 
 .link:hover {
-  color: var(--off-white);
-  text-decoration: none;
+  color: var(--link);
 }
 
 .linkActive {
-  color: var(--off-white);
+  font-weight: bold;
 }
 
 @media (max-width: 768px) {
   .nav {
-    padding: 16px 20px;
-    gap: 10px;
-  }
-
-  .left {
+    padding: 8px 12px;
     gap: 8px;
   }
 
+  .left {
+    gap: 6px;
+  }
+
   .backBtn {
-    padding: 7px 8px;
-    font-size: 9px;
+    padding: 3px 6px;
+    font-size: 10px;
   }
 
   .searchForm {
-    width: min(280px, 52vw);
+    width: min(220px, 45vw);
     gap: 4px;
   }
 
   .searchInput {
-    padding: 7px 8px;
+    padding: 3px 6px;
     font-size: 13px;
-    min-width: 88px;
+    min-width: 80px;
   }
 
   .searchBtn {
-    padding: 7px 8px;
-    font-size: 9px;
+    padding: 3px 6px;
+    font-size: 10px;
   }
 
   .links {
-    gap: 10px;
+    gap: 8px;
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    max-width: 36vw;
+    max-width: 30vw;
   }
 
   .link {
-    font-size: 9px;
+    font-size: 10px;
     white-space: nowrap;
   }
 }

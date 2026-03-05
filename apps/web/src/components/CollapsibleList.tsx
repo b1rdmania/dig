@@ -21,14 +21,11 @@ export function CollapsibleList({ children, maxVisible = 8, className }: Props) 
       <button
         onClick={() => setExpanded(!expanded)}
         style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "0.58rem",
-          letterSpacing: "0.05em",
-          textTransform: "uppercase" as const,
-          color: "var(--accent-light)",
+          fontSize: "0.7rem",
+          color: "var(--link)",
           border: "1px solid var(--line)",
           borderRadius: "2px",
-          padding: "0.16rem 0.55rem",
+          padding: "0.15rem 0.5rem",
           background: "transparent",
           cursor: "pointer",
         }}

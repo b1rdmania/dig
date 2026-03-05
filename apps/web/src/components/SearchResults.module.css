@@ -5,58 +5,50 @@
 }
 
 .meta {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--warm-mid);
-  padding: 0.5rem 0;
-  letter-spacing: 0.04em;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  padding: 0.4rem 0;
 }
 
 .degraded {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: var(--accent);
-  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  padding: 0.2rem 0.4rem;
   background: var(--surface);
   border-radius: var(--radius);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   display: inline-block;
 }
 
 .collapsed {
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  color: var(--warm-mid);
-  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  margin-top: 0.25rem;
 }
 
 .section {
-  margin-top: 1.4rem;
+  margin-top: 1rem;
 }
 
 .sectionHeading {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--warm-mid);
-  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--fg-muted);
+  margin-bottom: 0.3rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .sectionCount {
-  font-size: 0.58rem;
-  opacity: 0.8;
-  padding: 0.1rem 0.35rem;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.3rem;
   border: 1px solid var(--line);
   border-radius: 999px;
 }
 
 .overflow {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: var(--warm-mid);
-  padding: 0.4rem 0;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  padding: 0.3rem 0;
 }

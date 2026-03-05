@@ -1,5 +1,5 @@
 .section {
-  padding: 1.05rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -7,22 +7,13 @@
   height: 0.66rem;
   width: 30%;
   margin-bottom: 0.6rem;
-  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-raised) 50%, var(--surface) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  background: var(--surface);
   border-radius: var(--radius);
 }
 
 .line {
   height: 0.9rem;
   margin-bottom: 0.4rem;
-  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-raised) 50%, var(--surface) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  background: var(--surface);
   border-radius: var(--radius);
-}
-
-@keyframes shimmer {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
 }
