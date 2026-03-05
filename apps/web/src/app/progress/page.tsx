@@ -178,7 +178,7 @@ export default function ProgressPage() {
         <div className={styles.sectionHead}>
           <h2 className={styles.sectionTitle}>Dig vs Discogs API</h2>
           <div className={styles.sectionSub}>
-            Run 9 (live, 2026-03-05) — Both over internet, full 18.9M releases, p50 latency
+            Run 9 (live, 2026-03-05) — Sequential, throttled to Discogs 60 req/min limit
           </div>
         </div>
         <div className={styles.chartLegend}>
@@ -242,6 +242,12 @@ export default function ProgressPage() {
             </div>
             <div className={styles.scorecardKey}>Categories Dig wins</div>
           </div>
+        </div>
+        <div className={styles.notes}>
+          Queries run sequentially, paced at 1.1s between requests to stay within Discogs&apos;s 60 req/min authenticated limit.
+          Dig was idle during each throttle window — latency figures reflect single-connection p50, not burst capacity.
+          Under real concurrent load (see stress test below), Dig handles 56 req/s at c100 with 0 errors.
+          Discogs would rate-limit immediately at that volume.
         </div>
       </section>
 
