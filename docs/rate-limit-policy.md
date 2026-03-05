@@ -11,20 +11,16 @@ Locked for Phase 3 public alpha. Changes require discussion + version bump.
 
 ## MCP Beta Guardrail Policy (Week 1)
 
-Anonymous MCP traffic is intentionally stricter than REST:
+Anonymous MCP traffic is intentionally stricter than REST for initial launch. No API key is required for MCP in this phase.
 
 | Tier | Identifier | Limit | Window |
 |------|-----------|-------|--------|
 | MCP Anonymous | Client IP | 10 req/min | Fixed |
 | MCP Anonymous | Client IP | 50 req/day | Fixed |
-| MCP Keyed | `X-API-Key` header | 300 req/min | Fixed |
-| MCP Keyed | `X-API-Key` header | 10,000 req/day | Fixed |
 
 Control env vars (in `fly.mcp.toml`):
 - `MCP_ANON_PER_MIN` (default `10`)
 - `MCP_ANON_PER_DAY` (default `50`)
-- `MCP_KEY_PER_MIN` (default `300`)
-- `MCP_KEY_PER_DAY` (default `10000`)
 - `MCP_SPEND_PCT` (default `0`)
 - `MCP_BETA_CAPACITY_MODE` (`on|off`, default `off`)
 
@@ -58,6 +54,8 @@ All `/v1/` responses include:
 ```
 
 ## Key Management (Phase 3)
+
+Note: this section applies to REST and future premium MCP tiers. Initial MCP launch is anonymous-only.
 
 - API keys are stored in `auth.api_keys` table (schema exists in migration 001)
 - Keys are passed via `X-API-Key` header
