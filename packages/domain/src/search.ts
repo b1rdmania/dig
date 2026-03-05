@@ -848,25 +848,28 @@ export async function search(
 
   const broad = isBroadQuery(params);
 
+  const filtersApplied: Record<string, string | number> = {};
+  if (params.genre) filtersApplied.genre = params.genre;
+  if (params.style) filtersApplied.style = params.style;
+  if (params.year !== undefined) filtersApplied.year = params.year;
+  if (params.yearMin !== undefined) filtersApplied.year_min = params.yearMin;
+  if (params.yearMax !== undefined) filtersApplied.year_max = params.yearMax;
+  if (params.country) filtersApplied.country = params.country;
+
+  const types: SearchEntityType[] = params.type
+    ? [params.type]
+    : ["artist", "label", "master", "release"];
+
+  // Resolve per-entity-type batches BEFORE the pinned connection so the
+  // expensive EXISTS scan (cold cache on 18.9M rows) is not subject to
+  // the 3s statement_timeout. Results are cached in-memory for 60s.
+  const batchMap = await getBatchMap(db, types);
+
   // Use a single connection with statement_timeout to enforce per-query time limits.
   return await db.connection().execute(async (conn) => {
     await sql`SET statement_timeout = '3s'`.execute(conn);
 
     try {
-      const filtersApplied: Record<string, string | number> = {};
-      if (params.genre) filtersApplied.genre = params.genre;
-      if (params.style) filtersApplied.style = params.style;
-      if (params.year !== undefined) filtersApplied.year = params.year;
-      if (params.yearMin !== undefined) filtersApplied.year_min = params.yearMin;
-      if (params.yearMax !== undefined) filtersApplied.year_max = params.yearMax;
-      if (params.country) filtersApplied.country = params.country;
-
-      const types: SearchEntityType[] = params.type
-        ? [params.type]
-        : ["artist", "label", "master", "release"];
-
-      // Resolve per-entity-type batches (cached in map for this request)
-      const batchMap = await getBatchMap(conn, types);
 
       // Multi-type: cap per-type to prevent one type flooding results.
       // Single-type: use full limit.
