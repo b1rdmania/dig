@@ -24,6 +24,7 @@ Every new module gets at least one test. Parser code gets golden fixtures. Retri
 - DB types and migrations go in `@dig/db`
 - App-specific code stays in its app
 - No circular dependencies between packages
+- Dependency boundary rule: app code (`apps/api`, `apps/ingest`, `apps/mcp`, `apps/web`) must import DB helpers (`sql`, `createDb`, `Database`) from `@dig/db`, not directly from `kysely`. Direct `kysely` imports in app packages can compile locally but fail in runtime images where `kysely` is not a direct app dependency.
 
 ### 6. Ask when uncertain
 If a decision could go either way and isn't covered by the plan, ask the human rather than guessing. Especially for:

@@ -117,3 +117,9 @@ If one changes and others do not, work is considered incomplete.
 | Frontend | https://app.dig.baby (pending DNS) / https://web-eight-navy-21.vercel.app |
 | Marketing | https://dig.baby |
 | GitHub | https://github.com/b1rdmania/dig |
+
+## 8) Recent Runtime Gotcha (Do Not Repeat)
+
+- API startup failure occurred when `apps/api` imported `sql` from `kysely` directly.
+- Fix: import `sql` from `@dig/db` in app code.
+- Rule: keep `kysely` usage behind `@dig/db` exports for app packages.
