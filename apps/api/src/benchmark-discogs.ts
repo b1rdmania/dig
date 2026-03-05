@@ -105,26 +105,38 @@ function percentile(sorted: number[], p: number): number {
   return sorted[Math.max(0, idx)];
 }
 
+function buildOAuthHeader(consumerKey: string, consumerSecret: string): string {
+  const nonce = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  return `OAuth oauth_consumer_key="${consumerKey}", oauth_nonce="${nonce}", oauth_signature="${consumerSecret}%26", oauth_signature_method="PLAINTEXT", oauth_timestamp="${timestamp}", oauth_version="1.0"`;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   let token = "";
+  let consumerKey = "";
+  let consumerSecret = "";
   let digUrl = "http://localhost:3002";
   let runs = 2;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--token" && args[i + 1]) token = args[++i];
+    if (args[i] === "--consumer-key" && args[i + 1]) consumerKey = args[++i];
+    if (args[i] === "--consumer-secret" && args[i + 1]) consumerSecret = args[++i];
     if (args[i] === "--dig-url" && args[i + 1]) digUrl = args[++i];
     if (args[i] === "--runs" && args[i + 1]) runs = parseInt(args[++i], 10);
   }
 
-  if (!token) {
-    console.error("Usage: npx tsx apps/api/src/benchmark-discogs.ts --token YOUR_DISCOGS_TOKEN");
+  if (!token && !(consumerKey && consumerSecret)) {
+    console.error("Usage: npx tsx apps/api/src/benchmark-discogs.ts --token TOKEN  OR  --consumer-key KEY --consumer-secret SECRET");
     process.exit(1);
   }
 
-  const discogsHeaders = {
-    "Authorization": `Discogs token=${token}`,
-    "User-Agent": "DigBenchmark/1.0",
+  const discogsHeaders: Record<string, string> = {
+    "Authorization": consumerKey
+      ? buildOAuthHeader(consumerKey, consumerSecret)
+      : `Discogs token=${token}`,
+    "User-Agent": "DigBenchmark/1.0 +https://dig.baby",
   };
 
   console.log(`\n🔍 Dig vs Discogs Search Benchmark`);
@@ -154,6 +166,11 @@ async function main() {
 
       // Throttle before Discogs
       await sleep(THROTTLE_MS);
+
+      // Rebuild OAuth header per-request (fresh nonce + timestamp required)
+      if (consumerKey) {
+        discogsHeaders["Authorization"] = buildOAuthHeader(consumerKey, consumerSecret);
+      }
 
       // Run Discogs
       const discogs = await fetchTimed(`${DISCOGS_BASE}${q.discogsPath}`, discogsHeaders);
