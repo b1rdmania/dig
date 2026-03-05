@@ -103,8 +103,8 @@ export default function AboutPage() {
           <a href="https://github.com/b1rdmania/dig" target="_blank" rel="noreferrer" className={styles.extLink}>
             GitHub
           </a>
-          <a href="https://x.com/baborelux" target="_blank" rel="noreferrer" className={styles.extLink}>
-            @baborelux on X
+          <a href="https://x.com/b1rdmania" target="_blank" rel="noreferrer" className={styles.extLink}>
+            @b1rdmania on X
           </a>
           <a href="https://dig-api.fly.dev/v1/health" target="_blank" rel="noreferrer" className={styles.extLink}>
             API health
@@ -114,7 +114,7 @@ export default function AboutPage() {
 
       <footer className={styles.footer}>
         <p className={styles.footerNote}>
-          Built by <a href="https://x.com/baborelux" target="_blank" rel="noreferrer">birdmania</a>.
+          Built by <a href="https://x.com/b1rdmania" target="_blank" rel="noreferrer">b1rdmania</a>.
           The music tool agents reach for. And the one humans actually wanted.
         </p>
       </footer>

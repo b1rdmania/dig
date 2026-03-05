@@ -78,4 +78,4 @@ The API, MCP server, and web frontend are all live. See the [build log](https://
 
 ---
 
-Built by [@baborelux](https://x.com/baborelux)
+Built by [@b1rdmania](https://x.com/b1rdmania)
