@@ -276,3 +276,58 @@ No-Go if:
 - Schema/canonical errors unresolved
 - DB/API regressions appear
 - Cohort contains high thin-page ratio
+
+## 19. Additions from Marketing Brief (Kept)
+
+These items from the broader marketing brief are explicitly included:
+
+1. AI SEO posture:
+- Keep factual opening paragraphs near top of artist/release/label pages.
+- Keep source attribution visible ("Data from Discogs CC0").
+- Keep structured page hierarchy and semantic headings.
+
+2. Schema validation workflow:
+- Validate representative URL set with:
+  - Google Rich Results Test
+  - Schema.org validator
+- Capture pass/fail logs before each cohort expansion.
+
+3. Breadcrumb schema:
+- Add `BreadcrumbList` JSON-LD on all entity pages in Wave 1.
+
+4. Search Console operations:
+- Submit sitemap index + entity-partition sitemaps.
+- Track index coverage and enhancement warnings weekly.
+
+## 20. Deferred from Marketing Brief (Post-v1 Backlog)
+
+These are good ideas but intentionally deferred until v1 stability:
+
+1. Full 115k+ indexation target.
+2. Genre hub pages and broad browse surfaces.
+3. Editorial content cadence (guides/spotlights/data stories).
+4. Social calendar execution.
+5. Competitor comparison landing pages.
+6. Expanded AI citation benchmarking beyond baseline manual checks.
+
+Reason: these increase content and crawl surface area and should follow after technical quality and SLO stability are proven.
+
+## 21. Current Stack Reality (for Implementation)
+
+Use these assumptions for execution:
+
+1. App architecture:
+- Next.js App Router (not Pages Router)
+
+2. Route semantics:
+- `/release` = canonical album/master view
+- `/version` = pressing/edition view
+
+3. Runtime/deploy:
+- Primary production app/API/MCP are on Fly.io
+- Single shared production data environment
+
+4. Data source:
+- Discogs CC0 canonical catalog already ingested
+
+Any plan that assumes `/album` as primary route or Vercel as primary app host must be treated as a separate migration decision, not part of SEO v1.
