@@ -1,0 +1,162 @@
+.page {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 20px 0 40px;
+}
+
+.hero {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-faint);
+  margin-bottom: 8px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: normal;
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+
+.title em {
+  font-style: italic;
+}
+
+.lede {
+  color: var(--fg-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--fg-muted);
+}
+
+.optional {
+  font-weight: normal;
+  color: var(--fg-faint);
+}
+
+.select,
+.input,
+.textarea {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.6rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+}
+
+.select:focus,
+.input:focus,
+.textarea:focus {
+  border-color: var(--fg);
+}
+
+.select {
+  cursor: pointer;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.textarea::placeholder,
+.input::placeholder {
+  color: var(--fg-faint);
+}
+
+.submit {
+  align-self: flex-start;
+  background: var(--fg);
+  color: var(--bg);
+  border: 1px solid var(--fg);
+  border-radius: var(--radius);
+  padding: 0.5rem 1.2rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.submit:not(:disabled):hover {
+  opacity: 0.85;
+}
+
+.errorNote {
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+}
+
+.errorNote a {
+  color: var(--link);
+}
+
+/* Success state */
+.success {
+  padding: 24px 0;
+}
+
+.successTitle {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.successNote {
+  font-size: 0.9rem;
+  color: var(--fg-muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.resetBtn {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--fg-muted);
+  font-size: 0.8rem;
+  font-family: inherit;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+}
+
+.resetBtn:hover {
+  background: var(--surface);
+}
