@@ -1,0 +1,440 @@
+.page {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 20px 0 40px;
+}
+
+.hero {
+  margin-bottom: 32px;
+}
+
+.eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-faint);
+  margin-bottom: 8px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: normal;
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+
+.lede {
+  color: var(--fg-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.metaItem {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+
+.metaKey {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-faint);
+  margin-bottom: 4px;
+}
+
+.metaVal {
+  font-size: 13px;
+}
+
+.metaVal a {
+  color: var(--link);
+}
+
+/* Roadmap pills */
+.roadmapPills {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotDone {
+  background: #4a4;
+}
+
+.dotWarn {
+  background: #ca3;
+}
+
+.dotInfo {
+  background: #68c;
+}
+
+.pillLabel {
+  flex: 1;
+}
+
+.pillState {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+}
+
+/* Sections */
+.section {
+  margin-top: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.sectionHead {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: normal;
+}
+
+.sectionSub {
+  font-size: 12px;
+  color: var(--fg-faint);
+}
+
+/* Stats grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+
+.stat {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+
+.statKey {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-faint);
+}
+
+.statVal {
+  font-size: 20px;
+  margin-top: 4px;
+}
+
+.statNote {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* Tables */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-top: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.table th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-faint);
+  background: var(--surface);
+}
+
+.badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--fg-muted);
+  display: inline-block;
+}
+
+.badgePass {
+  color: #4a4;
+  border-color: #4a4;
+}
+
+.badgeWarn {
+  color: #ca3;
+  border-color: #ca3;
+}
+
+/* Scorecard */
+.scorecard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.scorecardItem {
+  text-align: center;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.scorecardVal {
+  font-size: 24px;
+}
+
+.scorecardValGood {
+  color: #4a4;
+}
+
+.scorecardKey {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+  margin-top: 4px;
+}
+
+/* Notes */
+.notes {
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--fg-muted);
+  line-height: 1.5;
+}
+
+.notes code {
+  font-size: 11px;
+  color: var(--fg);
+}
+
+/* Phase blocks */
+.roadmap {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.phase {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.phaseTop {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.phaseName {
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.phaseMeta {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.phaseList {
+  list-style: none;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.phaseList li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.tick {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex: 0 0 16px;
+  margin-top: 1px;
+  color: transparent;
+}
+
+.tickDone {
+  color: #4a4;
+  border-color: #4a4;
+}
+
+.tickProgress {
+  color: #ca3;
+  border-color: #ca3;
+}
+
+/* Comparison chart */
+.chartLegend {
+  display: flex;
+  gap: 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+.legendSwatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.chartRow {
+  display: grid;
+  grid-template-columns: 100px 1fr 70px;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+}
+
+.chartLabel {
+  font-size: 12px;
+}
+
+.chartBars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.chartBarWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chartBarTag {
+  font-size: 10px;
+  color: var(--fg-faint);
+  width: 40px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.chartBar {
+  height: 10px;
+  border-radius: 2px;
+  min-width: 2px;
+}
+
+.chartBarDig {
+  background: var(--link);
+}
+
+.chartBarDiscogs {
+  background: var(--fg-faint);
+}
+
+.chartBarMs {
+  font-size: 10px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.chartWinner {
+  font-size: 10px;
+  text-align: right;
+  letter-spacing: 0.06em;
+}
+
+.chartWinnerGood {
+  color: #4a4;
+}
+
+@media (max-width: 768px) {
+  .metaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .scorecard {
+    grid-template-columns: 1fr;
+  }
+
+  .chartRow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .table th:nth-child(3),
+  .table td:nth-child(3) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}

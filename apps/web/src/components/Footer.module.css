@@ -6,6 +6,12 @@
   border-top: 1px solid var(--line);
 }
 
+.left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .logo {
   font-size: 12px;
   color: var(--fg-faint);
@@ -16,11 +22,17 @@
   color: var(--fg-faint);
 }
 
-.note a {
+.links {
+  display: flex;
+  gap: 16px;
+}
+
+.link {
+  font-size: 11px;
   color: var(--fg-faint);
 }
 
-.note a:hover {
+.link:hover {
   color: var(--fg-muted);
 }
 
