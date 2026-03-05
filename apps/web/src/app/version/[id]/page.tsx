@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { digFetch, ApiRequestError } from "@/lib/api";
 import { isReleaseResponse, type ReleaseResponse } from "@/lib/types";
+import { entityMetadata } from "@/lib/seo";
 import { ReleaseHero } from "@/components/ReleaseHero";
 import { Tracklist } from "@/components/Tracklist";
 import { Credits } from "@/components/Credits";
@@ -18,16 +19,18 @@ interface Props {
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
   try {
-    const data = await digFetch<ReleaseResponse>(`/v1/releases/${id}`, {
-      revalidate: 300,
-    });
+    const data = await digFetch<ReleaseResponse>(`/v1/releases/${id}`, { revalidate: 300 });
     if (!isReleaseResponse(data)) return { title: "Version — Dig" };
     const r = data.release;
     const artist = r.artists[0]?.name || "Unknown";
-    return {
-      title: `${r.title} — ${artist} — Dig`,
-      description: `${r.title} by ${artist}. ${r.genres.join(", ")}. ${r.release_year || ""}`.trim(),
-    };
+    const title = `${r.title} — ${artist}`;
+    const desc = [r.title, "by", artist, r.genres.join(", "), r.release_year ? String(r.release_year) : ""].filter(Boolean).join(". ").trim();
+
+    const coverUrl = await digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${id}/cover`, { revalidate: 3600 })
+      .then((d) => d?.cover?.url ?? null)
+      .catch(() => null);
+
+    return entityMetadata({ title, description: `${desc}.`, path: `/version/${id}`, type: "version", coverUrl });
   } catch {
     return { title: "Version — Dig" };
   }

@@ -28,6 +28,14 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Dig — Music Data Layer",
   description: "Search 24M+ records from the Discogs CC0 dataset",
+  metadataBase: new URL("https://app.dig.baby"),
+  openGraph: {
+    siteName: "Dig",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+  },
 };
 
 export const viewport: Viewport = {

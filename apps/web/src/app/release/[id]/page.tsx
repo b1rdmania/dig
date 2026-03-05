@@ -13,6 +13,7 @@ import {
   type TraversalResponse,
 } from "@/lib/types";
 import { discogsUrl } from "@/lib/format";
+import { entityMetadata } from "@/lib/seo";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Tracklist } from "@/components/Tracklist";
 import { Credits } from "@/components/Credits";
@@ -33,11 +34,22 @@ export async function generateMetadata({ params }: Props) {
     // Try master first
     const data = await digFetch<MasterResponse>(`/v1/masters/${id}`, { revalidate: 300 });
     if (isMasterResponse(data)) {
-      const artist = data.master.artists[0]?.name || "Unknown";
-      return {
-        title: `${data.master.title} — ${artist} — Dig`,
-        description: `${data.master.title} by ${artist}.`,
-      };
+      const m = data.master;
+      const artist = m.artists[0]?.name || "Unknown";
+      const title = `${m.title} — ${artist}`;
+      const parts = [m.title, "by", artist];
+      if (m.genres.length) parts.push(m.genres.join(", "));
+      if (m.year) parts.push(String(m.year));
+
+      // Try to get cover art for OG image
+      let coverUrl: string | null = null;
+      if (m.main_release_discogs_id) {
+        coverUrl = await digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${m.main_release_discogs_id}/cover`, { revalidate: 3600 })
+          .then((d) => d?.cover?.url ?? null)
+          .catch(() => null);
+      }
+
+      return entityMetadata({ title, description: `${parts.join(". ")}.`, path: `/release/${id}`, type: "release", coverUrl });
     }
   } catch {
     // Not a master — try release
@@ -46,10 +58,8 @@ export async function generateMetadata({ params }: Props) {
       if (isReleaseResponse(data)) {
         const r = data.release;
         const artist = r.artists[0]?.name || "Unknown";
-        return {
-          title: `${r.title} — ${artist} — Dig`,
-          description: `${r.title} by ${artist}.`,
-        };
+        const title = `${r.title} — ${artist}`;
+        return entityMetadata({ title, description: `${r.title} by ${artist}.`, path: `/release/${id}`, type: "release" });
       }
     } catch {
       // Fall through

@@ -14,6 +14,7 @@ import {
   type ArtistResponse,
 } from "@/lib/types";
 import { discogsUrl, urlLabel } from "@/lib/format";
+import { entityMetadata } from "@/lib/seo";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
@@ -73,10 +74,7 @@ export async function generateMetadata({ params }: Props) {
   try {
     const data = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 });
     if (!isLabelResponse(data)) return { title: "Label — Dig" };
-    return {
-      title: `${data.label.name} — Dig`,
-      description: `Label page for ${data.label.name}.`,
-    };
+    return entityMetadata({ title: data.label.name, description: `Label page for ${data.label.name}.`, path: `/label/${id}`, type: "label" });
   } catch {
     return { title: "Label — Dig" };
   }

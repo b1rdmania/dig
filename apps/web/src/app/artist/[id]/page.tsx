@@ -16,6 +16,7 @@ import {
   type TimelineEvent,
 } from "@/lib/types";
 import { discogsUrl, urlLabel } from "@/lib/format";
+import { entityMetadata } from "@/lib/seo";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { CollapsibleList } from "@/components/CollapsibleList";
@@ -293,10 +294,9 @@ export async function generateMetadata({ params }: Props) {
   try {
     const data = await digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 });
     if (!isArtistResponse(data)) return { title: "Artist — Dig" };
-    return {
-      title: `${data.artist.name} — Dig`,
-      description: `Artist page for ${data.artist.name}.`,
-    };
+    const a = data.artist;
+    const desc = a.real_name ? `${a.name} (${a.real_name}).` : `Artist page for ${a.name}.`;
+    return entityMetadata({ title: a.name, description: desc, path: `/artist/${id}`, type: "artist" });
   } catch {
     return { title: "Artist — Dig" };
   }
