@@ -28,6 +28,7 @@ import {
   getLabelReleases,
   getMasterReleases,
   getReleaseCredits,
+  getBatchForTable,
   type SearchEntityType,
 } from "@dig/domain";
 import { toolError, toolResult } from "./contracts.js";
@@ -49,17 +50,6 @@ const MCP_BETA_CAPACITY_MODE = process.env.MCP_BETA_CAPACITY_MODE === "on";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Get the current active batch info for provenance */
-async function getBatchInfo(): Promise<{ batchId: string; dumpDate: string }> {
-  const batch = await db
-    .selectFrom("ingest.dump_batches" as any)
-    .select(["id", "dump_date"] as any[])
-    .where("status" as any, "in", ["active", "qa"])
-    .orderBy("created_at" as any, "desc")
-    .executeTakeFirstOrThrow();
-  return { batchId: (batch as any).id, dumpDate: (batch as any).dump_date };
-}
 
 function createRequestId(): string {
   return randomUUID();
@@ -303,7 +293,7 @@ server.tool(
     let status: "ok" | "error" = "ok";
     let errorCode: string | null = null;
     try {
-      const { batchId, dumpDate } = await getBatchInfo();
+      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.artists");
       const artist = await getArtist(db, discogs_id, batchId, dumpDate);
       if (!artist) {
         status = "error";
@@ -339,7 +329,7 @@ server.tool(
     let status: "ok" | "error" = "ok";
     let errorCode: string | null = null;
     try {
-      const { batchId, dumpDate } = await getBatchInfo();
+      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.labels");
       const label = await getLabel(db, discogs_id, batchId, dumpDate);
       if (!label) {
         status = "error";
@@ -375,7 +365,7 @@ server.tool(
     let status: "ok" | "error" = "ok";
     let errorCode: string | null = null;
     try {
-      const { batchId, dumpDate } = await getBatchInfo();
+      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.masters");
       const master = await getMaster(db, discogs_id, batchId, dumpDate);
       if (!master) {
         status = "error";
@@ -412,7 +402,7 @@ server.tool(
     let status: "ok" | "error" = "ok";
     let errorCode: string | null = null;
     try {
-      const { batchId, dumpDate } = await getBatchInfo();
+      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.releases");
       const release = await getRelease(db, discogs_id, batchId, dumpDate);
       if (!release) {
         status = "error";
@@ -462,7 +452,15 @@ server.tool(
     let status: "ok" | "error" = "ok";
     let errorCode: string | null = null;
     try {
-      const { batchId, dumpDate } = await getBatchInfo();
+      const LINK_TABLE: Record<string, string> = {
+        artist_releases: "catalog.release_artists",
+        artist_masters: "catalog.master_artists",
+        label_releases: "catalog.release_labels",
+        master_releases: "catalog.releases",
+        release_credits: "catalog.release_credits",
+      };
+      const table = LINK_TABLE[link_type] ?? "catalog.releases";
+      const { batchId, dumpDate } = await getBatchForTable(db, table);
 
       const handlers: Record<string, () => Promise<any>> = {
         artist_releases: () => getArtistReleases(db, discogs_id, batchId, dumpDate, limit, cursor),

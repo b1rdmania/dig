@@ -2,7 +2,9 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { digFetch, ApiRequestError } from "@/lib/api";
 import { isReleaseResponse, type ReleaseResponse } from "@/lib/types";
-import { entityMetadata } from "@/lib/seo";
+import { entityMetadata, BASE_URL } from "@/lib/seo";
+import { versionJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
+import { JsonLd } from "@/components/JsonLd";
 import { ReleaseHero } from "@/components/ReleaseHero";
 import { Tracklist } from "@/components/Tracklist";
 import { Credits } from "@/components/Credits";
@@ -30,7 +32,10 @@ export async function generateMetadata({ params }: Props) {
       .then((d) => d?.cover?.url ?? null)
       .catch(() => null);
 
-    return entityMetadata({ title, description: desc, path: `/version/${id}`, type: "version", coverUrl, videos: r.videos });
+    const canonical = r.master_discogs_id
+      ? `${BASE_URL}/release/${r.master_discogs_id}`
+      : undefined;
+    return entityMetadata({ title, description: desc, path: `/version/${id}`, type: "version", coverUrl, videos: r.videos, indexable: false, canonical });
   } catch {
     return { title: "Version — dig" };
   }
@@ -66,6 +71,13 @@ export default async function VersionPage({ params }: Props) {
             <p className={styles.copy}>{release.notes}</p>
           </section>
         )}
+        <JsonLd data={[
+          versionJsonLd({ discogs_id: release.discogs_id, title: release.title, release_year: release.release_year, artists: release.artists, genres: release.genres, country: release.country, master_discogs_id: release.master_discogs_id }),
+          breadcrumbJsonLd([
+            { name: "dig", url: BASE_URL },
+            { name: release.title, url: `${BASE_URL}/version/${release.discogs_id}` },
+          ]),
+        ]} />
         <Provenance provenance={release.provenance} />
       </div>
     );

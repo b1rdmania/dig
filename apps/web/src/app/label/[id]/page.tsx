@@ -14,7 +14,9 @@ import {
   type ArtistResponse,
 } from "@/lib/types";
 import { discogsUrl, urlLabel } from "@/lib/format";
-import { entityMetadata } from "@/lib/seo";
+import { entityMetadata, BASE_URL } from "@/lib/seo";
+import { labelJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
+import { JsonLd } from "@/components/JsonLd";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
@@ -152,6 +154,13 @@ export default async function LabelPage({ params }: Props) {
           <LabelDetails id={id} profile={label.profile} urls={label.urls} />
         </Suspense>
 
+        <JsonLd data={[
+          labelJsonLd({ discogs_id: label.discogs_id, name: label.name, urls: label.urls }),
+          breadcrumbJsonLd([
+            { name: "dig", url: BASE_URL },
+            { name: label.name, url: `${BASE_URL}/label/${label.discogs_id}` },
+          ]),
+        ]} />
         <Provenance provenance={label.provenance} />
       </div>
     );

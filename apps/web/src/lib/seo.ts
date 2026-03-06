@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { firstYoutubeThumb } from "./media";
 
-const BASE_URL = "https://app.dig.baby";
+export const BASE_URL = "https://app.dig.baby";
 
 const TYPE_LABELS: Record<string, string> = {
   artist: "Artist page",
@@ -17,11 +17,17 @@ interface EntityMeta {
   type?: "artist" | "release" | "version" | "label";
   coverUrl?: string | null;
   videos?: Array<{ url?: string | null }>;
+  /** Whether search engines should index this page. Defaults to true. */
+  indexable?: boolean;
+  /** Override the canonical URL (e.g. point version pages to parent release). */
+  canonical?: string;
 }
 
 export function entityMetadata(meta: EntityMeta): Metadata {
+  const indexable = meta.indexable ?? true;
   const pageTitle = `${meta.title} — dig`;
   const url = `${BASE_URL}${meta.path}`;
+  const canonicalUrl = meta.canonical ?? url;
   const ogTitle = TYPE_LABELS[meta.type || "release"] || "dig";
 
   // Image priority: cover art > YouTube thumbnail > dynamic OG
@@ -36,6 +42,8 @@ export function entityMetadata(meta: EntityMeta): Metadata {
   return {
     title: pageTitle,
     description: meta.description,
+    alternates: { canonical: canonicalUrl },
+    robots: { index: indexable, follow: true },
     openGraph: {
       title: ogTitle,
       description: meta.description,

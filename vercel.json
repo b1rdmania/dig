@@ -1,5 +1,13 @@
 {
   "buildCommand": "",
   "outputDirectory": ".",
-  "framework": null
+  "framework": null,
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.dig.baby" }],
+      "destination": "https://app.dig.baby/$1",
+      "permanent": true
+    }
+  ]
 }

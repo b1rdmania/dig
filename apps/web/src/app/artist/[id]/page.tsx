@@ -16,7 +16,9 @@ import {
   type TimelineEvent,
 } from "@/lib/types";
 import { discogsUrl, urlLabel } from "@/lib/format";
-import { entityMetadata } from "@/lib/seo";
+import { entityMetadata, BASE_URL } from "@/lib/seo";
+import { musicGroupJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
+import { JsonLd } from "@/components/JsonLd";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { CollapsibleList } from "@/components/CollapsibleList";
@@ -411,6 +413,13 @@ export default async function ArtistPage({ params, searchParams }: Props) {
           />
         </Suspense>
 
+        <JsonLd data={[
+          musicGroupJsonLd({ discogs_id: artist.discogs_id, name: artist.name, urls: artist.urls }),
+          breadcrumbJsonLd([
+            { name: "dig", url: BASE_URL },
+            { name: artist.name, url: `${BASE_URL}/artist/${artist.discogs_id}` },
+          ]),
+        ]} />
         <Provenance provenance={artist.provenance} />
       </div>
     );

@@ -13,7 +13,9 @@ import {
   type TraversalResponse,
 } from "@/lib/types";
 import { discogsUrl } from "@/lib/format";
-import { entityMetadata } from "@/lib/seo";
+import { entityMetadata, BASE_URL } from "@/lib/seo";
+import { musicAlbumJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
+import { JsonLd } from "@/components/JsonLd";
 import { firstYoutubeThumb } from "@/lib/media";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Tracklist } from "@/components/Tracklist";
@@ -160,6 +162,13 @@ export default async function ReleasePage({ params }: Props) {
           <ReleaseVersions id={id} />
         </Suspense>
 
+        <JsonLd data={[
+          musicAlbumJsonLd({ discogs_id: master.discogs_id, title: master.title, year: master.year, artists: master.artists, genres: master.genres }),
+          breadcrumbJsonLd([
+            { name: "dig", url: BASE_URL },
+            { name: master.title, url: `${BASE_URL}/release/${master.discogs_id}` },
+          ]),
+        ]} />
         <Provenance provenance={master.provenance} />
       </div>
     );
