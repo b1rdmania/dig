@@ -11,6 +11,7 @@ export function Footer() {
       <div className={styles.links}>
         <Link href="/about" className={styles.link}>About</Link>
         <Link href="/progress" className={styles.link}>How we built</Link>
+        <Link href="/usage" className={styles.link}>Usage</Link>
         <Link href="/feedback" className={styles.link}>Report a bug</Link>
         <a href="https://github.com/b1rdmania/dig" target="_blank" rel="noreferrer" className={styles.link}>GitHub</a>
       </div>

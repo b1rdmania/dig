@@ -1,7 +1,9 @@
 import { isApiError } from "./types";
+import type { McpUsageSnapshot } from "./types";
 
 const API_URL = process.env.DIG_API_URL || "https://dig-api.fly.dev";
 const API_KEY = process.env.DIG_API_KEY || "";
+const MCP_URL = process.env.DIG_MCP_URL || "https://dig-mcp.fly.dev";
 const TIMEOUT_MS = 10000;
 
 export class ApiRequestError extends Error {
@@ -80,5 +82,23 @@ export async function checkApiHealth(): Promise<boolean> {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+export async function fetchMcpUsage(): Promise<McpUsageSnapshot | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(`${MCP_URL}/usage`, {
+      signal: controller.signal,
+      cache: "no-store",
+      headers: API_KEY ? { "X-API-Key": API_KEY } : {},
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as McpUsageSnapshot;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }

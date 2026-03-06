@@ -7,6 +7,7 @@
  * Privacy: no PII collected. Session IDs are random UUIDs generated client-side.
  */
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { recordTelemetryEvent } from "../../metrics/usage.js";
 
 // Tighter per-IP rate limit for the write path (separate from global read limit).
 // 30 batches/min × 25 events/batch = 750 events/min max per IP.
@@ -96,6 +97,7 @@ export function registerEventRoutes(app: FastifyInstance): void {
         ...flattenProperties(evt.properties),
       }));
 
+      recordTelemetryEvent(evt.event, evt.session_id);
       accepted++;
     }
 

@@ -55,6 +55,11 @@ function createRequestId(): string {
   return randomUUID();
 }
 
+const mcpStartedAt = Date.now();
+let mcpCallsTotal = 0;
+let mcpCallsError = 0;
+const mcpCallsByTool = new Map<string, number>();
+
 function logToolInvocation(
   requestId: string,
   tool: string,
@@ -62,6 +67,10 @@ function logToolInvocation(
   elapsedMs: number,
   errorCode: string | null,
 ) {
+  mcpCallsTotal += 1;
+  if (status === "error") mcpCallsError += 1;
+  mcpCallsByTool.set(tool, (mcpCallsByTool.get(tool) ?? 0) + 1);
+
   console.log(
     JSON.stringify({
       kind: "mcp_tool_invocation",
@@ -73,6 +82,20 @@ function logToolInvocation(
       timestamp: new Date().toISOString(),
     }),
   );
+}
+
+function getMcpUsageSnapshot() {
+  const byTool: Record<string, number> = {};
+  for (const [tool, count] of mcpCallsByTool.entries()) byTool[tool] = count;
+  return {
+    service: "dig-mcp",
+    window: "since_process_start",
+    started_at: new Date(mcpStartedAt).toISOString(),
+    uptime_seconds: Math.floor((Date.now() - mcpStartedAt) / 1000),
+    calls_total: mcpCallsTotal,
+    errors_total: mcpCallsError,
+    calls_by_tool: byTool,
+  };
 }
 
 type RateCounter = {
@@ -502,6 +525,10 @@ server.tool(
 
 const app = express();
 app.use(rateLimitMiddleware);
+
+app.get("/usage", (_req, res) => {
+  res.json(getMcpUsageSnapshot());
+});
 
 // One transport instance per SSE connection.
 const transports = new Map<string, SSEServerTransport>();

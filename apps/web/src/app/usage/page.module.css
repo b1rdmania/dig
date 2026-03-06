@@ -1,0 +1,119 @@
+.page {
+  width: min(1040px, 92vw);
+  margin: 0 auto;
+  padding: 5.5rem 0 5rem;
+}
+
+.hero {
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--warm-mid);
+  margin: 0 0 0.8rem;
+}
+
+.title {
+  margin: 0;
+  color: var(--off-white);
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4.5vw, 3.6rem);
+  line-height: 0.98;
+}
+
+.lede {
+  margin: 1rem 0 0;
+  color: var(--cream);
+  line-height: 1.6;
+  max-width: 72ch;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  padding: 1rem;
+  background: rgba(20, 14, 10, 0.55);
+}
+
+.label {
+  margin: 0 0 0.45rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  color: var(--warm-mid);
+}
+
+.value {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 1.65rem;
+  color: var(--off-white);
+}
+
+.sub {
+  margin: 0.45rem 0 0;
+  color: var(--warm-mid);
+  font-size: 0.9rem;
+}
+
+.section {
+  border-top: 1px solid var(--line);
+  padding-top: 1.2rem;
+  margin-top: 1.4rem;
+}
+
+.section h2 {
+  margin: 0 0 0.8rem;
+  color: var(--off-white);
+  font-size: 1.22rem;
+  font-family: var(--font-serif);
+}
+
+.list {
+  display: grid;
+  gap: 0.48rem;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  border-bottom: 1px dashed rgba(168, 144, 112, 0.2);
+  padding-bottom: 0.35rem;
+}
+
+.row dt {
+  margin: 0;
+  color: var(--cream);
+}
+
+.row dd {
+  margin: 0;
+  color: var(--off-white);
+  font-family: var(--font-mono);
+}
+
+.note {
+  margin-top: 1.4rem;
+  color: var(--warm-mid);
+  font-size: 0.9rem;
+}
+
+.warn {
+  margin-top: 1rem;
+  color: #f6b47f;
+  font-size: 0.94rem;
+}

@@ -23,6 +23,8 @@ import { registerCoverRoutes } from "./routes/v1/covers.js";
 import { registerEventRoutes } from "./routes/v1/events.js";
 import { registerEnrichmentRoutes } from "./routes/v1/enrichment.js";
 import { registerSeoRoutes } from "./routes/v1/seo.js";
+import { registerUsageRoutes } from "./routes/v1/usage.js";
+import { recordApiRequest } from "./metrics/usage.js";
 
 export interface AppDeps {
   databaseUrl: string;
@@ -140,6 +142,13 @@ export async function buildApp(deps: AppDeps): Promise<{
       ip: req.ip,
       api_key: apiKey ? apiKey.slice(0, 8) + "..." : null,
     }));
+
+    recordApiRequest({
+      category: category as "search" | "retrieval" | "traversal" | "telemetry" | "health" | "other",
+      route,
+      status,
+      elapsedMs: Math.round(elapsed),
+    });
   });
 
   // --- Global error handler ---
@@ -191,6 +200,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerEventRoutes(app);
   registerEnrichmentRoutes(app, db);
   registerSeoRoutes(app, db);
+  registerUsageRoutes(app);
 
   return { app, db };
 }

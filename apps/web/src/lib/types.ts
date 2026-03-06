@@ -404,3 +404,36 @@ export function isApiError(data: unknown): data is ApiError {
   const d = data as Record<string, unknown>;
   return d.error !== undefined && typeof d.error === "object";
 }
+
+// Usage
+export interface ApiUsageSnapshot {
+  service: "dig-api";
+  window: string;
+  started_at: string;
+  uptime_seconds: number;
+  requests_total: number;
+  errors_total: number;
+  requests_by_category: Record<string, number>;
+  telemetry_events_total: number;
+  telemetry_by_event: Record<string, number>;
+  unique_sessions_estimate: number;
+}
+
+export interface ApiUsageSnapshotInternal extends ApiUsageSnapshot {
+  routes: Array<{
+    route: string;
+    count: number;
+    errors: number;
+    avg_ms: number;
+  }>;
+}
+
+export interface McpUsageSnapshot {
+  service: "dig-mcp";
+  window: string;
+  started_at: string;
+  uptime_seconds: number;
+  calls_total: number;
+  errors_total: number;
+  calls_by_tool: Record<string, number>;
+}
