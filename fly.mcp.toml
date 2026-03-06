@@ -14,7 +14,7 @@ primary_region = "iad"
   PORT = "3001"
   NODE_ENV = "production"
   MCP_ANON_PER_MIN = "20"
-  MCP_ANON_PER_DAY = "50"
+  MCP_ANON_PER_DAY = "100"
   MCP_SPEND_PCT = "0"
   MCP_BETA_CAPACITY_MODE = "off"
 
