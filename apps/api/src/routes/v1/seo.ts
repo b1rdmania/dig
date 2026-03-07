@@ -77,18 +77,18 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
         `.execute(db);
         ids = result.rows.map((r) => r.discogs_id);
       } else {
+        // EXISTS + LIMIT 1 uses idx_release_labels_batch_label; avoids full GROUP BY scan.
         const result = await sql<{ discogs_id: number }>`
           SELECT l.discogs_id
           FROM catalog.labels l
-          INNER JOIN (
-            SELECT label_discogs_id
-            FROM catalog.release_labels
-            WHERE batch_id = ${batchId}::uuid
-            GROUP BY label_discogs_id
-            HAVING COUNT(*) >= 5
-          ) rl ON l.discogs_id = rl.label_discogs_id
           WHERE l.batch_id = ${batchId}::uuid
             AND l.name NOT IN ('Not On Label', 'Unknown', 'Various')
+            AND EXISTS (
+              SELECT 1 FROM catalog.release_labels rl
+              WHERE rl.label_discogs_id = l.discogs_id
+                AND rl.batch_id = ${batchId}::uuid
+              LIMIT 1
+            )
           ORDER BY l.discogs_id ASC
           LIMIT ${limit}
         `.execute(db);

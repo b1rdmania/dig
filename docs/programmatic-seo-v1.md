@@ -331,3 +331,30 @@ Use these assumptions for execution:
 - Discogs CC0 canonical catalog already ingested
 
 Any plan that assumes `/album` as primary route or Vercel as primary app host must be treated as a separate migration decision, not part of SEO v1.
+
+---
+
+## Progress Log
+
+### Week 1 — 2026-03-06 ✅ COMPLETE
+
+- Canonical + robots meta on all entity pages
+- JSON-LD structured data: MusicGroup (artist), MusicAlbum (release), Organization (label), BreadcrumbList (all)
+- Version pages: `noindex, follow` + canonical → parent `/release/:master_id`
+- `robots.ts` pointing to `/sitemap-index.xml`
+
+### Week 2 — 2026-03-06/07 ✅ COMPLETE
+
+- `/v1/seo/cohort` API endpoint with quality filters (artists 5k, releases 20k, labels 2k)
+- Partitioned sitemaps: `sitemap-index.xml`, `sitemap-artists.xml`, `sitemap-releases.xml`, `sitemap-labels.xml`
+- Cohort query optimization: migrations `012` + `013` added 4 composite indexes; labels query rewritten (95s → 1.3s, releases 24s → 0.7s)
+- Validation report: `docs/week2-validation-report.md` — 20 URLs sampled, 0 critical errors
+- Baseline metrics: `docs/week2-baseline-metrics.md` — all expansion gates PASS
+- www.dig.baby redirect: `vercel.json` rule + `index.html` instant JS redirect
+
+### Pending (your action)
+
+- Submit `https://app.dig.baby/sitemap-index.xml` to Google Search Console
+- DNS: CNAME `www → cname.vercel-dns.com` + Vercel domain alias for `www.dig.baby`
+- Wave 1 observation window: 5–7 days post-GSC submission
+- Wave 2 proposal: conditional on gate pass evidence
