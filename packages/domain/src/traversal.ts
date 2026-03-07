@@ -4,6 +4,7 @@
  * Supported links:
  * - artist → releases (via release_artists)
  * - artist → masters (via master_artists)
+ * - artist → credits (via release_credits + track_credits)
  * - label → releases (via release_labels)
  * - master → releases (via releases.master_discogs_id)
  * - release → credits (via release_credits)
@@ -495,6 +496,214 @@ export async function getReleaseCredits(
     meta: {
       source_type: "release",
       source_discogs_id: releaseDiscogsId,
+      link_type: "credits",
+      elapsed_ms: Date.now() - start,
+    },
+  };
+}
+
+// ─── Role-family classifier ───────────────────────────────────────────────────
+
+export type RoleFamily = "writing" | "arranging" | "performance" | "production" | "other";
+
+const ROLE_FAMILY_PATTERNS: Array<{ family: RoleFamily; patterns: RegExp[] }> = [
+  { family: "writing",     patterns: [/writ/i, /compos/i, /lyric/i, /author/i] },
+  { family: "arranging",   patterns: [/arrang/i, /orchestrat/i, /conduct/i, /direct/i] },
+  { family: "performance", patterns: [/perform/i, /vocals?/i, /guitar/i, /bass/i, /drums?/i, /keys/i, /piano/i, /trumpet/i, /saxophone/i, /violin/i, /voice/i, /singer/i, /rapper/i, /dj/i, /turntabl/i, /instrum/i] },
+  { family: "production",  patterns: [/produc/i, /remix/i, /mix/i, /master/i, /engineer/i, /record/i, /studio/i, /program/i] },
+];
+
+export function classifyRoleFamily(role: string | null): RoleFamily {
+  if (!role) return "other";
+  for (const { family, patterns } of ROLE_FAMILY_PATTERNS) {
+    if (patterns.some((p) => p.test(role))) return family;
+  }
+  return "other";
+}
+
+// ─── Artist credits response shape ───────────────────────────────────────────
+
+export interface ArtistCreditLink {
+  release_discogs_id: number;
+  title: string | null;
+  year: number | null;
+  country: string | null;
+  roles: string[];
+  role_count: number;
+  credit_source: "release" | "track" | "both";
+  role_family: RoleFamily;
+  provenance: { source: "discogs"; dump_date: string; discogs_id: number };
+}
+
+export interface ArtistCreditsResponse {
+  links: ArtistCreditLink[];
+  pagination: {
+    cursor: string | null;
+    has_more: boolean;
+    total_estimate: number | null;
+  };
+  meta: {
+    source_type: "artist";
+    source_discogs_id: number;
+    link_type: "credits";
+    elapsed_ms: number;
+  };
+}
+
+// ─── getArtistCredits ─────────────────────────────────────────────────────────
+
+export async function getArtistCredits(
+  db: Kysely<Database>,
+  artistDiscogsId: number,
+  batchId: string,
+  dumpDate: string,
+  limit = DEFAULT_LIMIT,
+  cursor?: string,
+  roleFamily?: RoleFamily | "all",
+): Promise<ArtistCreditsResponse> {
+  const start = Date.now();
+  const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
+  const afterId = cursor ? decodeCursor(cursor) : null;
+
+  // Fetch release-level credits
+  const releaseCreditRows = await sql<{
+    release_discogs_id: number;
+    role: string | null;
+    title: string | null;
+    year: number | null;
+    country: string | null;
+  }>`
+    SELECT
+      rc.release_discogs_id,
+      rc.role,
+      r.title,
+      r.release_year AS year,
+      r.country
+    FROM catalog.release_credits rc
+    LEFT JOIN catalog.releases r
+      ON r.discogs_id = rc.release_discogs_id
+      AND r.batch_id = ${batchId}::uuid
+    WHERE rc.artist_discogs_id = ${artistDiscogsId}
+      AND rc.batch_id = ${batchId}::uuid
+      ${afterId !== null ? sql`AND rc.release_discogs_id > ${afterId}` : sql``}
+    ORDER BY rc.release_discogs_id ASC
+  `.execute(db);
+
+  // Fetch track-level credits (join to tracks to get release_discogs_id)
+  const trackCreditRows = await sql<{
+    release_discogs_id: number;
+    role: string | null;
+    title: string | null;
+    year: number | null;
+    country: string | null;
+  }>`
+    SELECT
+      t.release_discogs_id,
+      tc.role,
+      r.title,
+      r.release_year AS year,
+      r.country
+    FROM catalog.track_credits tc
+    JOIN catalog.tracks t
+      ON t.id = tc.track_id
+      AND t.batch_id = ${batchId}::uuid
+    LEFT JOIN catalog.releases r
+      ON r.discogs_id = t.release_discogs_id
+      AND r.batch_id = ${batchId}::uuid
+    WHERE tc.artist_discogs_id = ${artistDiscogsId}
+      AND tc.batch_id = ${batchId}::uuid
+      ${afterId !== null ? sql`AND t.release_discogs_id > ${afterId}` : sql``}
+    ORDER BY t.release_discogs_id ASC
+  `.execute(db);
+
+  // Merge and group by release_discogs_id
+  type MergedEntry = {
+    title: string | null;
+    year: number | null;
+    country: string | null;
+    releaseRoles: Set<string>;
+    trackRoles: Set<string>;
+  };
+
+  const byRelease = new Map<number, MergedEntry>();
+
+  for (const row of releaseCreditRows.rows) {
+    if (!byRelease.has(row.release_discogs_id)) {
+      byRelease.set(row.release_discogs_id, {
+        title: row.title,
+        year: row.year,
+        country: row.country,
+        releaseRoles: new Set(),
+        trackRoles: new Set(),
+      });
+    }
+    if (row.role) byRelease.get(row.release_discogs_id)!.releaseRoles.add(row.role);
+  }
+
+  for (const row of trackCreditRows.rows) {
+    if (!byRelease.has(row.release_discogs_id)) {
+      byRelease.set(row.release_discogs_id, {
+        title: row.title,
+        year: row.year,
+        country: row.country,
+        releaseRoles: new Set(),
+        trackRoles: new Set(),
+      });
+    }
+    if (row.role) byRelease.get(row.release_discogs_id)!.trackRoles.add(row.role);
+  }
+
+  // Build sorted link list
+  let allLinks: ArtistCreditLink[] = Array.from(byRelease.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([releaseId, entry]) => {
+      const roles = Array.from(new Set([...entry.releaseRoles, ...entry.trackRoles]));
+      const creditSource: "release" | "track" | "both" =
+        entry.releaseRoles.size > 0 && entry.trackRoles.size > 0
+          ? "both"
+          : entry.releaseRoles.size > 0
+          ? "release"
+          : "track";
+      // Dominant role family: first non-"other" wins, else "other"
+      let dominantFamily: RoleFamily = "other";
+      for (const r of roles) {
+        const f = classifyRoleFamily(r);
+        if (f !== "other") { dominantFamily = f; break; }
+      }
+      return {
+        release_discogs_id: releaseId,
+        title: entry.title,
+        year: entry.year,
+        country: entry.country,
+        roles,
+        role_count: roles.length,
+        credit_source: creditSource,
+        role_family: dominantFamily,
+        provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: releaseId },
+      };
+    });
+
+  // Apply role_family filter in JS (dataset bounded per artist)
+  if (roleFamily && roleFamily !== "all") {
+    allLinks = allLinks.filter((l) => l.role_family === roleFamily);
+  }
+
+  // Paginate
+  const hasMore = allLinks.length > lim;
+  const page = hasMore ? allLinks.slice(0, lim) : allLinks;
+
+  return {
+    links: page,
+    pagination: {
+      cursor: hasMore && page.length > 0
+        ? encodeCursor(page[page.length - 1].release_discogs_id)
+        : null,
+      has_more: hasMore,
+      total_estimate: allLinks.length,
+    },
+    meta: {
+      source_type: "artist",
+      source_discogs_id: artistDiscogsId,
       link_type: "credits",
       elapsed_ms: Date.now() - start,
     },

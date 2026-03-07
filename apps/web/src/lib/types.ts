@@ -230,6 +230,43 @@ export interface MasterVideosResponse {
   };
 }
 
+// Artist credits
+export type RoleFamily = "writing" | "arranging" | "performance" | "production" | "other";
+
+export interface ArtistCreditLink {
+  release_discogs_id: number;
+  title: string | null;
+  year: number | null;
+  country: string | null;
+  roles: string[];
+  role_count: number;
+  credit_source: "release" | "track" | "both";
+  role_family: RoleFamily;
+  provenance: Provenance;
+}
+
+export interface ArtistCreditsResponse {
+  links: ArtistCreditLink[];
+  pagination: Pagination;
+  meta: {
+    source_type: "artist";
+    source_discogs_id: number;
+    link_type: "credits";
+    elapsed_ms: number;
+  };
+}
+
+export function isArtistCreditsResponse(data: unknown): data is ArtistCreditsResponse {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "links" in data &&
+    Array.isArray((data as any).links) &&
+    "meta" in data &&
+    (data as any).meta?.link_type === "credits"
+  );
+}
+
 // Enrichment
 export interface EnrichmentProvenance {
   source: string;

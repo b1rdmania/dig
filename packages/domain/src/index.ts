@@ -38,12 +38,17 @@ export {
   getMasterVideos,
   getReleaseCredits,
   classifyReleaseType,
+  classifyRoleFamily,
+  getArtistCredits,
   type TraversalResponse,
   type TraversalLink,
   type MasterVideosResponse,
   type MasterVideo,
   type ReleaseType,
   type ReleaseTypeLabel,
+  type RoleFamily,
+  type ArtistCreditLink,
+  type ArtistCreditsResponse,
 } from "./traversal.js";
 export {
   getArtistRelationships,

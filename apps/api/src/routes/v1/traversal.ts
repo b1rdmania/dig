@@ -4,16 +4,19 @@ import type { Database } from "@dig/db";
 import {
   getArtistReleases,
   getArtistMasters,
+  getArtistCredits,
   getLabelReleases,
   getMasterReleases,
   getMasterVideos,
   getReleaseCredits,
   getBatchForTable,
+  type RoleFamily,
 } from "@dig/domain";
 
 type TraversalScope =
   | "artist_releases"
   | "artist_masters"
+  | "artist_credits"
   | "label_releases"
   | "master_releases"
   | "master_videos"
@@ -22,11 +25,14 @@ type TraversalScope =
 const SCOPE_TABLE: Record<TraversalScope, string> = {
   artist_releases: "catalog.release_artists",
   artist_masters: "catalog.master_artists",
+  artist_credits: "catalog.release_credits",
   label_releases: "catalog.release_labels",
   master_releases: "catalog.releases",
   master_videos: "catalog.release_videos",
   release_credits: "catalog.release_credits",
 };
+
+const VALID_ROLE_FAMILIES = ["writing", "arranging", "performance", "production", "other", "all"] as const;
 
 function getTraversalBatchInfo(db: Kysely<Database>, scope: TraversalScope) {
   return getBatchForTable(db, SCOPE_TABLE[scope]);
@@ -111,6 +117,22 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
     const rawLimit = parseInt(String((req.query as any)?.limit ?? "200"), 10);
     const limit = Number.isNaN(rawLimit) ? 200 : Math.min(Math.max(rawLimit, 1), 500);
     return reply.send(await getMasterVideos(db, discogsId, batchId, dumpDate, limit));
+  });
+
+  app.get("/v1/artists/:discogs_id/credits", async (req, reply) => {
+    const discogsId = parseDiscogsId((req.params as any).discogs_id);
+    if (!discogsId) {
+      return reply.status(400).send({
+        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
+      });
+    }
+    const { batchId, dumpDate } = await getTraversalBatchInfo(db, "artist_credits");
+    const { limit, cursor } = parseTraversalQuery(req.query as any);
+    const roleFamilyRaw = (req.query as any).role_family as string | undefined;
+    const roleFamily = VALID_ROLE_FAMILIES.includes(roleFamilyRaw as any)
+      ? (roleFamilyRaw as RoleFamily | "all")
+      : "all";
+    return reply.send(await getArtistCredits(db, discogsId, batchId, dumpDate, limit, cursor, roleFamily));
   });
 
   app.get("/v1/releases/:discogs_id/credits", async (req, reply) => {
