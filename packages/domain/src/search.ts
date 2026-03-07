@@ -24,6 +24,7 @@ import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import type { Database } from "@dig/db";
 import { getBatchForTable } from "./batch.js";
+import { getSuppressedEntityKeys } from "./quality.js";
 
 export type SearchEntityType = "artist" | "label" | "master" | "release";
 
@@ -38,6 +39,8 @@ export interface SearchParams {
   country?: string;
   limit?: number;
   cursor?: string;
+  /** Quality filter. Default 'active' hides low-signal/invalid entities. Use 'all' for admin/debug. */
+  quality?: "active" | "all";
 }
 
 export interface SearchResult {
@@ -982,6 +985,20 @@ export async function search(
             continue;
           }
           throw err;
+        }
+      }
+
+      // Quality filter: remove suppressed/invalid/low_value entities from results.
+      // Fail-open: entities with no quality row pass through (backfill may not be complete).
+      // Bypass with quality=all for admin/debug purposes.
+      if ((params.quality ?? "active") === "active" && allResults.length > 0) {
+        try {
+          const suppressed = await getSuppressedEntityKeys(conn, allResults);
+          if (suppressed.size > 0) {
+            allResults = allResults.filter(r => !suppressed.has(`${r.type}:${r.discogs_id}`));
+          }
+        } catch {
+          // Quality table may not exist yet (before migration) — fail open, don't suppress anything
         }
       }
 

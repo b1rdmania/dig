@@ -51,6 +51,13 @@ export {
   type ArtistCreditsResponse,
 } from "./traversal.js";
 export {
+  classifyEntityQuality,
+  getSuppressedEntityKeys,
+  QUALITY_VERSION,
+  type QualityStatus,
+  type QualityScore,
+} from "./quality.js";
+export {
   getArtistRelationships,
   getArtistContext,
   getArtistTimeline,

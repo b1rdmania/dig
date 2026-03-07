@@ -309,6 +309,18 @@ export interface TrackCreditsTable {
 
 // --- Enrich ---
 
+export interface EnrichEntityQualityTable {
+  entity_type: "artist" | "label" | "master" | "release";
+  discogs_id: number;
+  batch_id: string;
+  quality_status: "active" | "low_value" | "suppressed" | "invalid" | "orphan";
+  quality_reason: string;
+  quality_version: number;
+  quality_scored_at: Date;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 export interface EnrichLabelLinkoutsTable {
   id: Generated<number>;
   discogs_label_id: number;
@@ -377,5 +389,6 @@ export interface Database {
   "catalog.track_credits": TrackCreditsTable;
 
   // Enrich
+  "enrich.entity_quality": EnrichEntityQualityTable;
   "enrich.label_linkouts": EnrichLabelLinkoutsTable;
 }
