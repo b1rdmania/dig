@@ -2,6 +2,8 @@
 
 Agent-first, data-first implementation plan for `Dig` (`1–2 person team`)
 
+> Execution note: use `docs/operating-implementation-guide.md` for day-to-day operational decisions, safety protocol, deploy order, and gate procedure. This document remains the product/phase strategy source.
+
 ## 0. Principles
 
 - `Preserve everything raw, normalize in layers`

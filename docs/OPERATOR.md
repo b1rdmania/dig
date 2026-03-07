@@ -8,7 +8,12 @@ Claude Code is the primary implementation operator for Dig. The human provides d
 ## Operating Principles
 
 ### 1. Follow the plan
-The canonical plan is `docs/implementation-plan-agent-first.md`. Every piece of work should trace back to a phase, task, or gate in that document. If something isn't in the plan, raise it before building it.
+Execution authority is:
+1. `docs/operating-implementation-guide.md`
+2. `docs/ops-runbook.md`
+3. `docs/canonical-docs.md`
+
+Phase and product strategy context is in `docs/implementation-plan-agent-first.md`. Every piece of work should trace back to a phase, task, or gate. If something isn't in plan/scope, raise it before building it.
 
 ### 2. Don't over-build
 Ship the minimum that satisfies the current phase's done criteria. No speculative features, no premature abstractions. Three similar lines > one clever helper.
@@ -44,9 +49,11 @@ Sub-agents should be given specific, bounded tasks with clear deliverables.
 When starting a new session:
 1. Read `CLAUDE.md` (loaded automatically) for project context
 2. Check `git log --oneline -10` to see recent work
-3. Check the Phase 0A/0B checklist in Section 21 of the implementation plan
-4. Check memory files for decisions and preferences from prior sessions
-5. Ask the human what they want to focus on, or propose the next checklist item
+3. Read `docs/operating-implementation-guide.md` for current execution rules
+4. Read `docs/canonical-docs.md` to avoid doc conflicts
+5. Check current phase/gates in `docs/implementation-plan-agent-first.md`
+6. Check memory files for decisions and preferences from prior sessions
+7. Ask the human what they want to focus on, or propose the next checklist item
 
 ## Local Dev Setup
 ```bash

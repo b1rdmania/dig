@@ -1,7 +1,12 @@
 # Dig — Claude Code Project Guide
 
 ## What is this?
-Dig is a music data layer and search platform built on the Discogs CC0 catalog. REST API + MCP for agents, mobile-first search UI for humans. See the [implementation plan](docs/implementation-plan-agent-first.md) for the full system plan.
+Dig is a music data layer and search platform built on the Discogs CC0 catalog. REST API + MCP for agents, mobile-first search UI for humans.
+
+Execution authority:
+- `docs/operating-implementation-guide.md` (day-to-day operating rules)
+- `docs/ops-runbook.md` (incident and deploy procedure)
+- `docs/canonical-docs.md` (doc precedence map)
 
 ## Architecture
 - **Monorepo** (pnpm workspaces): `apps/` and `packages/`
@@ -125,6 +130,8 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 | `traverse_links` | Navigate entity graph (5 link types) |
 
 ## Important References
+- [Operating Guide](docs/operating-implementation-guide.md) — canonical execution workflow
+- [Canonical Docs Map](docs/canonical-docs.md) — doc precedence and usage
 - [Implementation Plan](docs/implementation-plan-agent-first.md) — canonical build plan
 - [Quickstart](docs/quickstart.md) — API + MCP reference with curl examples
 - [Response Contracts](docs/phase2-response-contracts.md) — locked JSON shapes
