@@ -56,18 +56,9 @@ export async function generateMetadata({ params }: Props) {
       return entityMetadata({ title, description: desc, path: `/release/${id}`, type: "release", coverUrl, videos: m.videos });
     }
   } catch {
-    // Not a master — try release
-    try {
-      const data = await digFetch<ReleaseResponse>(`/v1/releases/${id}`, { revalidate: 300 });
-      if (isReleaseResponse(data)) {
-        const r = data.release;
-        const artist = r.artists[0]?.name || "Unknown";
-        const title = `${r.title} — ${artist}`;
-        return entityMetadata({ title, description: `${r.title} by ${artist}`, path: `/release/${id}`, type: "release", videos: r.videos });
-      }
-    } catch {
-      // Fall through
-    }
+    // Not a master — page component will redirect to /version/:id.
+    // Do not commit metadata here: if head content is streamed before the
+    // redirect fires, Next.js cannot send a 307 and returns a partial 200.
   }
   return { title: "Release — dig" };
 }
