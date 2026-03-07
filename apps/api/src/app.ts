@@ -25,6 +25,7 @@ import { registerEnrichmentRoutes } from "./routes/v1/enrichment.js";
 import { registerSeoRoutes } from "./routes/v1/seo.js";
 import { registerUsageRoutes } from "./routes/v1/usage.js";
 import { recordApiRequest } from "./metrics/usage.js";
+import { registerAskRoutes } from "./routes/v1/ask.js";
 
 export interface AppDeps {
   databaseUrl: string;
@@ -201,6 +202,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerEnrichmentRoutes(app, db);
   registerSeoRoutes(app, db);
   registerUsageRoutes(app);
+  registerAskRoutes(app, db);
 
   return { app, db };
 }
