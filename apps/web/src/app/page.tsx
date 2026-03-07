@@ -78,9 +78,6 @@ export default async function SearchPage({ searchParams }: Props) {
           Dig.
         </h1>
       )}
-      <div style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--muted)", margin: "0 auto 1rem", maxWidth: 420 }}>
-        database upgrade in progress — search will be back in around one hour
-      </div>
       <Suspense>
         <IncrementalSearchWrapper>
           <SearchContent searchParams={resolved} />
