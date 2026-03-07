@@ -13,6 +13,7 @@ This file defines which document to use for what.
 2. `docs/enrichment-implementation-plan.md`
 3. `docs/seo-staged-roadmap.md`
 4. `docs/mcp-first-staged-rollout-plan.md`
+5. `docs/better-than-discogs-track.md` (active quality improvement stream)
 
 ## Contracts and Policies
 
