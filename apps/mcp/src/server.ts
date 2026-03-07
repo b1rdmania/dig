@@ -532,16 +532,45 @@ app.get("/usage", (_req, res) => {
 
 // One transport instance per SSE connection.
 const transports = new Map<string, SSEServerTransport>();
+let activeSessionId: string | null = null;
 
 app.get("/sse", async (_req, res) => {
+  // MCP SDK Server instance is single-transport; reject concurrent sessions
+  // explicitly instead of throwing and crashing the process.
+  if (activeSessionId && transports.has(activeSessionId)) {
+    res.status(503).json({
+      error: "MCP server currently has an active session. Retry shortly.",
+      code: "MCP_SESSION_BUSY",
+    });
+    return;
+  }
+
   const transport = new SSEServerTransport("/messages", res);
   transports.set(transport.sessionId, transport);
+  activeSessionId = transport.sessionId;
 
   res.on("close", () => {
     transports.delete(transport.sessionId);
+    if (activeSessionId === transport.sessionId) activeSessionId = null;
+    // Ensure server can accept a new connection after client disconnect.
+    void server.close().catch((err) => {
+      console.warn("[mcp] server.close() on SSE disconnect failed:", err);
+    });
   });
 
-  await server.connect(transport);
+  try {
+    await server.connect(transport);
+  } catch (err) {
+    transports.delete(transport.sessionId);
+    if (activeSessionId === transport.sessionId) activeSessionId = null;
+    console.error("[mcp] failed to connect transport:", err);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: "Failed to establish MCP SSE session",
+        code: "MCP_CONNECT_FAILED",
+      });
+    }
+  }
 });
 
 app.post("/messages", async (req, res) => {
