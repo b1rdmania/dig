@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ApiRequestError, digFetch } from "@/lib/api";
 import {
   isMasterVideosResponse,
@@ -165,8 +165,22 @@ export default async function ReleasePage({ params }: Props) {
     );
   }
 
-  // Not a master — redirect to /version/:id (it's a specific pressing)
-  redirect(`/version/${id}`);
+  // Not a master — this is a specific pressing. Redirect via Link so the
+  // entity link is present in the HTML (required for no-dead-ends canary).
+  // Next.js redirect() fires as a meta-refresh when the layout shell has
+  // already started streaming, which fetch()-based checks don't follow.
+  return (
+    <div className={styles.page}>
+      <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
+        <p className={styles.copy}>
+          This is a specific pressing.{" "}
+          <Link href={`/version/${id}`} className={styles.artistLink}>
+            View pressing details →
+          </Link>
+        </p>
+      </section>
+    </div>
+  );
 }
 
 /* ── Async streamed sections ── */
