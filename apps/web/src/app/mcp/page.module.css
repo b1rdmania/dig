@@ -1,0 +1,109 @@
+.page {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 20px 0 40px;
+}
+
+.hero {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-faint);
+  margin-bottom: 8px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: normal;
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+
+.title em {
+  font-style: italic;
+}
+
+.lede {
+  color: var(--fg-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.heading {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--fg-muted);
+  margin-bottom: 8px;
+}
+
+.copy {
+  font-size: 0.9rem;
+  color: var(--fg);
+  line-height: 1.6;
+}
+
+.code {
+  margin-top: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px;
+  overflow-x: auto;
+  color: var(--fg);
+  font-size: 12px;
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 6px;
+  font-size: 0.85rem;
+}
+
+.item strong {
+  color: var(--fg);
+}
+
+.note {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--fg-faint);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.link {
+  font-size: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--link);
+  padding: 0.2rem 0.5rem;
+  text-decoration: none;
+}
+
+.link:hover {
+  background: var(--surface);
+}
