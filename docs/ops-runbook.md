@@ -78,6 +78,17 @@ fly deploy --image registry.fly.io/dig-api:<deployment-id> --config fly.api.toml
 curl -s https://dig-api.fly.dev/v1/health | jq
 ```
 
+### Unified regression smoke (read-only)
+
+Run the cross-surface smoke after deploys or before gate closeout:
+
+```bash
+API_URL=https://dig-api.fly.dev \
+WEB_URL=https://app.dig.baby \
+MCP_URL=https://dig-mcp.fly.dev \
+npm run smoke:regression
+```
+
 Rollback drill was executed on 2026-02-28 (v2 -> v1 -> latest, health verified at each step).
 
 ## Database Access

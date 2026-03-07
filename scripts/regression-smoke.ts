@@ -1,0 +1,156 @@
+/**
+ * Read-only production/local regression smoke.
+ *
+ * Usage:
+ *   API_URL=https://dig-api.fly.dev WEB_URL=https://app.dig.baby MCP_URL=https://dig-mcp.fly.dev npx tsx scripts/regression-smoke.ts
+ *   API_URL=http://localhost:3000 WEB_URL=http://localhost:3002 MCP_URL=http://localhost:3001 npx tsx scripts/regression-smoke.ts
+ */
+
+type CheckResult = {
+  name: string;
+  ok: boolean;
+  detail: string;
+};
+
+const API_URL = (process.env.API_URL ?? "https://dig-api.fly.dev").replace(/\/$/, "");
+const WEB_URL = (process.env.WEB_URL ?? "https://app.dig.baby").replace(/\/$/, "");
+const MCP_URL = (process.env.MCP_URL ?? "https://dig-mcp.fly.dev").replace(/\/$/, "");
+
+async function getJson(path: string): Promise<any> {
+  const res = await fetch(path, { headers: { "user-agent": "dig-regression-smoke/1.0" } });
+  const text = await res.text();
+  let body: any = null;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = text;
+  }
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} ${res.statusText} @ ${path} :: ${typeof body === "string" ? body : JSON.stringify(body)}`);
+  }
+  return body;
+}
+
+async function getStatus(path: string): Promise<number> {
+  const res = await fetch(path, { headers: { "user-agent": "dig-regression-smoke/1.0" } });
+  return res.status;
+}
+
+function asResultsCount(payload: any): number {
+  if (!payload || !Array.isArray(payload.results)) return -1;
+  return payload.results.length;
+}
+
+async function run(): Promise<void> {
+  const checks: CheckResult[] = [];
+
+  // API health
+  try {
+    const health = await getJson(`${API_URL}/v1/health`);
+    checks.push({
+      name: "api-health",
+      ok: health?.status === "ok" && health?.postgres === true,
+      detail: JSON.stringify({ status: health?.status, postgres: health?.postgres }),
+    });
+  } catch (err: any) {
+    checks.push({ name: "api-health", ok: false, detail: String(err?.message ?? err) });
+  }
+
+  // Search canaries
+  const searchCases = [
+    { name: "search-artist-james-brown", path: "/v1/search?q=james+brown&type=artist&limit=5", min: 1 },
+    { name: "search-artist-radiohead", path: "/v1/search?q=radiohead&type=artist&limit=5", min: 1 },
+    { name: "search-master-radiohead", path: "/v1/search?q=radiohead&type=master&limit=5", min: 1 },
+    { name: "search-release-love", path: "/v1/search?q=love&type=release&limit=5", min: 1 },
+  ];
+  for (const test of searchCases) {
+    try {
+      const body = await getJson(`${API_URL}${test.path}`);
+      const count = asResultsCount(body);
+      checks.push({ name: test.name, ok: count >= test.min, detail: `results=${count}` });
+    } catch (err: any) {
+      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err) });
+    }
+  }
+
+  // Retrieval canaries
+  const retrievalCases = [
+    { name: "entity-artist-3840", path: "/v1/artists/3840", key: "artist" },
+    { name: "entity-label-1", path: "/v1/labels/1", key: "label" },
+    { name: "entity-master-21004", path: "/v1/masters/21004", key: "master" },
+    { name: "entity-release-9", path: "/v1/releases/9", key: "release" },
+  ];
+  for (const test of retrievalCases) {
+    try {
+      const body = await getJson(`${API_URL}${test.path}`);
+      checks.push({ name: test.name, ok: !!body?.[test.key], detail: `has_${test.key}=${!!body?.[test.key]}` });
+    } catch (err: any) {
+      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err) });
+    }
+  }
+
+  // Traversal canaries
+  const traversalCases = [
+    { name: "traversal-artist-masters-3840", path: "/v1/artists/3840/masters?limit=5" },
+    { name: "traversal-artist-releases-148", path: "/v1/artists/148/releases?limit=5" },
+    { name: "traversal-artist-credits-769196", path: "/v1/artists/769196/credits?limit=5" },
+  ];
+  for (const test of traversalCases) {
+    try {
+      const body = await getJson(`${API_URL}${test.path}`);
+      const links = Array.isArray(body?.links) ? body.links.length : -1;
+      checks.push({ name: test.name, ok: links >= 0, detail: `links=${links}` });
+    } catch (err: any) {
+      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err) });
+    }
+  }
+
+  // MCP service usage endpoint availability (lightweight sanity)
+  try {
+    const usage = await getJson(`${MCP_URL}/usage`);
+    checks.push({
+      name: "mcp-usage-endpoint",
+      ok: usage?.service === "dig-mcp" && typeof usage?.calls_total === "number",
+      detail: JSON.stringify({ service: usage?.service, calls_total: usage?.calls_total }),
+    });
+  } catch (err: any) {
+    checks.push({ name: "mcp-usage-endpoint", ok: false, detail: String(err?.message ?? err) });
+  }
+
+  // Web route status checks
+  const webCases = [
+    { name: "web-home", path: "/" },
+    { name: "web-artist-148", path: "/artist/148" },
+    { name: "web-release-21004", path: "/release/21004" },
+    { name: "web-version-9", path: "/version/9" },
+    { name: "web-label-1", path: "/label/1" },
+    { name: "web-mcp-page", path: "/mcp" },
+  ];
+  for (const test of webCases) {
+    try {
+      const status = await getStatus(`${WEB_URL}${test.path}`);
+      checks.push({ name: test.name, ok: status >= 200 && status < 400, detail: `status=${status}` });
+    } catch (err: any) {
+      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err) });
+    }
+  }
+
+  // Summary
+  const failed = checks.filter((c) => !c.ok);
+  const passed = checks.length - failed.length;
+  console.log(`\nRegression smoke results: ${passed}/${checks.length} passed`);
+  for (const check of checks) {
+    const marker = check.ok ? "PASS" : "FAIL";
+    console.log(`${marker} ${check.name} :: ${check.detail}`);
+  }
+
+  if (failed.length > 0) {
+    process.exit(1);
+  }
+}
+
+run().catch((err) => {
+  console.error("Regression smoke failed to execute:", err);
+  process.exit(1);
+});
+

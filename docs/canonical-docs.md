@@ -6,6 +6,7 @@ This file defines which document to use for what.
 
 1. `docs/operating-implementation-guide.md`
 2. `docs/ops-runbook.md`
+3. `docs/migration-parity-audit-2026-03-07.md` (schema/index parity reference)
 
 ## Strategy and Scope
 
