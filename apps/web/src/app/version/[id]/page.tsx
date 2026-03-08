@@ -71,6 +71,14 @@ export default async function VersionPage({ params }: Props) {
             <p className={styles.copy}>{release.notes}</p>
           </section>
         )}
+        {release.tracks.length === 0 && release.credits.length === 0 && !release.master_discogs_id && (
+          <section className={styles.section}>
+            <p className={styles.small}>
+              Limited data available for this pressing.{" "}
+              <a href="/" className={styles.link}>Search Dig</a> for related releases.
+            </p>
+          </section>
+        )}
         <JsonLd data={[
           versionJsonLd({ discogs_id: release.discogs_id, title: release.title, release_year: release.release_year, artists: release.artists, genres: release.genres, country: release.country, master_discogs_id: release.master_discogs_id }),
           breadcrumbJsonLd([
