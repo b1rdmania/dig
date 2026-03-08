@@ -71,6 +71,129 @@ function ArtistTimeline({ events, total }: { events: TimelineEvent[]; total: num
 
 /* ── Async streamed sections ── */
 
+const RELEASE_FILTERS = [
+  { value: "all", label: "All" },
+  { value: "album", label: "Albums / LPs" },
+  { value: "single_ep", label: "Singles / EPs" },
+  { value: "compilation", label: "Compilations" },
+  { value: "other", label: "Other" },
+] as const;
+
+const CREDIT_FILTERS = [
+  { value: "all", label: "All" },
+  { value: "writing", label: "Writing" },
+  { value: "arranging", label: "Arranging" },
+  { value: "performance", label: "Performance" },
+  { value: "production", label: "Production" },
+  { value: "other", label: "Other" },
+] as const;
+
+/** Releases section: fetches masters independently so shell renders without waiting. */
+async function ArtistReleases({ id, releaseType }: { id: string; releaseType: string }) {
+  const defaultTraversal: TraversalResponse = {
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: null },
+    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "masters", elapsed_ms: 0 },
+  };
+  const mastersUrl = `/v1/artists/${id}/masters?limit=30&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
+  const mastersData = await digFetch<TraversalResponse>(mastersUrl, { revalidate: 300 })
+    .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
+    .catch(() => defaultTraversal);
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>
+        Releases{mastersData.pagination.total_estimate != null
+          ? ` (${mastersData.pagination.total_estimate})`
+          : mastersData.links.length > 0
+          ? ` (${mastersData.links.length})`
+          : ""}
+      </h2>
+      <div className={styles.filterChips}>
+        {RELEASE_FILTERS.map((f) => (
+          <Link
+            key={f.value}
+            href={f.value === "all" ? `/artist/${id}` : `/artist/${id}?release_type=${f.value}`}
+            className={releaseType === f.value ? styles.chipActive : styles.chip}
+          >
+            {f.label}
+          </Link>
+        ))}
+      </div>
+      {mastersData.links.length === 0 && (
+        <div className={styles.small}>No primary releases found.</div>
+      )}
+      {mastersData.links.map((link) => (
+        <div className={styles.row} key={link.discogs_id}>
+          <Link href={`/release/${link.discogs_id}`} className={styles.item}>
+            {link.title || `Release ${link.discogs_id}`}
+          </Link>
+          <span className={styles.releaseRight}>
+            {link.release_type_label && (
+              <span className={styles.badge}>{link.release_type_label}</span>
+            )}
+            <span className={styles.small}>{link.year || "—"}</span>
+          </span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/** Credits section: fetches credits independently so shell renders without waiting. */
+async function ArtistCredits({ id, roleFamily }: { id: string; roleFamily: string }) {
+  const defaultCredits: ArtistCreditsResponse = {
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: null },
+    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "credits", elapsed_ms: 0 },
+  };
+  const creditsUrl = `/v1/artists/${id}/credits?limit=30${roleFamily !== "all" ? `&role_family=${roleFamily}` : ""}`;
+  const creditsData = await digFetch<ArtistCreditsResponse>(creditsUrl, { revalidate: 300 })
+    .then((d) => (isArtistCreditsResponse(d) ? d : defaultCredits))
+    .catch(() => defaultCredits);
+
+  if (creditsData.links.length === 0) return null;
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>
+        Credits &amp; Appearances{creditsData.pagination.total_estimate != null
+          ? ` (${creditsData.pagination.total_estimate})`
+          : ` (${creditsData.links.length})`}
+      </h2>
+      <div className={styles.filterChips}>
+        {CREDIT_FILTERS.map((f) => (
+          <Link
+            key={f.value}
+            href={f.value === "all" ? `/artist/${id}` : `/artist/${id}?role_family=${f.value}`}
+            className={roleFamily === f.value ? styles.chipActive : styles.chip}
+          >
+            {f.label}
+          </Link>
+        ))}
+      </div>
+      {creditsData.links.map((link) => (
+        <div className={styles.row} key={link.release_discogs_id}>
+          <Link href={`/release/${link.release_discogs_id}`} className={styles.item}>
+            {link.title || `Release ${link.release_discogs_id}`}
+          </Link>
+          <span className={styles.releaseRight}>
+            {link.roles.slice(0, 2).map((r) => (
+              <span key={r} className={styles.badge}>{r}</span>
+            ))}
+            <span className={styles.small}>{link.year || "—"}</span>
+          </span>
+        </div>
+      ))}
+      {creditsData.pagination.has_more && (
+        <div className={styles.small} style={{ marginTop: "0.5rem" }}>
+          Showing first 30 — <Link href={`/artist/${id}/credits`} className={styles.link}>view all credits</Link>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** About section: fetches context + resolves profile names, then renders. */
 async function ArtistAbout({ id, profile }: { id: string; profile: string | null }) {
   const defaultContext: ContextResponse = {
@@ -289,23 +412,6 @@ async function ArtistConnections({
 
 /* ── Main page ── */
 
-const RELEASE_FILTERS = [
-  { value: "all", label: "All" },
-  { value: "album", label: "Albums / LPs" },
-  { value: "single_ep", label: "Singles / EPs" },
-  { value: "compilation", label: "Compilations" },
-  { value: "other", label: "Other" },
-] as const;
-
-const CREDIT_FILTERS = [
-  { value: "all", label: "All" },
-  { value: "writing", label: "Writing" },
-  { value: "arranging", label: "Arranging" },
-  { value: "performance", label: "Performance" },
-  { value: "production", label: "Production" },
-  { value: "other", label: "Other" },
-] as const;
-
 interface Props {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -335,31 +441,10 @@ export default async function ArtistPage({ params, searchParams }: Props) {
     : "all";
 
   try {
-    // Only fetch artist + masters + credits for the main content.
-    // Enrichment (context, relationships, timeline) streams in via Suspense.
-    const defaultTraversal: TraversalResponse = {
-      links: [],
-      pagination: { cursor: null, has_more: false, total_estimate: null },
-      meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "masters", elapsed_ms: 0 },
-    };
-    const defaultCredits: ArtistCreditsResponse = {
-      links: [],
-      pagination: { cursor: null, has_more: false, total_estimate: null },
-      meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "credits", elapsed_ms: 0 },
-    };
-
-    const mastersUrl = `/v1/artists/${id}/masters?limit=30&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
-    const creditsUrl = `/v1/artists/${id}/credits?limit=30${roleFamily !== "all" ? `&role_family=${roleFamily}` : ""}`;
-
-    const [artistData, mastersData, creditsData] = await Promise.all([
-      digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }),
-      digFetch<TraversalResponse>(mastersUrl, { revalidate: 300 })
-        .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
-        .catch(() => defaultTraversal),
-      digFetch<ArtistCreditsResponse>(creditsUrl, { revalidate: 300 })
-        .then((d) => (isArtistCreditsResponse(d) ? d : defaultCredits))
-        .catch(() => defaultCredits),
-    ]);
+    // Shell only awaits the single artist lookup (~50ms). All traversal sections
+    // stream in independently via Suspense, so high-catalog artists (Nirvana,
+    // Madonna, etc.) show the header immediately rather than hanging for 10s.
+    const artistData = await digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 });
 
     if (!isArtistResponse(artistData)) {
       return <ErrorMessage message="Unexpected API response format" />;
@@ -384,87 +469,22 @@ export default async function ArtistPage({ params, searchParams }: Props) {
           </div>
         </section>
 
-        {/* ── About first: streams in (context fetch + name resolution) ── */}
+        {/* About: streams in (context + name resolution) */}
         <Suspense fallback={<SectionSkeleton lines={4} />}>
           <ArtistAbout id={id} profile={artist.profile} />
         </Suspense>
 
-        {/* ── Credits & Appearances: renders immediately ── */}
-        {creditsData.links.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.heading}>
-              Credits &amp; Appearances{creditsData.pagination.total_estimate != null ? ` (${creditsData.pagination.total_estimate})` : creditsData.links.length > 0 ? ` (${creditsData.links.length})` : ""}
-            </h2>
-            <div className={styles.filterChips}>
-              {CREDIT_FILTERS.map((f) => (
-                <Link
-                  key={f.value}
-                  href={f.value === "all" ? `/artist/${id}` : `/artist/${id}?role_family=${f.value}`}
-                  className={roleFamily === f.value ? styles.chipActive : styles.chip}
-                >
-                  {f.label}
-                </Link>
-              ))}
-            </div>
-            {creditsData.links.map((link) => (
-              <div className={styles.row} key={link.release_discogs_id}>
-                <Link href={`/release/${link.release_discogs_id}`} className={styles.item}>
-                  {link.title || `Release ${link.release_discogs_id}`}
-                </Link>
-                <span className={styles.releaseRight}>
-                  {link.roles.slice(0, 2).map((r) => (
-                    <span key={r} className={styles.badge}>{r}</span>
-                  ))}
-                  <span className={styles.small}>{link.year || "—"}</span>
-                </span>
-              </div>
-            ))}
-            {creditsData.pagination.has_more && (
-              <div className={styles.small} style={{ marginTop: "0.5rem" }}>
-                Showing first 30 — <Link href={`/artist/${id}/credits`} className={styles.link}>view all credits</Link>
-              </div>
-            )}
-          </section>
-        )}
+        {/* Credits: streams in independently — fast for small catalogs, graceful for large */}
+        <Suspense fallback={<SectionSkeleton lines={5} />}>
+          <ArtistCredits id={id} roleFamily={roleFamily} />
+        </Suspense>
 
-        {/* ── Releases: renders immediately ── */}
-        <section className={styles.section}>
-          <h2 className={styles.heading}>
-            Releases{mastersData.pagination.total_estimate != null ? ` (${mastersData.pagination.total_estimate})` : mastersData.links.length > 0 ? ` (${mastersData.links.length})` : ""}
-          </h2>
-          <div className={styles.filterChips}>
-            {RELEASE_FILTERS.map((f) => (
-              <Link
-                key={f.value}
-                href={f.value === "all" ? `/artist/${id}` : `/artist/${id}?release_type=${f.value}`}
-                className={releaseType === f.value ? styles.chipActive : styles.chip}
-              >
-                {f.label}
-              </Link>
-            ))}
-          </div>
-          {mastersData.links.length === 0 && creditsData.links.length === 0 && (
-            <div className={styles.small}>No releases or credits found for this artist.</div>
-          )}
-          {mastersData.links.length === 0 && creditsData.links.length > 0 && (
-            <div className={styles.small}>No primary releases — see Credits &amp; Appearances above.</div>
-          )}
-          {mastersData.links.map((link) => (
-            <div className={styles.row} key={link.discogs_id}>
-              <Link href={`/release/${link.discogs_id}`} className={styles.item}>
-                {link.title || `Release ${link.discogs_id}`}
-              </Link>
-              <span className={styles.releaseRight}>
-                {link.release_type_label && (
-                  <span className={styles.badge}>{link.release_type_label}</span>
-                )}
-                <span className={styles.small}>{link.year || "—"}</span>
-              </span>
-            </div>
-          ))}
-        </section>
+        {/* Releases: streams in independently — fast for small catalogs, graceful for large */}
+        <Suspense fallback={<SectionSkeleton lines={5} />}>
+          <ArtistReleases id={id} releaseType={releaseType} />
+        </Suspense>
 
-        {/* ── Connections: streams in (relationships + timeline fetch + name resolution) ── */}
+        {/* Connections: streams in (relationships + timeline + name resolution) */}
         <Suspense fallback={<SectionSkeleton lines={3} />}>
           <ArtistConnections
             id={id}

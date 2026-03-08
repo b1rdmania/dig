@@ -86,20 +86,10 @@ export default async function LabelPage({ params }: Props) {
   const { id } = await params;
 
   try {
-    const defaultTraversal: TraversalResponse = {
-      links: [],
-      pagination: { cursor: null, has_more: false, total_estimate: null },
-      meta: { source_type: "label", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
-    };
-
-    // Fetch label + releases for hero + releases list (main content).
-    // Profile name resolution + linkouts stream in via Suspense.
-    const [labelData, releasesData] = await Promise.all([
-      digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 }),
-      digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=30`, { revalidate: 300 })
-        .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
-        .catch(() => defaultTraversal),
-    ]);
+    // Shell only awaits single label lookup (~50ms). Releases stream in
+    // independently so large labels (Blue Note, Columbia, etc.) show the
+    // header immediately rather than hanging on the releases traversal query.
+    const labelData = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 });
 
     if (!isLabelResponse(labelData)) {
       return <ErrorMessage message="Unexpected API response format" />;
@@ -133,21 +123,10 @@ export default async function LabelPage({ params }: Props) {
           </div>
         </section>
 
-        {/* ── Releases: renders immediately ── */}
-        <section className={styles.section}>
-          <h2 className={styles.heading}>Releases</h2>
-          {releasesData.links.length === 0 && (
-            <div className={styles.small}>No linked releases found.</div>
-          )}
-          {releasesData.links.map((link) => (
-            <div className={styles.row} key={link.discogs_id}>
-              <Link href={`/release/${link.discogs_id}`} className={styles.item}>
-                {link.title || `Release ${link.discogs_id}`}
-              </Link>
-              <span className={styles.small}>{link.year || "—"}</span>
-            </div>
-          ))}
-        </section>
+        {/* ── Releases: streams in independently — fast for small labels, graceful for large ── */}
+        <Suspense fallback={<SectionSkeleton lines={5} />}>
+          <LabelReleases id={id} />
+        </Suspense>
 
         {/* ── Profile + Linkouts: stream in (name resolution + enrichment fetch) ── */}
         <Suspense fallback={<SectionSkeleton lines={3} />}>
@@ -171,7 +150,36 @@ export default async function LabelPage({ params }: Props) {
   }
 }
 
-/* ── Async streamed section ── */
+/* ── Async streamed sections ── */
+
+/** Releases list: fetches independently so shell renders without waiting. */
+async function LabelReleases({ id }: { id: string }) {
+  const defaultTraversal: TraversalResponse = {
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: null },
+    meta: { source_type: "label", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
+  };
+  const releasesData = await digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=30`, { revalidate: 300 })
+    .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
+    .catch(() => defaultTraversal);
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>Releases</h2>
+      {releasesData.links.length === 0 && (
+        <div className={styles.small}>No linked releases found.</div>
+      )}
+      {releasesData.links.map((link) => (
+        <div className={styles.row} key={link.discogs_id}>
+          <Link href={`/release/${link.discogs_id}`} className={styles.item}>
+            {link.title || `Release ${link.discogs_id}`}
+          </Link>
+          <span className={styles.small}>{link.year || "—"}</span>
+        </div>
+      ))}
+    </section>
+  );
+}
 
 /** Profile + linkouts + external links: fetches linkouts and resolves profile names. */
 async function LabelDetails({ id, profile, urls }: { id: string; profile: string | null; urls: string[] }) {

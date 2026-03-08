@@ -66,14 +66,42 @@ export default async function ReleasePage({ params }: Props) {
 
   if (!/^\d+$/.test(id)) notFound();
 
+  // Shell renders immediately. Master lookup + all content streams in via
+  // Suspense so a slow API response doesn't produce a TIMEOUT error page.
+  return (
+    <div className={styles.page}>
+      <Suspense fallback={<ReleasePageSkeleton />}>
+        <ReleaseMasterContent id={id} />
+      </Suspense>
+    </div>
+  );
+}
+
+function ReleasePageSkeleton() {
+  return (
+    <section className={styles.hero}>
+      <div className={styles.heroContent}>
+        <div className={styles.cover}><CoverPlaceholder /></div>
+        <div className={styles.info}>
+          <SectionSkeleton lines={4} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Full page content: streams in so a slow master fetch doesn't error the whole page. */
+async function ReleaseMasterContent({ id }: { id: string }) {
   // Try master first — this is the "release" in user-facing terms
   let masterData: MasterResponse | null = null;
   try {
     const data = await digFetch<MasterResponse>(`/v1/masters/${id}`, { revalidate: 300 });
     if (isMasterResponse(data)) masterData = data;
   } catch (err) {
-    if (!(err instanceof ApiRequestError && err.code === "NOT_FOUND")) {
-      if (err instanceof ApiRequestError) return <ErrorMessage code={err.code} message={err.message} />;
+    if (err instanceof ApiRequestError && err.code === "NOT_FOUND") {
+      // Not a master — fall through to pressing redirect below
+    } else if (err instanceof ApiRequestError) {
+      return <ErrorMessage code={err.code} message={err.message} />;
     }
   }
 
@@ -83,14 +111,13 @@ export default async function ReleasePage({ params }: Props) {
     const artistLine = master.artists.map((a) => a.name).join(", ");
 
     return (
-      <div className={styles.page}>
+      <>
         <PageViewTracker type="release" entityId={master.discogs_id} title={master.title} />
 
         {/* ── Hero: renders immediately from master data ── */}
         <section className={styles.hero}>
           <div className={styles.heroContent}>
             <div className={styles.cover}>
-              {/* Cover streams in via ReleaseDetails; show placeholder initially */}
               <Suspense fallback={<CoverPlaceholder />}>
                 <ReleaseCover id={id} mainReleaseId={master.main_release_discogs_id} title={master.title} videos={master.videos} />
               </Suspense>
@@ -154,25 +181,21 @@ export default async function ReleasePage({ params }: Props) {
           ]),
         ]} />
         <Provenance provenance={master.provenance} />
-      </div>
+      </>
     );
   }
 
   // Not a master — this is a specific pressing. Redirect via Link so the
   // entity link is present in the HTML (required for no-dead-ends canary).
-  // Next.js redirect() fires as a meta-refresh when the layout shell has
-  // already started streaming, which fetch()-based checks don't follow.
   return (
-    <div className={styles.page}>
-      <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
-        <p className={styles.copy}>
-          This is a specific pressing.{" "}
-          <Link href={`/version/${id}`} className={styles.artistLink}>
-            View pressing details →
-          </Link>
-        </p>
-      </section>
-    </div>
+    <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
+      <p className={styles.copy}>
+        This is a specific pressing.{" "}
+        <Link href={`/version/${id}`} className={styles.artistLink}>
+          View pressing details →
+        </Link>
+      </p>
+    </section>
   );
 }
 
