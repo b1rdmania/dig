@@ -66,6 +66,11 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
 }
 
+.modal,
+.modal * {
+  color: #efe7d8;
+}
+
 .head {
   display: flex;
   justify-content: space-between;
