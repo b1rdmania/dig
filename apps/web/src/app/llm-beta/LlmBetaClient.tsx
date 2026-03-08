@@ -1,27 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 const KEY_STORAGE = "dig.llm_beta.anthropic_key";
 const DIG_BETA_KEY = "dig-alpha-001";
-
-type AskResponse = {
-  answer: string;
-  confidence: number;
-  citations: Array<{ type: string; discogs_id: number; title_or_name: string }>;
-  meta: { model?: string; elapsed_ms?: number; search_results_used?: number; [key: string]: unknown };
-};
-
-type ErrorResponse = {
-  error: { code: string; message: string; details: unknown };
-};
-
-type Result =
-  | { ok: true; data: AskResponse }
-  | { ok: false; error: ErrorResponse["error"] };
 
 const ENTITY_PATHS: Record<string, string> = {
   artist: "artist",
@@ -30,44 +15,72 @@ const ENTITY_PATHS: Record<string, string> = {
   release: "version",
 };
 
+interface Source {
+  type: string;
+  discogs_id: number;
+  title_or_name: string;
+}
+
+interface AskMeta {
+  model?: string;
+  elapsed_ms?: number;
+  entities_extracted?: string[];
+  sources_found?: number;
+  off_topic?: boolean;
+}
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+  sources?: Source[];
+  meta?: AskMeta;
+  error?: boolean;
+}
+
 export function LlmBetaClient() {
   const [anthropicKey, setAnthropicKey] = useState("");
-  const [question, setQuestion] = useState("What are key releases by Aphex Twin?");
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<Result | null>(null);
-  const [showRaw, setShowRaw] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     try {
       const saved = window.sessionStorage.getItem(KEY_STORAGE);
       if (saved) setAnthropicKey(saved);
-    } catch {
-      // no-op
-    }
+    } catch { /* no-op */ }
   }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   function updateAnthropicKey(value: string) {
     setAnthropicKey(value);
     try {
-      if (value.trim()) {
-        window.sessionStorage.setItem(KEY_STORAGE, value.trim());
-      } else {
-        window.sessionStorage.removeItem(KEY_STORAGE);
-      }
-    } catch {
-      // no-op
-    }
+      if (value.trim()) window.sessionStorage.setItem(KEY_STORAGE, value.trim());
+      else window.sessionStorage.removeItem(KEY_STORAGE);
+    } catch { /* no-op */ }
   }
 
   async function ask() {
-    const q = question.trim();
-    if (!q || !anthropicKey.trim()) return;
+    const q = input.trim();
+    if (!q || !anthropicKey.trim() || loading) return;
 
+    const userMsg: Message = { role: "user", content: q };
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
+    setInput("");
     setLoading(true);
-    setResult(null);
-    setShowRaw(false);
 
     try {
+      // Build history for API (exclude last user msg — it's the current question)
+      const history = nextMessages.slice(0, -1).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
       const res = await fetch(`${API_URL}/v1/ask`, {
         method: "POST",
         headers: {
@@ -75,25 +88,50 @@ export function LlmBetaClient() {
           "x-api-key": DIG_BETA_KEY,
           "x-anthropic-api-key": anthropicKey.trim(),
         },
-        body: JSON.stringify({ question: q }),
+        body: JSON.stringify({ question: q, history }),
       });
 
-      const data = await res.json() as AskResponse | ErrorResponse;
+      const data = await res.json() as {
+        answer?: string;
+        sources?: Source[];
+        meta?: AskMeta;
+        error?: { code: string; message: string };
+      };
 
-      if ("error" in data) {
-        setResult({ ok: false, error: (data as ErrorResponse).error });
+      if (data.error) {
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: data.error!.message,
+          error: true,
+        }]);
       } else {
-        setResult({ ok: true, data: data as AskResponse });
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: data.answer ?? "",
+          sources: data.sources ?? [],
+          meta: data.meta,
+        }]);
       }
     } catch (err) {
-      setResult({
-        ok: false,
-        error: { code: "NETWORK_ERROR", message: "Request failed", details: String(err) },
-      });
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "Request failed — check your network or API key.",
+        error: true,
+      }]);
     } finally {
       setLoading(false);
+      inputRef.current?.focus();
     }
   }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      ask();
+    }
+  }
+
+  const hasKey = anthropicKey.trim().length > 0;
 
   return (
     <div className={styles.page}>
@@ -101,110 +139,110 @@ export function LlmBetaClient() {
         <p className={styles.eyebrow}>Private Beta</p>
         <h1 className={styles.title}>Ask dig.</h1>
         <p className={styles.lede}>
-          Natural language queries over the Discogs catalog via Claude. Your Anthropic key is stored only in
-          this browser session and sent per request — never saved server-side.
+          An intelligent music assistant with access to 24 million Discogs records.
+          Your Anthropic key is never saved server-side.
         </p>
       </section>
 
-      <section className={styles.panel}>
-        <label className={styles.label} htmlFor="anthropic-key">Anthropic API Key (session only)</label>
-        <input
-          id="anthropic-key"
-          className={styles.input}
-          type="password"
-          value={anthropicKey}
-          onChange={(e) => updateAnthropicKey(e.target.value)}
-          placeholder="sk-ant-..."
-        />
-        <p className={styles.help}>Cleared when browser session ends. Dig beta access key is preloaded.</p>
+      {!hasKey && (
+        <section className={styles.keySection}>
+          <label className={styles.label} htmlFor="anthropic-key">Anthropic API Key to get started</label>
+          <div className={styles.keyRow}>
+            <input
+              id="anthropic-key"
+              className={styles.input}
+              type="password"
+              value={anthropicKey}
+              onChange={(e) => updateAnthropicKey(e.target.value)}
+              placeholder="sk-ant-..."
+              autoFocus
+            />
+          </div>
+          <p className={styles.help}>Stored in this browser session only. Cleared when tab closes.</p>
+        </section>
+      )}
 
-        <label className={styles.label} htmlFor="llm-q">Question</label>
-        <textarea
-          id="llm-q"
-          className={styles.textarea}
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-        />
+      {hasKey && (
+        <>
+          {messages.length === 0 && (
+            <div className={styles.emptyState}>
+              <p className={styles.emptyHint}>Try: "Key albums by Talk Talk" · "Chicago house labels" · "Who produced Loveless?"</p>
+            </div>
+          )}
 
-        <div className={styles.row}>
-          <button
-            className={styles.btn}
-            disabled={loading || !anthropicKey.trim() || !question.trim()}
-            onClick={ask}
-            type="button"
-          >
-            {loading ? "Asking..." : "Ask"}
-          </button>
-          <button
-            className={styles.clear}
-            type="button"
-            onClick={() => updateAnthropicKey("")}
-            disabled={loading || !anthropicKey}
-          >
-            Clear key
-          </button>
-        </div>
+          <div className={styles.thread}>
+            {messages.map((m, i) => (
+              <div key={i} className={m.role === "user" ? styles.userMsg : styles.assistantMsg}>
+                {m.role === "user" ? (
+                  <p className={styles.userText}>{m.content}</p>
+                ) : (
+                  <div className={styles.assistantContent}>
+                    <p className={m.error ? styles.errorText : styles.answerText}>{m.content}</p>
 
-        {result && (
-          <div className={styles.resultBox}>
-            {result.ok ? (
-              <>
-                <p className={styles.answer}>{result.data.answer}</p>
+                    {m.sources && m.sources.length > 0 && (
+                      <div className={styles.sources}>
+                        {m.sources.map((s) => (
+                          <Link
+                            key={`${s.type}-${s.discogs_id}`}
+                            href={`/${ENTITY_PATHS[s.type] ?? s.type}/${s.discogs_id}`}
+                            className={styles.sourceLink}
+                          >
+                            {s.title_or_name}
+                            <span className={styles.sourceType}>{s.type}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
 
-                {result.data.citations.length > 0 && (
-                  <div className={styles.citations}>
-                    <p className={styles.citationsLabel}>Sources</p>
-                    {result.data.citations.map((c) => {
-                      const path = ENTITY_PATHS[c.type] ?? c.type;
-                      return (
-                        <Link
-                          key={`${c.type}-${c.discogs_id}`}
-                          href={`/${path}/${c.discogs_id}`}
-                          className={styles.citation}
-                        >
-                          {c.title_or_name}
-                          <span className={styles.citationType}>{c.type}</span>
-                        </Link>
-                      );
-                    })}
+                    {m.meta && (
+                      <p className={styles.metaLine}>
+                        {m.meta.model && <span>{m.meta.model}</span>}
+                        {m.meta.elapsed_ms && <span>{m.meta.elapsed_ms}ms</span>}
+                      </p>
+                    )}
                   </div>
                 )}
+              </div>
+            ))}
 
-                <p className={styles.metaLine}>
-                  {result.data.meta.model && <span>{result.data.meta.model}</span>}
-                  {result.data.meta.elapsed_ms && <span>{result.data.meta.elapsed_ms}ms</span>}
-                  {typeof result.data.confidence === "number" && (
-                    <span>confidence {Math.round(result.data.confidence * 100)}%</span>
-                  )}
-                </p>
-
-                <button
-                  className={styles.rawToggle}
-                  type="button"
-                  onClick={() => setShowRaw((v) => !v)}
-                >
-                  {showRaw ? "Hide raw" : "Show raw JSON"}
-                </button>
-                {showRaw && (
-                  <pre className={styles.raw}>{JSON.stringify(result.data, null, 2)}</pre>
-                )}
-              </>
-            ) : (
-              <div className={styles.errorBox}>
-                <p className={styles.errorCode}>{result.error.code}</p>
-                <p className={styles.errorMsg}>{result.error.message}</p>
-                {result.error.details != null && (
-                  <pre className={styles.raw}>{JSON.stringify(result.error.details, null, 2)}</pre>
-                )}
+            {loading && (
+              <div className={styles.assistantMsg}>
+                <p className={styles.thinking}>thinking...</p>
               </div>
             )}
-          </div>
-        )}
 
-        <p className={styles.help}>
-          Endpoint: <code>{API_URL}/v1/ask</code> · Model: claude-sonnet-4-6
-        </p>
-      </section>
+            <div ref={bottomRef} />
+          </div>
+
+          <div className={styles.inputBar}>
+            <textarea
+              ref={inputRef}
+              className={styles.chatInput}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about any artist, release, label, or genre..."
+              rows={1}
+              disabled={loading}
+            />
+            <button
+              className={styles.sendBtn}
+              onClick={ask}
+              disabled={loading || !input.trim()}
+              type="button"
+            >
+              {loading ? "..." : "→"}
+            </button>
+          </div>
+
+          <div className={styles.inputMeta}>
+            <p className={styles.help}>Enter to send · Shift+Enter for new line</p>
+            <button className={styles.clearKey} type="button" onClick={() => { updateAnthropicKey(""); setMessages([]); }}>
+              Clear key + history
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
