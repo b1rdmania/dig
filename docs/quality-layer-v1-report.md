@@ -68,11 +68,43 @@ To disable the quality filter without any code deployment:
 - Code: change default in `apps/api/src/routes/v1/search.ts` from `"active"` to `"all"`
 - Full rollback: set `quality_filter_enabled = false` feature flag (not yet implemented — use query param instead)
 
+## Guardrail Metric
+
+Run after each classify pass to detect abnormal distribution shifts:
+
+```sql
+SELECT
+  entity_type,
+  quality_status,
+  count(*) AS cnt,
+  round(count(*) * 100.0 / sum(count(*)) OVER (PARTITION BY entity_type), 2) AS pct
+FROM enrich.entity_quality
+GROUP BY entity_type, quality_status
+ORDER BY entity_type, cnt DESC;
+```
+
+**Alert thresholds** (based on v1 baseline):
+- artists `active` < 30% or > 40% → investigate
+- masters `active` < 99% → investigate
+- releases `active` < 99% → investigate
+- any entity type `suppressed` > 1% → investigate classifier regression
+
+## Post-Backfill Checklist
+
+After releases backfill completes:
+1. `ANALYZE enrich.entity_quality;`
+2. Run the guardrail metric query above and compare to v1 baseline
+3. Spot-check: `SELECT * FROM enrich.entity_quality WHERE entity_type='release' LIMIT 10;`
+4. Run canary searches with `?quality=active` vs `?quality=all` — verify delta matches expected suppression rate
+
 ## Pending
 
-- Releases backfill: ~17.3M rows remaining. Run via:
+- Releases backfill: ~17.3M rows remaining. Steps:
+  1. Update `/tmp/q_lmr.py` on the machine to process releases only (skip label/master loops)
+  2. Schedule during off-hours (avoid search contention)
+  3. Run via:
   ```bash
   fly ssh console -a dig-db --machine d8d1009a0702d8 \
     -C "bash -c 'nohup python3 /tmp/q_lmr.py > /tmp/q_lmr.log 2>&1 &'"
   ```
-  Note: script needs to be updated to release-only. Schedule during off-hours to avoid search contention.
+  4. Monitor: `fly ssh console -a dig-db --machine d8d1009a0702d8 -C "tail -f /tmp/q_lmr.log"`

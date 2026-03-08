@@ -58,7 +58,7 @@ async function run(): Promise<void> {
 
   // Search canaries
   const searchCases = [
-    { name: "search-artist-james-brown", path: "/v1/search?q=james+brown&type=artist&limit=5", min: 1 },
+    { name: "search-artist-aphex-twin", path: "/v1/search?q=aphex+twin&type=artist&limit=5", min: 1 },
     { name: "search-artist-radiohead", path: "/v1/search?q=radiohead&type=artist&limit=5", min: 1 },
     { name: "search-master-radiohead", path: "/v1/search?q=radiohead&type=master&limit=5", min: 1 },
     { name: "search-release-love", path: "/v1/search?q=love&type=release&limit=5", min: 1 },

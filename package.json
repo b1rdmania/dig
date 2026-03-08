@@ -11,10 +11,11 @@
     "dev:web": "pnpm --filter @dig/web dev",
     "build:web": "pnpm --filter @dig/web build",
     "benchmark:search": "npx tsx apps/api/src/benchmark.ts --base-url http://localhost:3002",
-    "smoke:regression": "npx tsx scripts/regression-smoke.ts",
-    "audit:migrations": "npx tsx scripts/migration-parity-audit.ts"
+    "smoke:regression": "pnpm exec tsx scripts/regression-smoke.ts",
+    "audit:migrations": "pnpm exec tsx scripts/migration-parity-audit.ts"
   },
   "devDependencies": {
-    "@types/node": "^25.3.0"
+    "@types/node": "^25.3.0",
+    "tsx": "^4.21.0"
   }
 }
