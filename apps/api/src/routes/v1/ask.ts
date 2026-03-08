@@ -112,7 +112,7 @@ const TOOLS = [
   {
     name: "get_artist_releases",
     description:
-      "Get an artist's catalog from the database — their albums, EPs, and singles. Returns titles, years, and release types. If this returns 0 or very few releases, ALSO call get_artist_credits — many artists' work is catalogued through credits (Producer, Written-By) rather than direct artist links.",
+      "Get an artist's catalog — albums, EPs, singles. When releases are thin (< 3), automatically also returns credits (productions, remixes, features). Always try this first for any artist catalog query.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -341,12 +341,34 @@ async function executeTool(
       for (const r of releases.slice(0, 5)) {
         evidenceCollector.push({ type: "master", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
       }
+
+      // Auto-fetch credits when releases are thin — many artists are catalogued via credits only
+      let credits: any[] = [];
+      if (releases.length < 3) {
+        try {
+          const creditResult = await getArtistCredits(db, id, batchId, dumpDate, limit) as any;
+          credits = (creditResult.links ?? []).map((l: any) => ({
+            discogs_id: l.release_discogs_id ?? l.discogs_id,
+            title: l.title,
+            year: l.year ?? null,
+            roles: l.roles ?? [],
+            dig_url: `https://app.dig.baby/version/${l.release_discogs_id ?? l.discogs_id}`,
+          }));
+          for (const c of credits.slice(0, 5)) {
+            evidenceCollector.push({ type: "release", discogs_id: c.discogs_id, title: c.title, dig_url: c.dig_url });
+          }
+        } catch { /* fail open */ }
+      }
+
       return {
         releases,
+        credits: credits ?? [],
         total: result.pagination.total_estimate ?? result.links.length,
         has_more: result.pagination.has_more,
-        REQUIRED_NEXT_STEP: result.links.length === 0
-          ? "Zero direct releases found. You MUST call get_artist_credits immediately before responding."
+        note: releases.length === 0 && credits.length === 0
+          ? "No releases or credits found. Try searching by label name instead."
+          : releases.length < 3 && credits.length > 0
+          ? "Few direct releases — catalog mainly found via credits below."
           : undefined,
       };
     }
