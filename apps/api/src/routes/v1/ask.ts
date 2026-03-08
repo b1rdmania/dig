@@ -38,7 +38,8 @@ CRITICAL RULES — follow these without exception:
 1. You access a DATABASE, not websites. Never say "I can't access URLs" or "I don't have internet access". You have tools — use them.
 2. NEVER say "not in Dig" or "not found" without actually calling search_catalog first.
 3. When get_artist_releases returns 0 or very few results, you MUST immediately call get_artist_credits — many artists are catalogued through credits (Producer, Written-By, Remixer) rather than direct artist links.
-4. All links go to Dig: app.dig.baby/release/[id] for albums/masters, app.dig.baby/artist/[id] for artists, app.dig.baby/label/[id] for labels. Never send anyone to Discogs.
+4. Format Dig links as markdown: [Title](https://app.dig.baby/release/ID) for albums/masters, [Name](https://app.dig.baby/artist/ID) for artists, [Label](https://app.dig.baby/label/ID) for labels. Never send anyone to Discogs.
+5. Videos are shown automatically below your response — never tell users to "click through" for video. When a release has video, it will just appear. Don't mention has_video or any other raw database field in your response.
 
 When you look things up, you use Dig (app.dig.baby) — 24 million records, credits, connections, label catalogs, the lot. Search it, follow threads, pull context. Use get_connections for band history. Use get_context for biography and background. Use get_label_releases for imprint catalogs. The data is there.
 
@@ -229,6 +230,11 @@ async function executeTool(
       const genre = input.genre ? String(input.genre) : undefined;
       const limit = Math.min(Math.max(Number(input.limit ?? 8), 1), 10);
       const sr = await search(db, { q, type, genre, limit, quality: "all" });
+      for (const r of sr.results.slice(0, 3)) {
+        const entityType = r.type === "master" ? "master" : r.type === "artist" ? "artist" : r.type === "label" ? "label" : "release";
+        const path = r.type === "master" ? "release" : r.type === "artist" ? "artist" : r.type === "label" ? "label" : "version";
+        evidenceCollector.push({ type: entityType as any, discogs_id: r.discogs_id, title: r.name ?? r.title ?? "", dig_url: `https://app.dig.baby/${path}/${r.discogs_id}` });
+      }
       return {
         results: sr.results.map((r) => ({
           type: r.type,
@@ -372,13 +378,18 @@ async function executeTool(
       const limit = Math.min(Math.max(Number(input.limit ?? 15), 1), 20);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.labels");
       const result = await getLabelReleases(db, id, batchId, dumpDate, limit) as any;
+      const labelReleases = (result.links ?? []).map((l: any) => ({
+        discogs_id: l.discogs_id,
+        title: l.title,
+        year: l.year ?? null,
+        artist: l.artist ?? null,
+        dig_url: `https://app.dig.baby/version/${l.discogs_id}`,
+      }));
+      for (const r of labelReleases.slice(0, 3)) {
+        evidenceCollector.push({ type: "release", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
+      }
       return {
-        releases: (result.links ?? []).map((l: any) => ({
-          discogs_id: l.discogs_id,
-          title: l.title,
-          year: l.year ?? null,
-          artist: l.artist ?? null,
-        })),
+        releases: labelReleases,
         total: result.pagination?.total_estimate ?? (result.links?.length ?? 0),
         has_more: result.pagination?.has_more ?? false,
       };

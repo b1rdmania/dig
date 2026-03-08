@@ -40,6 +40,7 @@ interface Message {
   error?: boolean;
   mode?: ResponseMode;
   evidence?: EvidenceItem[];
+  tool_calls?: number;
 }
 
 function VideoCard({ item }: { item: MediaItem }) {
@@ -152,6 +153,7 @@ export function LlmBetaClient() {
         media?: MediaItem[];
         mode?: ResponseMode;
         evidence?: EvidenceItem[];
+        meta?: { tool_calls?: number };
         error?: { code: string; message: string };
       };
 
@@ -164,6 +166,7 @@ export function LlmBetaClient() {
           media: data.media ?? [],
           mode: data.mode,
           evidence: data.evidence ?? [],
+          tool_calls: data.meta?.tool_calls ?? 0,
         }]);
       }
     } catch (err) {
@@ -233,7 +236,7 @@ export function LlmBetaClient() {
                       <p className={styles.errorText}>{m.content}</p>
                     ) : (
                       <>
-                        {m.mode === "grounded_empty" && (
+                        {m.mode === "grounded_empty" && (m.tool_calls ?? 0) > 0 && (
                           <p className={styles.modeNote}>Nothing found in Dig for this query.</p>
                         )}
                         {m.mode === "timeout_degraded" && (
