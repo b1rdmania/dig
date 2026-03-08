@@ -346,7 +346,8 @@ async function executeTool(
       let credits: any[] = [];
       if (releases.length < 3) {
         try {
-          const creditResult = await getArtistCredits(db, id, batchId, dumpDate, limit) as any;
+          const { batchId: creditsBatchId, dumpDate: creditsDumpDate } = await getBatchForTable(db, "catalog.release_credits");
+          const creditResult = await getArtistCredits(db, id, creditsBatchId, creditsDumpDate, limit) as any;
           credits = (creditResult.links ?? []).map((l: any) => ({
             discogs_id: l.release_discogs_id ?? l.discogs_id,
             title: l.title,
@@ -376,7 +377,7 @@ async function executeTool(
     if (name === "get_artist_credits") {
       const id = Number(input.discogs_id);
       const limit = Math.min(Math.max(Number(input.limit ?? 15), 1), 20);
-      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.artists");
+      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.release_credits");
       const result = await getArtistCredits(db, id, batchId, dumpDate, limit) as any;
       const credits = (result.links ?? []).map((l: any) => ({
         discogs_id: l.release_discogs_id ?? l.discogs_id,
