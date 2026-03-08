@@ -117,3 +117,47 @@
   color: #f6b47f;
   font-size: 0.94rem;
 }
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.93rem;
+}
+
+.table thead {
+  border-bottom: 1px solid var(--line);
+}
+
+.table tbody tr {
+  border-bottom: 1px dashed rgba(168, 144, 112, 0.2);
+}
+
+.thLabel,
+.tdLabel {
+  text-align: left;
+  padding: 0.45rem 1rem 0.45rem 0;
+  color: var(--cream);
+  white-space: nowrap;
+}
+
+.thNum,
+.tdNum {
+  text-align: right;
+  padding: 0.45rem 0 0.45rem 1rem;
+  font-family: var(--font-mono);
+  color: var(--off-white);
+  white-space: nowrap;
+}
+
+.table thead .thLabel,
+.table thead .thNum {
+  color: var(--warm-mid);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+}

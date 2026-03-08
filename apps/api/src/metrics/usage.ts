@@ -18,12 +18,18 @@ const byRoute = new Map<string, RouteCounter>();
 const telemetryByEvent = new Map<string, number>();
 const uniqueSessions = new Set<string>();
 const MAX_SESSION_TRACK = 100_000;
+const MAX_DAILY_COUNTER_ENTRIES = 10_000;
 const FLUSH_INTERVAL_MS = 10_000;
 
 let dbRef: Kysely<Database> | null = null;
 let flushTimer: NodeJS.Timeout | null = null;
 let flushing = false;
 const pendingCounters = new Map<string, number>();
+const pendingDailyCounters = new Map<string, number>();
+
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 function incrementCategory(category: Category): void {
   const current = byCategory.get(category) ?? 0;
@@ -32,6 +38,12 @@ function incrementCategory(category: Category): void {
 
 function queuePersistentCounter(counterKey: string, delta: number): void {
   pendingCounters.set(counterKey, (pendingCounters.get(counterKey) ?? 0) + delta);
+}
+
+function queueDailyCounter(metricKey: string, entityType = "", route = ""): void {
+  if (pendingDailyCounters.size >= MAX_DAILY_COUNTER_ENTRIES) return;
+  const key = `${todayKey()}|${metricKey}|${entityType}|${route}`;
+  pendingDailyCounters.set(key, (pendingDailyCounters.get(key) ?? 0) + 1);
 }
 
 export function recordApiRequest(params: {
@@ -57,6 +69,9 @@ export function recordApiRequest(params: {
   queuePersistentCounter(`route_count:${params.route}`, 1);
   if (params.status >= 400) queuePersistentCounter(`route_errors:${params.route}`, 1);
   queuePersistentCounter(`route_elapsed_ms:${params.route}`, params.elapsedMs);
+
+  queueDailyCounter("requests", params.category, params.route);
+  if (params.status >= 500) queueDailyCounter("errors", params.category, params.route);
 }
 
 export function recordTelemetryEvent(event: string, sessionId: string): void {
@@ -64,6 +79,9 @@ export function recordTelemetryEvent(event: string, sessionId: string): void {
   if (uniqueSessions.size < MAX_SESSION_TRACK) uniqueSessions.add(sessionId);
   queuePersistentCounter("telemetry_events_total", 1);
   queuePersistentCounter(`event:${event}`, 1);
+
+  queueDailyCounter("telemetry_events", "", event);
+  queueDailyCounter(`event:${event}`);
 }
 
 function mapToObject<T extends string>(map: Map<T, number>): Record<string, number> {
@@ -149,6 +167,42 @@ async function getLifetimeSnapshot() {
   }
 }
 
+async function getWindowSnapshot(days: number) {
+  if (!dbRef) return null;
+  try {
+    const result = await sql<{ metric_key: string; entity_type: string; count: string | number }>`
+      SELECT metric_key, entity_type, COALESCE(SUM(count), 0) as count
+      FROM enrich.usage_daily
+      WHERE day >= CURRENT_DATE - ${days - 1}::int
+      GROUP BY metric_key, entity_type
+    `.execute(dbRef);
+
+    const byEvent: Record<string, number> = {};
+    let requests = 0;
+    let errors = 0;
+    let telemetry = 0;
+
+    for (const row of result.rows) {
+      const count = typeof row.count === "number" ? row.count : Number(row.count);
+      const key = row.metric_key;
+      if (key === "requests") requests += count;
+      else if (key === "errors") errors += count;
+      else if (key === "telemetry_events") telemetry += count;
+      else if (key.startsWith("event:"))
+        byEvent[key.slice("event:".length)] = (byEvent[key.slice("event:".length)] ?? 0) + count;
+    }
+
+    return {
+      requests_total: requests,
+      errors_total: errors,
+      telemetry_events_total: telemetry,
+      telemetry_by_event: byEvent,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function flushPendingCounters(): Promise<void> {
   if (!dbRef || flushing || pendingCounters.size === 0) return;
   flushing = true;
@@ -176,11 +230,38 @@ async function flushPendingCounters(): Promise<void> {
   }
 }
 
+async function flushPendingDailyCounters(): Promise<void> {
+  if (!dbRef || pendingDailyCounters.size === 0) return;
+  const batch = new Map(pendingDailyCounters);
+  pendingDailyCounters.clear();
+  try {
+    await dbRef.transaction().execute(async (trx) => {
+      for (const [key, delta] of batch.entries()) {
+        const [day, metric_key, entity_type, route] = key.split("|");
+        await sql`
+          INSERT INTO enrich.usage_daily (day, metric_key, entity_type, route, count)
+          VALUES (${day}::date, ${metric_key}, ${entity_type ?? ""}, ${route ?? ""}, ${delta})
+          ON CONFLICT (day, metric_key, entity_type, route)
+          DO UPDATE SET
+            count = enrich.usage_daily.count + EXCLUDED.count,
+            updated_at = now()
+        `.execute(trx);
+      }
+    });
+  } catch {
+    // fail-open: re-queue
+    for (const [key, delta] of batch.entries()) {
+      pendingDailyCounters.set(key, (pendingDailyCounters.get(key) ?? 0) + delta);
+    }
+  }
+}
+
 export function initUsagePersistence(db: Kysely<Database>): void {
   dbRef = db;
   if (flushTimer) return;
   flushTimer = setInterval(() => {
     void flushPendingCounters();
+    void flushPendingDailyCounters();
   }, FLUSH_INTERVAL_MS);
   flushTimer.unref();
 }
@@ -191,9 +272,17 @@ export async function shutdownUsagePersistence(): Promise<void> {
     flushTimer = null;
   }
   await flushPendingCounters();
+  await flushPendingDailyCounters();
 }
 
 export async function getUsageSnapshot() {
+  const [lifetime, last24h, last7d, last30d] = await Promise.all([
+    getLifetimeSnapshot(),
+    getWindowSnapshot(1),
+    getWindowSnapshot(7),
+    getWindowSnapshot(30),
+  ]);
+
   return {
     service: "dig-api",
     window: "since_process_start",
@@ -205,7 +294,12 @@ export async function getUsageSnapshot() {
     telemetry_events_total: [...telemetryByEvent.values()].reduce((a, b) => a + b, 0),
     telemetry_by_event: mapToObject(telemetryByEvent),
     unique_sessions_estimate: uniqueSessions.size,
-    lifetime: await getLifetimeSnapshot(),
+    lifetime,
+    windows: {
+      last_24h: last24h,
+      last_7d: last7d,
+      last_30d: last30d,
+    },
   };
 }
 

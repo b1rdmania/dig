@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { digFetch, fetchMcpUsage } from "@/lib/api";
-import type { ApiUsageSnapshot } from "@/lib/types";
+import type { ApiUsageSnapshot, UsageWindow } from "@/lib/types";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -13,8 +13,39 @@ function formatNumber(value: number): string {
   return new Intl.NumberFormat("en-GB").format(value);
 }
 
+function formatPct(num: number, denom: number): string {
+  if (denom === 0) return "—";
+  return `${Math.round((num / denom) * 100)}%`;
+}
+
 function mapRows(map: Record<string, number>) {
   return Object.entries(map).sort((a, b) => b[1] - a[1]);
+}
+
+interface WindowRowProps {
+  label: string;
+  window: UsageWindow | null | undefined;
+}
+
+function WindowRow({ label, window }: WindowRowProps) {
+  if (!window) {
+    return (
+      <tr>
+        <td className={styles.tdLabel}>{label}</td>
+        <td className={styles.tdNum}>—</td>
+        <td className={styles.tdNum}>—</td>
+        <td className={styles.tdNum}>—</td>
+      </tr>
+    );
+  }
+  return (
+    <tr>
+      <td className={styles.tdLabel}>{label}</td>
+      <td className={styles.tdNum}>{formatNumber(window.requests_total)}</td>
+      <td className={styles.tdNum}>{formatNumber(window.errors_total)}</td>
+      <td className={styles.tdNum}>{formatNumber(window.telemetry_events_total)}</td>
+    </tr>
+  );
 }
 
 export default async function UsagePage() {
@@ -28,6 +59,25 @@ export default async function UsagePage() {
   const mcpRows = mcpUsage ? mapRows(mcpUsage.calls_by_tool) : [];
   const lifetimeCategoryRows = apiUsage.lifetime ? mapRows(apiUsage.lifetime.requests_by_category) : [];
   const lifetimeEventRows = apiUsage.lifetime ? mapRows(apiUsage.lifetime.telemetry_by_event) : [];
+
+  const hasWindows =
+    apiUsage.windows != null &&
+    (apiUsage.windows.last_24h != null ||
+      apiUsage.windows.last_7d != null ||
+      apiUsage.windows.last_30d != null);
+
+  // Funnel: use 7d window if available, else fall back to lifetime telemetry_by_event
+  const funnelSource: Record<string, number> =
+    apiUsage.windows?.last_7d?.telemetry_by_event ??
+    apiUsage.lifetime?.telemetry_by_event ??
+    apiUsage.telemetry_by_event;
+
+  const funnelSearches = funnelSource["search_submitted"] ?? 0;
+  const funnelClicks = funnelSource["search_result_clicked"] ?? 0;
+  const funnelReleaseViews =
+    (funnelSource["release_page_view"] ?? 0) + (funnelSource["version_page_view"] ?? 0);
+  const hasFunnel = funnelSearches > 0 || funnelClicks > 0 || funnelReleaseViews > 0;
+  const funnelPeriod = apiUsage.windows?.last_7d != null ? "last 7 days" : "lifetime";
 
   return (
     <div className={styles.page}>
@@ -69,6 +119,63 @@ export default async function UsagePage() {
           <p className={styles.sub}>since current service start</p>
         </article>
       </section>
+
+      {hasWindows && (
+        <section className={styles.section}>
+          <h2>Activity windows</h2>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.thLabel}>Period</th>
+                  <th className={styles.thNum}>Requests</th>
+                  <th className={styles.thNum}>Errors</th>
+                  <th className={styles.thNum}>Events</th>
+                </tr>
+              </thead>
+              <tbody>
+                <WindowRow label="Last 24h" window={apiUsage.windows?.last_24h} />
+                <WindowRow label="Last 7d" window={apiUsage.windows?.last_7d} />
+                <WindowRow label="Last 30d" window={apiUsage.windows?.last_30d} />
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {hasFunnel && (
+        <section className={styles.section}>
+          <h2>Search funnel ({funnelPeriod})</h2>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.thLabel}>Step</th>
+                  <th className={styles.thNum}>Count</th>
+                  <th className={styles.thNum}>vs. Searches</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className={styles.tdLabel}>Searches submitted</td>
+                  <td className={styles.tdNum}>{formatNumber(funnelSearches)}</td>
+                  <td className={styles.tdNum}>—</td>
+                </tr>
+                <tr>
+                  <td className={styles.tdLabel}>Result clicked</td>
+                  <td className={styles.tdNum}>{formatNumber(funnelClicks)}</td>
+                  <td className={styles.tdNum}>{formatPct(funnelClicks, funnelSearches)}</td>
+                </tr>
+                <tr>
+                  <td className={styles.tdLabel}>Release / version page views</td>
+                  <td className={styles.tdNum}>{formatNumber(funnelReleaseViews)}</td>
+                  <td className={styles.tdNum}>{formatPct(funnelReleaseViews, funnelSearches)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className={styles.section}>
         <h2>API request categories (lifetime)</h2>

@@ -444,6 +444,13 @@ export function isApiError(data: unknown): data is ApiError {
 }
 
 // Usage
+export interface UsageWindow {
+  requests_total: number;
+  errors_total: number;
+  telemetry_events_total: number;
+  telemetry_by_event: Record<string, number>;
+}
+
 export interface ApiUsageSnapshot {
   service: "dig-api";
   window: string;
@@ -468,6 +475,11 @@ export interface ApiUsageSnapshot {
       errors: number;
       avg_ms: number;
     }>;
+  } | null;
+  windows?: {
+    last_24h: UsageWindow | null;
+    last_7d: UsageWindow | null;
+    last_30d: UsageWindow | null;
   } | null;
 }
 
