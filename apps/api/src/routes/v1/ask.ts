@@ -18,7 +18,6 @@ interface AskBody {
 }
 
 const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-3-5-sonnet-latest";
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY ?? "";
 const PRIVATE_KEYS = new Set(
   (process.env.LLM_BETA_KEYS ?? "")
     .split(",")
@@ -95,6 +94,7 @@ async function callAnthropic(params: {
   question: string;
   contextLines: string[];
   maxTokens: number;
+  anthropicApiKey: string;
 }) {
   const system = [
     "You are Dig Assistant for music catalog retrieval.",
@@ -116,7 +116,7 @@ async function callAnthropic(params: {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
+      "x-api-key": params.anthropicApiKey,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
@@ -140,11 +140,12 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     const auth = requirePrivateKey(req);
     if (!auth.ok) return reply.status(auth.status).send(auth.body);
 
-    if (!ANTHROPIC_API_KEY) {
+    const anthropicApiKey = String(req.headers["x-anthropic-api-key"] ?? "").trim();
+    if (!anthropicApiKey) {
       return reply.status(503).send({
         error: {
           code: "CONFIG_ERROR",
-          message: "ANTHROPIC_API_KEY is not configured",
+          message: "x-anthropic-api-key header is required",
           details: null,
         },
       });
@@ -187,7 +188,13 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         ...details.map((d) => `detail: ${d.summary}`),
       ];
 
-      const modelResp: any = await callAnthropic({ model, question, contextLines, maxTokens });
+      const modelResp: any = await callAnthropic({
+        model,
+        question,
+        contextLines,
+        maxTokens,
+        anthropicApiKey,
+      });
       const rawText = String(modelResp?.content?.[0]?.text ?? "").trim();
 
       let parsed: any = null;
