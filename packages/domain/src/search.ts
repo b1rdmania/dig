@@ -41,6 +41,13 @@ export interface SearchParams {
   cursor?: string;
   /** Quality filter. Default 'active' hides low-signal/invalid entities. Use 'all' for admin/debug. */
   quality?: "active" | "all";
+  /**
+   * Zero-result rescue. When true and quality=active returns 0 results for a
+   * ≥4-char artist query, re-runs a fuzzy search without quality filtering and
+   * returns up to 3 suggestions in meta.suggested_results ("Did you mean?").
+   * Gate: SEARCH_ZERO_RESCUE=true env var. Off by default.
+   */
+  rescue?: boolean;
 }
 
 export interface SearchResult {
@@ -76,6 +83,8 @@ export interface SearchResponse {
     hint: string | null;
     degraded: boolean;
     degraded_reason: string | null;
+    /** Populated when rescue=true and quality=active returns 0 results. "Did you mean?" candidates. */
+    suggested_results?: SearchResult[] | null;
   };
 }
 
@@ -1026,6 +1035,28 @@ export async function search(
         }
       }
 
+      // Zero-result rescue: when quality=active returns nothing and rescue is enabled,
+      // run a fuzzy artist search without quality filtering to surface "Did you mean?" candidates.
+      // Triggers only for explicit artist queries (or untyped) with ≥4-char query.
+      let suggestedResults: SearchResult[] | null = null;
+      if (
+        params.rescue &&
+        allResults.length === 0 &&
+        params.q &&
+        params.q.length >= 4 &&
+        (params.type === "artist" || params.type === undefined)
+      ) {
+        const artistBatch = batchMap.get("artist");
+        if (artistBatch) {
+          try {
+            const rescue = await fuzzyFallback(conn, "artist", params.q, artistBatch.batchId, artistBatch.dumpDate);
+            if (rescue.length > 0) {
+              suggestedResults = rescue.slice(0, 3);
+            }
+          } catch { /* skip rescue on error — non-blocking */ }
+        }
+      }
+
       // Sort combined results with artist/master preference for all-type searches.
       // Explicit type searches keep strict relevance ordering.
       allResults.sort((a, b) => {
@@ -1063,6 +1094,7 @@ export async function search(
           hint,
           degraded,
           degraded_reason: degradedReason,
+          suggested_results: suggestedResults,
         },
       };
     } finally {

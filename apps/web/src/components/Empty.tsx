@@ -1,4 +1,6 @@
-export function Empty({ message }: { message?: string }) {
+import type { ReactNode } from "react";
+
+export function Empty({ message, children }: { message?: string; children?: ReactNode }) {
   if (!message) return null;
 
   return (
@@ -18,6 +20,7 @@ export function Empty({ message }: { message?: string }) {
       >
         {message}
       </p>
+      {children}
     </div>
   );
 }

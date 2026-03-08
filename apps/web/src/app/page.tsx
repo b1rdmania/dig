@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { digFetch, ApiRequestError } from "@/lib/api";
 import { isSearchResponse, type SearchResponse } from "@/lib/types";
 import { SearchResults } from "@/components/SearchResults";
@@ -44,6 +45,14 @@ async function SearchContent({
     }
 
     if (data.results.length === 0) {
+      const suggestions = data.meta.suggested_results;
+      if (suggestions && suggestions.length > 0) {
+        return (
+          <Empty message="No results found">
+            <DidYouMean suggestions={suggestions} />
+          </Empty>
+        );
+      }
       return <Empty message="No results found" />;
     }
 
@@ -54,6 +63,27 @@ async function SearchContent({
     }
     return <ErrorMessage message="Something went wrong" />;
   }
+}
+
+function DidYouMean({ suggestions }: { suggestions: NonNullable<SearchResponse["meta"]["suggested_results"]> }) {
+  return (
+    <div style={{ marginTop: "1.25rem", textAlign: "left" }}>
+      <p style={{ fontSize: "0.8rem", color: "var(--fg-faint)", marginBottom: "0.5rem" }}>
+        Did you mean?
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+        {suggestions.map((s) => (
+          <Link
+            key={s.discogs_id}
+            href={`/artist/${s.discogs_id}`}
+            style={{ fontSize: "0.95rem", color: "var(--fg)", textDecoration: "underline", textUnderlineOffset: "3px" }}
+          >
+            {s.name || s.title || `Artist ${s.discogs_id}`}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default async function SearchPage({ searchParams }: Props) {

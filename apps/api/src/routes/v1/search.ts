@@ -21,6 +21,7 @@ export function registerSearchRoutes(app: FastifyInstance, db: Kysely<Database>)
       limit: query.limit ? parseInt(query.limit, 10) : undefined,
       cursor: query.cursor,
       quality: query.quality === "all" ? "all" as const : "active" as const,
+      rescue: process.env.SEARCH_ZERO_RESCUE === "true",
     };
 
     const validationError = validateSearchParams(params);

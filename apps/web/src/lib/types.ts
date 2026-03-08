@@ -35,6 +35,7 @@ export interface SearchMeta {
   hint: string | null;
   degraded: boolean;
   degraded_reason: string | null;
+  suggested_results?: SearchResult[] | null;
 }
 
 export interface SearchResponse {

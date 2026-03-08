@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useIncrementalSearch } from "@/hooks/useIncrementalSearch";
+import type { SearchResult } from "@/lib/types";
 import { SearchResults } from "./SearchResults";
 import { Empty } from "./Empty";
 import styles from "./SearchBar.module.css";
@@ -167,8 +169,33 @@ function IncrementalResults({
       {results && results.results.length > 0 ? (
         <SearchResults data={results} />
       ) : status === "success" && query.length >= 2 ? (
-        <Empty message="No results found" />
+        <Empty message="No results found">
+          {results?.meta.suggested_results && results.meta.suggested_results.length > 0 && (
+            <IncrementalDidYouMean suggestions={results.meta.suggested_results} />
+          )}
+        </Empty>
       ) : null}
     </>
+  );
+}
+
+function IncrementalDidYouMean({ suggestions }: { suggestions: SearchResult[] }) {
+  return (
+    <div style={{ marginTop: "1.25rem", textAlign: "left" }}>
+      <p style={{ fontSize: "0.8rem", color: "var(--fg-faint)", marginBottom: "0.5rem" }}>
+        Did you mean?
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+        {suggestions.map((s) => (
+          <Link
+            key={s.discogs_id}
+            href={`/artist/${s.discogs_id}`}
+            style={{ fontSize: "0.95rem", color: "var(--fg)", textDecoration: "underline", textUnderlineOffset: "3px" }}
+          >
+            {s.name || s.title || `Artist ${s.discogs_id}`}
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
