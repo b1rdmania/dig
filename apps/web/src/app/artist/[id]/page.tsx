@@ -26,6 +26,7 @@ import { Provenance } from "@/components/Provenance";
 import { CollapsibleList } from "@/components/CollapsibleList";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
+import { hrefForTraversalLink, hrefForArtistCredit } from "@/lib/routes";
 import styles from "./page.module.css";
 
 /* ── Helpers ── */
@@ -125,7 +126,7 @@ async function ArtistReleases({ id, releaseType }: { id: string; releaseType: st
       )}
       {mastersData.links.map((link) => (
         <div className={styles.row} key={link.discogs_id}>
-          <Link href={`/release/${link.discogs_id}`} className={styles.item}>
+          <Link href={hrefForTraversalLink(link)} className={styles.item}>
             {link.title || `Release ${link.discogs_id}`}
           </Link>
           <span className={styles.releaseRight}>
@@ -174,7 +175,7 @@ async function ArtistCredits({ id, roleFamily }: { id: string; roleFamily: strin
       </div>
       {creditsData.links.map((link) => (
         <div className={styles.row} key={link.release_discogs_id}>
-          <Link href={`/release/${link.release_discogs_id}`} className={styles.item}>
+          <Link href={hrefForArtistCredit(link)} className={styles.item}>
             {link.title || `Release ${link.release_discogs_id}`}
           </Link>
           <span className={styles.releaseRight}>

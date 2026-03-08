@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ApiRequestError, digFetch } from "@/lib/api";
 import {
   isMasterResponse,
@@ -185,18 +185,8 @@ async function ReleaseMasterContent({ id }: { id: string }) {
     );
   }
 
-  // Not a master — this is a specific pressing. Redirect via Link so the
-  // entity link is present in the HTML (required for no-dead-ends canary).
-  return (
-    <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
-      <p className={styles.copy}>
-        This is a specific pressing.{" "}
-        <Link href={`/version/${id}`} className={styles.artistLink}>
-          View pressing details →
-        </Link>
-      </p>
-    </section>
-  );
+  // Not a master — redirect immediately to the pressing page.
+  redirect(`/version/${id}`);
 }
 
 /* ── Async streamed sections ── */

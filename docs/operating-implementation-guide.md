@@ -80,27 +80,41 @@ Use `docs/implementation-plan-agent-first.md` for long-form product strategy and
 4. Run post-deploy warmup procedure from `docs/ops-runbook.md`.
 5. Re-run the critical canary set before closing the task.
 
-## 8) No-Dead-Ends Policy
+## 8) Route Contract
+
+URL contract (non-negotiable):
+- Canonical master/album → `/release/:id`
+- Specific pressing/edition → `/version/:id`
+- Legacy `/master/:id` → redirect only
+
+Rules:
+- **Never build release/version hrefs inline.** Always use `apps/web/src/lib/routes.ts`.
+- `hrefForTraversalLink(link)` — dispatches on `link.type` (master → /release/, release → /version/)
+- `hrefForArtistCredit(credit)` — pressing IDs from credits → always `/version/`
+- `hrefForSearchResult(result)` — mirrors ResultCard routing logic
+- `hrefForMasterId(id)` / `hrefForReleaseId(id)` — primitives when type is already known
+
+## 9) No-Dead-Ends Policy
 
 1. Any linked entity on UI pages must resolve or degrade with explicit fallback copy.
 2. Validate against canary set (`docs/no-dead-ends-canary-ids.md`).
 3. Keep checker script green (`scripts/no-dead-ends-check.ts`) before broad rollout.
 
-## 9) MCP Launch Policy
+## 10) MCP Launch Policy
 
 1. Start with strict anonymous limits + spend guardrails.
 2. Keep protect mode and capacity mode operational.
 3. Preserve stable response contracts and structured errors.
 4. Review volume, timeout rate, and abuse signals on a weekly cadence.
 
-## 10) SEO Rollout Policy
+## 11) SEO Rollout Policy
 
 1. Prioritize high-signal artists + labels first.
 2. Keep low-value/duplicate pages out of indexing cohorts.
 3. Maintain sitemap and robots correctness.
 4. Track Search Console ingestion/errors weekly before expanding cohorts.
 
-## 11) Incident Discipline
+## 12) Incident Discipline
 
 For each incident class (API crash, search regression, DB saturation, MCP degradation):
 

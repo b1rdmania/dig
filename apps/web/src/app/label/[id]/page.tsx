@@ -21,6 +21,7 @@ import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
+import { hrefForTraversalLink } from "@/lib/routes";
 import styles from "../../artist/[id]/page.module.css";
 
 function BandcampIcon() {
@@ -187,7 +188,7 @@ async function LabelReleases({ id }: { id: string }) {
       )}
       {releasesData.links.map((link) => (
         <div className={styles.row} key={link.discogs_id}>
-          <Link href={`/release/${link.discogs_id}`} className={styles.item}>
+          <Link href={hrefForTraversalLink(link)} className={styles.item}>
             {link.title || `Release ${link.discogs_id}`}
           </Link>
           <span className={styles.small}>{link.year || "—"}</span>
