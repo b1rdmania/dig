@@ -107,6 +107,38 @@ SELECT pg_size_pretty(pg_database_size('dig'));
 SELECT count(*) FROM pg_stat_activity;
 ```
 
+## Long-Running Backfill SOP
+
+Use this for `nohup` backfills running directly on `dig-db` machine.
+
+### Monitor
+
+```bash
+fly ssh console -a dig-db --machine d8d1009a0702d8 -C "bash -lc 'tail -20 /tmp/q_v2_all.log; echo ---; ps -p 8467 -o pid=,stat=,etime=,cmd='"
+```
+
+### Stalled-job rule (required)
+
+Treat backfill as stalled if all are true:
+1. Process still exists.
+2. No new progress line in log for 60+ minutes.
+3. No completion marker (`BACKFILL_V2_COMPLETE`).
+
+Recovery:
+1. Stop stuck process.
+2. Restart **release phase only** (do not rerun artist phase unless explicitly required).
+3. Confirm new progress line appears within 10 minutes.
+
+### Completion evidence (required)
+
+Before closing the gate, capture:
+1. `BACKFILL_V2_COMPLETE` log line.
+2. `ANALYZE enrich.entity_quality` completion.
+3. Guardrail SQL snapshot:
+   - counts by `entity_type, quality_status`
+   - top `quality_reason`
+   - `quality_version` distribution
+
 ## MCP Smoke Test
 
 ```bash

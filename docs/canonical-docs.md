@@ -7,6 +7,9 @@ This file defines which document to use for what.
 1. `docs/operating-implementation-guide.md`
 2. `docs/ops-runbook.md`
 3. `docs/migration-parity-audit-2026-03-07.md` (schema/index parity reference)
+4. `docs/gate-closeout-template.md` (required gate report format)
+5. `docs/gate-item1-quality-layer-closeout.md` (Item 1 gate state)
+6. `docs/gate-item2-no-dead-ends-v2-closeout.md` (Item 2 gate state)
 
 ## Strategy and Scope
 
