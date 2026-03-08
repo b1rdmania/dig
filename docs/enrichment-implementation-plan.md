@@ -142,11 +142,16 @@ Done criteria:
 - Integrate setlist timeline data for mapped artists
 - Keep timeline as separate contextual dimension
 - Add temporal traversal/read endpoints
+- Roll out on full catalog eligibility set using quality filter:
+  - `eligible`: artists with `quality_status IN ('active','low_value')`
+  - `excluded`: artists with `quality_status='suppressed'` (must be counted + reason-coded)
+  - No sample-only closeout allowed for EN-D unless explicitly marked `DEFERRED_BY_DECISION`
 
 Done criteria:
-- Timeline query works for mapped artists
+- Timeline query works for full eligible artist population
 - Clear source/terms attribution present
 - No effect on canonical release search correctness
+- Coverage metrics and idempotency verified on full eligible set
 
 ## 4E. Label Linkouts (Bandcamp + Instagram)
 
@@ -195,6 +200,8 @@ Gate closeout format:
 - [ ] Setlist timeline integrated with source attribution
 - [ ] End-to-end MCP enrichment tools validated in two clients
 - [ ] Alpha docs updated with enrichment semantics and caveats
+- [ ] Full-catalog rollout evidence recorded (eligible/processed/excluded counts)
+- [ ] Idempotency rerun delta = 0 on full eligible set
 
 Execution checklist:
 - [EN-D Spike Checklist](en-d-spike-checklist.md)
@@ -247,3 +254,11 @@ Gate closeout:
 5. Add Wikidata context for mapped entities
 6. Add Setlist timeline as separate enrichment stream
 7. Add deterministic label linkouts from Discogs URLs ([runbook](label-linkouts-bandcamp-instagram.md))
+
+---
+
+## 10. Full-Catalog Rule (Locked)
+
+- Any enrichment gate marked `FULLY_CLOSED` must have full-catalog evidence on the defined eligible population.
+- If a gate is validated on sample only, status must be `VALIDATED_ON_SAMPLE` and cannot be promoted without a promotion record in `docs/full-catalog-rollout-ledger.md`.
+- EN-D promotion artifact is required: `docs/en-d-full-catalog-rollout.md`.

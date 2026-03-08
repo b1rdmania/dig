@@ -128,3 +128,12 @@ When docs conflict, precedence is:
 3. Expand SEO/enrichment cohorts only with gates and measurements.
 4. Ship new surfaces only after the above remain green.
 5. No item is complete until full-catalog promotion evidence exists (or a written defer decision is approved).
+
+## 14) Enrichment Full-Catalog Requirement
+
+1. Enrichment gates (EN-*) cannot be marked `FULLY_CLOSED` on sample/cohort evidence alone.
+2. Required status model:
+   - `VALIDATED_ON_SAMPLE` (intermediate only)
+   - `FULLY_CLOSED` (full eligible population complete)
+   - `DEFERRED_BY_DECISION` (explicitly documented deferral)
+3. EN-D rollout authority: `docs/en-d-full-catalog-rollout.md`.
