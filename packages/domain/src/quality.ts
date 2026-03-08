@@ -18,7 +18,7 @@ import type { Kysely } from "kysely";
 import type { Database } from "@dig/db";
 import type { SearchEntityType } from "./search.js";
 
-export const QUALITY_VERSION = 1;
+export const QUALITY_VERSION = 2;
 
 export type QualityStatus = "active" | "low_value" | "suppressed" | "invalid" | "orphan";
 
@@ -27,6 +27,15 @@ export interface QualityScore {
   quality_reason: string;
 }
 
+export interface QualityClassifyContext {
+  entityType?: SearchEntityType;
+  profile?: string | null;
+  realName?: string | null;
+  hasLinks?: boolean;
+}
+
+const ARTIST_PLACEHOLDER_RE = /^(artist\s+\d+|unknown|undefined|n\/?a|none|null|test)\b/i;
+
 /**
  * Classify a single entity by its name/title and Discogs data_quality field.
  * Deterministic and side-effect-free — safe to call in any context.
@@ -34,6 +43,7 @@ export interface QualityScore {
 export function classifyEntityQuality(
   nameOrTitle: string | null,
   dataQuality: string,
+  context: QualityClassifyContext = {},
 ): QualityScore {
   const name = nameOrTitle ?? "";
 
@@ -51,6 +61,22 @@ export function classifyEntityQuality(
 
   if (dataQuality === "Needs Major Changes") {
     return { quality_status: "low_value", quality_reason: "discogs_quality_needs_major_changes" };
+  }
+
+  // V2 artist-specific tightening
+  if (context.entityType === "artist") {
+    if (ARTIST_PLACEHOLDER_RE.test(name.trim())) {
+      return { quality_status: "suppressed", quality_reason: "artist_placeholder_name" };
+    }
+
+    const profileEmpty = !context.profile || context.profile.trim() === "";
+    const realNameEmpty = !context.realName || context.realName.trim() === "";
+    const hasLinks = context.hasLinks ?? true;
+
+    // Needs Vote + no profile/real_name + no graph links is typically junk/placeholder.
+    if (dataQuality === "Needs Vote" && profileEmpty && realNameEmpty && !hasLinks) {
+      return { quality_status: "low_value", quality_reason: "artist_unlinked_low_info" };
+    }
   }
 
   return { quality_status: "active", quality_reason: "default_active" };
