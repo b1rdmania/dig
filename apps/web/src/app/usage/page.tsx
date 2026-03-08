@@ -26,6 +26,8 @@ export default async function UsagePage() {
   const categoryRows = mapRows(apiUsage.requests_by_category);
   const eventRows = mapRows(apiUsage.telemetry_by_event);
   const mcpRows = mcpUsage ? mapRows(mcpUsage.calls_by_tool) : [];
+  const lifetimeCategoryRows = apiUsage.lifetime ? mapRows(apiUsage.lifetime.requests_by_category) : [];
+  const lifetimeEventRows = apiUsage.lifetime ? mapRows(apiUsage.lifetime.telemetry_by_event) : [];
 
   return (
     <div className={styles.page}>
@@ -33,16 +35,16 @@ export default async function UsagePage() {
         <p className={styles.eyebrow}>Usage</p>
         <h1 className={styles.title}>Dig in the wild.</h1>
         <p className={styles.lede}>
-          Public beta usage snapshots. Values are process-window counters (since service start), not billing-grade
-          analytics.
+          Public beta usage snapshots. API totals are now cumulative across deploys, with process-window counters also
+          shown for live diagnostics.
         </p>
       </section>
 
       <section className={styles.grid}>
         <article className={styles.card}>
-          <p className={styles.label}>API Requests</p>
-          <p className={styles.value}>{formatNumber(apiUsage.requests_total)}</p>
-          <p className={styles.sub}>since process start</p>
+          <p className={styles.label}>API Requests (Lifetime)</p>
+          <p className={styles.value}>{formatNumber(apiUsage.lifetime?.requests_total ?? apiUsage.requests_total)}</p>
+          <p className={styles.sub}>{apiUsage.lifetime ? "cumulative since launch" : "fallback: since process start"}</p>
         </article>
         <article className={styles.card}>
           <p className={styles.label}>MCP Calls</p>
@@ -55,16 +57,23 @@ export default async function UsagePage() {
           <p className={styles.sub}>telemetry estimate</p>
         </article>
         <article className={styles.card}>
-          <p className={styles.label}>Telemetry Events</p>
-          <p className={styles.value}>{formatNumber(apiUsage.telemetry_events_total)}</p>
+          <p className={styles.label}>Telemetry Events (Lifetime)</p>
+          <p className={styles.value}>
+            {formatNumber(apiUsage.lifetime?.telemetry_events_total ?? apiUsage.telemetry_events_total)}
+          </p>
           <p className={styles.sub}>client events accepted</p>
+        </article>
+        <article className={styles.card}>
+          <p className={styles.label}>API Requests (Process)</p>
+          <p className={styles.value}>{formatNumber(apiUsage.requests_total)}</p>
+          <p className={styles.sub}>since current service start</p>
         </article>
       </section>
 
       <section className={styles.section}>
-        <h2>API request categories</h2>
+        <h2>API request categories (lifetime)</h2>
         <dl className={styles.list}>
-          {categoryRows.map(([k, v]) => (
+          {(apiUsage.lifetime ? lifetimeCategoryRows : categoryRows).map(([k, v]) => (
             <div className={styles.row} key={k}>
               <dt>{k}</dt>
               <dd>{formatNumber(v)}</dd>
@@ -74,9 +83,9 @@ export default async function UsagePage() {
       </section>
 
       <section className={styles.section}>
-        <h2>Telemetry events</h2>
+        <h2>Telemetry events (lifetime)</h2>
         <dl className={styles.list}>
-          {eventRows.map(([k, v]) => (
+          {(apiUsage.lifetime ? lifetimeEventRows : eventRows).map(([k, v]) => (
             <div className={styles.row} key={k}>
               <dt>{k}</dt>
               <dd>{formatNumber(v)}</dd>
@@ -102,7 +111,7 @@ export default async function UsagePage() {
       </section>
 
       <p className={styles.note}>
-        Data source: Dig API + MCP process counters. For official billing/ops numbers, use internal monitoring.
+        Data source: Dig API persistent counters + process diagnostics, and MCP process counters.
       </p>
     </div>
   );

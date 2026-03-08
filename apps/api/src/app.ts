@@ -24,7 +24,7 @@ import { registerEventRoutes } from "./routes/v1/events.js";
 import { registerEnrichmentRoutes } from "./routes/v1/enrichment.js";
 import { registerSeoRoutes } from "./routes/v1/seo.js";
 import { registerUsageRoutes } from "./routes/v1/usage.js";
-import { recordApiRequest } from "./metrics/usage.js";
+import { initUsagePersistence, recordApiRequest, shutdownUsagePersistence } from "./metrics/usage.js";
 import { registerAskRoutes } from "./routes/v1/ask.js";
 
 export interface AppDeps {
@@ -56,6 +56,7 @@ export async function buildApp(deps: AppDeps): Promise<{
 }> {
   const app = Fastify({ logger: false });
   const db = createDb(deps.databaseUrl);
+  initUsagePersistence(db);
 
   // --- CORS ---
   await app.register(cors, {
@@ -201,8 +202,12 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerEventRoutes(app);
   registerEnrichmentRoutes(app, db);
   registerSeoRoutes(app, db);
-  registerUsageRoutes(app);
+  registerUsageRoutes(app, db);
   registerAskRoutes(app, db);
+
+  app.addHook("onClose", async () => {
+    await shutdownUsagePersistence();
+  });
 
   return { app, db };
 }

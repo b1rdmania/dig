@@ -455,6 +455,20 @@ export interface ApiUsageSnapshot {
   telemetry_events_total: number;
   telemetry_by_event: Record<string, number>;
   unique_sessions_estimate: number;
+  lifetime: {
+    as_of: string;
+    requests_total: number;
+    errors_total: number;
+    requests_by_category: Record<string, number>;
+    telemetry_events_total: number;
+    telemetry_by_event: Record<string, number>;
+    routes: Array<{
+      route: string;
+      count: number;
+      errors: number;
+      avg_ms: number;
+    }>;
+  } | null;
 }
 
 export interface ApiUsageSnapshotInternal extends ApiUsageSnapshot {

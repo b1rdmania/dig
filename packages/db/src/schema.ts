@@ -340,6 +340,13 @@ export interface EnrichLabelLinkoutsTable {
   updated_at: Generated<Date>;
 }
 
+export interface EnrichUsageCountersTable {
+  counter_key: string;
+  counter_value: ColumnType<number, number | undefined, number | undefined>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 // --- Database interface ---
 
 export interface Database {
@@ -391,4 +398,5 @@ export interface Database {
   // Enrich
   "enrich.entity_quality": EnrichEntityQualityTable;
   "enrich.label_linkouts": EnrichLabelLinkoutsTable;
+  "enrich.usage_counters": EnrichUsageCountersTable;
 }
