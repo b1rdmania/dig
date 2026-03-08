@@ -160,6 +160,17 @@
   color: var(--fg-faint);
 }
 
+.modeNote {
+  font-size: 0.8rem;
+  color: var(--fg-faint);
+  font-style: italic;
+}
+
+.modeDegraded {
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+
 /* Input bar */
 
 .inputBar {

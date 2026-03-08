@@ -24,11 +24,22 @@ interface MediaItem {
   youtube_url: string;
 }
 
+type ResponseMode = "grounded_success" | "grounded_empty" | "timeout_degraded" | "upstream_error";
+
+interface EvidenceItem {
+  type: "artist" | "label" | "master" | "release";
+  discogs_id: number;
+  title: string;
+  dig_url: string;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   media?: MediaItem[];
   error?: boolean;
+  mode?: ResponseMode;
+  evidence?: EvidenceItem[];
 }
 
 function VideoCard({ item }: { item: MediaItem }) {
@@ -139,16 +150,20 @@ export function LlmBetaClient() {
       const data = await res.json() as {
         answer?: string;
         media?: MediaItem[];
+        mode?: ResponseMode;
+        evidence?: EvidenceItem[];
         error?: { code: string; message: string };
       };
 
       if (data.error) {
-        setMessages((prev) => [...prev, { role: "assistant", content: data.error!.message, error: true }]);
+        setMessages((prev) => [...prev, { role: "assistant", content: data.error!.message, error: true, mode: data.mode }]);
       } else {
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: data.answer ?? "",
           media: data.media ?? [],
+          mode: data.mode,
+          evidence: data.evidence ?? [],
         }]);
       }
     } catch (err) {
@@ -217,17 +232,25 @@ export function LlmBetaClient() {
                     {m.error ? (
                       <p className={styles.errorText}>{m.content}</p>
                     ) : (
-                      <div className={styles.markdown}>
-                        <ReactMarkdown
-                          components={{
-                            a: ({ href, children }) => (
-                              <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-                            ),
-                          }}
-                        >
-                          {m.content}
-                        </ReactMarkdown>
-                      </div>
+                      <>
+                        {m.mode === "grounded_empty" && (
+                          <p className={styles.modeNote}>Nothing found in Dig for this query.</p>
+                        )}
+                        {m.mode === "timeout_degraded" && (
+                          <p className={styles.modeDegraded}>⚠ Retrieval partial — some data may be missing.</p>
+                        )}
+                        <div className={styles.markdown}>
+                          <ReactMarkdown
+                            components={{
+                              a: ({ href, children }) => (
+                                <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                              ),
+                            }}
+                          >
+                            {m.content}
+                          </ReactMarkdown>
+                        </div>
+                      </>
                     )}
                     {m.media && m.media.length > 0 && <VideoRail media={m.media} />}
                   </div>
