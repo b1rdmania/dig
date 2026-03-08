@@ -5,6 +5,7 @@ import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 const KEY_STORAGE = "dig.llm_beta.anthropic_key";
+const DIG_BETA_KEY = "dig-alpha-001";
 
 type AskResponse = {
   answer: string;
@@ -23,7 +24,6 @@ type ErrorResponse = {
 
 export function LlmBetaClient() {
   const [open, setOpen] = useState(true);
-  const [betaKey, setBetaKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
   const [question, setQuestion] = useState("What are key releases by Aphex Twin?");
   const [loading, setLoading] = useState(false);
@@ -63,7 +63,7 @@ export function LlmBetaClient() {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-api-key": betaKey.trim(),
+          "x-api-key": DIG_BETA_KEY,
           "x-anthropic-api-key": anthropicKey.trim(),
         },
         body: JSON.stringify({ question: q }),
@@ -119,16 +119,7 @@ export function LlmBetaClient() {
                 placeholder="sk-ant-..."
               />
               <p className={styles.help}>Not saved to server or database. Cleared when browser session ends.</p>
-
-              <label className={styles.label} htmlFor="beta-key">Dig Beta Key (optional if enabled)</label>
-              <input
-                id="beta-key"
-                className={styles.input}
-                type="password"
-                value={betaKey}
-                onChange={(e) => setBetaKey(e.target.value)}
-                placeholder="dig-beta-..."
-              />
+              <p className={styles.help}>Dig beta access key is preloaded on this tester.</p>
 
               <label className={styles.label} htmlFor="llm-q">Question</label>
               <textarea
