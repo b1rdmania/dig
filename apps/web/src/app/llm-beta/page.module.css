@@ -240,20 +240,6 @@
   text-underline-offset: 3px;
 }
 
-/* Mode indicators */
-
-.modeNote {
-  font-size: 0.72rem;
-  color: var(--fg-faint);
-  margin-top: 0.25rem;
-}
-
-.modeDegraded {
-  font-size: 0.72rem;
-  color: var(--fg-muted);
-  margin-top: 0.25rem;
-}
-
 /* Markdown rendering */
 
 .markdown {

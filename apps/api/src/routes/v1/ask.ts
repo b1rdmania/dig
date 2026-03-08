@@ -32,26 +32,17 @@ const PRIVATE_KEYS = new Set(
 // Personality — no output format instructions, no guardrails
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You are Dig's music assistant — a record shop expert with access to 24 million Discogs records via live database tools.
+const SYSTEM_PROMPT = `You work in a record shop. You know everything — every genre, scene, era, lineage, influence, footnote. All of it. Use that knowledge freely when it helps someone understand what they're looking for or why something matters.
 
-TOOLS: Always use them before making any claim. Before saying an artist, release, or label does or doesn't exist in Dig, call search_catalog and the relevant get_* tools to check. The data is there.
+When you look things up, you use Dig (app.dig.baby) — 24 million records, credits, connections, label catalogs, the lot. Everything is in there. Search it, follow threads, pull context. If get_artist_releases comes up thin, check get_artist_credits. Use get_connections for band history and collaborations. Use get_context for biography and background. Use get_label_releases for imprint catalogs. The data is there.
 
-CRITICAL RULES:
-- Never say "not in Dig" or "not catalogued" unless search_catalog AND get_* tools all returned empty results.
-- When get_artist_releases returns 0 or fewer than 3 results, you MUST immediately call get_artist_credits — many artists appear only in credits (producer, writer, remixer), not as primary artists.
-- Never say "I can't access URLs" or "I can't browse the web" — you access a DATABASE, not websites. get_master returns video data; get_artist_releases returns release data. Use the tools.
-- When asked to show a video or media from a release, call get_master on that release. The app automatically displays YouTube videos from the result inline.
+You're terse. One or two things that are actually worth knowing, not an exhaustive list. No bullet points. No numbered lists. No bold headers. Just talk like a person.
 
-LINKS: When you reference anything on Dig, include the exact URL using the ID from your tool results:
-- Artist: app.dig.baby/artist/{discogs_id}
-- Album/master: app.dig.baby/release/{discogs_id}
-- Pressing/version: app.dig.baby/version/{discogs_id}
-- Label: app.dig.baby/label/{discogs_id}
-Only use IDs you actually retrieved from tools. Never guess or fabricate IDs.
+When you hit something genuinely good — a deep cut, a connection worth making, a record that matters — you open up. Say what's special about it. You're allowed opinions.
 
-STYLE: Terse. No bullet points. No numbered lists. No bold headers. Talk like a person. One or two things worth knowing. When you find something genuinely good — a deep cut, a connection worth making — open up about it. Ask a single direct question if you're not sure what someone means.
+If you're not sure what someone means, ask. One direct question, not an apology.
 
-Everything you point people to is on Dig. Never reference Discogs.com or any other external site.`;
+Everything you point people to is on Dig. Never send anyone to Discogs or anywhere else — that's their business if they choose to go. The catalog, the connections, the context: it's all here.`;
 
 // ---------------------------------------------------------------------------
 // Tool definitions
@@ -194,14 +185,6 @@ export interface MediaItem {
   youtube_url: string;
 }
 
-export interface EvidenceItem {
-  type: string;
-  id: number;
-  name: string;
-}
-
-type ResponseMode = "grounded_success" | "grounded_empty" | "timeout_degraded" | "upstream_error";
-
 const YT_RE = /^[A-Za-z0-9_-]{11}$/;
 function extractYouTubeId(url: string): string | null {
   try {
@@ -223,7 +206,6 @@ async function executeTool(
   name: string,
   input: Record<string, unknown>,
   mediaCollector: MediaItem[],
-  evidenceCollector: EvidenceItem[],
 ): Promise<unknown> {
   try {
     if (name === "search_catalog") {
@@ -232,13 +214,6 @@ async function executeTool(
       const genre = input.genre ? String(input.genre) : undefined;
       const limit = Math.min(Math.max(Number(input.limit ?? 8), 1), 10);
       const sr = await search(db, { q, type, genre, limit, quality: "all" });
-      for (const r of sr.results) {
-        evidenceCollector.push({
-          type: r.type,
-          id: r.discogs_id,
-          name: r.name ?? r.title ?? "",
-        });
-      }
       return {
         results: sr.results.map((r) => ({
           type: r.type,
@@ -256,7 +231,6 @@ async function executeTool(
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.artists");
       const d = await getArtist(db, id, batchId, dumpDate) as any;
       if (!d) return { error: "Artist not found" };
-      evidenceCollector.push({ type: "artist", id: d.discogs_id, name: d.name });
       return {
         discogs_id: d.discogs_id,
         name: d.name,
@@ -266,7 +240,6 @@ async function executeTool(
         members: d.members?.map((m: any) => m.name) ?? [],
         aliases: d.aliases?.map((a: any) => a.name) ?? [],
         profile: d.profile ? String(d.profile).slice(0, 600) : null,
-        dig_url: `app.dig.baby/artist/${d.discogs_id}`,
       };
     }
 
@@ -275,14 +248,12 @@ async function executeTool(
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.labels");
       const d = await getLabel(db, id, batchId, dumpDate) as any;
       if (!d) return { error: "Label not found" };
-      evidenceCollector.push({ type: "label", id: d.discogs_id, name: d.name });
       return {
         discogs_id: d.discogs_id,
         name: d.name,
         parent_label: d.parent_label?.name ?? null,
         sublabels: d.sublabels?.map((s: any) => s.name).slice(0, 10) ?? [],
         profile: d.profile ? String(d.profile).slice(0, 600) : null,
-        dig_url: `app.dig.baby/label/${d.discogs_id}`,
       };
     }
 
@@ -291,8 +262,6 @@ async function executeTool(
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.masters");
       const d = await getMaster(db, id, batchId, dumpDate) as any;
       if (!d) return { error: "Release not found" };
-
-      evidenceCollector.push({ type: "master", id: d.discogs_id, name: d.title });
 
       // Collect YouTube videos
       const artistName = d.artists?.[0]?.name ?? "Unknown";
@@ -325,7 +294,6 @@ async function executeTool(
         })) ?? [],
         notes: d.notes ? String(d.notes).slice(0, 300) : null,
         has_video: mediaCollector.some((m) => m.discogs_id === d.discogs_id),
-        dig_url: `app.dig.baby/release/${d.discogs_id}`,
       };
     }
 
@@ -335,29 +303,18 @@ async function executeTool(
       const limit = Math.min(Math.max(Number(input.limit ?? 12), 1), 20);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.artists");
       const result = await getArtistMasters(db, id, batchId, dumpDate, limit, undefined, "newest", releaseType);
-
-      if (result.links.length === 0) {
-        return {
-          releases: [],
-          total: 0,
-          REQUIRED_NEXT_STEP: "Zero releases found as primary artist. You MUST call get_artist_credits immediately to find work credited as producer, writer, or remixer.",
-        };
-      }
-
-      for (const l of result.links) {
-        evidenceCollector.push({ type: "master", id: (l as any).discogs_id, name: (l as any).title });
-      }
-
       return {
         releases: result.links.map((l: any) => ({
           discogs_id: l.discogs_id,
           title: l.title,
           year: l.year ?? null,
           type: l.release_type_label ?? l.release_type ?? null,
-          dig_url: `app.dig.baby/release/${l.discogs_id}`,
         })),
         total: result.pagination.total_estimate ?? result.links.length,
         has_more: result.pagination.has_more,
+        note: result.links.length === 0
+          ? "No direct releases found. Call get_artist_credits to find work credited as producer/writer/remixer."
+          : undefined,
       };
     }
 
@@ -366,13 +323,6 @@ async function executeTool(
       const limit = Math.min(Math.max(Number(input.limit ?? 15), 1), 20);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.artists");
       const result = await getArtistCredits(db, id, batchId, dumpDate, limit) as any;
-      for (const l of (result.links ?? [])) {
-        evidenceCollector.push({
-          type: "release",
-          id: l.release_discogs_id ?? l.discogs_id,
-          name: l.title,
-        });
-      }
       return {
         credits: (result.links ?? []).map((l: any) => ({
           discogs_id: l.release_discogs_id ?? l.discogs_id,
@@ -380,7 +330,6 @@ async function executeTool(
           year: l.year ?? null,
           roles: l.roles ?? [],
           role_family: l.role_family ?? null,
-          dig_url: `app.dig.baby/version/${l.release_discogs_id ?? l.discogs_id}`,
         })),
         total: result.pagination?.total_estimate ?? (result.links?.length ?? 0),
       };
@@ -391,9 +340,6 @@ async function executeTool(
       const limit = Math.min(Math.max(Number(input.limit ?? 15), 1), 20);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.labels");
       const result = await getLabelReleases(db, id, batchId, dumpDate, limit) as any;
-      for (const l of (result.links ?? [])) {
-        evidenceCollector.push({ type: "release", id: l.discogs_id, name: l.title });
-      }
       return {
         releases: (result.links ?? []).map((l: any) => ({
           discogs_id: l.discogs_id,
@@ -524,7 +470,7 @@ async function runAgenticLoop(params: {
   model: string;
   maxTokens: number;
   anthropicApiKey: string;
-}): Promise<{ answer: string; model: string; tool_calls: number; media: MediaItem[]; evidence: EvidenceItem[] }> {
+}): Promise<{ answer: string; model: string; tool_calls: number; media: MediaItem[] }> {
   const messages: AnthropicMessage[] = [
     ...params.history,
     { role: "user", content: params.question },
@@ -533,7 +479,6 @@ async function runAgenticLoop(params: {
   let usedModel = params.model;
   let toolCallCount = 0;
   const mediaCollector: MediaItem[] = [];
-  const evidenceCollector: EvidenceItem[] = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const response = await callAnthropic({
@@ -550,7 +495,7 @@ async function runAgenticLoop(params: {
     if (response.stop_reason === "end_turn" || response.stop_reason === "max_tokens") {
       const textBlock = response.content.find((b) => b.type === "text");
       const answer = String(textBlock?.text ?? "").trim() || "I couldn't find anything relevant — try searching directly on Dig.";
-      return { answer, model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector };
+      return { answer, model: usedModel, tool_calls: toolCallCount, media: mediaCollector };
     }
 
     if (response.stop_reason === "tool_use") {
@@ -565,7 +510,6 @@ async function runAgenticLoop(params: {
             String(block.name ?? ""),
             (block.input as Record<string, unknown>) ?? {},
             mediaCollector,
-            evidenceCollector,
           );
           return {
             type: "tool_result" as const,
@@ -587,7 +531,6 @@ async function runAgenticLoop(params: {
       model: usedModel,
       tool_calls: toolCallCount,
       media: mediaCollector,
-      evidence: evidenceCollector,
     };
   }
 
@@ -613,7 +556,6 @@ async function runAgenticLoop(params: {
     model: usedModel,
     tool_calls: toolCallCount,
     media: mediaCollector,
-    evidence: evidenceCollector,
   };
 }
 
@@ -677,7 +619,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     const started = Date.now();
 
     try {
-      const { answer, model: usedModel, tool_calls, media, evidence } = await runAgenticLoop({
+      const { answer, model: usedModel, tool_calls, media } = await runAgenticLoop({
         db,
         question,
         history,
@@ -694,14 +636,9 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         return true;
       });
 
-      // Determine response mode
-      const mode: ResponseMode = evidence.length > 0 ? "grounded_success" : "grounded_empty";
-
       return reply.send({
         answer,
         media: dedupedMedia,
-        mode,
-        evidence: evidence.slice(0, 20),
         meta: {
           model: usedModel,
           elapsed_ms: Date.now() - started,
@@ -718,7 +655,6 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
             : "Failed to generate response",
           details: { reason: String(err?.message ?? err) },
         },
-        mode: "upstream_error" as ResponseMode,
       });
     }
   });

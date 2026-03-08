@@ -17,14 +17,6 @@ const ENTITY_PATHS: Record<string, string> = {
   release: "version",
 };
 
-type ResponseMode = "grounded_success" | "grounded_empty" | "timeout_degraded" | "upstream_error";
-
-interface EvidenceItem {
-  type: string;
-  id: number;
-  name: string;
-}
-
 interface MediaItem {
   discogs_id: number;
   title: string;
@@ -36,8 +28,6 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   media?: MediaItem[];
-  mode?: ResponseMode;
-  evidence?: EvidenceItem[];
   error?: boolean;
 }
 
@@ -149,25 +139,16 @@ export function LlmBetaClient() {
       const data = await res.json() as {
         answer?: string;
         media?: MediaItem[];
-        mode?: ResponseMode;
-        evidence?: EvidenceItem[];
         error?: { code: string; message: string };
       };
 
       if (data.error) {
-        setMessages((prev) => [...prev, {
-          role: "assistant",
-          content: data.error!.message,
-          mode: "upstream_error",
-          error: true,
-        }]);
+        setMessages((prev) => [...prev, { role: "assistant", content: data.error!.message, error: true }]);
       } else {
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: data.answer ?? "",
           media: data.media ?? [],
-          mode: data.mode,
-          evidence: data.evidence ?? [],
         }]);
       }
     } catch (err) {
@@ -249,12 +230,6 @@ export function LlmBetaClient() {
                       </div>
                     )}
                     {m.media && m.media.length > 0 && <VideoRail media={m.media} />}
-                    {m.mode === "grounded_empty" && (
-                      <p className={styles.modeNote}>nothing found in Dig for this query</p>
-                    )}
-                    {m.mode === "timeout_degraded" && (
-                      <p className={styles.modeDegraded}>⚠ retrieval partial — some data may be missing</p>
-                    )}
                   </div>
                 )}
               </div>
