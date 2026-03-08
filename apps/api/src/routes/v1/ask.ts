@@ -27,17 +27,7 @@ const PRIVATE_KEYS = new Set(
 
 function requirePrivateKey(req: FastifyRequest): { ok: true } | { ok: false; status: number; body: unknown } {
   if (PRIVATE_KEYS.size === 0) {
-    return {
-      ok: false,
-      status: 503,
-      body: {
-        error: {
-          code: "CONFIG_ERROR",
-          message: "LLM beta keys are not configured",
-          details: null,
-        },
-      },
-    };
+    return { ok: true };
   }
   const key = String(req.headers["x-api-key"] ?? "").trim();
   if (!key || !PRIVATE_KEYS.has(key)) {
