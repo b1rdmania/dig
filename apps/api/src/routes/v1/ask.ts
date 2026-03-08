@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
+import { sql } from "@dig/db";
 import {
   search,
   getArtist,
@@ -8,6 +9,7 @@ import {
   getMaster,
   getArtistMasters,
   getArtistCredits,
+  getLabelReleases,
   getBatchForTable,
 } from "@dig/domain";
 
@@ -30,20 +32,17 @@ const PRIVATE_KEYS = new Set(
 // Personality — no output format instructions, no guardrails
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You are the Dig music assistant. Dig is a music discovery platform built on 24 million records from the Discogs catalog — artists, labels, masters, releases, credits. The site is app.dig.baby.
+const SYSTEM_PROMPT = `You work in a record shop. You know music cold — artists, labels, scenes, lineages, the lot. You've got access to 24 million records on Dig (app.dig.baby) and tools to search them.
 
-You are deeply knowledgeable about music across all genres and eras. You understand what people mean: "Prince" is an artist, "Blue Note" is a jazz label, "Spirit of Eden" is a Talk Talk album, "classic Chicago house" is a genre and era.
+You're terse. You don't waste words. One or two things that are actually worth knowing, not an exhaustive list. No bullet points. No numbered lists. No bold headers. Just talk like a person.
 
-You have tools to search and retrieve real catalog data. Use them freely and creatively:
-- If get_artist_releases returns nothing, try search_catalog with type=master and the artist name — releases are sometimes credited differently
-- Try multiple search angles before giving up: artist name variations, label names, release titles
-- If you find an artist ID, always follow up with get_artist_releases to check their catalog
+When you hit something genuinely good — a deep cut, a connection worth making, a record that matters — you open up. Say what's special about it. "This is the one" is a complete sentence. You're allowed opinions.
 
-IMPORTANT: Only ever reference Dig (app.dig.baby) for searching and browsing. Never mention Discogs.com, Bandcamp, or any external site. If data isn't in the Dig catalog, simply say it's not in the catalog and suggest the user search Dig directly.
+If you're not sure what someone means, ask. One direct question, not an apology.
 
-Help people discover music. Be specific, surface the good stuff, reference actual titles and years. If something isn't available, be brief about it and move on — don't pad with suggestions to go elsewhere.
+You use your tools without narrating them. Search multiple angles if the first doesn't land. Producers and DJs often appear through credits rather than direct releases — if get_artist_releases comes up thin, check get_artist_credits. If you want context on an artist's story or connections, use get_context and get_connections. For a label's catalog, use get_label_releases. Follow threads.
 
-Don't narrate your tool use. Be conversational, not a database report.`;
+Everything lives on Dig. Never mention Discogs, Bandcamp, or anywhere else. If something genuinely isn't in the catalog, say so in one sentence.`;
 
 // ---------------------------------------------------------------------------
 // Tool definitions
@@ -126,12 +125,49 @@ const TOOLS = [
   {
     name: "get_artist_credits",
     description:
-      "Get releases an artist is credited on as producer, writer, remixer, or performer — even when not listed as the primary artist. Essential for producers and DJs whose work appears under different credits. Use this alongside or instead of get_artist_releases.",
+      "Get releases an artist is credited on as producer, writer, remixer, or performer — even when not listed as the primary artist. Essential for producers and DJs. Use alongside get_artist_releases, especially when that returns few results.",
     input_schema: {
       type: "object" as const,
       properties: {
         discogs_id: { type: "number", description: "Discogs artist ID" },
         limit: { type: "number", description: "Number of credits to return (1–20, default 15)" },
+      },
+      required: ["discogs_id"],
+    },
+  },
+  {
+    name: "get_label_releases",
+    description:
+      "Get releases that came out on a specific label — useful for 'what's on Warp Records' or 'show me the Tresor catalog'. Returns titles, artists, years.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        discogs_id: { type: "number", description: "Discogs label ID" },
+        limit: { type: "number", description: "Number of releases (1–20, default 15)" },
+      },
+      required: ["discogs_id"],
+    },
+  },
+  {
+    name: "get_connections",
+    description:
+      "Get an artist's connections from the relationship graph — band memberships, collaborations, teacher/student relationships, family. Use to answer 'who was in X band', 'what other projects did X have', 'who did X work with'.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        discogs_id: { type: "number", description: "Discogs artist ID" },
+      },
+      required: ["discogs_id"],
+    },
+  },
+  {
+    name: "get_context",
+    description:
+      "Get biographical context, location history, or timeline notes for an artist from the enrichment layer (sourced from Wikidata). Use when you want background on who an artist is, where they're from, or their history.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        discogs_id: { type: "number", description: "Discogs artist ID" },
       },
       required: ["discogs_id"],
     },
@@ -296,6 +332,73 @@ async function executeTool(
           role_family: l.role_family ?? null,
         })),
         total: result.pagination?.total_estimate ?? (result.links?.length ?? 0),
+      };
+    }
+
+    if (name === "get_label_releases") {
+      const id = Number(input.discogs_id);
+      const limit = Math.min(Math.max(Number(input.limit ?? 15), 1), 20);
+      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.labels");
+      const result = await getLabelReleases(db, id, batchId, dumpDate, limit) as any;
+      return {
+        releases: (result.links ?? []).map((l: any) => ({
+          discogs_id: l.discogs_id,
+          title: l.title,
+          year: l.year ?? null,
+          artist: l.artist ?? null,
+        })),
+        total: result.pagination?.total_estimate ?? (result.links?.length ?? 0),
+        has_more: result.pagination?.has_more ?? false,
+      };
+    }
+
+    if (name === "get_connections") {
+      const id = Number(input.discogs_id);
+      const rows = await sql<any>`
+        SELECT re.edge_type, re.target_entity_type, re.target_discogs_id,
+               a.name as target_name, re.valid_from, re.valid_to
+        FROM enrich.relationship_edges re
+        LEFT JOIN catalog.artists a
+          ON a.discogs_id = re.target_discogs_id
+         AND re.target_entity_type = 'artist'
+        WHERE re.source_discogs_id = ${id}
+          AND re.source_entity_type = 'artist'
+        LIMIT 20
+      `.execute(db);
+
+      return {
+        connections: rows.rows.map((r: any) => ({
+          type: r.edge_type,
+          entity_type: r.target_entity_type,
+          discogs_id: r.target_discogs_id,
+          name: r.target_name ?? null,
+          from: r.valid_from ?? null,
+          to: r.valid_to ?? null,
+        })),
+        total: rows.rows.length,
+      };
+    }
+
+    if (name === "get_context") {
+      const id = Number(input.discogs_id);
+      const rows = await sql<any>`
+        SELECT context_type, content_json, source
+        FROM enrich.entity_context
+        WHERE entity_type = 'artist' AND discogs_id = ${id}
+        ORDER BY context_type
+        LIMIT 6
+      `.execute(db);
+
+      if (rows.rows.length === 0) return { context: null };
+
+      return {
+        context: rows.rows.map((r: any) => {
+          const content = r.content_json;
+          const text = typeof content === "string"
+            ? content
+            : content?.text ?? content?.value ?? JSON.stringify(content);
+          return { type: r.context_type, text: String(text).slice(0, 500) };
+        }),
       };
     }
 
