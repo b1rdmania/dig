@@ -61,7 +61,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   await app.register(cors, {
     origin: true,
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "X-API-Key"],
+    allowedHeaders: ["Content-Type", "X-API-Key", "X-Anthropic-API-Key", "X-Request-Id"],
     exposedHeaders: [
       "X-RateLimit-Limit",
       "X-RateLimit-Remaining",
