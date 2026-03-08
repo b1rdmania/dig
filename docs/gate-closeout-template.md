@@ -15,6 +15,7 @@ Use this template for any phase/gate completion report.
 
 - What was in scope:
 - What was explicitly out of scope:
+- Scope label: `sample-only` | `partial-catalog` | `full-catalog`
 
 ## Changes Shipped
 
@@ -79,3 +80,4 @@ Use this template for any phase/gate completion report.
 
 - Operationally safe to proceed: `yes/no`
 - Next gate/phase to execute:
+- Promotion status: `VALIDATED_ON_SAMPLE` | `ROLLED_OUT_FULL` | `FULLY_CLOSED`

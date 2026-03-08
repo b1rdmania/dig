@@ -23,11 +23,14 @@ Use `docs/implementation-plan-agent-first.md` for long-form product strategy and
 ## 3) Required Workflow Per Change
 
 1. Define scope and success criteria.
+2. Tag scope as one of: `sample-only`, `partial-catalog`, `full-catalog`.
 2. Identify blast radius (API, MCP, DB, web, SEO, infra).
 3. Implement smallest safe diff.
 4. Run class-specific checks (Section 6).
 5. Deploy in controlled order (Section 7).
 6. Record outcome in status/decision log.
+7. If not full-catalog, mark as `VALIDATED_ON_SAMPLE` only.
+8. Promote to full-catalog and record in `docs/full-catalog-rollout-ledger.md` before `FULLY_CLOSED`.
 
 ## 4) Database Safety Protocol
 
@@ -124,3 +127,4 @@ When docs conflict, precedence is:
 2. Close open P0/P1 risks first.
 3. Expand SEO/enrichment cohorts only with gates and measurements.
 4. Ship new surfaces only after the above remain green.
+5. No item is complete until full-catalog promotion evidence exists (or a written defer decision is approved).

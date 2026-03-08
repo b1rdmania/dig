@@ -10,6 +10,7 @@ This file defines which document to use for what.
 4. `docs/gate-closeout-template.md` (required gate report format)
 5. `docs/gate-item1-quality-layer-closeout.md` (Item 1 gate state)
 6. `docs/gate-item2-no-dead-ends-v2-closeout.md` (Item 2 gate state)
+7. `docs/full-catalog-rollout-ledger.md` (promotion-to-full tracking)
 
 ## Strategy and Scope
 
