@@ -7,6 +7,7 @@ import {
   getLabel,
   getMaster,
   getArtistMasters,
+  getArtistCredits,
   getBatchForTable,
 } from "@dig/domain";
 
@@ -107,7 +108,7 @@ const TOOLS = [
   {
     name: "get_artist_releases",
     description:
-      "Get an artist's catalog from the database — their albums, EPs, and singles. Returns titles, years, and release types. If this returns 0 releases, fall back to search_catalog with type=master and the artist name — releases are sometimes credited under a different profile.",
+      "Get an artist's catalog from the database — their albums, EPs, and singles. Returns titles, years, and release types. If this returns 0 or very few releases, ALSO call get_artist_credits — many artists' work is catalogued through credits (Producer, Written-By) rather than direct artist links.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -118,6 +119,19 @@ const TOOLS = [
           description: "Filter by type. Use 'album' for main studio releases, 'all' for everything. Default: 'all'.",
         },
         limit: { type: "number", description: "Number of releases to return (1–20, default 12)" },
+      },
+      required: ["discogs_id"],
+    },
+  },
+  {
+    name: "get_artist_credits",
+    description:
+      "Get releases an artist is credited on as producer, writer, remixer, or performer — even when not listed as the primary artist. Essential for producers and DJs whose work appears under different credits. Use this alongside or instead of get_artist_releases.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        discogs_id: { type: "number", description: "Discogs artist ID" },
+        limit: { type: "number", description: "Number of credits to return (1–20, default 15)" },
       },
       required: ["discogs_id"],
     },
@@ -262,6 +276,26 @@ async function executeTool(
         })),
         total: result.pagination.total_estimate ?? result.links.length,
         has_more: result.pagination.has_more,
+        note: result.links.length === 0
+          ? "No direct releases found. Call get_artist_credits to find work credited as producer/writer/remixer."
+          : undefined,
+      };
+    }
+
+    if (name === "get_artist_credits") {
+      const id = Number(input.discogs_id);
+      const limit = Math.min(Math.max(Number(input.limit ?? 15), 1), 20);
+      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.artists");
+      const result = await getArtistCredits(db, id, batchId, dumpDate, limit) as any;
+      return {
+        credits: (result.links ?? []).map((l: any) => ({
+          discogs_id: l.release_discogs_id ?? l.discogs_id,
+          title: l.title,
+          year: l.year ?? null,
+          roles: l.roles ?? [],
+          role_family: l.role_family ?? null,
+        })),
+        total: result.pagination?.total_estimate ?? (result.links?.length ?? 0),
       };
     }
 
