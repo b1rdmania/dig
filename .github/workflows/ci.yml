@@ -41,6 +41,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Migration parity audit
+        run: npm run audit:migrations
+
       - name: Typecheck
         run: pnpm typecheck
 

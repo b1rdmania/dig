@@ -119,6 +119,12 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 14. **Gate E status**: GO with caveat for soft alpha (5-10 testers). NOT GO for broader/public (filtered p99 still high under heavy contention)
 15. See `docs/enrichment-implementation-plan.md`
 
+## Better-Than-Discogs Track (2026-03-08)
+- **Item 1 — Data Quality Layer v1**: GO WITH CAVEATS. Artist v2 reclassify complete. Releases v1 backfill running on dig-db (PID 8467, `/tmp/q_v2_all.py`, ~17:00–18:00 UTC complete). Gate not fully closed until ANALYZE + guardrail snapshot committed. `enrich.entity_quality` fully populated: 9.9M artists, 2.3M labels, 2.5M masters, 18.9M releases.
+- **Item 2 — No-Dead-Ends v2**: 0 structural dead-ends. Canary rebuilt with 100 verified IDs (`0d605ae`). 79 TIMEOUT = SSR perf issue (P1, separate). CI gate live (`.github/workflows/regression-smoke.yml`). Gate closeout doc pending.
+- **Item 3 — Artist Completeness Upgrade**: Not started.
+- **P1 open**: SSR timeout hardening (79 entities timing out at 10s ceiling), migration 014 not in kysely_migration table.
+
 ## MCP Tools
 | Tool | Description |
 |------|-------------|

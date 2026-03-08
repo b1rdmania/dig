@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import { extractYouTubeId } from "@/lib/media";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
@@ -15,26 +17,71 @@ const ENTITY_PATHS: Record<string, string> = {
   release: "version",
 };
 
-interface Source {
-  type: string;
+interface MediaItem {
   discogs_id: number;
-  title_or_name: string;
-}
-
-interface AskMeta {
-  model?: string;
-  elapsed_ms?: number;
-  entities_extracted?: string[];
-  sources_found?: number;
-  off_topic?: boolean;
+  title: string;
+  artist: string;
+  youtube_url: string;
 }
 
 interface Message {
   role: "user" | "assistant";
   content: string;
-  sources?: Source[];
-  meta?: AskMeta;
+  media?: MediaItem[];
   error?: boolean;
+}
+
+function VideoCard({ item }: { item: MediaItem }) {
+  const ytId = extractYouTubeId(item.youtube_url);
+  const [playing, setPlaying] = useState(false);
+
+  if (!ytId) return null;
+
+  return (
+    <div className={styles.videoCard}>
+      {playing ? (
+        <iframe
+          className={styles.videoEmbed}
+          src={`https://www.youtube.com/embed/${ytId}?autoplay=1`}
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+          title={item.title}
+        />
+      ) : (
+        <button
+          className={styles.videoThumb}
+          onClick={() => setPlaying(true)}
+          type="button"
+          aria-label={`Play ${item.title}`}
+        >
+          <img
+            src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+            alt={item.title}
+            className={styles.videoImg}
+          />
+          <span className={styles.playBtn}>▶</span>
+        </button>
+      )}
+      <div className={styles.videoMeta}>
+        <Link href={`/release/${item.discogs_id}`} className={styles.videoTitle}>
+          {item.title}
+        </Link>
+        <span className={styles.videoArtist}>{item.artist}</span>
+      </div>
+    </div>
+  );
+}
+
+function VideoRail({ media }: { media: MediaItem[] }) {
+  const validMedia = media.filter((m) => extractYouTubeId(m.youtube_url));
+  if (validMedia.length === 0) return null;
+  return (
+    <div className={styles.videoRail}>
+      {validMedia.map((m) => (
+        <VideoCard key={m.youtube_url} item={m} />
+      ))}
+    </div>
+  );
 }
 
 export function LlmBetaClient() {
@@ -68,14 +115,12 @@ export function LlmBetaClient() {
     const q = input.trim();
     if (!q || !anthropicKey.trim() || loading) return;
 
-    const userMsg: Message = { role: "user", content: q };
-    const nextMessages = [...messages, userMsg];
+    const nextMessages: Message[] = [...messages, { role: "user", content: q }];
     setMessages(nextMessages);
     setInput("");
     setLoading(true);
 
     try {
-      // Build history for API (exclude last user msg — it's the current question)
       const history = nextMessages.slice(0, -1).map((m) => ({
         role: m.role,
         content: m.content,
@@ -93,23 +138,17 @@ export function LlmBetaClient() {
 
       const data = await res.json() as {
         answer?: string;
-        sources?: Source[];
-        meta?: AskMeta;
+        media?: MediaItem[];
         error?: { code: string; message: string };
       };
 
       if (data.error) {
-        setMessages((prev) => [...prev, {
-          role: "assistant",
-          content: data.error!.message,
-          error: true,
-        }]);
+        setMessages((prev) => [...prev, { role: "assistant", content: data.error!.message, error: true }]);
       } else {
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: data.answer ?? "",
-          sources: data.sources ?? [],
-          meta: data.meta,
+          media: data.media ?? [],
         }]);
       }
     } catch (err) {
@@ -147,17 +186,15 @@ export function LlmBetaClient() {
       {!hasKey && (
         <section className={styles.keySection}>
           <label className={styles.label} htmlFor="anthropic-key">Anthropic API Key to get started</label>
-          <div className={styles.keyRow}>
-            <input
-              id="anthropic-key"
-              className={styles.input}
-              type="password"
-              value={anthropicKey}
-              onChange={(e) => updateAnthropicKey(e.target.value)}
-              placeholder="sk-ant-..."
-              autoFocus
-            />
-          </div>
+          <input
+            id="anthropic-key"
+            className={styles.input}
+            type="password"
+            value={anthropicKey}
+            onChange={(e) => updateAnthropicKey(e.target.value)}
+            placeholder="sk-ant-..."
+            autoFocus
+          />
           <p className={styles.help}>Stored in this browser session only. Cleared when tab closes.</p>
         </section>
       )}
@@ -177,29 +214,22 @@ export function LlmBetaClient() {
                   <p className={styles.userText}>{m.content}</p>
                 ) : (
                   <div className={styles.assistantContent}>
-                    <p className={m.error ? styles.errorText : styles.answerText}>{m.content}</p>
-
-                    {m.sources && m.sources.length > 0 && (
-                      <div className={styles.sources}>
-                        {m.sources.map((s) => (
-                          <Link
-                            key={`${s.type}-${s.discogs_id}`}
-                            href={`/${ENTITY_PATHS[s.type] ?? s.type}/${s.discogs_id}`}
-                            className={styles.sourceLink}
-                          >
-                            {s.title_or_name}
-                            <span className={styles.sourceType}>{s.type}</span>
-                          </Link>
-                        ))}
+                    {m.error ? (
+                      <p className={styles.errorText}>{m.content}</p>
+                    ) : (
+                      <div className={styles.markdown}>
+                        <ReactMarkdown
+                          components={{
+                            a: ({ href, children }) => (
+                              <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                            ),
+                          }}
+                        >
+                          {m.content}
+                        </ReactMarkdown>
                       </div>
                     )}
-
-                    {m.meta && (
-                      <p className={styles.metaLine}>
-                        {m.meta.model && <span>{m.meta.model}</span>}
-                        {m.meta.elapsed_ms && <span>{m.meta.elapsed_ms}ms</span>}
-                      </p>
-                    )}
+                    {m.media && m.media.length > 0 && <VideoRail media={m.media} />}
                   </div>
                 )}
               </div>

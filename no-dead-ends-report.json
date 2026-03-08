@@ -1,299 +1,114 @@
 {
-  "generated_at": "2026-03-08T05:51:57.865Z",
+  "generated_at": "2026-03-08T13:57:09.783Z",
   "base_url": "https://app.dig.baby",
   "summary": {
     "total": 100,
-    "pass": 18,
+    "pass": 58,
     "fail": 0,
-    "timeout": 79,
-    "error": 3
+    "timeout": 42,
+    "error": 0
   },
   "violations": [],
   "ssr_timeouts": [
     {
-      "entity": "artist/8760 (Madonna)",
-      "url": "https://app.dig.baby/artist/8760",
-      "elapsed_ms": 10304
-    },
-    {
-      "entity": "artist/125246 (Nirvana)",
-      "url": "https://app.dig.baby/artist/125246",
-      "elapsed_ms": 10138
-    },
-    {
-      "entity": "artist/1289 (Daft Punk)",
-      "url": "https://app.dig.baby/artist/1289",
-      "elapsed_ms": 10104
-    },
-    {
-      "entity": "artist/4654 (Kraftwerk)",
-      "url": "https://app.dig.baby/artist/4654",
-      "elapsed_ms": 10198
-    },
-    {
-      "entity": "artist/10783 (Beastie Boys)",
-      "url": "https://app.dig.baby/artist/10783",
-      "elapsed_ms": 10171
-    },
-    {
-      "entity": "artist/4480 (Massive Attack)",
-      "url": "https://app.dig.baby/artist/4480",
-      "elapsed_ms": 10170
-    },
-    {
-      "entity": "artist/2774 (Portishead)",
-      "url": "https://app.dig.baby/artist/2774",
-      "elapsed_ms": 10198
-    },
-    {
-      "entity": "artist/307 (Boards Of Canada)",
-      "url": "https://app.dig.baby/artist/307",
-      "elapsed_ms": 10226
-    },
-    {
-      "entity": "artist/41 (Autechre)",
-      "url": "https://app.dig.baby/artist/41",
-      "elapsed_ms": 10143
-    },
-    {
-      "entity": "artist/2290 (The Chemical Brothers)",
-      "url": "https://app.dig.baby/artist/2290",
-      "elapsed_ms": 10145
-    },
-    {
-      "entity": "artist/28209 (Public Enemy)",
-      "url": "https://app.dig.baby/artist/28209",
-      "elapsed_ms": 10224
-    },
-    {
-      "entity": "artist/38561 (OutKast)",
-      "url": "https://app.dig.baby/artist/38561",
-      "elapsed_ms": 10222
-    },
-    {
-      "entity": "artist/10995 (Erykah Badu)",
-      "url": "https://app.dig.baby/artist/10995",
-      "elapsed_ms": 10222
-    },
-    {
-      "entity": "artist/42627 (Lauryn Hill)",
-      "url": "https://app.dig.baby/artist/42627",
-      "elapsed_ms": 10221
-    },
-    {
-      "entity": "artist/82103 (Fugazi)",
-      "url": "https://app.dig.baby/artist/82103",
-      "elapsed_ms": 10235
-    },
-    {
-      "entity": "artist/17199 (Sonic Youth)",
-      "url": "https://app.dig.baby/artist/17199",
-      "elapsed_ms": 10137
-    },
-    {
-      "entity": "artist/7578 (Pavement)",
-      "url": "https://app.dig.baby/artist/7578",
-      "elapsed_ms": 10183
-    },
-    {
-      "entity": "artist/50997 (Nas)",
-      "url": "https://app.dig.baby/artist/50997",
-      "elapsed_ms": 10205
-    },
-    {
-      "entity": "artist/269 (Squarepusher)",
-      "url": "https://app.dig.baby/artist/269",
-      "elapsed_ms": 10136
-    },
-    {
-      "entity": "artist/1280 (Underworld)",
-      "url": "https://app.dig.baby/artist/1280",
-      "elapsed_ms": 10136
-    },
-    {
-      "entity": "artist/306157 (Burial)",
-      "url": "https://app.dig.baby/artist/306157",
-      "elapsed_ms": 10231
-    },
-    {
-      "entity": "label/281 (Blue Note)",
-      "url": "https://app.dig.baby/label/281",
-      "elapsed_ms": 10173
-    },
-    {
-      "entity": "label/23528 (Warp Records)",
-      "url": "https://app.dig.baby/label/23528",
-      "elapsed_ms": 10201
-    },
-    {
-      "entity": "label/77343 (Sub Pop)",
-      "url": "https://app.dig.baby/label/77343",
-      "elapsed_ms": 10232
-    },
-    {
-      "entity": "label/634 (4AD)",
-      "url": "https://app.dig.baby/label/634",
-      "elapsed_ms": 10257
-    },
-    {
-      "entity": "label/109 (Ninja Tune)",
-      "url": "https://app.dig.baby/label/109",
-      "elapsed_ms": 10256
-    },
-    {
-      "entity": "label/36339 (Mute Records)",
-      "url": "https://app.dig.baby/label/36339",
-      "elapsed_ms": 10255
-    },
-    {
-      "entity": "label/4241 (Def Jam Recordings)",
-      "url": "https://app.dig.baby/label/4241",
-      "elapsed_ms": 10255
-    },
-    {
-      "entity": "label/160 (XL Recordings)",
-      "url": "https://app.dig.baby/label/160",
-      "elapsed_ms": 10254
-    },
-    {
-      "entity": "label/93330 (Columbia Records)",
-      "url": "https://app.dig.baby/label/93330",
-      "elapsed_ms": 10155
-    },
-    {
-      "entity": "label/108701 (Virgin Records)",
-      "url": "https://app.dig.baby/label/108701",
-      "elapsed_ms": 10160
-    },
-    {
-      "entity": "label/3720 (Domino Records)",
-      "url": "https://app.dig.baby/label/3720",
-      "elapsed_ms": 10160
-    },
-    {
-      "entity": "label/472992 (Soul Jazz Collection)",
-      "url": "https://app.dig.baby/label/472992",
-      "elapsed_ms": 10160
-    },
-    {
-      "entity": "label/715 (Kompakt)",
-      "url": "https://app.dig.baby/label/715",
-      "elapsed_ms": 10159
-    },
-    {
-      "entity": "label/25386 (Hyperdub)",
-      "url": "https://app.dig.baby/label/25386",
-      "elapsed_ms": 10148
-    },
-    {
-      "entity": "label/128 (Metalheadz)",
-      "url": "https://app.dig.baby/label/128",
-      "elapsed_ms": 10151
-    },
-    {
-      "entity": "label/391810 (Soul Jazz Studio One Series)",
-      "url": "https://app.dig.baby/label/391810",
-      "elapsed_ms": 10147
-    },
-    {
       "entity": "release/21491 (OK Computer (Radiohead))",
       "url": "https://app.dig.baby/release/21491",
-      "elapsed_ms": 10148
+      "elapsed_ms": 10257
     },
     {
       "entity": "release/3684888 (Kind Of Blue (Miles Davis))",
       "url": "https://app.dig.baby/release/3684888",
-      "elapsed_ms": 10148
+      "elapsed_ms": 10257
     },
     {
       "entity": "release/2264887 (Ok Computer (alt))",
       "url": "https://app.dig.baby/release/2264887",
-      "elapsed_ms": 10133
+      "elapsed_ms": 10153
     },
     {
       "entity": "release/15313 (Endtroducing..... (DJ Shadow))",
       "url": "https://app.dig.baby/release/15313",
-      "elapsed_ms": 10132
+      "elapsed_ms": 10154
     },
     {
       "entity": "release/23683 (Mezzanine (Massive Attack))",
       "url": "https://app.dig.baby/release/23683",
-      "elapsed_ms": 10128
+      "elapsed_ms": 10157
     },
     {
       "entity": "release/50297 (Maxinquaye (Tricky))",
       "url": "https://app.dig.baby/release/50297",
-      "elapsed_ms": 10139
+      "elapsed_ms": 10157
     },
     {
       "entity": "release/9768 (Daydream Nation (Sonic Youth))",
       "url": "https://app.dig.baby/release/9768",
-      "elapsed_ms": 10101
+      "elapsed_ms": 10157
     },
     {
       "entity": "release/2815 (Homogenic (Björk))",
       "url": "https://app.dig.baby/release/2815",
-      "elapsed_ms": 10111
+      "elapsed_ms": 10196
     },
     {
       "entity": "release/30255 (Fear Of A Black Planet (Public Enemy))",
       "url": "https://app.dig.baby/release/30255",
-      "elapsed_ms": 10111
+      "elapsed_ms": 10218
     },
     {
       "entity": "release/1024691 (Illmatic (Nas))",
       "url": "https://app.dig.baby/release/1024691",
-      "elapsed_ms": 10136
+      "elapsed_ms": 10196
     },
     {
       "entity": "release/3607640 (Ready To Die (Biggie))",
       "url": "https://app.dig.baby/release/3607640",
-      "elapsed_ms": 10136
+      "elapsed_ms": 10100
     },
     {
       "entity": "release/32618 (Blue Lines (Massive Attack))",
       "url": "https://app.dig.baby/release/32618",
-      "elapsed_ms": 10136
+      "elapsed_ms": 10196
     },
     {
       "entity": "release/3378553 (Purple Rain (Prince))",
       "url": "https://app.dig.baby/release/3378553",
-      "elapsed_ms": 10119
+      "elapsed_ms": 10137
     },
     {
       "entity": "release/3548375 (Thriller (Michael Jackson))",
       "url": "https://app.dig.baby/release/3548375",
-      "elapsed_ms": 10160
+      "elapsed_ms": 10238
     },
     {
       "entity": "release/3372262 (The Joshua Tree (U2))",
       "url": "https://app.dig.baby/release/3372262",
-      "elapsed_ms": 10160
+      "elapsed_ms": 10148
     },
     {
       "entity": "release/3931883 (Vespertine (Björk))",
       "url": "https://app.dig.baby/release/3931883",
-      "elapsed_ms": 10159
+      "elapsed_ms": 10136
     },
     {
       "entity": "release/1209546 (Selected Ambient Works (Aphex Twin))",
       "url": "https://app.dig.baby/release/1209546",
-      "elapsed_ms": 10159
+      "elapsed_ms": 10266
     },
     {
       "entity": "release/3794433 (Loveless (My Bloody Valentine))",
       "url": "https://app.dig.baby/release/3794433",
-      "elapsed_ms": 10256
+      "elapsed_ms": 10202
     },
     {
       "entity": "release/1848812 (Nevermind (Nirvana))",
       "url": "https://app.dig.baby/release/1848812",
-      "elapsed_ms": 10115
+      "elapsed_ms": 10160
     },
     {
       "entity": "release/831781 (Fear variant)",
       "url": "https://app.dig.baby/release/831781",
-      "elapsed_ms": 10159
+      "elapsed_ms": 10161
     },
     {
       "entity": "version/83182 (OK Computer (original UK press))",
@@ -303,107 +118,107 @@
     {
       "entity": "version/105704 (OK Computer (US press))",
       "url": "https://app.dig.baby/version/105704",
-      "elapsed_ms": 10113
+      "elapsed_ms": 10201
     },
     {
       "entity": "version/216593 (OK Computer (reissue))",
       "url": "https://app.dig.baby/version/216593",
-      "elapsed_ms": 10095
+      "elapsed_ms": 10142
     },
     {
       "entity": "version/5058 (Endtroducing..... (original))",
       "url": "https://app.dig.baby/version/5058",
-      "elapsed_ms": 10201
+      "elapsed_ms": 10140
     },
     {
       "entity": "version/12261 (Endtroducing..... (reissue))",
       "url": "https://app.dig.baby/version/12261",
-      "elapsed_ms": 10124
+      "elapsed_ms": 10193
     },
     {
       "entity": "version/38906 (Endtroducing..... (deluxe))",
       "url": "https://app.dig.baby/version/38906",
-      "elapsed_ms": 10179
+      "elapsed_ms": 10141
     },
     {
       "entity": "version/6530 (Mezzanine (original))",
       "url": "https://app.dig.baby/version/6530",
-      "elapsed_ms": 10119
+      "elapsed_ms": 10140
     },
     {
       "entity": "version/11650 (Mezzanine (reissue))",
       "url": "https://app.dig.baby/version/11650",
-      "elapsed_ms": 10141
+      "elapsed_ms": 10271
     },
     {
       "entity": "version/104147 (Mezzanine (alt))",
       "url": "https://app.dig.baby/version/104147",
-      "elapsed_ms": 10145
+      "elapsed_ms": 10271
     },
     {
       "entity": "version/2739 (Maxinquaye (original))",
       "url": "https://app.dig.baby/version/2739",
-      "elapsed_ms": 10146
+      "elapsed_ms": 10271
     },
     {
       "entity": "version/22338 (Maxinquaye (reissue))",
       "url": "https://app.dig.baby/version/22338",
-      "elapsed_ms": 10149
+      "elapsed_ms": 10271
     },
     {
       "entity": "version/369200 (Daydream Nation (reissue))",
       "url": "https://app.dig.baby/version/369200",
-      "elapsed_ms": 10149
+      "elapsed_ms": 10263
     },
     {
       "entity": "version/2456 (Homogenic (original))",
       "url": "https://app.dig.baby/version/2456",
-      "elapsed_ms": 10134
+      "elapsed_ms": 10202
     },
     {
       "entity": "version/10744 (Homogenic (reissue))",
       "url": "https://app.dig.baby/version/10744",
-      "elapsed_ms": 10134
+      "elapsed_ms": 10200
     },
     {
       "entity": "version/78957 (Fear Of A Black Planet (original))",
       "url": "https://app.dig.baby/version/78957",
-      "elapsed_ms": 10136
+      "elapsed_ms": 10104
     },
     {
       "entity": "version/81859 (Fear Of A Black Planet (alt))",
       "url": "https://app.dig.baby/version/81859",
-      "elapsed_ms": 10189
+      "elapsed_ms": 10144
     },
     {
       "entity": "version/3603635 (Illmatic (reissue))",
       "url": "https://app.dig.baby/version/3603635",
-      "elapsed_ms": 10133
+      "elapsed_ms": 10146
     },
     {
       "entity": "version/3471 (Blue Lines (original))",
       "url": "https://app.dig.baby/version/3471",
-      "elapsed_ms": 10166
+      "elapsed_ms": 10187
     },
     {
       "entity": "version/11878 (Blue Lines (reissue))",
       "url": "https://app.dig.baby/version/11878",
-      "elapsed_ms": 10166
+      "elapsed_ms": 10187
     },
     {
       "entity": "version/2456 (Homogenic (original press))",
       "url": "https://app.dig.baby/version/2456",
-      "elapsed_ms": 10165
+      "elapsed_ms": 10187
     },
     {
       "entity": "version/579476 (Thriller (original))",
       "url": "https://app.dig.baby/version/579476",
-      "elapsed_ms": 10165
+      "elapsed_ms": 10186
     },
     {
       "entity": "version/2922817 (Joshua Tree (reissue))",
       "url": "https://app.dig.baby/version/2922817",
-      "elapsed_ms": 10166
+      "elapsed_ms": 10187
     }
   ],
   "results": [
@@ -411,37 +226,37 @@
       "entity": "artist/3840 (Radiohead)",
       "url": "https://app.dig.baby/artist/3840",
       "status": 200,
-      "actionable_links": 52,
+      "actionable_links": 43,
       "has_fallback": false,
       "verdict": "PASS",
-      "elapsed_ms": 10441
+      "elapsed_ms": 10685
     },
     {
       "entity": "artist/28795 (Prince)",
       "url": "https://app.dig.baby/artist/28795",
       "status": 200,
-      "actionable_links": 81,
-      "has_fallback": false,
+      "actionable_links": 46,
+      "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 10475
+      "elapsed_ms": 10772
     },
     {
       "entity": "artist/12596 (James Brown)",
       "url": "https://app.dig.baby/artist/12596",
       "status": 200,
-      "actionable_links": 70,
-      "has_fallback": false,
+      "actionable_links": 30,
+      "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 10481
+      "elapsed_ms": 10591
     },
     {
       "entity": "artist/45 (Aphex Twin)",
       "url": "https://app.dig.baby/artist/45",
       "status": 200,
-      "actionable_links": 93,
+      "actionable_links": 54,
       "has_fallback": false,
       "verdict": "PASS",
-      "elapsed_ms": 508
+      "elapsed_ms": 10505
     },
     {
       "entity": "artist/1 (The Persuader)",
@@ -450,346 +265,322 @@
       "actionable_links": 61,
       "has_fallback": false,
       "verdict": "PASS",
-      "elapsed_ms": 282
+      "elapsed_ms": 803
     },
     {
       "entity": "artist/769196 (Tommy Danvers (was dead-end before fix))",
       "url": "https://app.dig.baby/artist/769196",
       "status": 200,
-      "actionable_links": 54,
+      "actionable_links": 14,
       "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 520
+      "elapsed_ms": 21185
     },
     {
       "entity": "artist/157579 (Diane Warren (songwriter))",
       "url": "https://app.dig.baby/artist/157579",
       "status": 200,
-      "actionable_links": 10,
+      "actionable_links": 9,
       "has_fallback": false,
       "verdict": "PASS",
-      "elapsed_ms": 10322
+      "elapsed_ms": 10750
     },
     {
       "entity": "artist/4205 (Giorgio Moroder (producer))",
       "url": "https://app.dig.baby/artist/4205",
       "status": 200,
-      "actionable_links": 65,
-      "has_fallback": false,
+      "actionable_links": 26,
+      "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 10318
+      "elapsed_ms": 12581
     },
     {
       "entity": "artist/49758 (Nile Rodgers (songwriter/producer))",
       "url": "https://app.dig.baby/artist/49758",
       "status": 200,
-      "actionable_links": 56,
-      "has_fallback": false,
+      "actionable_links": 16,
+      "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 10311
+      "elapsed_ms": 11859
     },
     {
       "entity": "artist/17546 (Quincy Jones (producer/arranger))",
       "url": "https://app.dig.baby/artist/17546",
       "status": 200,
-      "actionable_links": 52,
-      "has_fallback": false,
+      "actionable_links": 22,
+      "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 10311
+      "elapsed_ms": 11725
     },
     {
       "entity": "artist/8760 (Madonna)",
       "url": "https://app.dig.baby/artist/8760",
       "status": 200,
-      "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10304
+      "actionable_links": 8,
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 11320
     },
     {
       "entity": "artist/125246 (Nirvana)",
       "url": "https://app.dig.baby/artist/125246",
       "status": 200,
-      "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10138
+      "actionable_links": 19,
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 11378
     },
     {
       "entity": "artist/1289 (Daft Punk)",
       "url": "https://app.dig.baby/artist/1289",
       "status": 200,
-      "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10104
+      "actionable_links": 8,
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 11513
     },
     {
       "entity": "artist/4654 (Kraftwerk)",
       "url": "https://app.dig.baby/artist/4654",
       "status": 200,
-      "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10198
+      "actionable_links": 22,
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 11512
     },
     {
       "entity": "artist/23755 (Miles Davis)",
       "url": "https://app.dig.baby/artist/23755",
-      "status": null,
-      "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "ERROR",
-      "reason": "The operation was aborted due to timeout",
-      "elapsed_ms": 30004
+      "status": 200,
+      "actionable_links": 41,
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 12149
     },
     {
       "entity": "artist/97545 (John Coltrane)",
       "url": "https://app.dig.baby/artist/97545",
-      "status": null,
+      "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "ERROR",
-      "reason": "The operation was aborted due to timeout",
-      "elapsed_ms": 30002
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10177
     },
     {
       "entity": "artist/10783 (Beastie Boys)",
       "url": "https://app.dig.baby/artist/10783",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10171
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10177
     },
     {
       "entity": "artist/4480 (Massive Attack)",
       "url": "https://app.dig.baby/artist/4480",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10170
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10205
     },
     {
       "entity": "artist/2774 (Portishead)",
       "url": "https://app.dig.baby/artist/2774",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10198
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10200
     },
     {
       "entity": "artist/307 (Boards Of Canada)",
       "url": "https://app.dig.baby/artist/307",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10226
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10176
     },
     {
       "entity": "artist/41 (Autechre)",
       "url": "https://app.dig.baby/artist/41",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10143
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10162
     },
     {
       "entity": "artist/2290 (The Chemical Brothers)",
       "url": "https://app.dig.baby/artist/2290",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10145
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10188
     },
     {
       "entity": "artist/3909 (New Order)",
       "url": "https://app.dig.baby/artist/3909",
       "status": 200,
-      "actionable_links": 13,
+      "actionable_links": 0,
       "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 20305
+      "elapsed_ms": 10161
     },
     {
       "entity": "artist/2725 (Depeche Mode)",
       "url": "https://app.dig.baby/artist/2725",
       "status": 200,
-      "actionable_links": 14,
+      "actionable_links": 0,
       "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 20304
+      "elapsed_ms": 10162
     },
     {
       "entity": "artist/3898 (Joy Division)",
       "url": "https://app.dig.baby/artist/3898",
-      "status": null,
+      "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "ERROR",
-      "reason": "The operation was aborted due to timeout",
-      "elapsed_ms": 30002
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10127
     },
     {
       "entity": "artist/28209 (Public Enemy)",
       "url": "https://app.dig.baby/artist/28209",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10224
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10138
     },
     {
       "entity": "artist/38561 (OutKast)",
       "url": "https://app.dig.baby/artist/38561",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10222
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10108
     },
     {
       "entity": "artist/10995 (Erykah Badu)",
       "url": "https://app.dig.baby/artist/10995",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10222
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10232
     },
     {
       "entity": "artist/42627 (Lauryn Hill)",
       "url": "https://app.dig.baby/artist/42627",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10221
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10232
     },
     {
       "entity": "artist/82103 (Fugazi)",
       "url": "https://app.dig.baby/artist/82103",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10235
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10233
     },
     {
       "entity": "artist/17199 (Sonic Youth)",
       "url": "https://app.dig.baby/artist/17199",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10137
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10156
     },
     {
       "entity": "artist/7578 (Pavement)",
       "url": "https://app.dig.baby/artist/7578",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10183
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10155
     },
     {
       "entity": "artist/50997 (Nas)",
       "url": "https://app.dig.baby/artist/50997",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10205
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10155
     },
     {
       "entity": "artist/269 (Squarepusher)",
       "url": "https://app.dig.baby/artist/269",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10136
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10154
     },
     {
       "entity": "artist/1280 (Underworld)",
       "url": "https://app.dig.baby/artist/1280",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10136
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10154
     },
     {
       "entity": "artist/306157 (Burial)",
       "url": "https://app.dig.baby/artist/306157",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10231
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10127
     },
     {
       "entity": "label/1 (label/1)",
       "url": "https://app.dig.baby/label/1",
       "status": 200,
-      "actionable_links": 30,
-      "has_fallback": false,
+      "actionable_links": 0,
+      "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 512
+      "elapsed_ms": 10288
     },
     {
       "entity": "label/100 (label/100)",
       "url": "https://app.dig.baby/label/100",
       "status": 200,
-      "actionable_links": 30,
-      "has_fallback": false,
+      "actionable_links": 0,
+      "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 511
+      "elapsed_ms": 10102
     },
     {
       "entity": "label/1000 (label/1000)",
       "url": "https://app.dig.baby/label/1000",
       "status": 200,
-      "actionable_links": 33,
-      "has_fallback": false,
+      "actionable_links": 0,
+      "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 512
+      "elapsed_ms": 10123
     },
     {
       "entity": "label/5000 (label/5000)",
       "url": "https://app.dig.baby/label/5000",
       "status": 200,
-      "actionable_links": 22,
-      "has_fallback": false,
+      "actionable_links": 0,
+      "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 511
+      "elapsed_ms": 10288
     },
     {
       "entity": "label/10000 (label/10000)",
@@ -798,37 +589,34 @@
       "actionable_links": 30,
       "has_fallback": false,
       "verdict": "PASS",
-      "elapsed_ms": 126
+      "elapsed_ms": 3864
     },
     {
       "entity": "label/281 (Blue Note)",
       "url": "https://app.dig.baby/label/281",
       "status": 200,
-      "actionable_links": 0,
+      "actionable_links": 47,
       "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10173
+      "verdict": "PASS",
+      "elapsed_ms": 5787
     },
     {
       "entity": "label/23528 (Warp Records)",
       "url": "https://app.dig.baby/label/23528",
       "status": 200,
-      "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10201
+      "actionable_links": 1,
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 11253
     },
     {
       "entity": "label/77343 (Sub Pop)",
       "url": "https://app.dig.baby/label/77343",
       "status": 200,
-      "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10232
+      "actionable_links": 1,
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 11203
     },
     {
       "entity": "label/51167 (Rough Trade)",
@@ -837,137 +625,124 @@
       "actionable_links": 1,
       "has_fallback": true,
       "verdict": "PASS",
-      "elapsed_ms": 20146
+      "elapsed_ms": 11242
     },
     {
       "entity": "label/634 (4AD)",
       "url": "https://app.dig.baby/label/634",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10257
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10244
     },
     {
       "entity": "label/109 (Ninja Tune)",
       "url": "https://app.dig.baby/label/109",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10256
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10305
     },
     {
       "entity": "label/36339 (Mute Records)",
       "url": "https://app.dig.baby/label/36339",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10255
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10110
     },
     {
       "entity": "label/4241 (Def Jam Recordings)",
       "url": "https://app.dig.baby/label/4241",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10255
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10110
     },
     {
       "entity": "label/160 (XL Recordings)",
       "url": "https://app.dig.baby/label/160",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10254
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10142
     },
     {
       "entity": "label/93330 (Columbia Records)",
       "url": "https://app.dig.baby/label/93330",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10155
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10201
     },
     {
       "entity": "label/108701 (Virgin Records)",
       "url": "https://app.dig.baby/label/108701",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10160
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10123
     },
     {
       "entity": "label/3720 (Domino Records)",
       "url": "https://app.dig.baby/label/3720",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10160
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10199
     },
     {
       "entity": "label/472992 (Soul Jazz Collection)",
       "url": "https://app.dig.baby/label/472992",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10160
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10103
     },
     {
       "entity": "label/715 (Kompakt)",
       "url": "https://app.dig.baby/label/715",
       "status": 200,
-      "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10159
+      "actionable_links": 1,
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10217
     },
     {
       "entity": "label/25386 (Hyperdub)",
       "url": "https://app.dig.baby/label/25386",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10148
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10215
     },
     {
       "entity": "label/128 (Metalheadz)",
       "url": "https://app.dig.baby/label/128",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10151
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10165
     },
     {
       "entity": "label/391810 (Soul Jazz Studio One Series)",
       "url": "https://app.dig.baby/label/391810",
       "status": 200,
       "actionable_links": 0,
-      "has_fallback": false,
-      "verdict": "TIMEOUT",
-      "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10147
+      "has_fallback": true,
+      "verdict": "PASS",
+      "elapsed_ms": 10165
     },
     {
       "entity": "release/21491 (OK Computer (Radiohead))",
@@ -977,7 +752,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10148
+      "elapsed_ms": 10257
     },
     {
       "entity": "release/3684888 (Kind Of Blue (Miles Davis))",
@@ -987,7 +762,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10148
+      "elapsed_ms": 10257
     },
     {
       "entity": "release/2264887 (Ok Computer (alt))",
@@ -997,7 +772,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10133
+      "elapsed_ms": 10153
     },
     {
       "entity": "release/15313 (Endtroducing..... (DJ Shadow))",
@@ -1007,7 +782,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10132
+      "elapsed_ms": 10154
     },
     {
       "entity": "release/23683 (Mezzanine (Massive Attack))",
@@ -1017,7 +792,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10128
+      "elapsed_ms": 10157
     },
     {
       "entity": "release/50297 (Maxinquaye (Tricky))",
@@ -1027,7 +802,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10139
+      "elapsed_ms": 10157
     },
     {
       "entity": "release/9768 (Daydream Nation (Sonic Youth))",
@@ -1037,7 +812,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10101
+      "elapsed_ms": 10157
     },
     {
       "entity": "release/2815 (Homogenic (Björk))",
@@ -1047,7 +822,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10111
+      "elapsed_ms": 10196
     },
     {
       "entity": "release/30255 (Fear Of A Black Planet (Public Enemy))",
@@ -1057,7 +832,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10111
+      "elapsed_ms": 10218
     },
     {
       "entity": "release/1024691 (Illmatic (Nas))",
@@ -1067,7 +842,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10136
+      "elapsed_ms": 10196
     },
     {
       "entity": "release/3607640 (Ready To Die (Biggie))",
@@ -1077,7 +852,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10136
+      "elapsed_ms": 10100
     },
     {
       "entity": "release/32618 (Blue Lines (Massive Attack))",
@@ -1087,7 +862,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10136
+      "elapsed_ms": 10196
     },
     {
       "entity": "release/3378553 (Purple Rain (Prince))",
@@ -1097,7 +872,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10119
+      "elapsed_ms": 10137
     },
     {
       "entity": "release/3548375 (Thriller (Michael Jackson))",
@@ -1107,7 +882,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10160
+      "elapsed_ms": 10238
     },
     {
       "entity": "release/3372262 (The Joshua Tree (U2))",
@@ -1117,7 +892,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10160
+      "elapsed_ms": 10148
     },
     {
       "entity": "release/3931883 (Vespertine (Björk))",
@@ -1127,7 +902,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10159
+      "elapsed_ms": 10136
     },
     {
       "entity": "release/1209546 (Selected Ambient Works (Aphex Twin))",
@@ -1137,7 +912,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10159
+      "elapsed_ms": 10266
     },
     {
       "entity": "release/3794433 (Loveless (My Bloody Valentine))",
@@ -1147,7 +922,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10256
+      "elapsed_ms": 10202
     },
     {
       "entity": "release/1848812 (Nevermind (Nirvana))",
@@ -1157,7 +932,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10115
+      "elapsed_ms": 10160
     },
     {
       "entity": "release/831781 (Fear variant)",
@@ -1167,7 +942,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10159
+      "elapsed_ms": 10161
     },
     {
       "entity": "version/83182 (OK Computer (original UK press))",
@@ -1187,7 +962,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10113
+      "elapsed_ms": 10201
     },
     {
       "entity": "version/216593 (OK Computer (reissue))",
@@ -1197,7 +972,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10095
+      "elapsed_ms": 10142
     },
     {
       "entity": "version/5058 (Endtroducing..... (original))",
@@ -1207,7 +982,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10201
+      "elapsed_ms": 10140
     },
     {
       "entity": "version/12261 (Endtroducing..... (reissue))",
@@ -1217,7 +992,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10124
+      "elapsed_ms": 10193
     },
     {
       "entity": "version/38906 (Endtroducing..... (deluxe))",
@@ -1227,7 +1002,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10179
+      "elapsed_ms": 10141
     },
     {
       "entity": "version/6530 (Mezzanine (original))",
@@ -1237,7 +1012,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10119
+      "elapsed_ms": 10140
     },
     {
       "entity": "version/11650 (Mezzanine (reissue))",
@@ -1247,7 +1022,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10141
+      "elapsed_ms": 10271
     },
     {
       "entity": "version/104147 (Mezzanine (alt))",
@@ -1257,7 +1032,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10145
+      "elapsed_ms": 10271
     },
     {
       "entity": "version/2739 (Maxinquaye (original))",
@@ -1267,7 +1042,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10146
+      "elapsed_ms": 10271
     },
     {
       "entity": "version/22338 (Maxinquaye (reissue))",
@@ -1277,7 +1052,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10149
+      "elapsed_ms": 10271
     },
     {
       "entity": "version/369200 (Daydream Nation (reissue))",
@@ -1287,7 +1062,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10149
+      "elapsed_ms": 10263
     },
     {
       "entity": "version/2456 (Homogenic (original))",
@@ -1297,7 +1072,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10134
+      "elapsed_ms": 10202
     },
     {
       "entity": "version/10744 (Homogenic (reissue))",
@@ -1307,7 +1082,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10134
+      "elapsed_ms": 10200
     },
     {
       "entity": "version/78957 (Fear Of A Black Planet (original))",
@@ -1317,7 +1092,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10136
+      "elapsed_ms": 10104
     },
     {
       "entity": "version/81859 (Fear Of A Black Planet (alt))",
@@ -1327,7 +1102,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10189
+      "elapsed_ms": 10144
     },
     {
       "entity": "version/3603635 (Illmatic (reissue))",
@@ -1337,7 +1112,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10133
+      "elapsed_ms": 10146
     },
     {
       "entity": "version/3471 (Blue Lines (original))",
@@ -1347,7 +1122,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10166
+      "elapsed_ms": 10187
     },
     {
       "entity": "version/11878 (Blue Lines (reissue))",
@@ -1357,7 +1132,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10166
+      "elapsed_ms": 10187
     },
     {
       "entity": "version/2456 (Homogenic (original press))",
@@ -1367,7 +1142,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10165
+      "elapsed_ms": 10187
     },
     {
       "entity": "version/579476 (Thriller (original))",
@@ -1377,7 +1152,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10165
+      "elapsed_ms": 10186
     },
     {
       "entity": "version/2922817 (Joshua Tree (reissue))",
@@ -1387,7 +1162,7 @@
       "has_fallback": false,
       "verdict": "TIMEOUT",
       "reason": "SSR timeout — Next.js API fetch timed out during server render",
-      "elapsed_ms": 10166
+      "elapsed_ms": 10187
     }
   ]
 }
