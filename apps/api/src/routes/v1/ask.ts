@@ -120,9 +120,23 @@ async function callAnthropic(params: {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Anthropic error ${res.status}: ${text.slice(0, 500)}`);
+    const error = new Error(`Anthropic error ${res.status}: ${text.slice(0, 500)}`) as Error & {
+      status?: number;
+      body?: string;
+    };
+    error.status = res.status;
+    error.body = text;
+    throw error;
   }
   return res.json();
+}
+
+function isModelNotFoundError(err: unknown): boolean {
+  const e = err as { status?: number; body?: string; message?: string };
+  if (e?.status === 404 && (e?.body?.includes("not_found_error") || e?.message?.includes("not_found_error"))) {
+    return true;
+  }
+  return false;
 }
 
 export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
@@ -154,7 +168,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     }
 
     const maxTokens = Math.min(Math.max(Number(body.max_tokens ?? 800), 128), 1500);
-    const model = String(body.model ?? DEFAULT_MODEL);
+    const requestedModel = String(body.model ?? DEFAULT_MODEL);
     const started = Date.now();
 
     try {
@@ -178,13 +192,40 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         ...details.map((d) => `detail: ${d.summary}`),
       ];
 
-      const modelResp: any = await callAnthropic({
-        model,
-        question,
-        contextLines,
-        maxTokens,
-        anthropicApiKey,
-      });
+      const modelCandidates = [
+        requestedModel,
+        "claude-3-7-sonnet-latest",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-haiku-20241022",
+      ].filter((value, index, arr) => value && arr.indexOf(value) === index);
+
+      let selectedModel = requestedModel;
+      let modelResp: any = null;
+      let lastError: unknown = null;
+
+      for (const candidate of modelCandidates) {
+        try {
+          modelResp = await callAnthropic({
+            model: candidate,
+            question,
+            contextLines,
+            maxTokens,
+            anthropicApiKey,
+          });
+          selectedModel = candidate;
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err;
+          if (!isModelNotFoundError(err)) {
+            throw err;
+          }
+        }
+      }
+
+      if (lastError) {
+        throw lastError;
+      }
       const rawText = String(modelResp?.content?.[0]?.text ?? "").trim();
 
       let parsed: any = null;
@@ -207,7 +248,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.5,
         citations: Array.isArray(parsed.citations) ? parsed.citations : [],
         meta: {
-          model,
+          model: selectedModel,
           elapsed_ms: Date.now() - started,
           search_results_used: top.length,
           request_id: (req as any).requestId ?? null,
