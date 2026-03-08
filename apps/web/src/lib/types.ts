@@ -202,6 +202,7 @@ export interface TraversalLink {
   format?: string | null;
   release_type?: "album" | "single_ep" | "compilation" | "other";
   release_type_label?: "LP" | "EP" | "Single" | "Comp" | "Other";
+  master_discogs_id?: number | null;
   provenance: Provenance;
 }
 

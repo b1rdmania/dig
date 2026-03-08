@@ -40,6 +40,7 @@ CRITICAL RULES — follow these without exception:
 3. When get_artist_releases returns 0 or very few results, you MUST immediately call get_artist_credits — many artists are catalogued through credits (Producer, Written-By, Remixer) rather than direct artist links.
 4. Format Dig links as markdown: [Title](https://app.dig.baby/release/ID) for albums/masters, [Name](https://app.dig.baby/artist/ID) for artists, [Label](https://app.dig.baby/label/ID) for labels. Never send anyone to Discogs, Bandcamp, NTS, Spotify, or any external site. If data is thin, say so and offer to search related artists or labels instead.
 5. Videos are shown automatically below your response — never tell users to "click through" for video. When a release has video, it will just appear. Don't mention has_video or any other raw database field in your response.
+6. NEVER call get_master() with a discogs_id from get_label_releases results. Label release IDs are VERSION IDs — using them with get_master pulls a completely unrelated record and shows wrong videos. If master_discogs_id is non-null in a label release result, you may call get_master(master_discogs_id). If master_discogs_id is null, skip get_master for that pressing.
 
 When you look things up, you use Dig (app.dig.baby) — 24 million records, credits, connections, label catalogs, the lot. Search it, follow threads, pull context. Use get_connections for band history. Use get_context for biography and background. Use get_label_releases for imprint catalogs. The data is there.
 
@@ -222,6 +223,7 @@ async function executeTool(
   mediaCollector: MediaItem[],
   evidenceCollector: EvidenceItem[],
   errorRef: { count: number },
+  allowedMasterIds: Set<number>,
 ): Promise<unknown> {
   try {
     if (name === "search_catalog") {
@@ -234,6 +236,7 @@ async function executeTool(
         const entityType = r.type === "master" ? "master" : r.type === "artist" ? "artist" : r.type === "label" ? "label" : "release";
         const path = r.type === "master" ? "release" : r.type === "artist" ? "artist" : r.type === "label" ? "label" : "version";
         evidenceCollector.push({ type: entityType as any, discogs_id: r.discogs_id, title: r.name ?? r.title ?? "", dig_url: `https://app.dig.baby/${path}/${r.discogs_id}` });
+        if (r.type === "master") allowedMasterIds.add(r.discogs_id);
       }
       return {
         results: sr.results.map((r) => ({
@@ -284,6 +287,10 @@ async function executeTool(
 
     if (name === "get_master") {
       const id = Number(input.discogs_id);
+      // Server-side guard: reject if this ID was never established as a master ID
+      if (!allowedMasterIds.has(id)) {
+        return { error: "Invalid master ID — this appears to be a release/version ID, not a master ID. Use master_discogs_id from label releases, or search for the track first to get its master ID." };
+      }
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.masters");
       const d = await getMaster(db, id, batchId, dumpDate) as any;
       if (!d) { errorRef.count++; return { error: "Release not found" }; }
@@ -342,6 +349,7 @@ async function executeTool(
       }));
       for (const r of releases.slice(0, 5)) {
         evidenceCollector.push({ type: r.dig_url.includes("/release/") ? "master" : "release", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
+        if (r.dig_url.includes("/release/")) allowedMasterIds.add(r.discogs_id);
       }
 
       // Auto-fetch credits when releases are thin — many artists are catalogued via credits only
@@ -405,13 +413,17 @@ async function executeTool(
       const result = await getLabelReleases(db, id, batchId, dumpDate, limit) as any;
       const labelReleases = (result.links ?? []).map((l: any) => ({
         discogs_id: l.discogs_id,
+        master_discogs_id: l.master_discogs_id ?? null,
         title: l.title,
         year: l.year ?? null,
         artist: l.artist ?? null,
-        dig_url: `https://app.dig.baby/version/${l.discogs_id}`,
+        dig_url: l.master_discogs_id
+          ? `https://app.dig.baby/release/${l.master_discogs_id}`
+          : `https://app.dig.baby/version/${l.discogs_id}`,
       }));
       for (const r of labelReleases.slice(0, 3)) {
         evidenceCollector.push({ type: "release", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
+        if (r.master_discogs_id != null) allowedMasterIds.add(r.master_discogs_id);
       }
       return {
         releases: labelReleases,
@@ -551,6 +563,7 @@ async function runAgenticLoop(params: {
   const mediaCollector: MediaItem[] = [];
   const evidenceCollector: EvidenceItem[] = [];
   const errorRef = { count: 0 };
+  const allowedMasterIds = new Set<number>();
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const response = await callAnthropic({
@@ -585,6 +598,7 @@ async function runAgenticLoop(params: {
             mediaCollector,
             evidenceCollector,
             errorRef,
+            allowedMasterIds,
           );
           return {
             type: "tool_result" as const,
@@ -725,9 +739,15 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         return true;
       });
 
+      // Media binding validator: only keep media whose source master is in evidence
+      const evidenceMasterIds = new Set(
+        dedupedEvidence.filter((e) => e.type === "master").map((e) => e.discogs_id)
+      );
+      const boundMedia = dedupedMedia.filter((m) => evidenceMasterIds.has(m.discogs_id));
+
       return reply.send({
         answer,
-        media: dedupedMedia,
+        media: boundMedia,
         mode,
         evidence: dedupedEvidence.slice(0, 20),
         meta: {

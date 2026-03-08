@@ -486,6 +486,7 @@ export async function getLabelReleases(
       "catalog.releases.discogs_id",
       "catalog.releases.title",
       "catalog.releases.release_year as year",
+      "catalog.releases.master_discogs_id",
     ])
     .where("catalog.release_labels.label_discogs_id", "=", labelDiscogsId)
     .where("catalog.release_labels.batch_id", "=", batchId)
@@ -506,6 +507,7 @@ export async function getLabelReleases(
       discogs_id: r.discogs_id,
       title: r.title,
       year: r.year,
+      master_discogs_id: (r as any).master_discogs_id ?? null,
       provenance: { source: "discogs", dump_date: dumpDate, discogs_id: r.discogs_id },
     })),
     pagination: {
