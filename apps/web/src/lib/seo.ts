@@ -28,7 +28,7 @@ export function entityMetadata(meta: EntityMeta): Metadata {
   const pageTitle = `${meta.title} — dig`;
   const url = `${BASE_URL}${meta.path}`;
   const canonicalUrl = meta.canonical ?? url;
-  const ogTitle = TYPE_LABELS[meta.type || "release"] || "dig";
+  const ogTitle = meta.title;
 
   // Image priority: cover art > YouTube thumbnail > dynamic OG
   let imageUrl = meta.coverUrl || null;
