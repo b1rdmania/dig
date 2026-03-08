@@ -36,7 +36,7 @@
   margin-top: 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  color: var(--off-white);
+  color: var(--fg);
   background: rgba(168, 112, 63, 0.2);
   padding: 0.52rem 0.92rem;
   cursor: pointer;
@@ -85,7 +85,7 @@
 .close {
   border: 0;
   background: transparent;
-  color: var(--off-white);
+  color: var(--fg);
   font-size: 18px;
   cursor: pointer;
 }
@@ -108,7 +108,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(242, 236, 224, 0.06);
-  color: var(--off-white);
+  color: var(--fg);
   padding: 0.55rem 0.65rem;
   font-size: 0.9rem;
 }
@@ -119,7 +119,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(242, 236, 224, 0.06);
-  color: var(--off-white);
+  color: var(--fg);
   padding: 0.55rem 0.65rem;
   font-size: 0.9rem;
   resize: vertical;
@@ -134,7 +134,7 @@
 .btn {
   border: 1px solid var(--accent);
   border-radius: var(--radius);
-  color: var(--off-white);
+  color: var(--bg);
   background: var(--accent);
   padding: 0.45rem 0.85rem;
   cursor: pointer;
@@ -171,7 +171,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(6, 5, 4, 0.92);
-  color: var(--off-white);
+  color: var(--fg);
   padding: 10px;
   font-size: 12px;
   overflow: auto;
@@ -186,5 +186,5 @@
 }
 
 .help code {
-  color: var(--off-white);
+  color: var(--fg);
 }
