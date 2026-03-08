@@ -23,7 +23,6 @@ type ErrorResponse = {
 };
 
 export function LlmBetaClient() {
-  const [open, setOpen] = useState(true);
   const [anthropicKey, setAnthropicKey] = useState("");
   const [question, setQuestion] = useState("What are key releases by Aphex Twin?");
   const [loading, setLoading] = useState(false);
@@ -93,64 +92,48 @@ export function LlmBetaClient() {
           Stripped-back tester for <code>/v1/ask</code>. Your Anthropic key is stored only in this browser session
           and sent per request in <code>x-anthropic-api-key</code>.
         </p>
-        <button className={styles.launcher} onClick={() => setOpen(true)} type="button">
-          Open tester
-        </button>
       </section>
 
-      {open && (
-        <div className={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
-          <div className={styles.modal}>
-            <div className={styles.head}>
-              <h2 className={styles.headTitle}>Dig LLM Beta Tester</h2>
-              <button className={styles.close} type="button" onClick={() => setOpen(false)} aria-label="Close">
-                ×
-              </button>
-            </div>
+      <section className={styles.panel}>
+        <label className={styles.label} htmlFor="anthropic-key">Anthropic API Key (session only)</label>
+        <input
+          id="anthropic-key"
+          className={styles.input}
+          type="password"
+          value={anthropicKey}
+          onChange={(e) => updateAnthropicKey(e.target.value)}
+          placeholder="sk-ant-..."
+        />
+        <p className={styles.help}>Not saved to server or database. Cleared when browser session ends.</p>
+        <p className={styles.help}>Dig beta access key is preloaded on this tester.</p>
 
-            <div className={styles.body}>
-              <label className={styles.label} htmlFor="anthropic-key">Anthropic API Key (session only)</label>
-              <input
-                id="anthropic-key"
-                className={styles.input}
-                type="password"
-                value={anthropicKey}
-                onChange={(e) => updateAnthropicKey(e.target.value)}
-                placeholder="sk-ant-..."
-              />
-              <p className={styles.help}>Not saved to server or database. Cleared when browser session ends.</p>
-              <p className={styles.help}>Dig beta access key is preloaded on this tester.</p>
+        <label className={styles.label} htmlFor="llm-q">Question</label>
+        <textarea
+          id="llm-q"
+          className={styles.textarea}
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+        />
 
-              <label className={styles.label} htmlFor="llm-q">Question</label>
-              <textarea
-                id="llm-q"
-                className={styles.textarea}
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-              />
-
-              <div className={styles.row}>
-                <button className={styles.btn} disabled={loading || !anthropicKey.trim() || !question.trim()} onClick={ask} type="button">
-                  {loading ? "Asking..." : "Ask"}
-                </button>
-                <button
-                  className={styles.clear}
-                  type="button"
-                  onClick={() => updateAnthropicKey("")}
-                  disabled={loading || !anthropicKey}
-                >
-                  Clear key
-                </button>
-              </div>
-
-              <pre className={styles.result}>{output}</pre>
-              <p className={styles.help}>
-                API endpoint: <code>{API_URL}/v1/ask</code>
-              </p>
-            </div>
-          </div>
+        <div className={styles.row}>
+          <button className={styles.btn} disabled={loading || !anthropicKey.trim() || !question.trim()} onClick={ask} type="button">
+            {loading ? "Asking..." : "Ask"}
+          </button>
+          <button
+            className={styles.clear}
+            type="button"
+            onClick={() => updateAnthropicKey("")}
+            disabled={loading || !anthropicKey}
+          >
+            Clear key
+          </button>
         </div>
-      )}
+
+        <pre className={styles.result}>{output}</pre>
+        <p className={styles.help}>
+          API endpoint: <code>{API_URL}/v1/ask</code>
+        </p>
+      </section>
     </div>
   );
 }
