@@ -3,7 +3,8 @@
 - **Gate ID**: Better-Than-Discogs Track / Item 1
 - **Date**: 2026-03-08
 - **Owner**: Claude Code
-- **Decision**: `GO WITH CAVEATS`
+- **Decision**: `GO WITH CAVEATS — BACKFILL PENDING`
+- **Status**: ⚠️ NOT FULLY CLOSED — see Backfill Completion Gate below
 
 ## Scope
 
@@ -85,7 +86,24 @@ Fail-open design: unclassified releases pass through search with no suppression.
 2. **Guardrail monitoring** — Run guardrail SQL after each ingest/classify pass; see `docs/quality-layer-v1-report.md`
 3. **Item 2 (No-Dead-Ends v2)** — Expand canary to 200 entities, add CI gate via `scripts/no-dead-ends-check.ts`
 
+## Backfill Completion Gate
+
+Item 1 is NOT FULLY CLOSED until all three are done:
+
+- [ ] Releases backfill (~17.3M rows) — run `/tmp/q_lmr.py` releases-only off-hours
+- [ ] `ANALYZE enrich.entity_quality;` — after backfill completes
+- [ ] Guardrail SQL snapshot — run query from report, save in a follow-up commit
+
+Evidence format when closing:
+```
+Gate Item 1 — FULLY CLOSED
+Releases backfill: {N} rows classified ({pct}% of 18.9M)
+ANALYZE: done {timestamp}
+Guardrail snapshot: {inline table or link to doc}
+```
+
 ## Final Sign-off
 
-- Operationally safe to proceed: **yes**
+- Operationally safe to proceed: **yes** (fail-open design)
+- Fully closed: **no** — pending backfill completion gate above
 - Next gate/phase: Item 2 — No-Dead-Ends v2 (canary expansion + CI gate)

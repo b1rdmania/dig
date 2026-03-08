@@ -10,6 +10,7 @@ type CheckResult = {
   name: string;
   ok: boolean;
   detail: string;
+  blocking: boolean; // false = log only, never fails exit code
 };
 
 const API_URL = (process.env.API_URL ?? "https://dig-api.fly.dev").replace(/\/$/, "");
@@ -51,9 +52,10 @@ async function run(): Promise<void> {
       name: "api-health",
       ok: health?.status === "ok" && health?.postgres === true,
       detail: JSON.stringify({ status: health?.status, postgres: health?.postgres }),
+      blocking: true,
     });
   } catch (err: any) {
-    checks.push({ name: "api-health", ok: false, detail: String(err?.message ?? err) });
+    checks.push({ name: "api-health", ok: false, detail: String(err?.message ?? err), blocking: true });
   }
 
   // Search canaries
@@ -67,9 +69,33 @@ async function run(): Promise<void> {
     try {
       const body = await getJson(`${API_URL}${test.path}`);
       const count = asResultsCount(body);
-      checks.push({ name: test.name, ok: count >= test.min, detail: `results=${count}` });
+      checks.push({ name: test.name, ok: count >= test.min, detail: `results=${count}`, blocking: true });
     } catch (err: any) {
-      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err) });
+      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err), blocking: true });
+    }
+  }
+
+  // Non-blocking observation: known high-frequency FTS queries that may timeout.
+  // Logged for visibility but never fails exit code. Track elapsed_ms for regression detection.
+  const heavyQueries = [
+    { name: "obs-heavy-james-brown", path: "/v1/search?q=james+brown&type=artist&limit=5" },
+    { name: "obs-heavy-prince", path: "/v1/search?q=prince&type=artist&limit=5" },
+  ];
+  for (const test of heavyQueries) {
+    try {
+      const t0 = Date.now();
+      const body = await getJson(`${API_URL}${test.path}`);
+      const elapsed = Date.now() - t0;
+      const count = asResultsCount(body);
+      const degraded = body?.meta?.degraded_reason ?? null;
+      checks.push({
+        name: test.name,
+        ok: count > 0 && !degraded,
+        detail: `results=${count} elapsed_ms=${elapsed} degraded=${degraded ?? "none"}`,
+        blocking: false,
+      });
+    } catch (err: any) {
+      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err), blocking: false });
     }
   }
 
@@ -83,9 +109,9 @@ async function run(): Promise<void> {
   for (const test of retrievalCases) {
     try {
       const body = await getJson(`${API_URL}${test.path}`);
-      checks.push({ name: test.name, ok: !!body?.[test.key], detail: `has_${test.key}=${!!body?.[test.key]}` });
+      checks.push({ name: test.name, ok: !!body?.[test.key], detail: `has_${test.key}=${!!body?.[test.key]}`, blocking: true });
     } catch (err: any) {
-      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err) });
+      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err), blocking: true });
     }
   }
 
@@ -99,9 +125,9 @@ async function run(): Promise<void> {
     try {
       const body = await getJson(`${API_URL}${test.path}`);
       const links = Array.isArray(body?.links) ? body.links.length : -1;
-      checks.push({ name: test.name, ok: links >= 0, detail: `links=${links}` });
+      checks.push({ name: test.name, ok: links >= 0, detail: `links=${links}`, blocking: true });
     } catch (err: any) {
-      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err) });
+      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err), blocking: true });
     }
   }
 
@@ -112,9 +138,10 @@ async function run(): Promise<void> {
       name: "mcp-usage-endpoint",
       ok: usage?.service === "dig-mcp" && typeof usage?.calls_total === "number",
       detail: JSON.stringify({ service: usage?.service, calls_total: usage?.calls_total }),
+      blocking: true,
     });
   } catch (err: any) {
-    checks.push({ name: "mcp-usage-endpoint", ok: false, detail: String(err?.message ?? err) });
+    checks.push({ name: "mcp-usage-endpoint", ok: false, detail: String(err?.message ?? err), blocking: true });
   }
 
   // Web route status checks
@@ -129,22 +156,33 @@ async function run(): Promise<void> {
   for (const test of webCases) {
     try {
       const status = await getStatus(`${WEB_URL}${test.path}`);
-      checks.push({ name: test.name, ok: status >= 200 && status < 400, detail: `status=${status}` });
+      checks.push({ name: test.name, ok: status >= 200 && status < 400, detail: `status=${status}`, blocking: true });
     } catch (err: any) {
-      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err) });
+      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err), blocking: true });
     }
   }
 
   // Summary
-  const failed = checks.filter((c) => !c.ok);
-  const passed = checks.length - failed.length;
-  console.log(`\nRegression smoke results: ${passed}/${checks.length} passed`);
-  for (const check of checks) {
+  const blocking = checks.filter((c) => c.blocking);
+  const observations = checks.filter((c) => !c.blocking);
+  const failedBlocking = blocking.filter((c) => !c.ok);
+  const passedBlocking = blocking.filter((c) => c.ok);
+
+  console.log(`\nRegression smoke results: ${passedBlocking.length}/${blocking.length} passed`);
+  for (const check of blocking) {
     const marker = check.ok ? "PASS" : "FAIL";
     console.log(`${marker} ${check.name} :: ${check.detail}`);
   }
 
-  if (failed.length > 0) {
+  if (observations.length > 0) {
+    console.log(`\nObservations (non-blocking):`);
+    for (const obs of observations) {
+      const marker = obs.ok ? "OK  " : "WARN";
+      console.log(`${marker} ${obs.name} :: ${obs.detail}`);
+    }
+  }
+
+  if (failedBlocking.length > 0) {
     process.exit(1);
   }
 }
@@ -153,4 +191,3 @@ run().catch((err) => {
   console.error("Regression smoke failed to execute:", err);
   process.exit(1);
 });
-
