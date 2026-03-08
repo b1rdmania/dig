@@ -62,8 +62,8 @@ export default async function VersionPage({ params }: Props) {
         <Suspense fallback={<ReleaseHero release={release} coverUrl={null} />}>
           <VersionHeroWithCover release={release} id={id} />
         </Suspense>
-        <Tracklist tracks={release.tracks} />
         <MediaSection videos={release.videos} />
+        <Tracklist tracks={release.tracks} />
         <Credits credits={release.credits} />
         {release.notes && (
           <section className={styles.section}>
