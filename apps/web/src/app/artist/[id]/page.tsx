@@ -89,14 +89,14 @@ const CREDIT_FILTERS = [
   { value: "other", label: "Other" },
 ] as const;
 
-/** Releases section: fetches masters independently so shell renders without waiting. */
+/** Releases section: fetches catalog releases independently so shell renders without waiting. */
 async function ArtistReleases({ id, releaseType }: { id: string; releaseType: string }) {
   const defaultTraversal: TraversalResponse = {
     links: [],
     pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "masters", elapsed_ms: 0 },
+    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "catalog_releases", elapsed_ms: 0 },
   };
-  const mastersUrl = `/v1/artists/${id}/masters?limit=30&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
+  const mastersUrl = `/v1/artists/${id}/catalog_releases?limit=30&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
   const mastersData = await digFetch<TraversalResponse>(mastersUrl, { revalidate: 300 })
     .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
     .catch(() => defaultTraversal);
@@ -122,7 +122,7 @@ async function ArtistReleases({ id, releaseType }: { id: string; releaseType: st
         ))}
       </div>
       {mastersData.links.length === 0 && (
-        <div className={styles.small}>No primary releases found.</div>
+        <div className={styles.small}>No releases found.</div>
       )}
       {mastersData.links.map((link) => (
         <div className={styles.row} key={link.discogs_id}>
@@ -484,14 +484,14 @@ async function ArtistContent({ id, releaseType, roleFamily }: { id: string; rele
           <ArtistAbout id={id} profile={artist.profile} />
         </Suspense>
 
-        {/* Credits: streams in independently */}
-        <Suspense fallback={<SectionSkeleton lines={5} />}>
-          <ArtistCredits id={id} roleFamily={roleFamily} />
-        </Suspense>
-
         {/* Releases: streams in independently */}
         <Suspense fallback={<SectionSkeleton lines={5} />}>
           <ArtistReleases id={id} releaseType={releaseType} />
+        </Suspense>
+
+        {/* Credits: streams in independently */}
+        <Suspense fallback={<SectionSkeleton lines={5} />}>
+          <ArtistCredits id={id} roleFamily={roleFamily} />
         </Suspense>
 
         {/* Connections: streams in (relationships + timeline + name resolution) */}

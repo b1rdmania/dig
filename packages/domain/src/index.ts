@@ -33,6 +33,7 @@ export { getCoverUrl, type CoverResult } from "./covers.js";
 export {
   getArtistReleases,
   getArtistMasters,
+  getArtistCatalogReleases,
   getLabelReleases,
   getMasterReleases,
   getMasterVideos,

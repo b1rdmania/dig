@@ -275,6 +275,194 @@ export async function getArtistMasters(
   };
 }
 
+export async function getArtistCatalogReleases(
+  db: Kysely<Database>,
+  artistDiscogsId: number,
+  batchId: string,
+  dumpDate: string,
+  limit = DEFAULT_LIMIT,
+  cursor?: string,
+  sort: "newest" | "oldest" = "newest",
+  releaseType: ReleaseType | "all" = "all",
+): Promise<TraversalResponse> {
+  const start = Date.now();
+  const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
+  const afterId = cursor ? decodeCursor(cursor) : null;
+
+  // Query 1 — masters path (same as getArtistMasters)
+  const masterRows = await db
+    .selectFrom("catalog.master_artists")
+    .innerJoin("catalog.masters", (join) =>
+      join
+        .onRef("catalog.masters.discogs_id", "=", "catalog.master_artists.master_discogs_id")
+        .on("catalog.masters.batch_id", "=", batchId),
+    )
+    .select([
+      "catalog.masters.discogs_id",
+      "catalog.masters.title",
+      "catalog.masters.year",
+    ])
+    .select(
+      sql<string[] | null>`(
+        SELECT array_agg(DISTINCT d)
+        FROM catalog.release_formats rf,
+             unnest(rf.descriptions) AS d
+        WHERE rf.release_discogs_id = catalog.masters.main_release_discogs_id
+          AND rf.batch_id = ${batchId}
+      )`.as("format_descriptions"),
+    )
+    .where("catalog.master_artists.artist_discogs_id", "=", artistDiscogsId)
+    .where("catalog.master_artists.batch_id", "=", batchId)
+    .limit(MASTERS_FETCH_CAP)
+    .execute();
+
+  // Query 2 — release primary path (release_artists)
+  const releaseRows = await db
+    .selectFrom("catalog.release_artists")
+    .innerJoin("catalog.releases", (join) =>
+      join
+        .onRef("catalog.releases.discogs_id", "=", "catalog.release_artists.release_discogs_id")
+        .on("catalog.releases.batch_id", "=", batchId),
+    )
+    .select([
+      "catalog.releases.discogs_id",
+      "catalog.releases.title",
+      "catalog.releases.release_year as year",
+      "catalog.releases.master_discogs_id",
+    ])
+    .select(
+      sql<string[] | null>`(
+        SELECT array_agg(DISTINCT d)
+        FROM catalog.release_formats rf,
+             unnest(rf.descriptions) AS d
+        WHERE rf.release_discogs_id = catalog.releases.discogs_id
+          AND rf.batch_id = ${batchId}
+      )`.as("format_descriptions"),
+    )
+    .where("catalog.release_artists.artist_discogs_id", "=", artistDiscogsId)
+    .where("catalog.release_artists.batch_id", "=", batchId)
+    .limit(MASTERS_FETCH_CAP)
+    .execute();
+
+  // Merge + deduplicate: key = "m:<master_id>" or "r:<release_id>"
+  type CatalogEntry = {
+    key: string;
+    type: "master" | "release";
+    discogs_id: number;
+    title: string | null;
+    year: number | null;
+    format_descriptions: string[] | null;
+  };
+
+  const map = new Map<string, CatalogEntry>();
+
+  // First pass: add all masters
+  for (const r of masterRows) {
+    const key = `m:${r.discogs_id}`;
+    map.set(key, {
+      key,
+      type: "master",
+      discogs_id: r.discogs_id,
+      title: r.title,
+      year: r.year,
+      format_descriptions: (r as any).format_descriptions as string[] | null,
+    });
+  }
+
+  // Second pass: add release_artists rows, deduplicating against masters
+  for (const r of releaseRows) {
+    const masterDiscogs = (r as any).master_discogs_id as number | null;
+    if (masterDiscogs != null) {
+      const masterKey = `m:${masterDiscogs}`;
+      if (map.has(masterKey)) {
+        // Master already present — skip, master wins
+        continue;
+      }
+      // Master referenced but not in our master_artists results —
+      // represent via master key so it won't duplicate if we see it again
+      map.set(masterKey, {
+        key: masterKey,
+        type: "master",
+        discogs_id: masterDiscogs,
+        title: r.title,
+        year: (r as any).year as number | null,
+        format_descriptions: (r as any).format_descriptions as string[] | null,
+      });
+    } else {
+      // No master link — standalone release
+      const key = `r:${r.discogs_id}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          type: "release",
+          discogs_id: r.discogs_id,
+          title: r.title,
+          year: (r as any).year as number | null,
+          format_descriptions: (r as any).format_descriptions as string[] | null,
+        });
+      }
+    }
+  }
+
+  // Classify each entry
+  const classified = Array.from(map.values()).map((entry) => {
+    const { release_type, release_type_label } = classifyReleaseType(
+      entry.format_descriptions ?? [],
+      entry.title,
+    );
+    return { ...entry, release_type, release_type_label };
+  });
+
+  // Filter by release type
+  const filtered = releaseType === "all"
+    ? classified
+    : classified.filter((r) => r.release_type === releaseType);
+
+  // Sort by year + discogs_id
+  filtered.sort((a, b) => {
+    const dir = sort === "newest" ? -1 : 1;
+    const ya = a.year ?? (sort === "newest" ? -Infinity : Infinity);
+    const yb = b.year ?? (sort === "newest" ? -Infinity : Infinity);
+    if (ya !== yb) return (ya - yb) * dir;
+    return (a.discogs_id - b.discogs_id) * dir;
+  });
+
+  // Cursor paginate after sort
+  let startIdx = 0;
+  if (afterId !== null) {
+    const cursorIdx = filtered.findIndex((r) => r.discogs_id === afterId);
+    startIdx = cursorIdx >= 0 ? cursorIdx + 1 : 0;
+  }
+
+  const page = filtered.slice(startIdx, startIdx + lim);
+  const hasMore = startIdx + lim < filtered.length;
+
+  return {
+    links: page.map((r) => ({
+      type: r.type,
+      discogs_id: r.discogs_id,
+      title: r.title ?? undefined,
+      year: r.year,
+      release_type: r.release_type,
+      release_type_label: r.release_type_label,
+      provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: r.discogs_id },
+    })),
+    pagination: {
+      cursor: hasMore && page.length > 0
+        ? encodeCursor(page[page.length - 1].discogs_id)
+        : null,
+      has_more: hasMore,
+      total_estimate: filtered.length,
+    },
+    meta: {
+      source_type: "artist",
+      source_discogs_id: artistDiscogsId,
+      link_type: "catalog_releases",
+      elapsed_ms: Date.now() - start,
+    },
+  };
+}
+
 export async function getLabelReleases(
   db: Kysely<Database>,
   labelDiscogsId: number,

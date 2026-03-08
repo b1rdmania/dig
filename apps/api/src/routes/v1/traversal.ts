@@ -4,6 +4,7 @@ import type { Database } from "@dig/db";
 import {
   getArtistReleases,
   getArtistMasters,
+  getArtistCatalogReleases,
   getArtistCredits,
   getLabelReleases,
   getMasterReleases,
@@ -16,6 +17,7 @@ import {
 type TraversalScope =
   | "artist_releases"
   | "artist_masters"
+  | "artist_catalog_releases"
   | "artist_credits"
   | "label_releases"
   | "master_releases"
@@ -25,6 +27,7 @@ type TraversalScope =
 const SCOPE_TABLE: Record<TraversalScope, string> = {
   artist_releases: "catalog.release_artists",
   artist_masters: "catalog.master_artists",
+  artist_catalog_releases: "catalog.master_artists",
   artist_credits: "catalog.release_credits",
   label_releases: "catalog.release_labels",
   master_releases: "catalog.releases",
@@ -80,6 +83,18 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
     const { batchId, dumpDate } = await getTraversalBatchInfo(db, "artist_masters");
     const { limit, cursor, sort, releaseType } = parseTraversalQuery(req.query as any);
     return reply.send(await getArtistMasters(db, discogsId, batchId, dumpDate, limit, cursor, sort, releaseType));
+  });
+
+  app.get("/v1/artists/:discogs_id/catalog_releases", async (req, reply) => {
+    const discogsId = parseDiscogsId((req.params as any).discogs_id);
+    if (!discogsId) {
+      return reply.status(400).send({
+        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
+      });
+    }
+    const { batchId, dumpDate } = await getTraversalBatchInfo(db, "artist_catalog_releases");
+    const { limit, cursor, sort, releaseType } = parseTraversalQuery(req.query as any);
+    return reply.send(await getArtistCatalogReleases(db, discogsId, batchId, dumpDate, limit, cursor, sort, releaseType));
   });
 
   app.get("/v1/labels/:discogs_id/releases", async (req, reply) => {

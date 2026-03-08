@@ -7,7 +7,7 @@ import {
   getArtist,
   getLabel,
   getMaster,
-  getArtistMasters,
+  getArtistCatalogReleases,
   getArtistCredits,
   getLabelReleases,
   getBatchForTable,
@@ -329,17 +329,19 @@ async function executeTool(
       const id = Number(input.discogs_id);
       const releaseType = (input.release_type as any) ?? "all";
       const limit = Math.min(Math.max(Number(input.limit ?? 12), 1), 20);
-      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.artists");
-      const result = await getArtistMasters(db, id, batchId, dumpDate, limit, undefined, "newest", releaseType);
+      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.master_artists");
+      const result = await getArtistCatalogReleases(db, id, batchId, dumpDate, limit, undefined, "newest", releaseType);
       const releases = result.links.map((l: any) => ({
         discogs_id: l.discogs_id,
         title: l.title,
         year: l.year ?? null,
         type: l.release_type_label ?? l.release_type ?? null,
-        dig_url: `https://app.dig.baby/release/${l.discogs_id}`,
+        dig_url: l.type === "master"
+          ? `https://app.dig.baby/release/${l.discogs_id}`
+          : `https://app.dig.baby/version/${l.discogs_id}`,
       }));
       for (const r of releases.slice(0, 5)) {
-        evidenceCollector.push({ type: "master", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
+        evidenceCollector.push({ type: r.dig_url.includes("/release/") ? "master" : "release", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
       }
 
       // Auto-fetch credits when releases are thin — many artists are catalogued via credits only
