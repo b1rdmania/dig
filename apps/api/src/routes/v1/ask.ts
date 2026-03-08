@@ -17,7 +17,7 @@ interface AskBody {
   max_tokens?: number;
 }
 
-const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-3-5-sonnet-latest";
+const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-sonnet-4-6";
 const PRIVATE_KEYS = new Set(
   (process.env.LLM_BETA_KEYS ?? "")
     .split(",")
@@ -194,9 +194,9 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
 
       const modelCandidates = [
         requestedModel,
-        "claude-3-7-sonnet-latest",
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5-20251001",
         "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
       ].filter((value, index, arr) => value && arr.indexOf(value) === index);
 
       let selectedModel = requestedModel;

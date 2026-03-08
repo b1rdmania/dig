@@ -92,19 +92,6 @@
   cursor: default;
 }
 
-.result {
-  border: 1px solid var(--fg);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: var(--fg);
-  font-size: 0.9rem;
-  line-height: 1.45;
-  padding: 0.6rem;
-  min-height: 180px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  overflow: auto;
-}
 
 .help {
   font-size: 0.82rem;
@@ -112,5 +99,94 @@
 }
 
 .help code {
+  color: var(--fg);
+}
+
+.resultBox {
+  border-top: 1px solid var(--line);
+  padding-top: 0.9rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.answer {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--fg);
+}
+
+.citations {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.citationsLabel {
+  font-size: 0.72rem;
+  color: var(--fg-faint);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.citation {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.citationType {
+  font-size: 0.72rem;
+  color: var(--fg-faint);
+  text-decoration: none;
+}
+
+.metaLine {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: var(--fg-faint);
+}
+
+.rawToggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.raw {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  padding: 0.6rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: auto;
+}
+
+.errorBox {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.errorCode {
+  font-size: 0.78rem;
+  color: var(--fg-faint);
+  letter-spacing: 0.05em;
+}
+
+.errorMsg {
+  font-size: 0.95rem;
   color: var(--fg);
 }

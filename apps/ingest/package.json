@@ -16,7 +16,8 @@
     "wikidata-context": "tsx src/wikidata-context-import.ts",
     "setlistfm-import": "tsx src/setlistfm-import.ts",
     "label-linkouts": "tsx src/label-linkouts-import.ts",
-    "linkout-verify": "tsx src/linkout-verify.ts"
+    "linkout-verify": "tsx src/linkout-verify.ts",
+    "setlistfm-full-catalog": "tsx src/setlistfm-full-catalog.ts"
   },
   "dependencies": {
     "@dig/db": "workspace:*",
