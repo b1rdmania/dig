@@ -151,25 +151,41 @@ interface IntentResult {
   off_topic: boolean;
 }
 
-async function extractIntent(question: string, anthropicApiKey: string): Promise<IntentResult> {
-  const system = `Extract music entities from the user's question. Return only valid JSON.
+async function extractIntent(
+  question: string,
+  anthropicApiKey: string,
+  history: AnthropicMessage[],
+): Promise<IntentResult> {
+  const system = `You help identify what a user is looking for in a music catalog conversation.
 
-Identify specific artists, labels, or releases the user is asking about. Guess the most likely entity type.
-If the question is not about music at all, set off_topic to true.
+Given the conversation history and the latest message, extract:
+1. Specific artists, labels, or releases to search for (resolve pronouns like "his", "their", "it" using context)
+2. Whether the message is completely unrelated to music (cooking, finance, weather, etc.)
+
+Be permissive: casual follow-ups, meta-questions about the conversation, slang, or questions about the assistant itself are NOT off_topic. Only flag genuinely non-music subjects.
 
 Examples:
 "What are key releases by Prince?" → {"entities":[{"name":"Prince","type":"artist"}],"off_topic":false}
-"Tell me about Blue Note Records" → {"entities":[{"name":"Blue Note Records","type":"label"}],"off_topic":false}
+"what's his most popular release?" (after talking about Kasra V) → {"entities":[{"name":"Kasra V","type":"artist"}],"off_topic":false}
 "classic Chicago house" → {"entities":[{"name":"Chicago house","type":"any"}],"off_topic":false}
-"What's the weather like?" → {"entities":[],"off_topic":true}
+"why are you so constrained?" → {"entities":[],"off_topic":false}
+"hmmm" → {"entities":[],"off_topic":false}
+"What's the weather in Paris?" → {"entities":[],"off_topic":true}
+"how do I make pasta?" → {"entities":[],"off_topic":true}
 
 Return JSON only. No explanation.`;
+
+  // Pass last 4 history messages for pronoun resolution context
+  const contextMessages: AnthropicMessage[] = [
+    ...history.slice(-4),
+    { role: "user", content: question },
+  ];
 
   try {
     const { text } = await callAnthropic({
       model: INTENT_MODEL,
       system,
-      messages: [{ role: "user", content: question }],
+      messages: contextMessages,
       maxTokens: 200,
       anthropicApiKey,
     });
@@ -306,8 +322,8 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     const started = Date.now();
 
     try {
-      // Step 1: Extract intent
-      const intent = await extractIntent(question, anthropicApiKey);
+      // Step 1: Extract intent (pass history for pronoun resolution)
+      const intent = await extractIntent(question, anthropicApiKey, history);
 
       // Guardrail: off-topic
       if (intent.off_topic) {
