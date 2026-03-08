@@ -85,10 +85,19 @@ export async function generateMetadata({ params }: Props) {
 export default async function LabelPage({ params }: Props) {
   const { id } = await params;
 
+  // Shell renders bare layout immediately. Full content (including entity lookup)
+  // streams in via Suspense — prevents slow API responses from producing error pages.
+  return (
+    <div className={styles.page}>
+      <Suspense fallback={<SectionSkeleton lines={4} />}>
+        <LabelContent id={id} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function LabelContent({ id }: { id: string }) {
   try {
-    // Shell only awaits single label lookup (~50ms). Releases stream in
-    // independently so large labels (Blue Note, Columbia, etc.) show the
-    // header immediately rather than hanging on the releases traversal query.
     const labelData = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 });
 
     if (!isLabelResponse(labelData)) {
@@ -98,8 +107,8 @@ export default async function LabelPage({ params }: Props) {
     const label = labelData.label;
 
     return (
-      <div className={styles.page}>
-        {/* ── Hero: renders immediately ── */}
+      <>
+        {/* ── Hero: renders immediately after entity lookup ── */}
         <section className={styles.hero}>
           <h1 className={styles.title}>{label.name}</h1>
           {label.parent_label?.name && (
@@ -141,12 +150,19 @@ export default async function LabelPage({ params }: Props) {
           ]),
         ]} />
         <Provenance provenance={label.provenance} />
-      </div>
+      </>
     );
   } catch (err) {
     if (err instanceof ApiRequestError && err.code === "NOT_FOUND") notFound();
-    if (err instanceof ApiRequestError) return <ErrorMessage code={err.code} message={err.message} />;
-    return <ErrorMessage message="Failed to load label" />;
+    // Slow/failed fetches: show graceful fallback with search link (not an error code)
+    return (
+      <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
+        <p className={styles.copy}>Unable to load this page right now.</p>
+        <p className={styles.small} style={{ marginTop: "0.5rem" }}>
+          <Link href="/" className={styles.link}>Back to search</Link>
+        </p>
+      </section>
+    );
   }
 }
 

@@ -138,7 +138,8 @@ const CANARY: CanaryEntry[] = [
 // Patterns that count as actionable internal links
 const INTERNAL_LINK_RE = /href=["']\/(artist|label|release|version|master)\/\d+/g;
 // Patterns for explicit fallback copy (allowed to have zero links)
-const FALLBACK_COPY_RE = /No (releases|credits|connections|linked releases|primary releases|artist information|parent release)/i;
+// Includes graceful error states ("Unable to load") — these are temporary failures, not structural dead-ends
+const FALLBACK_COPY_RE = /No (releases|credits|connections|linked releases|primary releases|artist information|parent release)|Unable to load/i;
 // Pattern for SSR timeout error — Next.js app returned a TIMEOUT error page instead of entity data.
 // This is a performance/infrastructure issue distinct from a structural dead-end.
 const SSR_TIMEOUT_RE = /"TIMEOUT"|>TIMEOUT<|Request timed out/;

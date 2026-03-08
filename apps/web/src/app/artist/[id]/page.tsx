@@ -440,10 +440,19 @@ export default async function ArtistPage({ params, searchParams }: Props) {
     ? sp.role_family
     : "all";
 
+  // Shell renders bare layout immediately. Full content (including entity lookup)
+  // streams in via Suspense — prevents slow API responses from producing error pages.
+  return (
+    <div className={styles.page}>
+      <Suspense fallback={<SectionSkeleton lines={4} />}>
+        <ArtistContent id={id} releaseType={releaseType} roleFamily={roleFamily} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function ArtistContent({ id, releaseType, roleFamily }: { id: string; releaseType: string; roleFamily: string }) {
   try {
-    // Shell only awaits the single artist lookup (~50ms). All traversal sections
-    // stream in independently via Suspense, so high-catalog artists (Nirvana,
-    // Madonna, etc.) show the header immediately rather than hanging for 10s.
     const artistData = await digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 });
 
     if (!isArtistResponse(artistData)) {
@@ -453,7 +462,7 @@ export default async function ArtistPage({ params, searchParams }: Props) {
     const artist = artistData.artist;
 
     return (
-      <div className={styles.page}>
+      <>
         <section className={styles.hero}>
           <h1 className={styles.title}>{artist.name}</h1>
           {artist.real_name && <div className={styles.subtitle}>Real name: {artist.real_name}</div>}
@@ -474,12 +483,12 @@ export default async function ArtistPage({ params, searchParams }: Props) {
           <ArtistAbout id={id} profile={artist.profile} />
         </Suspense>
 
-        {/* Credits: streams in independently — fast for small catalogs, graceful for large */}
+        {/* Credits: streams in independently */}
         <Suspense fallback={<SectionSkeleton lines={5} />}>
           <ArtistCredits id={id} roleFamily={roleFamily} />
         </Suspense>
 
-        {/* Releases: streams in independently — fast for small catalogs, graceful for large */}
+        {/* Releases: streams in independently */}
         <Suspense fallback={<SectionSkeleton lines={5} />}>
           <ArtistReleases id={id} releaseType={releaseType} />
         </Suspense>
@@ -505,11 +514,18 @@ export default async function ArtistPage({ params, searchParams }: Props) {
           ]),
         ]} />
         <Provenance provenance={artist.provenance} />
-      </div>
+      </>
     );
   } catch (err) {
     if (err instanceof ApiRequestError && err.code === "NOT_FOUND") notFound();
-    if (err instanceof ApiRequestError) return <ErrorMessage code={err.code} message={err.message} />;
-    return <ErrorMessage message="Failed to load artist" />;
+    // Slow/failed fetches: show graceful fallback with search link (not an error code)
+    return (
+      <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
+        <p className={styles.copy}>Unable to load this page right now.</p>
+        <p className={styles.small} style={{ marginTop: "0.5rem" }}>
+          <Link href="/" className={styles.link}>Back to search</Link>
+        </p>
+      </section>
+    );
   }
 }
