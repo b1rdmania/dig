@@ -63,8 +63,8 @@ export default async function VersionPage({ params }: Props) {
           <VersionHeroWithCover release={release} id={id} />
         </Suspense>
         <Tracklist tracks={release.tracks} />
-        <Credits credits={release.credits} />
         <MediaSection videos={release.videos} />
+        <Credits credits={release.credits} />
         {release.notes && (
           <section className={styles.section}>
             <h2 className={styles.heading}>Notes</h2>

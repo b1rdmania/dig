@@ -112,18 +112,9 @@ export function MediaSection({ videos }: { videos: ReleaseVideo[] }) {
         </button>
       )}
       {showMore && (
-        <div className={styles.moreList}>
-          {remaining.map((v) => (
-            <a
-              key={v.youtubeId}
-              href={v.url}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.moreLink}
-            >
-              <span>▸</span>
-              <span>{v.title || v.youtubeId}</span>
-            </a>
+        <div className={styles.moreGrid}>
+          {remaining.map((v, i) => (
+            <EmbedCard key={v.youtubeId} video={v} index={MAX_EMBEDS + i} />
           ))}
         </div>
       )}

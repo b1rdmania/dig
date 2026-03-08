@@ -3,11 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApiRequestError, digFetch } from "@/lib/api";
 import {
-  isMasterVideosResponse,
   isMasterResponse,
   isReleaseResponse,
   isTraversalResponse,
-  type MasterVideosResponse,
   type MasterResponse,
   type ReleaseResponse,
   type TraversalResponse,
@@ -138,14 +136,9 @@ export default async function ReleasePage({ params }: Props) {
           </div>
         </section>
 
-        {/* ── Tracklist + Credits + Notes: stream in from main release fetch ── */}
+        {/* ── Tracklist + Media + Credits + Notes: stream in from main release fetch ── */}
         <Suspense fallback={<SectionSkeleton lines={6} />}>
           <ReleaseDetails mainReleaseId={master.main_release_discogs_id} />
-        </Suspense>
-
-        {/* ── Media: streams in from master videos fetch ── */}
-        <Suspense fallback={<SectionSkeleton lines={3} />}>
-          <ReleaseMedia id={id} />
         </Suspense>
 
         {/* ── Versions: streams in from traversal fetch ── */}
@@ -248,6 +241,7 @@ async function ReleaseDetails({ mainReleaseId }: { mainReleaseId: number | null 
   return (
     <>
       <Tracklist tracks={mainRelease.tracks} />
+      <MediaSection videos={mainRelease.videos} />
       <Credits credits={mainRelease.credits} />
       {mainRelease.notes && (
         <section className={styles.section}>
@@ -257,19 +251,6 @@ async function ReleaseDetails({ mainReleaseId }: { mainReleaseId: number | null 
       )}
     </>
   );
-}
-
-/** Media section: fetches aggregated master videos. */
-async function ReleaseMedia({ id }: { id: string }) {
-  const defaultVideos = { videos: [], meta: { source_type: "master" as const, source_discogs_id: Number(id), elapsed_ms: 0 } };
-
-  const data = await digFetch<MasterVideosResponse>(`/v1/masters/${id}/videos?limit=200`, { revalidate: 300 })
-    .then((d) => (isMasterVideosResponse(d) ? d : defaultVideos))
-    .catch(() => defaultVideos);
-
-  if (data.videos.length === 0) return null;
-
-  return <MediaSection videos={data.videos} />;
 }
 
 /** Versions list: fetches releases traversal for this master. */
