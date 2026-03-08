@@ -212,3 +212,5 @@ main().catch((err) => {
   console.error("Stress test failed:", err);
   process.exit(1);
 });
+
+export {};
