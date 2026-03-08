@@ -3,8 +3,8 @@
 - **Gate ID**: Better-Than-Discogs Track / Item 1
 - **Date**: 2026-03-08
 - **Owner**: Claude Code
-- **Decision**: `GO WITH CAVEATS — BACKFILL PENDING`
-- **Status**: ⚠️ NOT FULLY CLOSED — see Backfill Completion Gate below
+- **Decision**: `GO — FULLY CLOSED`
+- **Status**: ✅ CLOSED — 2026-03-08 12:07 UTC
 
 ## Scope
 
@@ -46,21 +46,31 @@
 
 | Entity | Rows classified | Total | % |
 |--------|----------------|-------|---|
-| artists | 9,917,545 | 9,917,545 | 100% |
+| artists | 9,627,744 | 9,627,744 | 100% |
 | labels | 2,338,764 | 2,338,764 | 100% |
 | masters | 2,520,704 | 2,520,704 | 100% |
-| releases | ~1,569,218 | ~18.9M | ~8.3% |
+| releases | 18,876,362 | 18,876,362 | 100% ✅ |
 
-Fail-open design: unclassified releases pass through search with no suppression.
+Backfill completed 2026-03-08 ~11:58 UTC. ANALYZE completed 12:07 UTC.
 
-## Distribution (v1 Baseline)
+## Distribution — Final Guardrail Snapshot (2026-03-08 12:07 UTC)
 
-| entity | active | low_value | suppressed |
-|--------|--------|-----------|------------|
-| artists | 35.2% | 64.8% | ~0% |
-| labels | 36.0% | 63.9% | ~0% |
-| masters | 99.8% | 0.2% | ~0% |
-| releases (partial) | 99.8% | 0.2% | ~0% |
+| entity | active | low_value | suppressed | total |
+|--------|--------|-----------|------------|-------|
+| artist | 2,837,367 (29.5%) | 7,079,714 (73.5%) | 464 (<0.1%) | 9,627,744 |
+| label | 843,015 (36.1%) | 1,495,746 (63.9%) | 3 (<0.1%) | 2,338,764 |
+| master | 2,515,338 (99.8%) | 5,206 (0.2%) | 160 (<0.1%) | 2,520,704 |
+| release | 18,804,239 (99.6%) | 70,602 (0.4%) | 1,521 (<0.1%) | 18,876,362 |
+
+**Artist v2 breakdown:**
+| status | reason | count |
+|--------|--------|-------|
+| low_value | discogs_quality_needs_major_changes | 6,422,505 |
+| active | default_active | 2,837,367 |
+| low_value | artist_unlinked_low_info | 655,536 |
+| low_value | numeric_name | 1,673 |
+| suppressed | artist_placeholder_name | 416 |
+| suppressed | discogs_quality_entirely_incorrect | 48 |
 
 ## Rollback Plan
 
@@ -88,22 +98,19 @@ Fail-open design: unclassified releases pass through search with no suppression.
 
 ## Backfill Completion Gate
 
-Item 1 is NOT FULLY CLOSED until all three are done:
-
-- [ ] Releases backfill (~17.3M rows) — run `/tmp/q_lmr.py` releases-only off-hours
-- [ ] `ANALYZE enrich.entity_quality;` — after backfill completes
-- [ ] Guardrail SQL snapshot — run query from report, save in a follow-up commit
-
-Evidence format when closing:
 ```
 Gate Item 1 — FULLY CLOSED
-Releases backfill: {N} rows classified ({pct}% of 18.9M)
-ANALYZE: done {timestamp}
-Guardrail snapshot: {inline table or link to doc}
+Releases backfill: 18,876,362 rows classified (100% of 18.9M)
+ANALYZE: done 2026-03-08 12:07 UTC
+Guardrail snapshot: see Distribution table above
 ```
+
+- [x] Releases backfill — 18,876,362 rows ✅
+- [x] `ANALYZE enrich.entity_quality;` — completed 12:07 UTC ✅
+- [x] Guardrail SQL snapshot — captured above ✅
 
 ## Final Sign-off
 
-- Operationally safe to proceed: **yes** (fail-open design)
-- Fully closed: **no** — pending backfill completion gate above
-- Next gate/phase: Item 2 — No-Dead-Ends v2 (canary expansion + CI gate)
+- Operationally safe to proceed: **yes**
+- Fully closed: **yes** ✅
+- Next gate/phase: Item 2 — No-Dead-Ends v2 (0 structural dead-ends confirmed, closeout doc pending)
