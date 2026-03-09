@@ -108,6 +108,8 @@
   display: grid;
   gap: 0.6rem;
   max-width: 92%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .answerText {
@@ -303,6 +305,7 @@
   padding-bottom: 0.25rem;
   margin-top: 0.5rem;
   scrollbar-width: thin;
+  width: 100%;
 }
 
 .videoCard {

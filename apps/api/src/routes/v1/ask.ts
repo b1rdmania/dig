@@ -21,7 +21,7 @@ const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-sonnet-4-6";
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_TURNS = 6;
 const ANTHROPIC_CALL_TIMEOUT_MS = 30_000;  // 30s per Anthropic call
-const TOOL_EXEC_TIMEOUT_MS = 8_000;        // 8s per tool/DB call
+const TOOL_EXEC_TIMEOUT_MS = 15_000;       // 15s per tool/DB call
 const LOOP_DEADLINE_MS = 60_000;           // 60s total for the agentic loop
 
 const PRIVATE_KEYS = new Set(
