@@ -12,8 +12,8 @@ Ship account login, paid plan gating, and LLM beta access control without touchi
 What this unlocks:
 
 1. User login on web.
-2. Tiered limits/features (`free`, `pro`, `team`) enforced server-side.
-3. Paid upgrades (e.g. `GBP 5/month`) via Stripe.
+2. Tiered limits/features (`free`, `early_access`, `team`) enforced server-side.
+3. Paid upgrades (e.g. `GBP 5/month` Early Access) via Stripe.
 4. LLM beta access tied to entitlement flags.
 5. Optional API key issuance tied to plan.
 
@@ -99,7 +99,7 @@ Create additive auth tables (keep existing `auth.users` and `auth.api_keys`):
 
 3. `auth.user_entitlements`
    - `user_id uuid PK references auth.users(id)`
-   - `plan text not null default 'free'` (`free|pro|team`)
+   - `plan text not null default 'free'` (`free|early_access|team`)
    - `llm_beta_access boolean not null default false`
    - `monthly_request_limit integer not null default 500`
    - `rpm_limit integer not null default 20`
@@ -149,7 +149,7 @@ Plan matrix:
    - `llm_beta_access=false` (unless allowlisted)
    - features: `{ "favorites": true, "advanced_search": false, "mcp_high_limit": false }`
 
-2. `pro` (target GBP 5/month)
+2. `early_access` (target GBP 5/month)
    - `monthly_request_limit=10000`
    - `rpm_limit=120`
    - `llm_beta_access=true`
@@ -244,7 +244,7 @@ Implement favorites because it is low-risk and visible value:
 
 ### 8.1 Product setup
 
-1. Create Stripe product `Dig Pro`.
+1. Create Stripe product `Dig Early Access`.
 2. Monthly price in GBP (`£5`).
 3. Save `price_id` in env/config mapping.
 
@@ -300,7 +300,7 @@ API:
 2. `CLERK_JWKS_URL` (or use Clerk SDK verifier)
 3. `STRIPE_SECRET_KEY`
 4. `STRIPE_WEBHOOK_SECRET`
-5. `STRIPE_PRICE_PRO_GBP_MONTHLY`
+5. `STRIPE_PRICE_EARLY_ACCESS_GBP_MONTHLY`
 6. `BILLING_ENABLED=true`
 
 ---
@@ -347,7 +347,7 @@ Gate C pass:
 Gate D pass:
 
 1. Free user blocked from beta as expected.
-2. Pro user allowed and rate limits match plan.
+2. Early Access user allowed and rate limits match plan.
 
 ---
 
@@ -370,7 +370,7 @@ Gate D pass:
 1. Sign up -> free plan -> LLM blocked.
 2. Upgrade -> LLM enabled.
 3. Monthly quota exceeded -> correct error contract.
-4. API key request path follows entitlement.
+4. API key request path follows entitlement (self-serve; max 2 active keys/user).
 
 ### Regression smoke (must remain green)
 
@@ -441,22 +441,22 @@ Body shape must match existing error contract:
 
 ---
 
-## 16) Questions Requiring Your Sign-off
+## 16) Confirmed Product Decisions (2026-03-09)
 
-1. Confirm launch pricing: `GBP 5/month` for `pro`?
-2. Should LLM beta be included in `pro` by default, or separate toggle initially?
-3. Keep core search/retrieval fully free in v1 (recommended: yes)?
-4. Do you want API key self-serve in v1 account page, or admin-issued only?
-5. Do we expose annual billing at launch (recommended: no, monthly only first)?
+1. Confirm launch pricing: `GBP 5/month` for `early_access`.
+2. Confirm LLM beta included in `early_access` by default.
+3. Keep core search/retrieval fully free in v1 (yes).
+4. API key mode: self-serve in v1 account page (max 2 active keys/user).
+5. Billing cadence: monthly-only at launch (no annual in v1).
 
 ---
 
-## 17) Recommended Decisions (default if no reply)
+## 17) Implementation Defaults (locked)
 
-1. `pro = GBP 5/month`
-2. `llm_beta_access included in pro`
+1. `early_access = GBP 5/month`
+2. `llm_beta_access included in early_access`
 3. `core search remains free`
-4. `API key self-serve enabled for pro`
+4. `API key self-serve enabled for early_access` (max 2 active keys/user)
 5. `monthly billing only`
 
 This keeps launch simple and monetization testable with minimal operational risk.
