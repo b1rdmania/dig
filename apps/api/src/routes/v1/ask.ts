@@ -17,11 +17,11 @@ import {
 // Config
 // ---------------------------------------------------------------------------
 
-const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-sonnet-4-6";
-const MAX_TOOL_ROUNDS = 6;
-const MAX_HISTORY_TURNS = 12;
+const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-haiku-4-5-20251001";
+const MAX_TOOL_ROUNDS = 3;
+const MAX_HISTORY_TURNS = 6;
 const ANTHROPIC_CALL_TIMEOUT_MS = 30_000;  // 30s per Anthropic call
-const LOOP_DEADLINE_MS = 90_000;           // 90s total for the agentic loop
+const LOOP_DEADLINE_MS = 60_000;           // 60s total for the agentic loop
 
 const PRIVATE_KEYS = new Set(
   (process.env.LLM_BETA_KEYS ?? "")
