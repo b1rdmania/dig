@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { buildSitemapIndexXml, xmlResponse } from "@/lib/sitemap-xml";
 
 export const revalidate = 86400;
