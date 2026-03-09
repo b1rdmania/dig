@@ -2,19 +2,19 @@
  * Discogs market snapshot — Phase 2.
  * Returns lowest listed price and items for sale for a release.
  *
+ * Data source: GET https://api.discogs.com/marketplace/stats/{release_id}
+ * Auth: personal access token via Authorization: Discogs token={key}
+ * Rate limit: 240 req/min with token (we stay well within via 7-day cache).
+ *
  * Cache policy: 7-day TTL in Redis (key: market:{discogs_release_id}).
  * Fail-soft: returns { market: null } on any external error.
- *
- * Gated by MARKET_SNAPSHOT_ENABLED env var. Returns null until:
- * 1. MARKET_SNAPSHOT_ENABLED=true is set in Fly secrets.
- * 2. DISCOGS_API_KEY is set (requires a registered Discogs application).
- * 3. Discogs API terms confirmed for this display context.
  */
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 const ENABLED = process.env.MARKET_SNAPSHOT_ENABLED === "true";
 const DISCOGS_API_KEY = process.env.DISCOGS_API_KEY ?? "";
 const CACHE_TTL = 60 * 60 * 24 * 7; // 7 days
+const FETCH_TIMEOUT_MS = 3000;
 
 export interface MarketSnapshot {
   lowest_price: number | null;
@@ -33,14 +33,45 @@ type RedisLike = {
 async function fetchFromDiscogs(releaseId: number): Promise<MarketSnapshot | null> {
   if (!DISCOGS_API_KEY) return null;
 
-  // TODO: implement Discogs OAuth or personal access token call
-  // GET https://api.discogs.com/marketplace/price_suggestions/{release_id}
-  // or GET https://api.discogs.com/releases/{release_id}/marketplace/stats
-  // Requires: Authorization: Discogs token={DISCOGS_API_KEY}
-  //
-  // Implementation stub — returns null until Discogs API key + terms are confirmed.
-  void releaseId;
-  return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(
+      `https://api.discogs.com/marketplace/stats/${releaseId}`,
+      {
+        headers: {
+          Authorization: `Discogs token=${DISCOGS_API_KEY}`,
+          "User-Agent": "DigBaby/1.0 +https://dig.baby",
+        },
+        signal: controller.signal,
+      },
+    );
+
+    if (!res.ok) return null;
+
+    const data = await res.json() as {
+      lowest_price?: { value?: number; currency?: string } | null;
+      num_for_sale?: number | null;
+      blocked_from_sale?: boolean;
+    };
+
+    // Blocked listings are not shown
+    if (data.blocked_from_sale) return null;
+
+    return {
+      lowest_price: data.lowest_price?.value ?? null,
+      num_for_sale: data.num_for_sale ?? null,
+      last_sold_price: null, // not available via this endpoint
+      currency: data.lowest_price?.currency ?? "USD",
+      fetched_at: new Date().toISOString(),
+      source: "discogs_marketplace",
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function getMarket(
