@@ -3,7 +3,8 @@
   max-width: var(--max-width);
   margin: 0 auto;
   display: grid;
-  gap: 1.5rem;
+  gap: 1rem;
+  min-height: calc(100dvh - 160px);
 }
 
 .hero {
@@ -26,6 +27,29 @@
 .lede {
   font-size: 0.95rem;
   color: var(--fg-muted);
+}
+
+.supportStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.supportLabel {
+  font-size: 0.74rem;
+  color: var(--fg-faint);
+  letter-spacing: 0.04em;
+}
+
+.supportLink {
+  font-size: 0.86rem;
+  color: var(--fg-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Key entry */
@@ -83,8 +107,18 @@
 .thread {
   display: grid;
   gap: 1.25rem;
+  max-height: min(58vh, 640px);
+  overflow-y: auto;
+  padding-right: 0.2rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chatShell {
   border-top: 1px solid var(--line);
   padding-top: 1rem;
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
 }
 
 .userMsg {
@@ -180,10 +214,11 @@
   gap: 0.5rem;
   align-items: flex-end;
   border-top: 1px solid var(--line);
-  padding-top: 1rem;
+  padding-top: 0.8rem;
   position: sticky;
-  bottom: 1rem;
+  bottom: 0;
   background: var(--bg);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.35rem);
 }
 
 .chatInput {
@@ -193,7 +228,7 @@
   color: var(--fg);
   border: 1px solid var(--fg);
   border-radius: var(--radius);
-  font-size: 0.95rem;
+  font-size: 16px;
   font-family: inherit;
   line-height: 1.45;
   resize: none;
@@ -201,6 +236,7 @@
   min-height: 2.5rem;
   max-height: 8rem;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chatInput::placeholder {
@@ -234,7 +270,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: -0.75rem;
+  margin-top: -0.35rem;
 }
 
 .help {
@@ -306,6 +342,7 @@
   margin-top: 0.5rem;
   scrollbar-width: thin;
   width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .videoCard {
@@ -371,4 +408,22 @@
 .videoArtist {
   font-size: 0.72rem;
   color: var(--fg-faint);
+}
+
+@media (max-width: 720px) {
+  .thread {
+    max-height: 44vh;
+  }
+
+  .supportStrip {
+    gap: 0.45rem 0.7rem;
+  }
+
+  .supportLink {
+    font-size: 0.8rem;
+  }
+
+  .inputMeta {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

@@ -43,6 +43,12 @@ interface Message {
   tool_calls?: number;
 }
 
+function linkifyPlainUrls(text: string): string {
+  return text.replace(/(^|\s)(https?:\/\/[^\s]+)/g, (_m, prefix: string, url: string) => {
+    return `${prefix}[${url}](${url})`;
+  });
+}
+
 function VideoCard({ item }: { item: MediaItem }) {
   const ytId = extractYouTubeId(item.youtube_url);
   const [playing, setPlaying] = useState(false);
@@ -104,6 +110,13 @@ export function LlmBetaClient() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  function resizeComposer() {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
+  }
+
   useEffect(() => {
     try {
       const saved = window.sessionStorage.getItem(KEY_STORAGE);
@@ -114,6 +127,10 @@ export function LlmBetaClient() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    resizeComposer();
+  }, [input]);
 
   function updateAnthropicKey(value: string) {
     setAnthropicKey(value);
@@ -178,6 +195,7 @@ export function LlmBetaClient() {
     } finally {
       setLoading(false);
       inputRef.current?.focus();
+      resizeComposer();
     }
   }
 
@@ -199,6 +217,14 @@ export function LlmBetaClient() {
         <p className={styles.lede}>Your Anthropic key is never saved server-side.</p>
       </section>
 
+      <section className={styles.supportStrip}>
+        <span className={styles.supportLabel}>Need help?</span>
+        <Link href="/feedback" className={styles.supportLink}>Report a bug</Link>
+        <a href="https://x.com/b1rdmania" target="_blank" rel="noreferrer" className={styles.supportLink}>@b1rdmania</a>
+        <a href="https://github.com/b1rdmania/dig" target="_blank" rel="noreferrer" className={styles.supportLink}>GitHub</a>
+        <Link href="/mcp" className={styles.supportLink}>MCP setup</Link>
+      </section>
+
       {!hasKey && (
         <section className={styles.keySection}>
           <label className={styles.label} htmlFor="anthropic-key">Anthropic API Key to get started</label>
@@ -209,6 +235,9 @@ export function LlmBetaClient() {
             value={anthropicKey}
             onChange={(e) => updateAnthropicKey(e.target.value)}
             placeholder="sk-ant-..."
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             autoFocus
           />
           <p className={styles.help}>Stored in this browser session only. Cleared when tab closes.</p>
@@ -216,7 +245,7 @@ export function LlmBetaClient() {
       )}
 
       {hasKey && (
-        <>
+        <div className={styles.chatShell}>
           <div className={styles.thread}>
             {messages.map((m, i) => (
               <div key={i} className={m.role === "user" ? styles.userMsg : styles.assistantMsg}>
@@ -242,7 +271,7 @@ export function LlmBetaClient() {
                               ),
                             }}
                           >
-                            {m.content}
+                            {linkifyPlainUrls(m.content)}
                           </ReactMarkdown>
                         </div>
                       </>
@@ -269,9 +298,17 @@ export function LlmBetaClient() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onFocus={() => {
+                window.setTimeout(() => {
+                  inputRef.current?.scrollIntoView({ block: "nearest" });
+                }, 80);
+              }}
               placeholder="Ask about any artist, release, label, or genre..."
               rows={1}
               disabled={loading}
+              autoCapitalize="sentences"
+              autoCorrect="off"
+              spellCheck={false}
             />
             <button
               className={styles.sendBtn}
@@ -289,7 +326,7 @@ export function LlmBetaClient() {
               Clear key + history
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
