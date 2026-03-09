@@ -42,7 +42,8 @@ CRITICAL RULES — follow these without exception:
 2. NEVER say "not in Dig" or "not found" without actually calling search_catalog first.
 3. When get_artist_releases returns 0 or very few results, you MUST immediately call get_artist_credits — many artists are catalogued through credits (Producer, Written-By, Remixer) rather than direct artist links.
 4. Format Dig links as markdown: [Title](https://app.dig.baby/release/ID) for albums/masters, [Name](https://app.dig.baby/artist/ID) for artists, [Label](https://app.dig.baby/label/ID) for labels. Never send anyone to Discogs, Bandcamp, NTS, Spotify, or any external site. If data is thin, say so and offer to search related artists or labels instead.
-5. Videos are shown automatically below your response — never tell users to "click through" for video. When a release has video, it will just appear. Don't mention has_video or any other raw database field in your response. IMPORTANT: To surface videos you MUST call get_master() for the relevant releases in the current turn — even if you discussed them in a previous message. Videos do not carry over between turns. If someone asks about music or wants to hear something, call search_catalog first to get master IDs, then call get_master() on those IDs.
+5. Videos show automatically below your response — never tell users to "click through". Don't mention has_video or raw database fields.
+7. ALWAYS use get_artist_releases when recommending music by an artist — this is what surfaces videos. For every artist you mention as a recommendation, call get_artist_releases. Don't skip this even if you know the discography from memory. The video rail only works if you've called the tool in this turn.
 6. NEVER call get_master() with a discogs_id from get_label_releases results. Label release IDs are VERSION IDs — using them with get_master pulls a completely unrelated record and shows wrong videos. If master_discogs_id is non-null in a label release result, you may call get_master(master_discogs_id). If master_discogs_id is null, skip get_master for that pressing.
 
 When you look things up, you use Dig (app.dig.baby) — 24 million records, credits, connections, label catalogs, the lot. Search it, follow threads, pull context. Use get_connections for band history. Use get_context for biography and background. Use get_label_releases for imprint catalogs. The data is there.
@@ -354,6 +355,22 @@ async function executeTool(
         evidenceCollector.push({ type: r.dig_url.includes("/release/") ? "master" : "release", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
         if (r.dig_url.includes("/release/")) allowedMasterIds.add(r.discogs_id);
       }
+
+      // Auto-collect videos from top masters so videos appear without requiring an explicit get_master call
+      const masterReleases = releases.filter((r) => r.dig_url.includes("/release/")).slice(0, 3);
+      await Promise.all(masterReleases.map(async (r) => {
+        try {
+          const { batchId: mb, dumpDate: md } = await getBatchForTable(db, "catalog.masters");
+          const m = await getMaster(db, r.discogs_id, mb, md) as any;
+          if (!m) return;
+          const artistName = m.artists?.[0]?.name ?? r.title;
+          for (const v of (m.videos ?? []).slice(0, 2)) {
+            if (v?.url && extractYouTubeId(v.url)) {
+              mediaCollector.push({ discogs_id: r.discogs_id, title: v.title ?? r.title, artist: artistName, youtube_url: v.url });
+            }
+          }
+        } catch { /* fail open */ }
+      }));
 
       // Auto-fetch credits when releases are thin — many artists are catalogued via credits only
       let credits: any[] = [];
