@@ -20,6 +20,8 @@ import {
 const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-sonnet-4-6";
 const MAX_TOOL_ROUNDS = 6;
 const MAX_HISTORY_TURNS = 12;
+const ANTHROPIC_CALL_TIMEOUT_MS = 30_000;  // 30s per Anthropic call
+const LOOP_DEADLINE_MS = 90_000;           // 90s total for the agentic loop
 
 const PRIVATE_KEYS = new Set(
   (process.env.LLM_BETA_KEYS ?? "")
@@ -512,21 +514,30 @@ async function callAnthropic(params: {
   maxTokens: number;
   anthropicApiKey: string;
 }) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": params.anthropicApiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: params.model,
-      max_tokens: params.maxTokens,
-      system: params.system,
-      tools: params.tools,
-      messages: params.messages,
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ANTHROPIC_CALL_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": params.anthropicApiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: params.model,
+        max_tokens: params.maxTokens,
+        system: params.system,
+        tools: params.tools,
+        messages: params.messages,
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     const text = await res.text();
@@ -564,8 +575,13 @@ async function runAgenticLoop(params: {
   const evidenceCollector: EvidenceItem[] = [];
   const errorRef = { count: 0 };
   const allowedMasterIds = new Set<number>();
+  const deadline = Date.now() + LOOP_DEADLINE_MS;
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    if (Date.now() > deadline) {
+      const mode: ResponseMode = evidenceCollector.length > 0 ? "timeout_degraded" : "grounded_empty";
+      return { answer: "Taking too long — try a more specific question.", model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode };
+    }
     const response = await callAnthropic({
       model: params.model,
       system: SYSTEM_PROMPT,
