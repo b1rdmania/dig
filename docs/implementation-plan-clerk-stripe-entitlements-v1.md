@@ -19,7 +19,7 @@ What this unlocks:
 
 Non-goals for v1:
 
-1. No Discogs OAuth sync yet (collections/wantlist deferred).
+1. No Discogs OAuth sync yet (Discogs collections/wantlist import deferred).
 2. No custom auth provider; Clerk is canonical identity.
 3. No breaking change to existing anonymous API behavior.
 
@@ -147,13 +147,13 @@ Plan matrix:
    - `monthly_request_limit=500`
    - `rpm_limit=20`
    - `llm_beta_access=false` (unless allowlisted)
-   - features: `{ "favorites": true, "advanced_search": false, "mcp_high_limit": false }`
+   - features: `{ "favorites": false, "wantlist": false, "advanced_search": false, "mcp_high_limit": false }`
 
 2. `early_access` (target GBP 5/month)
    - `monthly_request_limit=10000`
    - `rpm_limit=120`
    - `llm_beta_access=true`
-   - features: `{ "favorites": true, "advanced_search": true, "mcp_high_limit": true }`
+   - features: `{ "favorites": true, "wantlist": true, "advanced_search": true, "mcp_high_limit": true }`
 
 3. `team`
    - staged later; keep mapping but no public purchase flow in v1.
@@ -226,17 +226,27 @@ Do not gate core public search/retrieval in v1 unless explicitly decided.
    - signed out: `Sign in`
    - signed in: `Account`
 
-### 7.3 Favorites scaffold (v1)
+### 7.3 Favorites + Want List (paid feature)
 
-Implement favorites because it is low-risk and visible value:
+Implement favorites + wants list as paid feature (`early_access`) with upgrade CTA:
 
-1. New table `auth.user_favorites`
-   - `(user_id, entity_type, discogs_id)` unique.
+1. New table `auth.user_saved_items`
+   - `user_id uuid not null`
+   - `entity_type text not null` (`artist|release|version|label|track`)
+   - `discogs_id integer not null`
+   - `list_type text not null` (`favorite|want`)
+   - unique `(user_id, list_type, entity_type, discogs_id)`
 2. API endpoints:
-   - `GET /v1/me/favorites`
-   - `POST /v1/me/favorites`
-   - `DELETE /v1/me/favorites/:entity_type/:discogs_id`
-3. Web button on artist/release/version pages: `Save`.
+   - `GET /v1/me/saved?list_type=favorite|want`
+   - `POST /v1/me/saved`
+   - `DELETE /v1/me/saved/:list_type/:entity_type/:discogs_id`
+3. Web UI:
+   - heart icon next to track/release rows saves to `favorite`
+   - secondary action saves to `want`
+   - free-tier click on locked action shows paywall CTA
+4. Paywall CTA copy:
+   - `Save to crates and want list is part of Early Access (£5/month).`
+   - `You also get beta access to the Dig AI layer.`
 
 ---
 
@@ -369,8 +379,10 @@ Gate D pass:
 
 1. Sign up -> free plan -> LLM blocked.
 2. Upgrade -> LLM enabled.
-3. Monthly quota exceeded -> correct error contract.
-4. API key request path follows entitlement (self-serve; max 2 active keys/user).
+3. Free user clicks heart/want -> sees upgrade CTA.
+4. Early Access user can add/remove favorite and want items.
+5. Monthly quota exceeded -> correct error contract.
+6. API key request path follows entitlement (self-serve; max 2 active keys/user).
 
 ### Regression smoke (must remain green)
 
@@ -416,7 +428,7 @@ Body shape must match existing error contract:
 
 1. Migration + schema updates
    - `018_auth_entitlements.ts`
-   - `019_user_favorites.ts`
+   - `019_user_saved_items.ts`
    - `packages/db/src/schema.ts`
 
 2. API auth/entitlements module
@@ -429,7 +441,7 @@ Body shape must match existing error contract:
    - Clerk setup
    - account page
    - LLM beta gating UI
-   - favorites buttons + API calls
+   - favorites/want-list buttons + paywall CTA + API calls
 
 5. Contracts/docs
    - update `docs/phase2-response-contracts.md`
@@ -443,11 +455,12 @@ Body shape must match existing error contract:
 
 ## 16) Confirmed Product Decisions (2026-03-09)
 
-1. Confirm launch pricing: `GBP 5/month` for `early_access`.
-2. Confirm LLM beta included in `early_access` by default.
-3. Keep core search/retrieval fully free in v1 (yes).
+1. Launch pricing: `GBP 5/month` for `early_access`.
+2. LLM beta is included in `early_access` by default.
+3. Core search/retrieval remains fully free in v1.
 4. API key mode: self-serve in v1 account page (max 2 active keys/user).
 5. Billing cadence: monthly-only at launch (no annual in v1).
+6. Favorites + want list are paid `early_access` features.
 
 ---
 
@@ -458,5 +471,6 @@ Body shape must match existing error contract:
 3. `core search remains free`
 4. `API key self-serve enabled for early_access` (max 2 active keys/user)
 5. `monthly billing only`
+6. `favorites/wantlist gated to early_access`
 
 This keeps launch simple and monetization testable with minimal operational risk.
