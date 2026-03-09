@@ -9,7 +9,7 @@ type CohortType = typeof COHORT_TYPES[number];
 
 const MAX_LIMITS: Record<CohortType, number> = {
   artists: 5000,
-  releases: 200000,
+  releases: 50000,
   labels: 2000,
 };
 

@@ -8,9 +8,9 @@ const BASE = "https://app.dig.baby";
 
 export async function GET() {
   try {
-    const res = await fetch(`${API_URL}/v1/seo/cohort?type=releases&limit=200000`, {
+    const res = await fetch(`${API_URL}/v1/seo/cohort?type=releases&limit=50000`, {
       headers: API_KEY ? { "X-API-Key": API_KEY } : {},
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(120_000),
     });
     const data = res.ok ? (await res.json()) as { ids: number[] } : { ids: [] };
 
