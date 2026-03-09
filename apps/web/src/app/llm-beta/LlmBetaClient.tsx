@@ -194,11 +194,9 @@ export function LlmBetaClient() {
     <div className={styles.page}>
       <section className={styles.hero}>
         <p className={styles.eyebrow}>Private Beta</p>
-        <h1 className={styles.title}>Ask dig.</h1>
-        <p className={styles.lede}>
-          An intelligent music assistant with access to 24 million Discogs records.
-          Your Anthropic key is never saved server-side.
-        </p>
+        <h1 className={styles.title}>Ask Dig.</h1>
+        <p className={styles.lede}>An intelligent music assistant.</p>
+        <p className={styles.lede}>Your Anthropic key is never saved server-side.</p>
       </section>
 
       {!hasKey && (
@@ -219,12 +217,6 @@ export function LlmBetaClient() {
 
       {hasKey && (
         <>
-          {messages.length === 0 && (
-            <div className={styles.emptyState}>
-              <p className={styles.emptyHint}>Try: "Key albums by Talk Talk" · "Chicago house labels" · "Who produced Loveless?"</p>
-            </div>
-          )}
-
           <div className={styles.thread}>
             {messages.map((m, i) => (
               <div key={i} className={m.role === "user" ? styles.userMsg : styles.assistantMsg}>

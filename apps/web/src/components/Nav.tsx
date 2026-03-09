@@ -34,7 +34,7 @@ export function Nav() {
           </button>
         )}
         <Link href="/" className={styles.logo}>
-          DIG <span className={styles.beta}>[beta]</span>
+          Dig <span className={styles.beta}>[beta]</span>
         </Link>
       </div>
       {isSubpage ? (
