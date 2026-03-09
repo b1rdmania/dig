@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-const customStyles = {
+export const customStyles = {
   root: {
     '--bg': '#F4F4F4',
     '--text-main': '#111111',
@@ -230,11 +230,11 @@ const customStyles = {
   },
 };
 
-const GeoIcon = ({ style, ...props }) => (
+export const GeoIcon = ({ style, ...props }) => (
   <svg style={{ stroke: '#111111', strokeWidth: 1, fill: 'none', vectorEffect: 'non-scaling-stroke', ...style }} {...props} />
 );
 
-const ListItem = ({ index, title, artist, isPlaying, onClick }) => {
+export const ListItem = ({ index, title, artist, isPlaying, onClick }) => {
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -252,7 +252,7 @@ const ListItem = ({ index, title, artist, isPlaying, onClick }) => {
   );
 };
 
-const ArtworkCard = ({ index, children, title, desc, round, textCenter, onClick }) => {
+export const ArtworkCard = ({ index, children, title, desc, round, textCenter, onClick }) => {
   const [hovered, setHovered] = useState(false);
   return (
     <div

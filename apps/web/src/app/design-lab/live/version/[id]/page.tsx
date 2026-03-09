@@ -1,15 +1,8 @@
-import Link from "next/link";
+import Variant3LiveShell from "@/components/design-lab/Variant3LiveShell";
 import { digFetch } from "@/lib/api";
-import {
-  isReleaseResponse,
-  isMasterResponse,
-  type ReleaseResponse,
-  type MasterResponse,
-} from "@/lib/types";
-import { artistNames, formatDuration } from "@/lib/format";
+import { isReleaseResponse, isMasterResponse, type ReleaseResponse, type MasterResponse } from "@/lib/types";
+import { artistNames } from "@/lib/format";
 import { firstYoutubeThumb } from "@/lib/media";
-import { topVideos } from "../../shared";
-import styles from "../../live.module.css";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,122 +16,79 @@ export default async function DesignLabVersionPage({ params }: Props) {
 
   if (!release) {
     return (
-      <main className={styles.page}>
-        <section className={styles.section}>
-          <p className={styles.warn}>Version not found.</p>
-          <div className={styles.links}><Link className={styles.pill} href="/design-lab/live/search">Back to search</Link></div>
-        </section>
-      </main>
+      <Variant3LiveShell
+        sectionLabel="/ VERSION"
+        title="Version not found"
+        queryValue="Try another pressing id"
+        pills={[{ label: "not found", active: true }]}
+        columns={[
+          { title: "TRACKS", items: [] },
+          { title: "FORMATS", items: [] },
+          { title: "ARTISTS", items: [] },
+          { title: "NAV", items: [{ index: "001", title: "Back to search", subtitle: "Find version", href: "/design-lab/live/search", type: "label" }] },
+        ]}
+      />
     );
   }
 
-  const [coverRes, masterRes] = await Promise.all([
-    digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${id}/cover`, { revalidate: 3600 }).catch(() => null),
-    release.master_discogs_id
-      ? digFetch<MasterResponse>(`/v1/masters/${release.master_discogs_id}`, { revalidate: 300 }).catch(() => null)
-      : Promise.resolve(null),
-  ]);
-
-  const coverUrl = coverRes?.cover?.url || firstYoutubeThumb(release.videos) || null;
+  const masterRes = release.master_discogs_id
+    ? await digFetch<MasterResponse>(`/v1/masters/${release.master_discogs_id}`, { revalidate: 300 }).catch(() => null)
+    : null;
   const master = masterRes && isMasterResponse(masterRes) ? masterRes.master : null;
-  const videos = topVideos(release.videos, 6);
+
+  const tracks = release.tracks || [];
+  const media = release.videos || [];
 
   return (
-    <main className={styles.page}>
-      <section className={styles.hero}>
-        <div className={styles.grid2}>
-          <div className={styles.cover}>
-            {coverUrl ? (
-              <img src={coverUrl} alt={release.title} />
-            ) : (
-              <div className={styles.coverPlaceholder}><span>No cover</span></div>
-            )}
-          </div>
-          <div>
-            <p className={styles.kicker}>Live Template / Version</p>
-            <h1 className={styles.title}>{release.title}</h1>
-            <p className={styles.sub}>{artistNames(release.artists)}{release.release_year ? ` • ${release.release_year}` : ""}</p>
-            <div className={styles.badges}>
-              {release.formats.flatMap((f) => f.descriptions).slice(0, 6).map((f) => (
-                <span key={f} className={styles.badge}>{f}</span>
-              ))}
-              {release.genres.slice(0, 4).map((g) => (
-                <span key={g} className={styles.badge}>{g}</span>
-              ))}
-            </div>
-            <div className={styles.links}>
-              <Link className={styles.pill} href="/design-lab/live">Lab home</Link>
-              {master && <Link className={styles.pill} href={`/design-lab/live/release/${master.discogs_id}`}>Release page</Link>}
-              <a className={styles.pill} href={`https://www.discogs.com/release/${release.discogs_id}`} target="_blank" rel="noreferrer">Open on Discogs</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.split}>
-          <div className={styles.card}>
-            <h2 className={styles.sectionTitle}>Tracklist</h2>
-            {release.tracks.length === 0 ? (
-              <div className={styles.emptyCard}>No tracklist data.</div>
-            ) : (
-              release.tracks.map((t, idx) => (
-                <div key={`${t.position_raw}-${t.title}-${idx}`} className={styles.trackGrid}>
-                  <span className={styles.trackPos}>{t.position_raw || idx + 1}</span>
-                  <div>
-                    <p className={styles.trackTitle}>{t.title}</p>
-                    {t.credits.length > 0 && (
-                      <p className={styles.trackCredits}>
-                        {t.credits.slice(0, 4).map((c) => `${c.role}: ${c.artist_name}`).join(" • ")}
-                      </p>
-                    )}
-                  </div>
-                  <span className={styles.trackDuration}>{formatDuration(t.duration_seconds) || "—"}</span>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className={styles.card}>
-            <h2 className={styles.sectionTitle}>Credits</h2>
-            {release.credits.length === 0 ? (
-              <div className={styles.emptyCard}>No release-level credits.</div>
-            ) : (
-              <div className={styles.list}>
-                {release.credits.slice(0, 18).map((c, idx) => (
-                  <div key={`${c.artist_discogs_id}-${c.role}-${idx}`} className={styles.row}>
-                    <Link className={styles.mainLink} href={`/design-lab/live/artist/${c.artist_discogs_id}`}>{c.artist_name}</Link>
-                    <span className={styles.meta}>{c.role}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Media</h2>
-        {videos.length === 0 ? (
-          <div className={styles.emptyCard}>No playable YouTube media found.</div>
-        ) : (
-          <div className={styles.videoGrid}>
-            {videos.map((v) => (
-              <a key={v.url} className={styles.videoCard} href={v.url} target="_blank" rel="noreferrer">
-                <img className={styles.videoThumb} src={v.thumb} alt={v.title} />
-                <div className={styles.videoBody}>
-                  <p className={styles.videoTitle}>{v.title}</p>
-                  <p className={styles.videoMeta}>{v.duration || "YouTube"}</p>
-                </div>
-              </a>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className={styles.section}>
-        <p className={styles.meta}>discogs|{release.provenance.dump_date}|#{release.discogs_id}</p>
-      </section>
-    </main>
+    <Variant3LiveShell
+      sectionLabel="/ VERSION"
+      title={release.title}
+      queryValue={`${artistNames(release.artists)}${release.release_year ? ` • ${release.release_year}` : ""}`}
+      pills={[
+        { label: `${tracks.length} tracks`, active: true },
+        { label: `${release.formats.length} formats` },
+        { label: release.country || "unknown country" },
+      ]}
+      nowPlaying={{ title: tracks[0]?.title || release.title, artist: artistNames(release.artists) }}
+      columns={[
+        {
+          title: "TRACKS",
+          items: tracks.slice(0, 8).map((t, i) => ({
+            index: t.position_raw || String(i + 1).padStart(2, "0"),
+            title: t.title,
+            subtitle: t.credits[0] ? `${t.credits[0].role}: ${t.credits[0].artist_name}` : "Track",
+            type: "release",
+          })),
+        },
+        {
+          title: "FORMATS",
+          items: release.formats.slice(0, 2).map((f, i) => ({
+            index: String(i + 1).padStart(3, "0"),
+            title: f.name,
+            subtitle: f.descriptions.join(", ") || "Format",
+            type: "release",
+          })),
+        },
+        {
+          title: "ARTISTS",
+          items: release.artists.slice(0, 2).map((a, i) => ({
+            index: String(i + 3).padStart(3, "0"),
+            title: a.name,
+            subtitle: a.role || "Artist",
+            href: `/design-lab/live/artist/${a.discogs_id}`,
+            type: "artist",
+          })),
+        },
+        {
+          title: "LINKS",
+          items: [
+            ...(master ? [{ index: "005", title: "Release page", subtitle: master.title, href: `/design-lab/live/release/${master.discogs_id}`, type: "release" }] : []),
+            ...(media[0]
+              ? [{ index: "006", title: media[0].title || "YouTube", subtitle: "Open media", href: media[0].url, thumb: firstYoutubeThumb([{ url: media[0].url }]) || undefined, type: "release" }]
+              : []),
+          ],
+        },
+      ]}
+    />
   );
 }

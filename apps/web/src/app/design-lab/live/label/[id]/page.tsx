@@ -1,14 +1,7 @@
-import Link from "next/link";
+import Variant3LiveShell from "@/components/design-lab/Variant3LiveShell";
 import { digFetch } from "@/lib/api";
-import {
-  isLabelResponse,
-  isTraversalResponse,
-  type LabelResponse,
-  type TraversalResponse,
-} from "@/lib/types";
-import { urlLabel } from "@/lib/format";
+import { isLabelResponse, isTraversalResponse, type LabelResponse, type TraversalResponse } from "@/lib/types";
 import { hrefForTraversalLink } from "../../shared";
-import styles from "../../live.module.css";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -19,7 +12,7 @@ export default async function DesignLabLabelPage({ params }: Props) {
 
   const [labelRes, releasesRes] = await Promise.all([
     digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 }).catch(() => null),
-    digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=50`, { revalidate: 300 }).catch(() => null),
+    digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=30`, { revalidate: 300 }).catch(() => null),
   ]);
 
   const label = labelRes && isLabelResponse(labelRes) ? labelRes.label : null;
@@ -27,67 +20,71 @@ export default async function DesignLabLabelPage({ params }: Props) {
 
   if (!label) {
     return (
-      <main className={styles.page}>
-        <section className={styles.section}>
-          <p className={styles.warn}>Label not found.</p>
-          <div className={styles.links}><Link className={styles.pill} href="/design-lab/live/search">Back to search</Link></div>
-        </section>
-      </main>
+      <Variant3LiveShell
+        sectionLabel="/ LABEL"
+        title="Label not found"
+        queryValue="Try another label id"
+        pills={[{ label: "not found", active: true }]}
+        columns={[
+          { title: "RELEASES", items: [] },
+          { title: "CATALOG", items: [] },
+          { title: "PROFILE", items: [] },
+          { title: "NAV", items: [{ index: "001", title: "Back to search", subtitle: "Find label", href: "/design-lab/live/search", type: "label" }] },
+        ]}
+      />
     );
   }
 
   return (
-    <main className={styles.page}>
-      <section className={styles.hero}>
-        <p className={styles.kicker}>Live Template / Label</p>
-        <h1 className={styles.title}>{label.name}</h1>
-        {label.parent_label?.name && <p className={styles.sub}>Parent label: {label.parent_label.name}</p>}
-        <div className={styles.links}>
-          <Link className={styles.pill} href="/design-lab/live">Lab home</Link>
-          <Link className={styles.pill} href="/design-lab/live/search?type=label">Search labels</Link>
-          <a className={styles.pill} href={`https://www.discogs.com/label/${label.discogs_id}`} target="_blank" rel="noreferrer">Open on Discogs</a>
-        </div>
-      </section>
-
-      {label.profile && (
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>About</h2>
-          <p className={styles.warn} style={{ whiteSpace: "pre-wrap", lineHeight: 1.55, color: "var(--lab-text)" }}>{label.profile}</p>
-        </section>
-      )}
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Catalog Releases • {releases.length}</h2>
-        {releases.length === 0 && <div className={styles.emptyCard}>No releases found for this label.</div>}
-        <div className={styles.list}>
-          {releases.map((r) => (
-            <div className={styles.row} key={`${r.type}-${r.discogs_id}`}>
-              <div>
-                <Link className={styles.mainLink} href={hrefForTraversalLink(r)}>
-                  {r.title || `Release ${r.discogs_id}`}
-                </Link>
-                <div className={styles.subMeta}>{r.country || "—"}</div>
-              </div>
-              <span className={styles.meta}>{r.format || r.type}{r.year ? ` • ${r.year}` : ""}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {label.urls.length > 0 && (
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>External Links</h2>
-          <div className={styles.links}>
-            {label.urls.slice(0, 10).map((url) => (
-              <a key={url} className={styles.pill} href={url} target="_blank" rel="noreferrer">{urlLabel(url)}</a>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className={styles.section}>
-        <p className={styles.meta}>discogs|{label.provenance.dump_date}|#{label.discogs_id}</p>
-      </section>
-    </main>
+    <Variant3LiveShell
+      sectionLabel="/ LABEL"
+      title={label.name}
+      queryValue={label.profile?.slice(0, 90) || `Label #${label.discogs_id}`}
+      pills={[
+        { label: `${releases.length} releases`, active: true },
+        { label: label.parent_label?.name || "no parent" },
+        { label: `${label.urls.length} links` },
+      ]}
+      nowPlaying={{ title: label.name, artist: "Label catalog" }}
+      columns={[
+        {
+          title: "RELEASES",
+          items: releases.slice(0, 8).map((r, i) => ({
+            index: String(i + 1).padStart(2, "0"),
+            title: r.title || `Release ${r.discogs_id}`,
+            subtitle: `${r.country || "—"}${r.year ? ` • ${r.year}` : ""}`,
+            href: hrefForTraversalLink(r),
+            type: "release",
+          })),
+        },
+        {
+          title: "FEATURED",
+          items: releases.slice(0, 2).map((r, i) => ({
+            index: String(i + 1).padStart(3, "0"),
+            title: r.title || `Release ${r.discogs_id}`,
+            subtitle: r.format || "Release",
+            href: hrefForTraversalLink(r),
+            type: "release",
+          })),
+        },
+        {
+          title: "LINKS",
+          items: label.urls.slice(0, 2).map((u, i) => ({
+            index: String(i + 3).padStart(3, "0"),
+            title: u.replace(/^https?:\/\//, "").slice(0, 42),
+            subtitle: "External",
+            href: u,
+            type: "label",
+          })),
+        },
+        {
+          title: "NAV",
+          items: [
+            { index: "005", title: "Open on Discogs", subtitle: "Label page", href: `https://www.discogs.com/label/${label.discogs_id}`, type: "label" },
+            { index: "006", title: "Back to lab", subtitle: "Design Lab Live", href: "/design-lab/live", type: "label" },
+          ],
+        },
+      ]}
+    />
   );
 }
