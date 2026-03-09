@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Release } from "@/lib/types";
+import type { Release, MarketSnapshot } from "@/lib/types";
 import { formatDescriptions, discogsUrl } from "@/lib/format";
 import { firstYoutubeThumb } from "@/lib/media";
 import { OutboundLink } from "./OutboundLink";
@@ -8,9 +8,10 @@ import styles from "./ReleaseHero.module.css";
 interface Props {
   release: Release;
   coverUrl?: string | null;
+  market?: MarketSnapshot | null;
 }
 
-export function ReleaseHero({ release, coverUrl }: Props) {
+export function ReleaseHero({ release, coverUrl, market }: Props) {
   const heroImage = coverUrl || firstYoutubeThumb(release.videos);
   const format = release.formats[0];
 
@@ -86,11 +87,17 @@ export function ReleaseHero({ release, coverUrl }: Props) {
         </div>
       )}
       <div className={styles.links}>
-        {release.master_discogs_id && (
+        {market?.lowest_price != null && market.lowest_price > 0 && (
+          <span className={styles.marketPrice}>
+            {market.currency} {market.lowest_price.toFixed(2)}
+            {market.num_for_sale ? ` · ${market.num_for_sale} for sale` : ""}
+          </span>
+        )}
+        {release.master_discogs_id ? (
           <Link href={`/release/${release.master_discogs_id}`} className={styles.link}>
             View Release Page
           </Link>
-        )}
+        ) : null}
         <OutboundLink
           href={discogsUrl("release", release.discogs_id)}
           entityType="release"

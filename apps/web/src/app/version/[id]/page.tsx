@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { digFetch, ApiRequestError } from "@/lib/api";
-import { isReleaseResponse, type ReleaseResponse } from "@/lib/types";
+import { isReleaseResponse, type ReleaseResponse, type MarketResponse } from "@/lib/types";
 import { entityMetadata, BASE_URL } from "@/lib/seo";
 import { versionJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "@/components/JsonLd";
@@ -13,7 +13,6 @@ import { Provenance } from "@/components/Provenance";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { PageViewTracker } from "@/components/PageViewTracker";
 import { ReleaseNav } from "@/components/ReleaseNav";
-import { MarketSnapshot } from "@/components/MarketSnapshot";
 import styles from "../../release/[id]/page.module.css";
 
 interface Props {
@@ -64,11 +63,11 @@ export default async function VersionPage({ params }: Props) {
         <Suspense fallback={<ReleaseHero release={release} coverUrl={null} />}>
           <VersionHeroWithCover release={release} id={id} />
         </Suspense>
-        {release.master_discogs_id && (
+        {release.master_discogs_id ? (
           <Suspense fallback={null}>
             <ReleaseNav masterId={release.master_discogs_id} currentReleaseId={release.discogs_id} />
           </Suspense>
-        )}
+        ) : null}
         <MediaSection videos={release.videos} />
         <Tracklist tracks={release.tracks} />
         <Credits credits={release.credits} />
@@ -78,11 +77,6 @@ export default async function VersionPage({ params }: Props) {
             <p className={styles.copy}>{release.notes}</p>
           </section>
         )}
-        {/* ── Market snapshot (Phase 2 — shows nothing until MARKET_SNAPSHOT_ENABLED) ── */}
-        <Suspense fallback={null}>
-          <MarketSnapshot releaseId={release.discogs_id} />
-        </Suspense>
-
         {release.tracks.length === 0 && release.credits.length === 0 && !release.master_discogs_id && (
           <section className={styles.section}>
             <p className={styles.small}>
@@ -112,12 +106,15 @@ export default async function VersionPage({ params }: Props) {
   }
 }
 
-/** Hero with cover art streamed in. */
+/** Hero with cover art and market data streamed in. */
 async function VersionHeroWithCover({ release, id }: { release: ReleaseResponse["release"]; id: string }) {
-  const coverData = await digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${id}/cover`, { revalidate: 3600 })
-    .catch(() => null);
+  const [coverData, marketData] = await Promise.all([
+    digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${id}/cover`, { revalidate: 3600 }).catch(() => null),
+    digFetch<MarketResponse>(`/v1/releases/${id}/market`, { revalidate: 3600 }).catch(() => null),
+  ]);
 
   const coverUrl = coverData?.cover?.url ?? null;
+  const market = marketData?.market ?? null;
 
-  return <ReleaseHero release={release} coverUrl={coverUrl} />;
+  return <ReleaseHero release={release} coverUrl={coverUrl} market={market} />;
 }
