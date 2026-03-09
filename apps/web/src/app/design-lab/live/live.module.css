@@ -1,53 +1,55 @@
 .page {
-  --lab-bg: #0b0806;
-  --lab-card: rgba(20, 14, 10, 0.82);
-  --lab-card-2: rgba(28, 19, 14, 0.88);
-  --lab-line: rgba(214, 169, 117, 0.25);
-  --lab-line-strong: rgba(214, 169, 117, 0.42);
-  --lab-text: #f2ece0;
-  --lab-muted: #b39a79;
-  --lab-accent: #d2a06b;
-  --lab-accent-2: #d58e76;
-  --lab-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
-  max-width: 1140px;
+  --lab-bg: #f4f4f4;
+  --lab-card: #ffffff;
+  --lab-card-2: #ffffff;
+  --lab-line: #d0d0d0;
+  --lab-line-strong: #9f9f9f;
+  --lab-text: #111111;
+  --lab-muted: #666666;
+  --lab-accent: #111111;
+  --lab-shadow: none;
+  max-width: 1200px;
   margin: 0 auto;
   min-height: calc(100vh - 82px);
   border-left: 1px solid var(--lab-line);
   border-right: 1px solid var(--lab-line);
-  background:
-    radial-gradient(800px 400px at 20% -10%, rgba(213, 142, 118, 0.14), transparent 62%),
-    radial-gradient(900px 500px at 92% 8%, rgba(210, 160, 107, 0.12), transparent 65%),
-    linear-gradient(180deg, rgba(8, 6, 5, 0.92), rgba(8, 6, 5, 0.98));
+  background: var(--lab-bg);
+  color: var(--lab-text);
 }
 
 .hero {
-  padding: 1.35rem 1.3rem;
+  padding: 2rem 2.25rem;
   border-bottom: 1px solid var(--lab-line);
-  background: linear-gradient(120deg, rgba(213, 142, 118, 0.1), rgba(11, 8, 6, 0));
+  background: var(--lab-bg);
 }
 
 .kicker {
   margin: 0;
-  font-size: 0.68rem;
-  letter-spacing: 0.18em;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--lab-muted);
-  font-family: var(--font-mono), "Courier New", monospace;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
 }
 
 .title {
   margin: 0.45rem 0 0;
   color: var(--lab-text);
-  font-size: clamp(2rem, 4.8vw, 4rem);
-  line-height: 0.94;
+  font-size: clamp(2.8rem, 7vw, 5.2rem);
+  line-height: 0.98;
   letter-spacing: -0.02em;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 300;
 }
 
 .sub {
   margin: 0.7rem 0 0;
   color: var(--lab-muted);
-  font-size: clamp(1rem, 2vw, 1.3rem);
+  font-size: clamp(0.95rem, 1.4vw, 1.08rem);
   line-height: 1.3;
+  max-width: 72ch;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .links {
@@ -64,29 +66,30 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--lab-text);
-  padding: 0.28rem 0.6rem;
+  padding: 0.4rem 0.8rem;
   text-decoration: none;
-  font-family: var(--font-mono), "Courier New", monospace;
-  background: rgba(63, 40, 24, 0.34);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #fff;
+  font-weight: 500;
 }
 
 .pill:hover {
   border-color: var(--lab-line-strong);
-  color: #fff;
 }
 
 .section {
-  padding: 1rem 1.3rem;
+  padding: 1.2rem 2.25rem;
   border-bottom: 1px solid var(--lab-line);
 }
 
 .sectionTitle {
   margin: 0 0 0.75rem;
   color: var(--lab-muted);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  font-family: var(--font-mono), "Courier New", monospace;
+  letter-spacing: 0.12em;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
 }
 
 .form {
@@ -99,7 +102,7 @@
 .textarea,
 .select {
   border: 1px solid var(--lab-line);
-  background: rgba(18, 13, 10, 0.8);
+  background: #fff;
   color: var(--lab-text);
   padding: 0.7rem 0.8rem;
   font-size: 1rem;
@@ -112,25 +115,26 @@
 
 .input::placeholder,
 .textarea::placeholder {
-  color: rgba(242, 236, 224, 0.48);
+  color: #777;
 }
 
 .select {
-  font-family: var(--font-mono), "Courier New", monospace;
-  font-size: 0.75rem;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.76rem;
   text-transform: uppercase;
 }
 
 .btn {
   border: 1px solid var(--lab-line);
-  background: linear-gradient(180deg, rgba(210, 160, 107, 0.34), rgba(210, 160, 107, 0.22));
-  color: var(--lab-text);
+  background: #111;
+  color: #fff;
   padding: 0.7rem 0.95rem;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.11em;
   font-size: 0.69rem;
-  font-family: var(--font-mono), "Courier New", monospace;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
 }
 
 .btn:hover {
@@ -147,6 +151,7 @@
   margin: 0;
   font-size: 0.83rem;
   color: var(--lab-muted);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .grid2 {
@@ -159,7 +164,7 @@
   width: 260px;
   height: 260px;
   border: 1px solid var(--lab-line);
-  background: rgba(39, 26, 18, 0.55);
+  background: #fff;
   box-shadow: var(--lab-shadow);
   overflow: hidden;
 }
@@ -179,7 +184,8 @@
   font-size: 0.75rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-family: var(--font-mono), "Courier New", monospace;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
 }
 
 .list {
@@ -192,7 +198,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.65rem;
   align-items: baseline;
-  border-top: 1px solid rgba(214, 169, 117, 0.18);
+  border-top: 1px solid var(--lab-line);
   padding: 0.58rem 0;
 }
 
@@ -203,21 +209,22 @@
 .mainLink {
   color: var(--lab-text);
   text-decoration: none;
-  font-size: 1.02rem;
+  font-size: 1rem;
   line-height: 1.2;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .mainLink:hover {
-  color: #fff;
   text-decoration: underline;
   text-underline-offset: 0.24em;
-  text-decoration-color: rgba(210, 160, 107, 0.75);
+  text-decoration-color: #666;
 }
 
 .subMeta {
   margin-top: 0.18rem;
   color: var(--lab-muted);
   font-size: 0.79rem;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .meta {
@@ -225,13 +232,15 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--lab-muted);
-  font-family: var(--font-mono), "Courier New", monospace;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
 }
 
 .warn {
   margin: 0;
   font-size: 0.9rem;
   color: var(--lab-muted);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .muted {
@@ -252,7 +261,8 @@
   font-size: 0.64rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  font-family: var(--font-mono), "Courier New", monospace;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
 }
 
 .split {
@@ -296,6 +306,7 @@
   color: var(--lab-text);
   font-size: 0.84rem;
   line-height: 1.3;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .videoMeta {
@@ -304,13 +315,15 @@
   font-size: 0.67rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  font-family: var(--font-mono), "Courier New", monospace;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
 }
 
 .emptyCard {
   border: 1px dashed var(--lab-line);
   padding: 0.9rem;
   color: var(--lab-muted);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .tabs {
@@ -329,13 +342,14 @@
   font-size: 0.67rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  font-family: var(--font-mono), "Courier New", monospace;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
 }
 
 .tabActive {
   color: var(--lab-text);
   border-color: var(--lab-line-strong);
-  background: rgba(210, 160, 107, 0.14);
+  background: #fff;
 }
 
 .trackGrid {
@@ -353,14 +367,16 @@
 
 .trackPos {
   color: var(--lab-muted);
-  font-family: var(--font-mono), "Courier New", monospace;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.67rem;
+  font-weight: 500;
 }
 
 .trackTitle {
   color: var(--lab-text);
   margin: 0;
   font-size: 0.95rem;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .trackCredits {
@@ -368,12 +384,14 @@
   color: var(--lab-muted);
   font-size: 0.75rem;
   line-height: 1.35;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .trackDuration {
   color: var(--lab-muted);
-  font-family: var(--font-mono), "Courier New", monospace;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.73rem;
+  font-weight: 500;
 }
 
 @media (max-width: 980px) {
