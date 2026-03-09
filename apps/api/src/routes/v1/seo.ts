@@ -32,7 +32,11 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
    *   labels   — has ≥5 linked releases
    */
   app.get("/v1/seo/cohort", async (req, reply) => {
-    const { type, limit: limitRaw } = req.query as { type?: string; limit?: string };
+    const { type, limit: limitRaw, offset: offsetRaw } = req.query as {
+      type?: string;
+      limit?: string;
+      offset?: string;
+    };
 
     if (!type || !COHORT_TYPES.includes(type as CohortType)) {
       return reply.status(400).send({
@@ -45,6 +49,7 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
       parseInt(limitRaw || "0", 10) || MAX_LIMITS[cohortType],
       MAX_LIMITS[cohortType],
     );
+    const offset = Math.max(parseInt(offsetRaw || "0", 10) || 0, 0);
 
     try {
       const { batchId } = await getBatchForTable(db, BATCH_TABLE[cohortType]);
@@ -59,6 +64,7 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
             AND length(trim(profile)) > 10
           ORDER BY discogs_id ASC
           LIMIT ${limit}
+          OFFSET ${offset}
         `.execute(db);
         ids = result.rows.map((r) => r.discogs_id);
       } else if (cohortType === "releases") {
@@ -78,6 +84,7 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
             )
           ORDER BY m.year DESC NULLS LAST, m.discogs_id ASC
           LIMIT ${limit}
+          OFFSET ${offset}
         `.execute(db);
         ids = result.rows.map((r) => r.discogs_id);
       } else {
@@ -95,6 +102,7 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
             )
           ORDER BY l.discogs_id ASC
           LIMIT ${limit}
+          OFFSET ${offset}
         `.execute(db);
         ids = result.rows.map((r) => r.discogs_id);
       }
@@ -103,6 +111,7 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
         type: cohortType,
         ids,
         count: ids.length,
+        offset,
         generated_at: new Date().toISOString(),
       });
     } catch (err) {

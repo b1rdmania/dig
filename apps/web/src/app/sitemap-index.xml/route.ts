@@ -10,6 +10,9 @@ export async function GET() {
       `${BASE}/sitemap.xml`,
       `${BASE}/sitemap-artists.xml`,
       `${BASE}/sitemap-releases.xml`,
+      `${BASE}/sitemap-releases-2.xml`,
+      `${BASE}/sitemap-releases-3.xml`,
+      `${BASE}/sitemap-releases-4.xml`,
       `${BASE}/sitemap-labels.xml`,
     ]),
   );
