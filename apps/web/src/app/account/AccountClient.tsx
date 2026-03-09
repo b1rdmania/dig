@@ -101,7 +101,7 @@ export function AccountClient({
         {!isEarlyAccess && (
           <div className={styles.upgrade}>
             <p className={styles.upgradeText}>
-              Early Access — £5/month. Includes AI music assistant, favourites, want list, and higher limits.
+              Early Access — £5/month. Includes the Dig AI assistant, want list, crates, and higher limits. Favourites are already free for signed-in users.
             </p>
             {upgradeError && <p className={styles.errorText}>{upgradeError}</p>}
             <button
@@ -117,14 +117,15 @@ export function AccountClient({
 
         {isEarlyAccess && (
           <ul className={styles.featureList}>
+            <li className={styles.featureItem} data-on="true">✓ Favourites (free for all signed-in users)</li>
             <li className={styles.featureItem} data-on={String(llmBetaAccess)}>
               {llmBetaAccess ? "✓" : "–"} Ask Dig (AI assistant)
             </li>
-            <li className={styles.featureItem} data-on={String(features.favorites ?? false)}>
-              {features.favorites ? "✓" : "–"} Favourites
-            </li>
             <li className={styles.featureItem} data-on={String(features.wantlist ?? false)}>
               {features.wantlist ? "✓" : "–"} Want list
+            </li>
+            <li className={styles.featureItem} data-on={String(features.crates ?? false)}>
+              {features.crates ? "✓" : "–"} Crates
             </li>
           </ul>
         )}

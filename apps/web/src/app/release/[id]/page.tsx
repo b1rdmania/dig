@@ -24,6 +24,7 @@ import { OutboundLink } from "@/components/OutboundLink";
 import { MediaSection } from "@/components/MediaSection";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ReleaseNav } from "@/components/ReleaseNav";
+import { SaveButton } from "@/components/SaveButton";
 import styles from "./page.module.css";
 
 interface Props {
@@ -159,6 +160,13 @@ async function ReleaseMasterContent({ id }: { id: string }) {
                 >
                   Open on Discogs
                 </OutboundLink>
+                <SaveButton entityType="release" discogsId={master.discogs_id} listType="favorite" />
+                <SaveButton
+                  entityType="release"
+                  discogsId={master.discogs_id}
+                  listType="want"
+                  upgradeContext="Want list is part of Early Access (£5/month). You also get the Dig AI assistant."
+                />
               </div>
             </div>
           </div>

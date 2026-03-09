@@ -15,8 +15,9 @@ export interface Entitlements {
   monthlyRequestLimit: number;
   rpmLimit: number;
   features: {
-    favorites: boolean;
-    wantlist: boolean;
+    favorites: boolean;   // free: true  — any signed-in user can heart a release
+    wantlist: boolean;    // paid: false — want list requires early_access
+    crates: boolean;      // paid: false — crates (custom lists) require early_access
     advanced_search: boolean;
     mcp_high_limit: boolean;
   };
@@ -28,21 +29,22 @@ const PLAN_DEFAULTS: Record<Plan, Entitlements> = {
     llmBetaAccess: false,
     monthlyRequestLimit: 500,
     rpmLimit: 20,
-    features: { favorites: false, wantlist: false, advanced_search: false, mcp_high_limit: false },
+    // favorites = free: signed-in users can save to their collection
+    features: { favorites: true, wantlist: false, crates: false, advanced_search: false, mcp_high_limit: false },
   },
   early_access: {
     plan: "early_access",
     llmBetaAccess: true,
     monthlyRequestLimit: 10000,
     rpmLimit: 120,
-    features: { favorites: true, wantlist: true, advanced_search: true, mcp_high_limit: true },
+    features: { favorites: true, wantlist: true, crates: true, advanced_search: true, mcp_high_limit: true },
   },
   team: {
     plan: "team",
     llmBetaAccess: true,
     monthlyRequestLimit: 50000,
     rpmLimit: 500,
-    features: { favorites: true, wantlist: true, advanced_search: true, mcp_high_limit: true },
+    features: { favorites: true, wantlist: true, crates: true, advanced_search: true, mcp_high_limit: true },
   },
 };
 
@@ -122,7 +124,7 @@ export async function upsertUserFromClerk(
     )
     .execute();
 
-  // Ensure entitlement row exists (default free)
+  // Ensure entitlement row exists (default free — favorites enabled for all signed-in users)
   await db
     .insertInto("auth.user_entitlements")
     .values({
@@ -131,7 +133,7 @@ export async function upsertUserFromClerk(
       llm_beta_access: false,
       monthly_request_limit: 500,
       rpm_limit: 20,
-      features: { favorites: false, wantlist: false, advanced_search: false, mcp_high_limit: false },
+      features: { favorites: true, wantlist: false, crates: false, advanced_search: false, mcp_high_limit: false },
     })
     .onConflict((oc) => oc.column("user_id").doNothing())
     .execute();
@@ -219,7 +221,7 @@ export async function applyStripeEvent(
   }
 
   // Recompute entitlements from subscription status
-  const PRICE_EARLY_ACCESS = process.env.STRIPE_PRICE_EARLY_ACCESS_GBP_MONTHLY ?? "";
+  const PRICE_EARLY_ACCESS = process.env.STRIPE_PRICE_EARLY_ACCESS_GBP_MONTHLY ?? "UNSET";
   const isActive = subscriptionStatus === "active" || subscriptionStatus === "trialing";
   const isEarlyAccess = isActive && priceId === PRICE_EARLY_ACCESS;
   const plan: Plan = isEarlyAccess ? "early_access" : "free";

@@ -3,6 +3,7 @@ import type { Release, MarketSnapshot } from "@/lib/types";
 import { formatDescriptions, discogsUrl } from "@/lib/format";
 import { firstYoutubeThumb } from "@/lib/media";
 import { OutboundLink } from "./OutboundLink";
+import { SaveButton } from "./SaveButton";
 import styles from "./ReleaseHero.module.css";
 
 interface Props {
@@ -106,6 +107,17 @@ export function ReleaseHero({ release, coverUrl, market }: Props) {
         >
           Open on Discogs
         </OutboundLink>
+        <SaveButton
+          entityType="version"
+          discogsId={release.discogs_id}
+          listType="favorite"
+        />
+        <SaveButton
+          entityType="version"
+          discogsId={release.discogs_id}
+          listType="want"
+          upgradeContext="Want list is part of Early Access (£5/month). You also get the Dig AI assistant."
+        />
       </div>
         </div>
       </div>

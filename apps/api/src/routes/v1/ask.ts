@@ -11,7 +11,9 @@ import {
   getArtistCredits,
   getLabelReleases,
   getBatchForTable,
+  checkAndIncrementLlmQuota,
 } from "@dig/domain";
+import { resolveUser } from "../../auth.js";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -741,10 +743,43 @@ interface AskBody {
   max_tokens?: number;
 }
 
+// Whether to enforce entitlement gates (set ENTITLEMENTS_ENFORCE=true in production)
+const ENTITLEMENTS_ENFORCE = process.env.ENTITLEMENTS_ENFORCE === "true";
+
 export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
   app.post("/v1/ask", async (req: FastifyRequest<{ Body: AskBody }>, reply) => {
     const auth = requirePrivateKey(req);
     if (!auth.ok) return reply.status(auth.status).send(auth.body);
+
+    // --- Entitlement gate (Phase D) ---
+    if (ENTITLEMENTS_ENFORCE) {
+      const user = await resolveUser(db, req.headers.authorization);
+      if (!user) {
+        return reply.status(401).send({
+          error: { code: "AUTH_REQUIRED", message: "Sign in required to use Ask Dig", details: null },
+        });
+      }
+      if (!user.entitlements.llmBetaAccess) {
+        return reply.status(403).send({
+          error: {
+            code: "PLAN_UPGRADE_REQUIRED",
+            message: "Ask Dig is part of Early Access (£5/month).",
+            details: { plan_required: "early_access" },
+          },
+        });
+      }
+      // Monthly quota check + increment
+      const quota = await checkAndIncrementLlmQuota(db, user.userId, user.entitlements.monthlyRequestLimit);
+      if (!quota.allowed) {
+        return reply.status(429).send({
+          error: {
+            code: "QUOTA_EXCEEDED",
+            message: "Monthly quota reached",
+            details: { limit: quota.limit, current: quota.current, period_month: new Date().toISOString().slice(0, 7) },
+          },
+        });
+      }
+    }
 
     const anthropicApiKey = String(req.headers["x-anthropic-api-key"] ?? "").trim();
     if (!anthropicApiKey) {
