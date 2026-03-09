@@ -21,6 +21,7 @@ const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-haiku-4-5-20251001";
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_TURNS = 6;
 const ANTHROPIC_CALL_TIMEOUT_MS = 30_000;  // 30s per Anthropic call
+const TOOL_EXEC_TIMEOUT_MS = 8_000;        // 8s per tool/DB call
 const LOOP_DEADLINE_MS = 60_000;           // 60s total for the agentic loop
 
 const PRIVATE_KEYS = new Set(
@@ -628,16 +629,15 @@ async function runAgenticLoop(params: {
       const toolResults = await Promise.all(
         toolUseBlocks.map(async (block) => {
           const toolStart = Date.now();
-          const result = await executeTool(
-            params.db,
-            String(block.name ?? ""),
-            (block.input as Record<string, unknown>) ?? {},
-            mediaCollector,
-            evidenceCollector,
-            errorRef,
-            allowedMasterIds,
+          const toolName = String(block.name ?? "");
+          const toolTimeout = new Promise<{ error: string }>((resolve) =>
+            setTimeout(() => resolve({ error: `Tool ${toolName} timed out after ${TOOL_EXEC_TIMEOUT_MS}ms` }), TOOL_EXEC_TIMEOUT_MS)
           );
-          log("ask:tool_result", { tool: String(block.name ?? ""), elapsed_ms: Date.now() - toolStart });
+          const result = await Promise.race([
+            executeTool(params.db, toolName, (block.input as Record<string, unknown>) ?? {}, mediaCollector, evidenceCollector, errorRef, allowedMasterIds),
+            toolTimeout,
+          ]);
+          log("ask:tool_result", { tool: toolName, elapsed_ms: Date.now() - toolStart, timed_out: (result as any)?.error?.includes("timed out") ?? false });
           return {
             type: "tool_result" as const,
             tool_use_id: String(block.id ?? ""),
