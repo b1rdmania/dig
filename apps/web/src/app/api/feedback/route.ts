@@ -4,9 +4,9 @@ const FORM_ID = "1FAIpQLSePe6R5VBfqkR8HQ6Q0ctK0Iv-QOdxdLmUnAvJzyWC5cDmLqQ";
 const FORM_URL = `https://docs.google.com/forms/d/e/${FORM_ID}/viewform`;
 const FORM_ACTION = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
 
-const FIELD_TYPE        = "entry.1507367897";
-const FIELD_DESCRIPTION = "entry.1135993400";
-const FIELD_EMAIL       = "entry.998456675";
+const FIELD_TYPE        = "entry.475873863";
+const FIELD_DESCRIPTION = "entry.800259623";
+const FIELD_EMAIL       = "entry.1541120051";
 
 // Map our internal values to the exact strings Google Forms expects
 const TYPE_MAP: Record<string, string> = {
@@ -58,8 +58,8 @@ export async function POST(req: NextRequest) {
       redirect: "manual",
     });
 
-    // Google returns 302 on success, 400 on bad input
-    if (res.status === 302 || res.status === 200) {
+    // Google returns 200 or 302 on success, 400 on bad input
+    if (res.status === 200 || res.status === 302) {
       return NextResponse.json({ ok: true });
     }
 
