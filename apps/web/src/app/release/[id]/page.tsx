@@ -125,6 +125,7 @@ async function ReleaseMasterContent({ id }: { id: string }) {
               </Suspense>
             </div>
             <div className={styles.info}>
+              <p className={styles.kicker}>Release / Canonical</p>
               <h1 className={styles.title}>{master.title}</h1>
               {artistLine && (
                 <div className={styles.artists}>
@@ -140,6 +141,8 @@ async function ReleaseMasterContent({ id }: { id: string }) {
               )}
               <div className={styles.meta}>
                 {master.year && <span>{master.year}</span>}
+                {master.year && <span className={styles.metaDot}>•</span>}
+                <span>Master #{master.discogs_id}</span>
               </div>
               {(master.genres.length > 0 || master.styles.length > 0) && (
                 <div className={styles.tags}>
