@@ -8,7 +8,7 @@ const BASE = "https://app.dig.baby";
 
 export async function GET() {
   try {
-    const res = await fetch(`${API_URL}/v1/seo/cohort?type=releases&limit=20000`, {
+    const res = await fetch(`${API_URL}/v1/seo/cohort?type=releases&limit=200000`, {
       headers: API_KEY ? { "X-API-Key": API_KEY } : {},
       signal: AbortSignal.timeout(60_000),
     });

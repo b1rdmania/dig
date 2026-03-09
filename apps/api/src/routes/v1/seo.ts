@@ -9,7 +9,7 @@ type CohortType = typeof COHORT_TYPES[number];
 
 const MAX_LIMITS: Record<CohortType, number> = {
   artists: 5000,
-  releases: 20000,
+  releases: 200000,
   labels: 2000,
 };
 
@@ -65,6 +65,10 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
         const result = await sql<{ discogs_id: number }>`
           SELECT m.discogs_id
           FROM catalog.masters m
+          JOIN enrich.entity_quality eq
+            ON eq.entity_type = 'master'
+           AND eq.discogs_id = m.discogs_id
+           AND eq.quality_status = 'active'
           WHERE m.batch_id = ${batchId}::uuid
             AND m.main_release_discogs_id IS NOT NULL
             AND EXISTS (
