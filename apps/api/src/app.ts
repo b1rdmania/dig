@@ -39,7 +39,7 @@ export interface AppDeps {
 // Keyed (X-API-Key header): 300 req/min
 // These are alpha values — will be adjusted based on production traffic patterns.
 const ANON_RATE_LIMIT = 60;
-const KEYED_RATE_LIMIT = 300;
+const KEYED_RATE_LIMIT = 1000;
 
 // Load-test bypass: requests with this header skip rate limiting entirely.
 // Only active in staging (set via LOAD_TEST_TOKEN env var). Remove after test.
