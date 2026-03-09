@@ -43,6 +43,9 @@ const VALID_EVENT_NAMES = new Set([
   "outbound_discogs_clicked",
   "media_play_clicked",
   "media_show_more_clicked",
+  "release_nav_clicked",
+  "market_snapshot_viewed",
+  "market_discogs_clicked",
 ]);
 
 interface EventPayload {

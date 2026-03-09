@@ -374,6 +374,20 @@ export function isLinkoutsResponse(data: unknown): data is LabelLinkoutsResponse
   return Array.isArray(d.linkouts) && d.meta !== undefined;
 }
 
+// Market snapshot (Phase 2 — dormant until MARKET_SNAPSHOT_ENABLED + DISCOGS_API_KEY set)
+export interface MarketSnapshot {
+  lowest_price: number | null;
+  num_for_sale: number | null;
+  last_sold_price: number | null;
+  currency: string;
+  fetched_at: string;
+  source: "discogs_marketplace";
+}
+
+export interface MarketResponse {
+  market: MarketSnapshot | null;
+}
+
 // Error
 export interface ApiError {
   error: {

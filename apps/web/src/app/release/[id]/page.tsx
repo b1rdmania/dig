@@ -23,6 +23,8 @@ import { PageViewTracker } from "@/components/PageViewTracker";
 import { OutboundLink } from "@/components/OutboundLink";
 import { MediaSection } from "@/components/MediaSection";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
+import { ReleaseNav } from "@/components/ReleaseNav";
+import { MarketSnapshot } from "@/components/MarketSnapshot";
 import styles from "./page.module.css";
 
 interface Props {
@@ -163,10 +165,22 @@ async function ReleaseMasterContent({ id }: { id: string }) {
           </div>
         </section>
 
+        {/* ── Prev/Next version navigation ── */}
+        <Suspense fallback={null}>
+          <ReleaseNav masterId={master.discogs_id} currentReleaseId={master.main_release_discogs_id} />
+        </Suspense>
+
         {/* ── Tracklist + Media + Credits + Notes: stream in from main release fetch ── */}
         <Suspense fallback={<SectionSkeleton lines={6} />}>
           <ReleaseDetails mainReleaseId={master.main_release_discogs_id} />
         </Suspense>
+
+        {/* ── Market snapshot (Phase 2 — shows nothing until MARKET_SNAPSHOT_ENABLED) ── */}
+        {master.main_release_discogs_id && (
+          <Suspense fallback={null}>
+            <MarketSnapshot releaseId={master.discogs_id} discogsReleaseId={master.main_release_discogs_id} />
+          </Suspense>
+        )}
 
         {/* ── Versions: streams in from traversal fetch ── */}
         <Suspense fallback={<SectionSkeleton lines={4} />}>

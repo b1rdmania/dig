@@ -1,0 +1,57 @@
+.section {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.heading {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--fg-muted);
+  margin-bottom: 0.5rem;
+}
+
+.grid {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.label {
+  font-size: 0.65rem;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.value {
+  font-size: 0.9rem;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.6rem;
+}
+
+.age {
+  font-size: 0.65rem;
+  color: var(--fg-faint);
+}
+
+.cta {
+  font-size: 0.72rem;
+  color: var(--link);
+}
+
+.cta:hover {
+  text-decoration: underline;
+}
