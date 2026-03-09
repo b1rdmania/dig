@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GOOGLE_FORM_ACTION =
-  "https://docs.google.com/forms/d/e/1FAIpQLSePe6R5VBfqkR8HQ6Q0ctK0Iv-QOdxdLmUnAvJzyWC5cDmLqQ/formResponse";
+const FORM_ID = "1FAIpQLSePe6R5VBfqkR8HQ6Q0ctK0Iv-QOdxdLmUnAvJzyWC5cDmLqQ";
+const FORM_URL = `https://docs.google.com/forms/d/e/${FORM_ID}/viewform`;
+const FORM_ACTION = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
 
 const FIELD_TYPE        = "entry.1507367897";
 const FIELD_DESCRIPTION = "entry.1135993400";
 const FIELD_EMAIL       = "entry.998456675";
+
+// Map our internal values to the exact strings Google Forms expects
+const TYPE_MAP: Record<string, string> = {
+  bug:            "Bug",
+  suggestion:     "Suggestion",
+  "wrong-result": "Wrong result",
+  "missing-data": "Missing data",
+  other:          "Other",
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,19 +29,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Description required" }, { status: 400 });
     }
 
+    // Step 1: load the form to get session cookies + fbzx CSRF token
+    const formPage = await fetch(FORM_URL, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+    });
+    const cookies = formPage.headers.get("set-cookie") ?? "";
+    const html = await formPage.text();
+
+    const fbzxMatch = html.match(/name="fbzx"\s+value="([^"]+)"/);
+    const fbzx = fbzxMatch?.[1] ?? String(Math.floor(Math.random() * 1e18));
+
+    // Step 2: submit with the session cookies and fbzx token
     const body = new URLSearchParams();
-    body.set(FIELD_TYPE, type || "other");
+    body.set(FIELD_TYPE, TYPE_MAP[type] ?? "Other");
     body.set(FIELD_DESCRIPTION, description.trim());
     if (email?.trim()) body.set(FIELD_EMAIL, email.trim());
+    body.set("fbzx", fbzx);
 
-    await fetch(GOOGLE_FORM_ACTION, {
+    const res = await fetch(FORM_ACTION, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Referer": FORM_URL,
+        "Cookie": cookies,
+        "User-Agent": "Mozilla/5.0",
+      },
       body: body.toString(),
+      redirect: "manual",
     });
 
-    // Google Forms always redirects — any response means it arrived.
-    return NextResponse.json({ ok: true });
+    // Google returns 302 on success, 400 on bad input
+    if (res.status === 302 || res.status === 200) {
+      return NextResponse.json({ ok: true });
+    }
+
+    console.error("Feedback submission failed:", res.status);
+    return NextResponse.json({ error: "Submission rejected" }, { status: 502 });
   } catch (err) {
     console.error("Feedback proxy error:", err);
     return NextResponse.json({ error: "Failed to submit" }, { status: 500 });
