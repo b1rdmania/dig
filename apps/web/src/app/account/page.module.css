@@ -1,0 +1,158 @@
+.page {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: grid;
+  gap: 0;
+  padding-bottom: 3rem;
+}
+
+.banner {
+  padding: 0.75rem 1rem;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 0.875rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  border-radius: var(--radius);
+}
+
+.bannerMuted {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  text-align: center;
+  margin-bottom: 1rem;
+  border-radius: var(--radius);
+}
+
+.section {
+  border-top: 1px solid var(--line);
+  padding: 1.25rem 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  color: var(--fg-faint);
+  letter-spacing: 0.04em;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.name {
+  font-size: 1rem;
+  color: var(--fg);
+}
+
+.email {
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+}
+
+.label {
+  font-size: 0.75rem;
+  color: var(--fg-faint);
+  letter-spacing: 0.04em;
+}
+
+.planRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.planBadge {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--fg);
+  border-radius: var(--radius);
+  color: var(--fg);
+}
+
+.planBadge[data-plan="early_access"],
+.planBadge[data-plan="team"] {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.rpmNote {
+  font-size: 0.78rem;
+  color: var(--fg-faint);
+}
+
+.upgrade {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.upgradeText {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  line-height: 1.5;
+}
+
+.upgradeBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 1rem;
+  background: var(--fg);
+  color: var(--bg);
+  border: 1px solid var(--fg);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.upgradeBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.errorText {
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+}
+
+.featureList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.featureItem {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+
+.featureItem[data-on="true"] {
+  color: var(--fg);
+}
+
+.signOut {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

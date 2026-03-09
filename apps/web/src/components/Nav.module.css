@@ -95,6 +95,23 @@
   background: var(--surface);
 }
 
+.authArea {
+  flex-shrink: 0;
+}
+
+.authLink {
+  font-size: 12px;
+  color: var(--fg-muted);
+  text-decoration: none;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.authLink:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
 
 @media (max-width: 768px) {
   .nav {

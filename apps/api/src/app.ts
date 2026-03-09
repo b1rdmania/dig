@@ -12,6 +12,7 @@
 import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply } from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import cors from "@fastify/cors";
+import rawBody from "fastify-raw-body";
 import Redis from "ioredis";
 import { randomUUID } from "node:crypto";
 import { createDb } from "@dig/db";
@@ -27,6 +28,7 @@ import { registerUsageRoutes } from "./routes/v1/usage.js";
 import { initUsagePersistence, recordApiRequest, shutdownUsagePersistence } from "./metrics/usage.js";
 import { registerAskRoutes } from "./routes/v1/ask.js";
 import { registerMarketRoutes } from "./routes/v1/market.js";
+import { registerBillingRoutes } from "./routes/v1/billing.js";
 
 export interface AppDeps {
   databaseUrl: string;
@@ -58,6 +60,9 @@ export async function buildApp(deps: AppDeps): Promise<{
   const app = Fastify({ logger: false });
   const db = createDb(deps.databaseUrl);
   initUsagePersistence(db);
+
+  // --- Raw body (for Stripe webhook signature verification) ---
+  await app.register(rawBody, { field: "rawBody", global: false, encoding: false, runFirst: true });
 
   // --- CORS ---
   await app.register(cors, {
@@ -206,6 +211,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerUsageRoutes(app, db);
   registerAskRoutes(app, db);
   registerMarketRoutes(app, redis);
+  registerBillingRoutes(app, db);
 
   app.addHook("onClose", async () => {
     await shutdownUsagePersistence();

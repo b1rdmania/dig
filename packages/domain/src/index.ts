@@ -52,6 +52,14 @@ export {
   type ArtistCreditsResponse,
 } from "./traversal.js";
 export {
+  getEntitlementsByClerkId,
+  upsertUserFromClerk,
+  applyStripeEvent,
+  checkAndIncrementLlmQuota,
+  type Plan,
+  type Entitlements,
+} from "./entitlements.js";
+export {
   classifyEntityQuality,
   getSuppressedEntityKeys,
   QUALITY_VERSION,

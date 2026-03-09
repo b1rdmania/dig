@@ -12,12 +12,15 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@clerk/backend": "^3.0.1",
     "@dig/db": "workspace:*",
     "@dig/domain": "workspace:*",
     "@fastify/cors": "^11.2.0",
     "@fastify/rate-limit": "^10.2.0",
     "fastify": "^5.2.1",
-    "ioredis": "^5.4.2"
+    "fastify-raw-body": "^5.0.0",
+    "ioredis": "^5.4.2",
+    "stripe": "^20.4.1"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

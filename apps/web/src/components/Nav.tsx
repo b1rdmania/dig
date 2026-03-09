@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import styles from "./Nav.module.css";
 
 export function Nav() {
@@ -10,6 +11,7 @@ export function Nav() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") || "");
+  const { isSignedIn } = useUser();
 
   useEffect(() => {
     setQ(searchParams.get("q") || "");
@@ -53,6 +55,13 @@ export function Nav() {
           </button>
         </form>
       ) : null}
+      <div className={styles.authArea}>
+        {isSignedIn ? (
+          <Link href="/account" className={styles.authLink}>Account</Link>
+        ) : (
+          <Link href="/sign-in" className={styles.authLink}>Sign in</Link>
+        )}
+      </div>
     </nav>
   );
 }

@@ -12,6 +12,10 @@ export interface UsersTable {
   id: Generated<string>;
   email: string;
   role: "public" | "developer" | "curator" | "admin";
+  clerk_user_id: string | null;
+  stripe_customer_id: string | null;
+  plan: Generated<"free" | "early_access" | "team">;
+  plan_expires_at: Date | null;
   created_at: Generated<Date>;
 }
 
@@ -22,6 +26,69 @@ export interface ApiKeysTable {
   label: string | null;
   rate_limit_tier: "public" | "developer";
   active: Generated<boolean>;
+  created_at: Generated<Date>;
+}
+
+export interface UserProfilesTable {
+  user_id: string;
+  clerk_user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface SubscriptionsTable {
+  id: Generated<string>;
+  user_id: string;
+  provider: Generated<string>;
+  provider_customer_id: string;
+  provider_subscription_id: string;
+  status: string;
+  price_id: string;
+  current_period_start: Date | null;
+  current_period_end: Date | null;
+  cancel_at_period_end: Generated<boolean>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface UserEntitlementsTable {
+  user_id: string;
+  plan: Generated<string>;
+  llm_beta_access: Generated<boolean>;
+  monthly_request_limit: Generated<number>;
+  rpm_limit: Generated<number>;
+  features: ColumnType<Record<string, boolean>, Record<string, boolean> | undefined, Record<string, boolean>>;
+  effective_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface UsageQuotasTable {
+  user_id: string;
+  period_month: string;
+  request_count: Generated<number>;
+  llm_request_count: Generated<number>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface BillingEventsTable {
+  id: Generated<string>;
+  provider: Generated<string>;
+  provider_event_id: string;
+  event_type: string;
+  payload: ColumnType<unknown, unknown, unknown>;
+  processed_at: Date | null;
+  created_at: Generated<Date>;
+}
+
+export interface UserSavedItemsTable {
+  id: Generated<string>;
+  user_id: string;
+  entity_type: "artist" | "release" | "version" | "label" | "track";
+  discogs_id: number;
+  list_type: "favorite" | "want";
   created_at: Generated<Date>;
 }
 
@@ -353,6 +420,12 @@ export interface Database {
   // Auth
   "auth.users": UsersTable;
   "auth.api_keys": ApiKeysTable;
+  "auth.user_profiles": UserProfilesTable;
+  "auth.subscriptions": SubscriptionsTable;
+  "auth.user_entitlements": UserEntitlementsTable;
+  "auth.usage_quotas": UsageQuotasTable;
+  "auth.billing_events": BillingEventsTable;
+  "auth.user_saved_items": UserSavedItemsTable;
 
   // Ingest
   "ingest.dump_batches": DumpBatchesTable;
