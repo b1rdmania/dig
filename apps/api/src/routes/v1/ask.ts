@@ -563,7 +563,9 @@ async function runAgenticLoop(params: {
   model: string;
   maxTokens: number;
   anthropicApiKey: string;
+  log: (msg: string, extra?: Record<string, unknown>) => void;
 }): Promise<{ answer: string; model: string; tool_calls: number; media: MediaItem[]; evidence: EvidenceItem[]; mode: ResponseMode }> {
+  const { log } = params;
   const messages: AnthropicMessage[] = [
     ...params.history,
     { role: "user", content: params.question },
@@ -577,19 +579,35 @@ async function runAgenticLoop(params: {
   const allowedMasterIds = new Set<number>();
   const deadline = Date.now() + LOOP_DEADLINE_MS;
 
+  log("ask:loop_start", { model: params.model, history_turns: params.history.length, question_len: params.question.length });
+
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     if (Date.now() > deadline) {
+      log("ask:deadline_exceeded", { round, tool_calls: toolCallCount });
       const mode: ResponseMode = evidenceCollector.length > 0 ? "timeout_degraded" : "grounded_empty";
       return { answer: "Taking too long — try a more specific question.", model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode };
     }
-    const response = await callAnthropic({
-      model: params.model,
-      system: SYSTEM_PROMPT,
-      messages,
-      tools: TOOLS,
-      maxTokens: params.maxTokens,
-      anthropicApiKey: params.anthropicApiKey,
-    });
+
+    const callStart = Date.now();
+    log("ask:anthropic_call", { round, messages_in_context: messages.length });
+
+    let response: Awaited<ReturnType<typeof callAnthropic>>;
+    try {
+      response = await callAnthropic({
+        model: params.model,
+        system: SYSTEM_PROMPT,
+        messages,
+        tools: TOOLS,
+        maxTokens: params.maxTokens,
+        anthropicApiKey: params.anthropicApiKey,
+      });
+    } catch (err: any) {
+      log("ask:anthropic_error", { round, elapsed_ms: Date.now() - callStart, error: String(err?.message ?? err) });
+      throw err;
+    }
+
+    const callMs = Date.now() - callStart;
+    log("ask:anthropic_response", { round, elapsed_ms: callMs, stop_reason: response.stop_reason, model: response.model });
 
     usedModel = response.model ?? params.model;
 
@@ -597,16 +615,19 @@ async function runAgenticLoop(params: {
       const textBlock = response.content.find((b) => b.type === "text");
       const answer = String(textBlock?.text ?? "").trim() || "I couldn't find anything relevant — try searching directly on Dig.";
       const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : errorRef.count > 0 ? "timeout_degraded" : "grounded_empty";
+      log("ask:loop_end", { rounds: round + 1, tool_calls: toolCallCount, mode, answer_len: answer.length });
       return { answer, model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode };
     }
 
     if (response.stop_reason === "tool_use") {
-      // Execute all tool calls in parallel
       const toolUseBlocks = response.content.filter((b) => b.type === "tool_use");
       toolCallCount += toolUseBlocks.length;
+      const toolNames = toolUseBlocks.map((b) => String(b.name ?? "unknown"));
+      log("ask:tool_calls", { round, tools: toolNames });
 
       const toolResults = await Promise.all(
         toolUseBlocks.map(async (block) => {
+          const toolStart = Date.now();
           const result = await executeTool(
             params.db,
             String(block.name ?? ""),
@@ -616,6 +637,7 @@ async function runAgenticLoop(params: {
             errorRef,
             allowedMasterIds,
           );
+          log("ask:tool_result", { tool: String(block.name ?? ""), elapsed_ms: Date.now() - toolStart });
           return {
             type: "tool_result" as const,
             tool_use_id: String(block.id ?? ""),
@@ -624,7 +646,6 @@ async function runAgenticLoop(params: {
         }),
       );
 
-      // Feed assistant response + tool results back into the conversation
       messages.push({ role: "assistant", content: response.content });
       messages.push({ role: "user", content: toolResults });
       continue;
@@ -632,6 +653,7 @@ async function runAgenticLoop(params: {
 
     const textBlock = response.content.find((b) => b.type === "text");
     const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : "timeout_degraded";
+    log("ask:loop_end_unexpected", { round, stop_reason: response.stop_reason, mode });
     return {
       answer: String(textBlock?.text ?? "Something went wrong.").trim(),
       model: usedModel,
@@ -642,6 +664,8 @@ async function runAgenticLoop(params: {
     };
   }
 
+  log("ask:max_rounds_exceeded", { tool_calls: toolCallCount });
+
   // Exceeded max rounds — ask Claude for a final answer without tools
   const finalMessages: AnthropicMessage[] = [
     ...messages,
@@ -650,6 +674,7 @@ async function runAgenticLoop(params: {
       content: "Based on what you've found so far, please give your final answer.",
     },
   ];
+  const finalCallStart = Date.now();
   const finalResp = await callAnthropic({
     model: params.model,
     system: SYSTEM_PROMPT,
@@ -658,6 +683,7 @@ async function runAgenticLoop(params: {
     maxTokens: params.maxTokens,
     anthropicApiKey: params.anthropicApiKey,
   });
+  log("ask:final_call", { elapsed_ms: Date.now() - finalCallStart, stop_reason: finalResp.stop_reason });
   const textBlock = finalResp.content.find((b) => b.type === "text");
   const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : "timeout_degraded";
   return {
@@ -728,6 +754,8 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     const maxTokens = Math.min(Math.max(Number(body.max_tokens ?? 1200), 256), 2000);
     const model = String(body.model ?? DEFAULT_MODEL);
     const started = Date.now();
+    const log = (msg: string, extra?: Record<string, unknown>) =>
+      req.log.info({ event: msg, ...extra });
 
     try {
       const { answer, model: usedModel, tool_calls, media, evidence, mode } = await runAgenticLoop({
@@ -737,6 +765,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         model,
         maxTokens,
         anthropicApiKey,
+        log,
       });
 
       // Deduplicate media by youtube_url
@@ -773,6 +802,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         },
       });
     } catch (err: any) {
+      log("ask:request_failed", { elapsed_ms: Date.now() - started, error: String(err?.message ?? err), status: err?.status });
       const status = err?.status === 401 ? 401 : 502;
       return reply.status(status).send({
         error: {
