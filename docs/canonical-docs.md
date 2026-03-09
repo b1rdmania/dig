@@ -19,6 +19,7 @@ This file defines which document to use for what.
 3. `docs/seo-staged-roadmap.md`
 4. `docs/mcp-first-staged-rollout-plan.md`
 5. `docs/better-than-discogs-track.md` (active quality improvement stream)
+6. `docs/implementation-plan-clerk-stripe-entitlements-v1.md` (auth, billing, entitlement rollout)
 
 ## Contracts and Policies
 
