@@ -45,6 +45,22 @@
   text-decoration: none;
 }
 
+.labLink {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+}
+
+.labLink:hover {
+  color: var(--fg);
+  border-color: var(--fg-faint);
+}
+
 .beta {
   font-weight: normal;
   font-size: 10px;
@@ -104,6 +120,11 @@
 
   .left {
     gap: 6px;
+  }
+
+  .labLink {
+    font-size: 9px;
+    padding: 2px 5px;
   }
 
   .backBtn {

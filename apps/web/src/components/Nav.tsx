@@ -36,6 +36,9 @@ export function Nav() {
         <Link href="/" className={styles.logo}>
           DIG <span className={styles.beta}>[beta]</span>
         </Link>
+        <Link href="/design-lab" className={styles.labLink}>
+          Design Lab
+        </Link>
       </div>
       {isSubpage ? (
         <form className={styles.searchForm} onSubmit={onSearchSubmit}>
