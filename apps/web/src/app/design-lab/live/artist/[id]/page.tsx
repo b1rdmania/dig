@@ -62,9 +62,9 @@ export default async function DesignLabArtistPage({ params, searchParams }: Prop
       title={artist.name}
       queryValue={artist.profile?.slice(0, 90) || `Artist #${artist.discogs_id}`}
       pills={[
-        { label: `${releases.length} releases`, active: true },
-        { label: `${credits.length} credits` },
-        { label: releaseType },
+        { label: `${releases.length} releases`, active: true, href: `/design-lab/live/artist/${id}` },
+        { label: `${credits.length} credits`, href: `/design-lab/live/artist/${id}` },
+        { label: releaseType, href: `/design-lab/live/artist/${id}?release_type=${releaseType}` },
       ]}
       nowPlaying={{ title: artist.name, artist: artist.real_name || "Artist" }}
       columns={[

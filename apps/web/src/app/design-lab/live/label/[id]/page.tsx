@@ -41,9 +41,9 @@ export default async function DesignLabLabelPage({ params }: Props) {
       title={label.name}
       queryValue={label.profile?.slice(0, 90) || `Label #${label.discogs_id}`}
       pills={[
-        { label: `${releases.length} releases`, active: true },
-        { label: label.parent_label?.name || "no parent" },
-        { label: `${label.urls.length} links` },
+        { label: `${releases.length} releases`, active: true, href: `/design-lab/live/label/${id}` },
+        { label: label.parent_label?.name || "no parent", href: `/design-lab/live/label/${id}` },
+        { label: `${label.urls.length} links`, href: `/design-lab/live/label/${id}` },
       ]}
       nowPlaying={{ title: label.name, artist: "Label catalog" }}
       columns={[

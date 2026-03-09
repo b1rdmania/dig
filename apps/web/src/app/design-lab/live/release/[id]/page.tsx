@@ -57,9 +57,9 @@ export default async function DesignLabReleasePage({ params }: Props) {
       title={master.title}
       queryValue={`${artistNames(master.artists)}${master.year ? ` • ${master.year}` : ""}`}
       pills={[
-        { label: `${tracks.length} tracks`, active: true },
-        { label: `${versions.length} versions` },
-        { label: `${videos.length} videos` },
+        { label: `${tracks.length} tracks`, active: true, href: `/design-lab/live/release/${id}` },
+        { label: `${versions.length} versions`, href: `/design-lab/live/release/${id}` },
+        { label: `${videos.length} videos`, href: `/design-lab/live/release/${id}` },
       ]}
       nowPlaying={{ title: tracks[0]?.title || master.title, artist: artistNames(master.artists) }}
       columns={[

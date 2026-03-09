@@ -32,9 +32,9 @@ export default async function DesignLabSearchPage({ searchParams }: Props) {
       title="Dig Search"
       queryValue={q || "Search artists, labels, releases..."}
       pills={[
-        { label: type || "all", active: true },
-        { label: `${results.length} results` },
-        { label: data ? `${data.meta.elapsed_ms}ms` : "live" },
+        { label: type || "all", active: true, href: `/design-lab/live/search?q=${encodeURIComponent(q || "kasra v")}` },
+        { label: "artists", href: `/design-lab/live/search?q=${encodeURIComponent(q || "kasra v")}&type=artist` },
+        { label: "releases", href: `/design-lab/live/search?q=${encodeURIComponent(q || "kasra v")}&type=master` },
       ]}
       nowPlaying={{ title: q || "No query", artist: data ? `${results.length} results` : "Run search" }}
       columns={[

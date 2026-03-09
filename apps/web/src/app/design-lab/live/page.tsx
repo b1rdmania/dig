@@ -11,9 +11,9 @@ export default function DesignLabLiveHome() {
       title="Dig Live"
       queryValue="Try Kasra V, Larry Heard, Warp Records"
       pills={[
-        { label: "Search", active: true },
-        { label: "Artist" },
-        { label: "Release" },
+        { label: "Search", active: true, href: "/design-lab/live/search?q=kasra%20v" },
+        { label: "Artist", href: "/design-lab/live/artist/4506398" },
+        { label: "Release", href: "/design-lab/live/release/22044" },
       ]}
       nowPlaying={{ title: "Design Lab Live", artist: "Dig" }}
       columns={[
