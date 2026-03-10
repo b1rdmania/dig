@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useRouter, usePathname } from "next/navigation";
 import { trackFavoriteToggled } from "@/lib/analytics";
@@ -21,6 +21,34 @@ export function FavoriteButton({ entityType, discogsId }: Props) {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadSavedState() {
+      if (!isSignedIn) {
+        if (active) setSaved(false);
+        return;
+      }
+
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const res = await fetch(`${API_URL}/v1/me/saved?list_type=favorite`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json() as { items?: Array<{ entity_type: string; discogs_id: number }> };
+        const isSaved = Boolean(data.items?.some((item) => item.entity_type === entityType && item.discogs_id === discogsId));
+        if (active) setSaved(isSaved);
+      } catch {
+        // fail-open in UI
+      }
+    }
+
+    loadSavedState();
+    return () => { active = false; };
+  }, [isSignedIn, getToken, entityType, discogsId]);
+
   const toggle = useCallback(async () => {
     if (!isSignedIn) {
       router.push(`/sign-in?redirect_url=${encodeURIComponent(pathname ?? "/")}`);
@@ -34,8 +62,13 @@ export function FavoriteButton({ entityType, discogsId }: Props) {
 
     try {
       const token = await getToken();
+      if (!token) {
+        setSaved(previousSaved);
+        router.push(`/sign-in?redirect_url=${encodeURIComponent(pathname ?? "/")}`);
+        return;
+      }
       const headers: Record<string, string> = {
-        Authorization: `Bearer ${token ?? ""}`,
+        Authorization: `Bearer ${token}`,
       };
 
       if (previousSaved) {

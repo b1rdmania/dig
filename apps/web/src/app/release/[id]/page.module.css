@@ -120,15 +120,12 @@
   display: flex;
   gap: 0.8rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .link {
   font-size: 0.75rem;
   color: var(--link);
-}
-
-.shareBarWrap {
-  margin-top: 0.6rem;
 }
 
 .section {

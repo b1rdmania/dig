@@ -1,3 +1,10 @@
+.row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
 .btn {
   background: none;
   border: none;
@@ -7,10 +14,12 @@
   color: var(--fg-faint);
   line-height: 1;
   font-family: inherit;
-  min-height: 44px;
+  min-height: 28px;
   display: inline-flex;
   align-items: center;
   transition: color 0.15s;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .btn:hover {

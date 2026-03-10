@@ -113,8 +113,6 @@ export function ReleaseHero({ release, coverUrl, market }: Props) {
           entityType="version"
           discogsId={release.discogs_id}
         />
-      </div>
-      <div className={styles.shareBarWrap}>
         <ShareBar
           url={`${BASE_URL}/version/${release.discogs_id}`}
           title={release.title}

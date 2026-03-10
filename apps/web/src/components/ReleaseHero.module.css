@@ -121,6 +121,7 @@
   flex-wrap: wrap;
   gap: 0.8rem;
   margin-top: 0.6rem;
+  align-items: center;
 }
 
 .labelLink {
@@ -139,8 +140,4 @@
 .marketPrice {
   font-size: 0.75rem;
   color: var(--fg-muted);
-}
-
-.shareBarWrap {
-  margin-top: 0.6rem;
 }
