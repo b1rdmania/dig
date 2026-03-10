@@ -1,9 +1,19 @@
 # Implementation Plan: Mixtapes Phase 1 UX Closeout
 
-Date: 2026-03-10  
-Owner: Web/API  
-Scope: Complete Phase 1 mixtape user flow (create + add while browsing + verify persistence).  
+Date: 2026-03-10
+Owner: Web/API
+Scope: Complete Phase 1 mixtape user flow (create + add while browsing + verify persistence).
 Out of scope: Spotify export execution (Phase 2), crates, want list UX changes.
+
+## Status: GO ✓
+
+Acceptance: 4/4 PASS (2026-03-10)
+- ✓ Paid user: add from release + version, appears in account mixtape list
+- ✓ Free user: 403 upgrade path confirmed (code audit + API test)
+- ✓ Signed-out: return-to-page sign-in redirect confirmed (code audit, same pattern as FavoriteButton)
+- ✓ No duplicate hearts; share row wraps inline on mobile (CSS audit: flex-wrap on .links, justify-content: center at 768px)
+
+Tag: mixtapes-phase1 @ c5d16e8
 
 ---
 
