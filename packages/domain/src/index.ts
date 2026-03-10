@@ -67,6 +67,18 @@ export {
   type QualityScore,
 } from "./quality.js";
 export {
+  upsertSpotifyToken,
+  getSpotifyToken,
+  deleteSpotifyToken,
+  isTokenExpired,
+  createExportJob,
+  getExportJob,
+  listExportJobs,
+  updateExportJob,
+  type StoredSpotifyToken,
+  type ExportJob,
+} from "./spotify-export.js";
+export {
   createMixtape,
   listMixtapes,
   getMixtape,

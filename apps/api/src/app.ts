@@ -31,6 +31,7 @@ import { registerMarketRoutes } from "./routes/v1/market.js";
 import { registerBillingRoutes } from "./routes/v1/billing.js";
 import { registerSavedRoutes } from "./routes/v1/saved.js";
 import { registerMixtapeRoutes } from "./routes/v1/mixtapes.js";
+import { registerSpotifyRoutes } from "./routes/v1/spotify.js";
 
 export interface AppDeps {
   databaseUrl: string;
@@ -216,6 +217,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerBillingRoutes(app, db);
   registerSavedRoutes(app, db);
   registerMixtapeRoutes(app, db);
+  registerSpotifyRoutes(app, db, redis);
 
   app.addHook("onClose", async () => {
     await shutdownUsagePersistence();

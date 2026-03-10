@@ -138,6 +138,7 @@ export interface MixtapeExportJobsTable {
   tracks_matched: number | null;
   tracks_total: number | null;
   error_message: string | null;
+  track_results: ColumnType<unknown, unknown | undefined, unknown | undefined>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
