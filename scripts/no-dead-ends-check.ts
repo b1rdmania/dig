@@ -28,7 +28,7 @@ const CANARY: CanaryEntry[] = [
   // Original fixtures
   { type: "artist", id: 3840,   notes: "Radiohead" },
   { type: "artist", id: 28795,  notes: "Prince" },
-  { type: "artist", id: 12596,  notes: "James Brown" },
+  { type: "artist", id: 38863,  notes: "Aretha Franklin" },
   { type: "artist", id: 45,     notes: "Aphex Twin" },
   { type: "artist", id: 1,      notes: "The Persuader" },
   { type: "artist", id: 769196, notes: "Tommy Danvers (was dead-end before fix)" },
@@ -217,9 +217,14 @@ async function main() {
   const timeouts = results.filter((r) => r.verdict === "TIMEOUT");
   const errors = results.filter((r) => r.verdict === "ERROR");
   const passes = results.filter((r) => r.verdict === "PASS");
+  // Pages that passed but only via graceful fallback copy (not actionable links).
+  // A spike here means backend is slow but frontend is degrading correctly.
+  const passWithFallback = passes.filter((r) => r.has_fallback && r.actionable_links === 0);
+  const passWithLinks = passes.filter((r) => r.actionable_links > 0);
 
   console.log(`\n${"─".repeat(60)}`);
-  console.log(`Results: ${passes.length} PASS, ${violations.length} FAIL, ${timeouts.length} TIMEOUT (SSR), ${errors.length} ERROR`);
+  console.log(`Results: ${passes.length} PASS (${passWithLinks.length} with links, ${passWithFallback.length} fallback-only), ${violations.length} FAIL, ${timeouts.length} TIMEOUT (SSR), ${errors.length} ERROR`);
+  console.log(`Metrics: ui_timeout_errors=${timeouts.length}, fallback_rate=${passWithFallback.length}/${passes.length + timeouts.length}`);
   console.log(`Note: TIMEOUT = SSR fetch timeout (performance issue, not structural dead-end)`);
 
   if (violations.length > 0) {
@@ -242,9 +247,18 @@ async function main() {
   const report = {
     generated_at: new Date().toISOString(),
     base_url: BASE_URL,
-    summary: { total: results.length, pass: passes.length, fail: violations.length, timeout: timeouts.length, error: errors.length },
+    summary: {
+      total: results.length,
+      pass: passes.length,
+      pass_with_links: passWithLinks.length,
+      pass_fallback_only: passWithFallback.length,
+      fail: violations.length,
+      ui_timeout_errors: timeouts.length,
+      error: errors.length,
+    },
     violations: violations.map((v) => ({ entity: v.entity, url: v.url, reason: v.reason })),
     ssr_timeouts: timeouts.map((t) => ({ entity: t.entity, url: t.url, elapsed_ms: t.elapsed_ms })),
+    fallback_pages: passWithFallback.map((r) => ({ entity: r.entity, url: r.url, elapsed_ms: r.elapsed_ms })),
     results,
   };
 

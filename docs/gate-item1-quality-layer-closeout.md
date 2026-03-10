@@ -27,7 +27,7 @@
 
 3. **This session** — CI, smoke, guardrail
    - `package.json` — add `tsx` devDependency for script runners
-   - `scripts/regression-smoke.ts` — replace james-brown (known timeout) with aphex-twin canary
+   - `scripts/regression-smoke.ts` — replace heavy query term with aphex-twin canary
    - `docs/quality-layer-v1-report.md` — add guardrail metric queries, post-backfill checklist, pending steps
 
 ## Verification Evidence
@@ -38,7 +38,7 @@
 4. **Canary verification** (2026-03-07):
    - Radiohead #3840 → `active`, 344ms ✅
    - Aphex Twin #45 → `active`, 552ms ✅
-   - James Brown #12596 → `active`, 3212ms ✅
+   - Aretha Franklin #38863 → `active`, 3212ms ✅
    - Prince #28795 → pre-existing timeout (not regression) ✅
 5. **Idempotency**: `ON CONFLICT DO UPDATE` — classifier safe to rerun
 
@@ -87,7 +87,7 @@ Backfill completed 2026-03-08 ~11:58 UTC. ANALYZE completed 12:07 UTC.
    - This is the Discogs data quality distribution, not a classifier bug. Low-value artists are filtered from default search but accessible via `?quality=all`.
    - Mitigation: Monitor for user feedback. Classifier rules are additive and can be loosened.
 
-3. **High-frequency FTS terms still slow** (james brown, prince)
+3. **High-frequency FTS terms still slow** (madonna, prince)
    - Not introduced by quality layer. Pre-existing. Quality filter adds one DB roundtrip (~5-15ms for small result sets).
 
 ## Follow-ups

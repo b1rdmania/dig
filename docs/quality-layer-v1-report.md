@@ -58,7 +58,7 @@ Testing against known entities (2026-03-07):
 - Radiohead #3840 (Needs Vote → `active`): found in 344ms ✅
 - Aphex Twin #45 (Correct → `active`): found in 552ms ✅
 - Prince #28795 (Needs Vote → `active`): pre-existing timeout (high-frequency "prince" term in FTS) — NOT a regression ✅
-- James Brown #12596 (Needs Vote → `active`): 12 results, 3212ms ✅
+- Aretha Franklin #38863 (Needs Vote → `active`): 12 results, 3212ms ✅
 - Labels, masters classified correctly
 
 ## Rollback

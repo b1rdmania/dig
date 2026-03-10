@@ -78,7 +78,7 @@ async function run(): Promise<void> {
   // Non-blocking observation: known high-frequency FTS queries that may timeout.
   // Logged for visibility but never fails exit code. Track elapsed_ms for regression detection.
   const heavyQueries = [
-    { name: "obs-heavy-james-brown", path: "/v1/search?q=james+brown&type=artist&limit=5" },
+    { name: "obs-heavy-madonna", path: "/v1/search?q=madonna&type=artist&limit=5" },
     { name: "obs-heavy-prince", path: "/v1/search?q=prince&type=artist&limit=5" },
   ];
   for (const test of heavyQueries) {

@@ -12,7 +12,7 @@ Method: live page fetch + grep for JSON-LD, robots meta, canonical tag
 |----|------|--------|-----------|----------------|
 | 3840 | Radiohead | `index, follow` | `/artist/3840` | 4 (MusicGroup + BreadcrumbList) |
 | 28795 | Prince | `index, follow` | `/artist/28795` | 4 |
-| 12596 | James Brown | `index, follow` | `/artist/12596` | 4 |
+| 38863 | Aretha Franklin | `index, follow` | `/artist/38863` | 4 |
 | 45 | Aphex Twin | `index, follow` | `/artist/45` | 4 |
 | 1 | The Persuader | `index, follow` | `/artist/1` | 4 |
 

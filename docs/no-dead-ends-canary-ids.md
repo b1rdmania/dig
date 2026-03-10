@@ -14,7 +14,7 @@ Do not remove IDs from this list — add new ones instead.
 |----|------|-------|
 | 3840 | Radiohead | Masters + releases expected |
 | 28795 | Prince | Large catalog |
-| 12596 | James Brown | Large catalog |
+| 38863 | Aretha Franklin | Large catalog |
 | 45 | Aphex Twin | Electronic, many releases |
 | 1 | The Persuader | Small but valid |
 
