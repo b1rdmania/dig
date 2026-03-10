@@ -173,10 +173,19 @@
 .savedItem {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 0.8rem;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
   border-bottom: 1px solid var(--line);
-  padding-bottom: 0.45rem;
+}
+
+.savedType {
+  font-size: 0.7rem;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: 4.5rem;
 }
 
 .savedLink {
@@ -184,15 +193,14 @@
   font-size: 0.9rem;
   text-decoration: underline;
   text-underline-offset: 2px;
+  text-decoration-color: var(--line);
+}
+
+.savedLink:hover {
+  text-decoration-color: var(--fg-muted);
 }
 
 .savedText {
   color: var(--fg);
   font-size: 0.9rem;
-}
-
-.savedMeta {
-  color: var(--fg-faint);
-  font-size: 0.78rem;
-  white-space: nowrap;
 }

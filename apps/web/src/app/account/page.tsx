@@ -2,7 +2,8 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { AccountClient } from "./AccountClient";
 
-const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL ?? "https://dig-api.fly.dev";
+// Use internal Fly network URL server-side for lower latency
+const API_URL = process.env.DIG_API_URL ?? process.env.NEXT_PUBLIC_DIG_API_URL ?? "https://dig-api.fly.dev";
 
 interface Entitlements {
   plan: string;
@@ -54,6 +55,24 @@ async function getFavorites(token: string): Promise<SavedItem[]> {
   }
 }
 
+async function resolveEntityName(entityType: SavedEntityType, discogsId: number): Promise<string | null> {
+  try {
+    const pathMap: Record<SavedEntityType, string> = {
+      artist: `/v1/artists/${discogsId}`,
+      label: `/v1/labels/${discogsId}`,
+      release: `/v1/masters/${discogsId}`,
+      version: `/v1/releases/${discogsId}`,
+      track: `/v1/releases/${discogsId}`,
+    };
+    const res = await fetch(`${API_URL}${pathMap[entityType]}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json() as Record<string, any>;
+    return data.artist?.name ?? data.label?.name ?? data.master?.title ?? data.release?.title ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function AccountPage({
   searchParams,
 }: {
@@ -68,10 +87,18 @@ export default async function AccountPage({
     searchParams,
   ]);
 
-  const [entitlements, favorites] = token
+  const [entitlements, rawFavorites] = token
     ? await Promise.all([getEntitlements(token), getFavorites(token)])
     : [null, []];
   const checkoutStatus = params.checkout ?? null;
+
+  // Resolve entity names in parallel (cap at 20 to avoid waterfall on large lists)
+  const favorites = await Promise.all(
+    rawFavorites.slice(0, 20).map(async (item) => ({
+      ...item,
+      name: await resolveEntityName(item.entity_type, item.discogs_id),
+    }))
+  );
 
   return (
     <AccountClient

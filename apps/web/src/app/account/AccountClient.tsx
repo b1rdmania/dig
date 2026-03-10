@@ -22,6 +22,7 @@ interface Props {
     discogs_id: number;
     list_type: "favorite" | "want";
     created_at: string;
+    name: string | null;
   }>;
 }
 
@@ -155,17 +156,15 @@ export function AccountClient({
           <ul className={styles.savedList}>
             {favorites.map((item) => {
               const href = hrefForFavorite(item.entity_type, item.discogs_id);
-              const title = `${item.entity_type} #${item.discogs_id}`;
+              const title = item.name ?? `${item.entity_type} #${item.discogs_id}`;
               return (
                 <li key={item.id} className={styles.savedItem}>
+                  <span className={styles.savedType}>{item.entity_type}</span>
                   {href ? (
                     <a href={href} className={styles.savedLink}>{title}</a>
                   ) : (
                     <span className={styles.savedText}>{title}</span>
                   )}
-                  <span className={styles.savedMeta}>
-                    saved {new Date(item.created_at).toLocaleDateString()}
-                  </span>
                 </li>
               );
             })}
