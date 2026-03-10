@@ -1,19 +1,24 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
 
-const hasClerkKey = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+// Use unprefixed env var so key is read at runtime, not baked in at build time.
+// Set CLERK_PUBLISHABLE_KEY as a Fly secret — no rebuild needed for rotation.
+const publishableKey = process.env.CLERK_PUBLISHABLE_KEY ?? "";
 
 // Routes that require authentication
 const isProtectedRoute = createRouteMatcher(["/account(.*)"]);
 
-const clerk = clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    await auth.protect();
-  }
-});
+const clerk = clerkMiddleware(
+  async (auth, req) => {
+    if (isProtectedRoute(req)) {
+      await auth.protect();
+    }
+  },
+  { publishableKey: publishableKey || undefined },
+);
 
 export default function middleware(req: NextRequest, event: NextFetchEvent) {
-  if (!hasClerkKey) return NextResponse.next();
+  if (!publishableKey) return NextResponse.next();
   return clerk(req, event);
 }
 

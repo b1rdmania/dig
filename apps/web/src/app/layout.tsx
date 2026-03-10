@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ClerkProvider>
+        <ClerkProvider publishableKey={process.env.CLERK_PUBLISHABLE_KEY}>
           <Suspense fallback={null}>
             <Nav />
           </Suspense>
