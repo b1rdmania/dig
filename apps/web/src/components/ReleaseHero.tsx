@@ -2,8 +2,11 @@ import Link from "next/link";
 import type { Release, MarketSnapshot } from "@/lib/types";
 import { formatDescriptions, discogsUrl } from "@/lib/format";
 import { firstYoutubeThumb } from "@/lib/media";
+import { BASE_URL } from "@/lib/seo";
 import { OutboundLink } from "./OutboundLink";
 import { SaveButton } from "./SaveButton";
+import { FavoriteButton } from "./FavoriteButton";
+import { ShareBar } from "./ShareBar";
 import styles from "./ReleaseHero.module.css";
 
 interface Props {
@@ -107,16 +110,23 @@ export function ReleaseHero({ release, coverUrl, market }: Props) {
         >
           Open on Discogs
         </OutboundLink>
-        <SaveButton
+        <FavoriteButton
           entityType="version"
           discogsId={release.discogs_id}
-          listType="favorite"
         />
         <SaveButton
           entityType="version"
           discogsId={release.discogs_id}
           listType="want"
           upgradeContext="Want list is part of Early Access (£5/month). You also get the Dig AI assistant."
+        />
+      </div>
+      <div className={styles.shareBarWrap}>
+        <ShareBar
+          url={`${BASE_URL}/version/${release.discogs_id}`}
+          title={release.title}
+          entityType="version"
+          entityId={release.discogs_id}
         />
       </div>
         </div>

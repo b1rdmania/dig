@@ -25,6 +25,8 @@ import { MediaSection } from "@/components/MediaSection";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ReleaseNav } from "@/components/ReleaseNav";
 import { SaveButton } from "@/components/SaveButton";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { ShareBar } from "@/components/ShareBar";
 import styles from "./page.module.css";
 
 interface Props {
@@ -160,12 +162,20 @@ async function ReleaseMasterContent({ id }: { id: string }) {
                 >
                   Open on Discogs
                 </OutboundLink>
-                <SaveButton entityType="release" discogsId={master.discogs_id} listType="favorite" />
+                <FavoriteButton entityType="release" discogsId={master.discogs_id} />
                 <SaveButton
                   entityType="release"
                   discogsId={master.discogs_id}
                   listType="want"
                   upgradeContext="Want list is part of Early Access (£5/month). You also get the Dig AI assistant."
+                />
+              </div>
+              <div className={styles.shareBarWrap}>
+                <ShareBar
+                  url={`${BASE_URL}/release/${master.discogs_id}`}
+                  title={master.title}
+                  entityType="release"
+                  entityId={master.discogs_id}
                 />
               </div>
             </div>

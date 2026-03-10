@@ -1,0 +1,36 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  line-height: 1;
+  min-height: 44px;
+  text-decoration: none;
+  transition: color 0.1s, border-color 0.1s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.btn:hover {
+  color: var(--fg);
+  border-color: var(--fg-muted);
+}
+
+/* Temporary feedback state for copy */
+.feedback {
+  color: var(--fg);
+  border-color: var(--fg-muted);
+}

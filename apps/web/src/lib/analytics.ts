@@ -148,6 +148,22 @@ export function trackMediaShowMoreClicked(remainingCount: number): void {
   });
 }
 
+export function trackFavoriteToggled(entityType: string, entityId: number, saved: boolean): void {
+  track("favorite_toggled", {
+    entity_type: entityType,
+    entity_id: entityId,
+    saved,
+  });
+}
+
+export function trackShareClicked(entityType: string | null, entityId: number | null, channel: string): void {
+  track("share_clicked", {
+    entity_type: entityType,
+    entity_id: entityId,
+    channel,
+  });
+}
+
 export function trackIncrementalSearch(
   event: "started" | "completed" | "aborted" | "error",
   properties: {

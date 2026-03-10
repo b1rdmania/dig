@@ -26,6 +26,8 @@ import { Provenance } from "@/components/Provenance";
 import { CollapsibleList } from "@/components/CollapsibleList";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { ShareBar } from "@/components/ShareBar";
 import { hrefForTraversalLink, hrefForArtistCredit } from "@/lib/routes";
 import styles from "./page.module.css";
 
@@ -476,6 +478,15 @@ async function ArtistContent({ id, releaseType, roleFamily }: { id: string; rele
                 {urlLabel(url)}
               </a>
             ))}
+            <FavoriteButton entityType="artist" discogsId={artist.discogs_id} />
+          </div>
+          <div style={{ marginTop: "0.6rem" }}>
+            <ShareBar
+              url={`${BASE_URL}/artist/${artist.discogs_id}`}
+              title={artist.name}
+              entityType="artist"
+              entityId={artist.discogs_id}
+            />
           </div>
         </section>
 

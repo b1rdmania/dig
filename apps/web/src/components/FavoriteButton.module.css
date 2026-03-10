@@ -1,0 +1,54 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  position: relative;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  line-height: 1;
+  transition: color 0.1s, border-color 0.1s;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  color: var(--fg);
+  border-color: var(--fg-muted);
+}
+
+.btn[data-saved="true"] {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Compact variant: icon-only, no border */
+.compact {
+  border: none;
+  padding: 0.25rem;
+  font-size: 1rem;
+  min-height: 44px;
+  min-width: 44px;
+  justify-content: center;
+}
+
+.errorTip {
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}

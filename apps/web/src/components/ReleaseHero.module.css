@@ -140,3 +140,7 @@
   font-size: 0.75rem;
   color: var(--fg-muted);
 }
+
+.shareBarWrap {
+  margin-top: 0.6rem;
+}

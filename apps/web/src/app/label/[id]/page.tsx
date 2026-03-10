@@ -21,6 +21,8 @@ import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { ShareBar } from "@/components/ShareBar";
 import { hrefForTraversalLink } from "@/lib/routes";
 import styles from "../../artist/[id]/page.module.css";
 
@@ -130,6 +132,15 @@ async function LabelContent({ id }: { id: string }) {
             >
               Open on Discogs
             </a>
+            <FavoriteButton entityType="label" discogsId={label.discogs_id} />
+          </div>
+          <div style={{ marginTop: "0.6rem" }}>
+            <ShareBar
+              url={`${BASE_URL}/label/${label.discogs_id}`}
+              title={label.name}
+              entityType="label"
+              entityId={label.discogs_id}
+            />
           </div>
         </section>
 
