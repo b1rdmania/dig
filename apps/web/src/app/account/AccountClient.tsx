@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { SignOutButton } from "@clerk/nextjs";
 import styles from "./page.module.css";
 
@@ -23,6 +22,8 @@ interface Props {
     list_type: "favorite" | "want";
     created_at: string;
     name: string | null;
+    artist: string | null;
+    coverUrl: string | null;
   }>;
 }
 
@@ -51,7 +52,7 @@ export function AccountClient({
   checkoutStatus,
   favorites,
 }: Props) {
-  const router = useRouter();
+  const [tab, setTab] = useState<"crates" | "mixtapes">("crates");
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
@@ -82,37 +83,76 @@ export function AccountClient({
   return (
     <div className={styles.page}>
       {checkoutStatus === "success" && (
-        <div className={styles.banner}>
-          Welcome to Early Access. Your plan is now active.
-        </div>
+        <div className={styles.banner}>Welcome to Early Access. Your plan is now active.</div>
       )}
       {checkoutStatus === "cancel" && (
         <div className={styles.bannerMuted}>Checkout cancelled — your plan is unchanged.</div>
       )}
 
-      <section className={styles.section}>
-        <p className={styles.label}>Your Crates</p>
-        {favorites.length === 0 ? (
-          <p className={styles.emptyText}>Nothing saved yet. Tap ♡ on any artist, release, or label.</p>
-        ) : (
-          <ul className={styles.savedList}>
-            {favorites.map((item) => {
-              const href = hrefForFavorite(item.entity_type, item.discogs_id);
-              const title = item.name ?? `${item.entity_type} #${item.discogs_id}`;
-              return (
-                <li key={item.id} className={styles.savedItem}>
-                  <span className={styles.savedType}>{item.entity_type}</span>
-                  {href ? (
-                    <a href={href} className={styles.savedLink}>{title}</a>
-                  ) : (
-                    <span className={styles.savedText}>{title}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      {/* Tabs */}
+      <div className={styles.tabs}>
+        <button
+          type="button"
+          className={styles.tab}
+          data-active={String(tab === "crates")}
+          onClick={() => setTab("crates")}
+        >
+          Your Crates
+        </button>
+        <button
+          type="button"
+          className={styles.tab}
+          data-active={String(tab === "mixtapes")}
+          onClick={() => setTab("mixtapes")}
+        >
+          Mixtapes
+        </button>
+      </div>
+
+      {tab === "crates" && (
+        <section className={styles.section}>
+          {favorites.length === 0 ? (
+            <p className={styles.emptyText}>Nothing saved yet. Tap ♡ on any artist, release, or label.</p>
+          ) : (
+            <ul className={styles.savedList}>
+              {favorites.map((item) => {
+                const href = hrefForFavorite(item.entity_type, item.discogs_id);
+                const title = item.name ?? `${item.entity_type} #${item.discogs_id}`;
+                return (
+                  <li key={item.id} className={styles.savedItem}>
+                    <div className={styles.savedThumb}>
+                      {item.coverUrl ? (
+                        <img src={item.coverUrl} alt="" className={styles.savedThumbImg} />
+                      ) : (
+                        <div className={styles.savedThumbPlaceholder} />
+                      )}
+                    </div>
+                    <div className={styles.savedInfo}>
+                      {href ? (
+                        <a href={href} className={styles.savedLink}>{title}</a>
+                      ) : (
+                        <span className={styles.savedText}>{title}</span>
+                      )}
+                      {item.artist && (
+                        <span className={styles.savedArtist}>{item.artist}</span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {tab === "mixtapes" && (
+        <section className={styles.section}>
+          <p className={styles.comingSoon}>Mixtapes coming soon.</p>
+          <p className={styles.emptyText}>
+            Create a mixtape, add tracks, and export to Spotify or Apple Music.
+          </p>
+        </section>
+      )}
 
       <section className={styles.section}>
         <p className={styles.eyebrow}>Account</p>
@@ -135,7 +175,6 @@ export function AccountClient({
             <span className={styles.rpmNote}>{monthlyRequestLimit.toLocaleString()} req/month</span>
           )}
         </div>
-
         {!isEarlyAccess && (
           <div className={styles.upgrade}>
             <p className={styles.upgradeText}>

@@ -55,7 +55,13 @@ async function getFavorites(token: string): Promise<SavedItem[]> {
   }
 }
 
-async function resolveEntityName(entityType: SavedEntityType, discogsId: number): Promise<string | null> {
+interface EntityDetails {
+  name: string | null;
+  artist: string | null;
+  coverUrl: string | null;
+}
+
+async function resolveEntityDetails(entityType: SavedEntityType, discogsId: number): Promise<EntityDetails> {
   try {
     const pathMap: Record<SavedEntityType, string> = {
       artist: `/v1/artists/${discogsId}`,
@@ -64,12 +70,34 @@ async function resolveEntityName(entityType: SavedEntityType, discogsId: number)
       version: `/v1/releases/${discogsId}`,
       track: `/v1/releases/${discogsId}`,
     };
-    const res = await fetch(`${API_URL}${pathMap[entityType]}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    const data = await res.json() as Record<string, any>;
-    return data.artist?.name ?? data.label?.name ?? data.master?.title ?? data.release?.title ?? null;
+
+    // Fetch entity data + cover in parallel for release/version types
+    const hasCover = entityType === "version" || entityType === "release" || entityType === "track";
+    const [entityRes, coverRes] = await Promise.all([
+      fetch(`${API_URL}${pathMap[entityType]}`, { cache: "no-store" }),
+      hasCover ? fetch(`${API_URL}/v1/releases/${discogsId}/cover`, { cache: "no-store" }).catch(() => null) : null,
+    ]);
+
+    if (!entityRes.ok) return { name: null, artist: null, coverUrl: null };
+    const data = await entityRes.json() as Record<string, any>;
+
+    const name = data.artist?.name ?? data.label?.name ?? data.master?.title ?? data.release?.title ?? null;
+    const artists: Array<{ name: string }> = data.master?.artists ?? data.release?.artists ?? [];
+    const artist = artists[0]?.name ?? null;
+
+    let coverUrl: string | null = null;
+    if (coverRes?.ok) {
+      const coverData = await coverRes.json() as Record<string, any>;
+      const url = coverData?.cover?.url;
+      // Skip placeholder/vinyl URLs — only use real cover art
+      if (url && !url.includes("placeholder") && !url.includes("vinyl")) {
+        coverUrl = url;
+      }
+    }
+
+    return { name, artist, coverUrl };
   } catch {
-    return null;
+    return { name: null, artist: null, coverUrl: null };
   }
 }
 
@@ -92,12 +120,12 @@ export default async function AccountPage({
     : [null, []];
   const checkoutStatus = params.checkout ?? null;
 
-  // Resolve entity names in parallel (cap at 20 to avoid waterfall on large lists)
+  // Resolve entity details in parallel (cap at 20)
   const favorites = await Promise.all(
-    rawFavorites.slice(0, 20).map(async (item) => ({
-      ...item,
-      name: await resolveEntityName(item.entity_type, item.discogs_id),
-    }))
+    rawFavorites.slice(0, 20).map(async (item) => {
+      const details = await resolveEntityDetails(item.entity_type, item.discogs_id);
+      return { ...item, ...details };
+    })
   );
 
   return (
