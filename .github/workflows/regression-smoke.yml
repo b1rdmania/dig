@@ -29,6 +29,35 @@ jobs:
           MCP_URL: https://dig-mcp.fly.dev
         run: npm run smoke:regression
 
+  route-404-sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Route 404 sweep
+        run: npm run sweep:404
+        env:
+          API_URL: https://dig-api.fly.dev
+          WEB_URL: https://app.dig.baby
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: route-404-report
+          path: route-404-report.json
+
   no-dead-ends:
     runs-on: ubuntu-latest
     timeout-minutes: 30

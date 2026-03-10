@@ -222,7 +222,7 @@ export function MixtapesTab({ plan }: Props) {
     return (
       <div className={styles.gated}>
         <p className={styles.gatedText}>Mixtapes are an Early Access feature.</p>
-        <p className={styles.gatedSub}>Upgrade to create and export playlists to Spotify.</p>
+        <p className={styles.gatedSub}>Upgrade to create and save track collections.</p>
       </div>
     );
   }

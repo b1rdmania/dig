@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
+import { sql } from "@dig/db";
 import { getArtist, getLabel, getMaster, getRelease, getBatchForTable } from "@dig/domain";
 
 function parseDiscogsId(raw: string): number | null {
@@ -51,7 +52,11 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
       });
     }
     const { batchId, dumpDate } = await getBatchForTable(db, "catalog.masters");
-    const master = await getMaster(db, discogsId, batchId, dumpDate);
+    // Transaction so SET LOCAL statement_timeout is scoped to this query only.
+    const master = await db.transaction().execute(async (trx) => {
+      await sql`SET LOCAL statement_timeout = '12000'`.execute(trx);
+      return getMaster(trx, discogsId, batchId, dumpDate);
+    });
     if (!master) {
       return reply.status(404).send({
         error: { code: "NOT_FOUND", message: `Master ${discogsId} not found`, details: null },
@@ -68,7 +73,11 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
       });
     }
     const { batchId, dumpDate } = await getBatchForTable(db, "catalog.releases");
-    const release = await getRelease(db, discogsId, batchId, dumpDate);
+    // Transaction so SET LOCAL statement_timeout is scoped to this query only.
+    const release = await db.transaction().execute(async (trx) => {
+      await sql`SET LOCAL statement_timeout = '12000'`.execute(trx);
+      return getRelease(trx, discogsId, batchId, dumpDate);
+    });
     if (!release) {
       return reply.status(404).send({
         error: { code: "NOT_FOUND", message: `Release ${discogsId} not found`, details: null },

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { digFetch, ApiRequestError } from "@/lib/api";
 import { isReleaseResponse, type ReleaseResponse, type MarketResponse } from "@/lib/types";
@@ -13,6 +14,7 @@ import { Provenance } from "@/components/Provenance";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { PageViewTracker } from "@/components/PageViewTracker";
 import { ReleaseNav } from "@/components/ReleaseNav";
+import { SectionSkeleton } from "@/components/SectionSkeleton";
 import styles from "../../release/[id]/page.module.css";
 
 interface Props {
@@ -47,8 +49,19 @@ export default async function VersionPage({ params }: Props) {
 
   if (!/^\d+$/.test(id)) notFound();
 
+  // Shell renders immediately. Release data streams in via Suspense so a slow
+  // API response degrades gracefully instead of producing an error page.
+  return (
+    <div className={styles.page}>
+      <Suspense fallback={<SectionSkeleton lines={4} />}>
+        <VersionContent id={id} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function VersionContent({ id }: { id: string }) {
   try {
-    // Fetch release data (needed for everything). Cover streams in separately.
     const data = await digFetch<ReleaseResponse>(`/v1/releases/${id}`, { revalidate: 300 });
 
     if (!isReleaseResponse(data)) {
@@ -58,7 +71,7 @@ export default async function VersionPage({ params }: Props) {
     const release = data.release;
 
     return (
-      <div className={styles.page}>
+      <>
         <PageViewTracker type="version" entityId={release.discogs_id} title={release.title} />
         <Suspense fallback={<ReleaseHero release={release} coverUrl={null} />}>
           <VersionHeroWithCover release={release} id={id} />
@@ -93,11 +106,20 @@ export default async function VersionPage({ params }: Props) {
           ]),
         ]} />
         <Provenance provenance={release.provenance} />
-      </div>
+      </>
     );
   } catch (err) {
-    if (err instanceof ApiRequestError && err.code === "NOT_FOUND") {
-      notFound();
+    if (err instanceof ApiRequestError && err.code === "NOT_FOUND") notFound();
+    if (err instanceof ApiRequestError && (err.code === "TIMEOUT" || err.status >= 500)) {
+      // Slow or unavailable — graceful fallback (no TIMEOUT text in HTML)
+      return (
+        <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
+          <p className={styles.copy}>Unable to load this version right now.</p>
+          <p className={styles.small} style={{ marginTop: "0.5rem" }}>
+            <Link href="/" className={styles.link}>Back to search</Link>
+          </p>
+        </section>
+      );
     }
     if (err instanceof ApiRequestError) {
       return <ErrorMessage code={err.code} message={err.message} />;

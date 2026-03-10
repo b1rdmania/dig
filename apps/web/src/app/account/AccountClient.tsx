@@ -176,7 +176,7 @@ export function AccountClient({
         {!isEarlyAccess && (
           <div className={styles.upgrade}>
             <p className={styles.upgradeText}>
-              Early Access — £5/month. Includes the Dig AI assistant, want list, crates, and higher limits.
+              Early Access — £5/month. Includes the Dig AI assistant, favourites, mixtapes, and higher limits.
             </p>
             {upgradeError && <p className={styles.errorText}>{upgradeError}</p>}
             <button

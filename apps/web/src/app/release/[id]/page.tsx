@@ -104,6 +104,16 @@ async function ReleaseMasterContent({ id }: { id: string }) {
   } catch (err) {
     if (err instanceof ApiRequestError && err.code === "NOT_FOUND") {
       // Not a master — fall through to pressing redirect below
+    } else if (err instanceof ApiRequestError && (err.code === "TIMEOUT" || err.status >= 500)) {
+      // Slow or unavailable — graceful fallback (no TIMEOUT text in HTML)
+      return (
+        <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
+          <p className={styles.copy}>Unable to load this release right now.</p>
+          <p className={styles.small} style={{ marginTop: "0.5rem" }}>
+            <Link href="/" className={styles.link}>Back to search</Link>
+          </p>
+        </section>
+      );
     } else if (err instanceof ApiRequestError) {
       return <ErrorMessage code={err.code} message={err.message} />;
     }
