@@ -60,7 +60,7 @@ export function ReleaseHero({ release, coverUrl, market }: Props) {
         {format && (
           <span className={styles.detail}>
             {format.name}
-            {format.descriptions.length > 0 &&
+            {format.descriptions && format.descriptions.length > 0 &&
               ` \u2014 ${formatDescriptions(format.descriptions)}`}
           </span>
         )}
