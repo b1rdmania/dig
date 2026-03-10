@@ -156,6 +156,22 @@ export function trackFavoriteToggled(entityType: string, entityId: number, saved
   });
 }
 
+export function trackMixtapeAddClicked(entityType: string, entityId: number): void {
+  track("mixtape_add_clicked", { entity_type: entityType, entity_id: entityId });
+}
+
+export function trackMixtapeAddSucceeded(entityType: string, entityId: number, mixtapeId: string): void {
+  track("mixtape_add_succeeded", { entity_type: entityType, entity_id: entityId, mixtape_id: mixtapeId });
+}
+
+export function trackMixtapeAddFailed(entityType: string, entityId: number, reason: string): void {
+  track("mixtape_add_failed", { entity_type: entityType, entity_id: entityId, reason });
+}
+
+export function trackMixtapeUpgradePrompted(entityType: string, entityId: number): void {
+  track("mixtape_upgrade_prompted", { entity_type: entityType, entity_id: entityId });
+}
+
 export function trackShareClicked(entityType: string | null, entityId: number | null, channel: string): void {
   track("share_clicked", {
     entity_type: entityType,

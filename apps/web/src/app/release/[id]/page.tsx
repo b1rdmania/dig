@@ -25,6 +25,7 @@ import { MediaSection } from "@/components/MediaSection";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ReleaseNav } from "@/components/ReleaseNav";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { AddToMixtapeButton } from "@/components/AddToMixtapeButton";
 import { ShareBar } from "@/components/ShareBar";
 import styles from "./page.module.css";
 
@@ -162,6 +163,12 @@ async function ReleaseMasterContent({ id }: { id: string }) {
                   Open on Discogs
                 </OutboundLink>
                 <FavoriteButton entityType="release" discogsId={master.discogs_id} />
+                <AddToMixtapeButton
+                  sourceEntityType="master"
+                  sourceDiscogsId={master.discogs_id}
+                  name={master.title}
+                  artist={master.artists[0]?.name ?? null}
+                />
                 <ShareBar
                   url={`${BASE_URL}/release/${master.discogs_id}`}
                   title={master.title}

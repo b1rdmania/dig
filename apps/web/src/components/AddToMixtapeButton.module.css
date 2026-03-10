@@ -1,0 +1,99 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--fg-faint);
+  font-family: inherit;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.15s;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.trigger:hover {
+  color: var(--fg-muted);
+}
+
+.feedback {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+}
+
+.upgradeLink,
+.popoverLink {
+  color: var(--fg-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  min-width: 180px;
+  max-width: 260px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  padding: 0.35rem 0;
+}
+
+.popoverNote {
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mixtapeItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.mixtapeItem:hover {
+  background: var(--line);
+}
+
+.mixtapeTitle {
+  font-size: 0.82rem;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.mixtapeMeta {
+  font-size: 0.72rem;
+  color: var(--fg-faint);
+  flex-shrink: 0;
+}
