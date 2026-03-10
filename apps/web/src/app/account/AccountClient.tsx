@@ -91,67 +91,9 @@ export function AccountClient({
       )}
 
       <section className={styles.section}>
-        <p className={styles.eyebrow}>Account</p>
-        <div className={styles.identity}>
-          {imageUrl && <img src={imageUrl} alt="" className={styles.avatar} />}
-          <div>
-            <p className={styles.name}>{displayName}</p>
-            <p className={styles.email}>{email}</p>
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <p className={styles.label}>Plan</p>
-        <div className={styles.planRow}>
-          <span className={styles.planBadge} data-plan={plan}>
-            {PLAN_LABELS[plan] ?? plan}
-          </span>
-          {!isEarlyAccess && (
-            <span className={styles.rpmNote}>500 req/month · 20 req/min</span>
-          )}
-          {isEarlyAccess && (
-            <span className={styles.rpmNote}>{monthlyRequestLimit.toLocaleString()} req/month</span>
-          )}
-        </div>
-
-        {!isEarlyAccess && (
-          <div className={styles.upgrade}>
-            <p className={styles.upgradeText}>
-              Early Access — £5/month. Includes the Dig AI assistant, want list, crates, and higher limits. Favourites are already free for signed-in users.
-            </p>
-            {upgradeError && <p className={styles.errorText}>{upgradeError}</p>}
-            <button
-              className={styles.upgradeBtn}
-              onClick={startUpgrade}
-              disabled={upgrading}
-              type="button"
-            >
-              {upgrading ? "Redirecting..." : "Upgrade to Early Access →"}
-            </button>
-          </div>
-        )}
-
-        {isEarlyAccess && (
-          <ul className={styles.featureList}>
-            <li className={styles.featureItem} data-on="true">✓ Favourites (free for all signed-in users)</li>
-            <li className={styles.featureItem} data-on={String(llmBetaAccess)}>
-              {llmBetaAccess ? "✓" : "–"} Ask Dig (AI assistant)
-            </li>
-            <li className={styles.featureItem} data-on={String(features.wantlist ?? false)}>
-              {features.wantlist ? "✓" : "–"} Want list
-            </li>
-            <li className={styles.featureItem} data-on={String(features.crates ?? false)}>
-              {features.crates ? "✓" : "–"} Crates
-            </li>
-          </ul>
-        )}
-      </section>
-
-      <section className={styles.section}>
-        <p className={styles.label}>Favorites</p>
+        <p className={styles.label}>Your Crates</p>
         {favorites.length === 0 ? (
-          <p className={styles.emptyText}>No favorites yet. Tap the heart on any artist, release, label, or version.</p>
+          <p className={styles.emptyText}>Nothing saved yet. Tap ♡ on any artist, release, or label.</p>
         ) : (
           <ul className={styles.savedList}>
             {favorites.map((item) => {
@@ -169,6 +111,46 @@ export function AccountClient({
               );
             })}
           </ul>
+        )}
+      </section>
+
+      <section className={styles.section}>
+        <p className={styles.eyebrow}>Account</p>
+        <div className={styles.identity}>
+          {imageUrl && <img src={imageUrl} alt="" className={styles.avatar} />}
+          <div>
+            <p className={styles.name}>{displayName}</p>
+            <p className={styles.email}>{email}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <p className={styles.label}>Plan</p>
+        <div className={styles.planRow}>
+          <span className={styles.planBadge} data-plan={plan}>
+            {PLAN_LABELS[plan] ?? plan}
+          </span>
+          {isEarlyAccess && (
+            <span className={styles.rpmNote}>{monthlyRequestLimit.toLocaleString()} req/month</span>
+          )}
+        </div>
+
+        {!isEarlyAccess && (
+          <div className={styles.upgrade}>
+            <p className={styles.upgradeText}>
+              Early Access — £5/month. Includes the Dig AI assistant, want list, crates, and higher limits.
+            </p>
+            {upgradeError && <p className={styles.errorText}>{upgradeError}</p>}
+            <button
+              className={styles.upgradeBtn}
+              onClick={startUpgrade}
+              disabled={upgrading}
+              type="button"
+            >
+              {upgrading ? "Redirecting..." : "Upgrade to Early Access →"}
+            </button>
+          </div>
         )}
       </section>
 
