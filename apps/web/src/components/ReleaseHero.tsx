@@ -4,7 +4,6 @@ import { formatDescriptions, discogsUrl } from "@/lib/format";
 import { firstYoutubeThumb } from "@/lib/media";
 import { BASE_URL } from "@/lib/seo";
 import { OutboundLink } from "./OutboundLink";
-import { SaveButton } from "./SaveButton";
 import { FavoriteButton } from "./FavoriteButton";
 import { ShareBar } from "./ShareBar";
 import styles from "./ReleaseHero.module.css";
@@ -113,12 +112,6 @@ export function ReleaseHero({ release, coverUrl, market }: Props) {
         <FavoriteButton
           entityType="version"
           discogsId={release.discogs_id}
-        />
-        <SaveButton
-          entityType="version"
-          discogsId={release.discogs_id}
-          listType="want"
-          upgradeContext="Want list is part of Early Access (£5/month). You also get the Dig AI assistant."
         />
       </div>
       <div className={styles.shareBarWrap}>
