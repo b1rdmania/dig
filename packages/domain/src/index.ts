@@ -67,6 +67,18 @@ export {
   type QualityScore,
 } from "./quality.js";
 export {
+  createMixtape,
+  listMixtapes,
+  getMixtape,
+  deleteMixtape,
+  addTrack,
+  listTracks,
+  removeTrack,
+  type Mixtape,
+  type MixtapeTrack,
+  type AddTrackInput,
+} from "./mixtapes.js";
+export {
   getArtistRelationships,
   getArtistContext,
   getArtistTimeline,

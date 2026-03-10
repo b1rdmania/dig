@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SignOutButton } from "@clerk/nextjs";
+import { MixtapesTab } from "@/components/MixtapesTab";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL ?? "https://dig-api.fly.dev";
@@ -147,10 +148,7 @@ export function AccountClient({
 
       {tab === "mixtapes" && (
         <section className={styles.section}>
-          <p className={styles.comingSoon}>Mixtapes coming soon.</p>
-          <p className={styles.emptyText}>
-            Create a mixtape, add tracks, and export to Spotify or Apple Music.
-          </p>
+          <MixtapesTab plan={plan} />
         </section>
       )}
 

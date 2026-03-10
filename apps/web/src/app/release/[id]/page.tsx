@@ -173,10 +173,12 @@ async function ReleaseMasterContent({ id }: { id: string }) {
           </div>
         </section>
 
-        {/* ── Prev/Next version navigation ── */}
-        <Suspense fallback={null}>
-          <ReleaseNav masterId={master.discogs_id} currentReleaseId={master.main_release_discogs_id} />
-        </Suspense>
+        {/* ── Prev/Next artist catalogue navigation ── */}
+        {master.artists[0]?.discogs_id ? (
+          <Suspense fallback={null}>
+            <ReleaseNav artistId={master.artists[0].discogs_id} currentMasterId={master.discogs_id} />
+          </Suspense>
+        ) : null}
 
         {/* ── Tracklist + Media + Credits + Notes: stream in from main release fetch ── */}
         <Suspense fallback={<SectionSkeleton lines={6} />}>

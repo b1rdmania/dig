@@ -92,6 +92,56 @@ export interface UserSavedItemsTable {
   created_at: Generated<Date>;
 }
 
+export interface MixtapesTable {
+  id: Generated<string>;
+  user_id: string;
+  title: string;
+  description: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface MixtapeTracksTable {
+  id: Generated<string>;
+  mixtape_id: string;
+  user_id: string;
+  position: number;
+  source_entity_type: string;
+  source_discogs_id: number;
+  master_discogs_id: number | null;
+  name: string | null;
+  artist: string | null;
+  client_request_id: string | null;
+  added_at: Generated<Date>;
+}
+
+export interface SpotifyTokensTable {
+  id: Generated<string>;
+  user_id: string;
+  access_token_enc: string;
+  refresh_token_enc: string;
+  token_type: Generated<string>;
+  scopes: Generated<string>;
+  expires_at: Date;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface MixtapeExportJobsTable {
+  id: Generated<string>;
+  mixtape_id: string;
+  user_id: string;
+  platform: string;
+  status: Generated<string>;
+  platform_playlist_id: string | null;
+  platform_playlist_url: string | null;
+  tracks_matched: number | null;
+  tracks_total: number | null;
+  error_message: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 // --- Ingest ---
 
 export interface DumpBatchesTable {
@@ -426,6 +476,10 @@ export interface Database {
   "auth.usage_quotas": UsageQuotasTable;
   "auth.billing_events": BillingEventsTable;
   "auth.user_saved_items": UserSavedItemsTable;
+  "auth.mixtapes": MixtapesTable;
+  "auth.mixtape_tracks": MixtapeTracksTable;
+  "auth.spotify_tokens": SpotifyTokensTable;
+  "auth.mixtape_export_jobs": MixtapeExportJobsTable;
 
   // Ingest
   "ingest.dump_batches": DumpBatchesTable;

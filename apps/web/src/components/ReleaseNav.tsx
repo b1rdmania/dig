@@ -4,49 +4,49 @@ import { isTraversalResponse, type TraversalResponse } from "@/lib/types";
 import styles from "./ReleaseNav.module.css";
 
 interface Props {
-  masterId: number;
-  currentReleaseId: number | null;
+  artistId: number;
+  currentMasterId: number | null;
 }
 
-/** Prev/Next navigation through pressings of a master release. Server component. */
-export async function ReleaseNav({ masterId, currentReleaseId }: Props) {
+/** Prev/Next navigation through an artist's catalogue. Server component. */
+export async function ReleaseNav({ artistId, currentMasterId }: Props) {
+  if (!currentMasterId) return null;
+
   const fallback: TraversalResponse = {
     links: [],
     pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "master", source_discogs_id: masterId, link_type: "releases", elapsed_ms: 0 },
+    meta: { source_type: "artist", source_discogs_id: artistId, link_type: "catalog_releases", elapsed_ms: 0 },
   };
 
   const data = await digFetch<TraversalResponse>(
-    `/v1/masters/${masterId}/releases?limit=100`,
+    `/v1/artists/${artistId}/catalog_releases?sort=newest&limit=500`,
     { revalidate: 300 },
   )
     .then((d) => (isTraversalResponse(d) ? d : fallback))
     .catch(() => fallback);
 
-  const versions = data.links;
-  if (versions.length <= 1) return null;
+  const masters = data.links;
+  if (masters.length <= 1) return null;
 
-  let idx = currentReleaseId
-    ? versions.findIndex((v) => v.discogs_id === currentReleaseId)
-    : 0;
-  if (idx === -1) idx = 0;
+  const idx = masters.findIndex((m) => m.discogs_id === currentMasterId);
+  if (idx === -1) return null;
 
-  const prev = idx > 0 ? versions[idx - 1] : null;
-  const next = idx < versions.length - 1 ? versions[idx + 1] : null;
+  const prev = idx > 0 ? masters[idx - 1] : null;
+  const next = idx < masters.length - 1 ? masters[idx + 1] : null;
 
   return (
-    <nav className={styles.nav} aria-label="Version navigation">
+    <nav className={styles.nav} aria-label="Artist catalogue navigation">
       {prev ? (
-        <Link href={`/version/${prev.discogs_id}`} className={styles.btn} prefetch={false}>
-          ← {prev.year ?? prev.discogs_id}
+        <Link href={`/release/${prev.discogs_id}`} className={styles.btn} prefetch={false}>
+          ← {prev.year ?? prev.title ?? prev.discogs_id}
         </Link>
       ) : (
         <span className={styles.btnOff}>←</span>
       )}
-      <span className={styles.counter}>{idx + 1} / {versions.length}</span>
+      <span className={styles.counter}>{idx + 1} / {masters.length}</span>
       {next ? (
-        <Link href={`/version/${next.discogs_id}`} className={styles.btn} prefetch={false}>
-          {next.year ?? next.discogs_id} →
+        <Link href={`/release/${next.discogs_id}`} className={styles.btn} prefetch={false}>
+          {next.year ?? next.title ?? next.discogs_id} →
         </Link>
       ) : (
         <span className={styles.btnOff}>→</span>

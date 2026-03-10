@@ -1,0 +1,127 @@
+.root {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.createRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--fg-muted);
+}
+
+.createBtn {
+  padding: 0.45rem 0.85rem;
+  background: var(--fg);
+  color: var(--bg);
+  border: 1px solid var(--fg);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.createBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.error {
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+}
+
+.loading,
+.empty {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+  gap: 0.5rem;
+}
+
+.itemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.itemTitle {
+  font-size: 0.875rem;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemMeta {
+  font-size: 0.75rem;
+  color: var(--fg-faint);
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  padding: 0 0.25rem;
+  font-size: 1.1rem;
+  color: var(--fg-faint);
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.deleteBtn:hover {
+  color: var(--fg-muted);
+}
+
+.exportNote {
+  font-size: 0.78rem;
+  color: var(--fg-faint);
+  margin-top: 0.25rem;
+}
+
+.gated {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.gatedText {
+  font-size: 0.875rem;
+  color: var(--fg);
+}
+
+.gatedSub {
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+}

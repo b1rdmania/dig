@@ -63,9 +63,9 @@ export default async function VersionPage({ params }: Props) {
         <Suspense fallback={<ReleaseHero release={release} coverUrl={null} />}>
           <VersionHeroWithCover release={release} id={id} />
         </Suspense>
-        {release.master_discogs_id ? (
+        {release.artists[0]?.discogs_id && release.master_discogs_id ? (
           <Suspense fallback={null}>
-            <ReleaseNav masterId={release.master_discogs_id} currentReleaseId={release.discogs_id} />
+            <ReleaseNav artistId={release.artists[0].discogs_id} currentMasterId={release.master_discogs_id} />
           </Suspense>
         ) : null}
         <MediaSection videos={release.videos} />
