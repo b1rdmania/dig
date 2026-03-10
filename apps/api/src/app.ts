@@ -41,7 +41,7 @@ export interface AppDeps {
 // Anonymous (by IP): 60 req/min
 // Keyed (X-API-Key header): 300 req/min
 // These are alpha values — will be adjusted based on production traffic patterns.
-const ANON_RATE_LIMIT = 60;
+const ANON_RATE_LIMIT = 180;
 const KEYED_RATE_LIMIT = 1000;
 
 // Load-test bypass: requests with this header skip rate limiting entirely.
@@ -68,7 +68,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   // --- CORS ---
   await app.register(cors, {
     origin: true,
-    methods: ["GET", "POST", "OPTIONS"],
+    methods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "X-API-Key", "X-Anthropic-API-Key", "X-Request-Id"],
     exposedHeaders: [
       "X-RateLimit-Limit",
