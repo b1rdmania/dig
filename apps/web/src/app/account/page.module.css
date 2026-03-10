@@ -156,3 +156,43 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+.emptyText {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+
+.savedList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.savedItem {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.45rem;
+}
+
+.savedLink {
+  color: var(--fg);
+  font-size: 0.9rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.savedText {
+  color: var(--fg);
+  font-size: 0.9rem;
+}
+
+.savedMeta {
+  color: var(--fg-faint);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}

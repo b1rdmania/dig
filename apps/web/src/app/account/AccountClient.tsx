@@ -16,6 +16,13 @@ interface Props {
   features: Record<string, boolean>;
   monthlyRequestLimit: number;
   checkoutStatus: string | null;
+  favorites: Array<{
+    id: string;
+    entity_type: "artist" | "release" | "version" | "label" | "track";
+    discogs_id: number;
+    list_type: "favorite" | "want";
+    created_at: string;
+  }>;
 }
 
 const PLAN_LABELS: Record<string, string> = {
@@ -23,6 +30,14 @@ const PLAN_LABELS: Record<string, string> = {
   early_access: "Early Access",
   team: "Team",
 };
+
+function hrefForFavorite(entityType: string, discogsId: number): string | null {
+  if (entityType === "artist") return `/artist/${discogsId}`;
+  if (entityType === "label") return `/label/${discogsId}`;
+  if (entityType === "release") return `/release/${discogsId}`;
+  if (entityType === "version") return `/version/${discogsId}`;
+  return null;
+}
 
 export function AccountClient({
   displayName,
@@ -33,6 +48,7 @@ export function AccountClient({
   features,
   monthlyRequestLimit,
   checkoutStatus,
+  favorites,
 }: Props) {
   const router = useRouter();
   const [upgrading, setUpgrading] = useState(false);
@@ -127,6 +143,32 @@ export function AccountClient({
             <li className={styles.featureItem} data-on={String(features.crates ?? false)}>
               {features.crates ? "✓" : "–"} Crates
             </li>
+          </ul>
+        )}
+      </section>
+
+      <section className={styles.section}>
+        <p className={styles.label}>Favorites</p>
+        {favorites.length === 0 ? (
+          <p className={styles.emptyText}>No favorites yet. Tap the heart on any artist, release, label, or version.</p>
+        ) : (
+          <ul className={styles.savedList}>
+            {favorites.map((item) => {
+              const href = hrefForFavorite(item.entity_type, item.discogs_id);
+              const title = `${item.entity_type} #${item.discogs_id}`;
+              return (
+                <li key={item.id} className={styles.savedItem}>
+                  {href ? (
+                    <a href={href} className={styles.savedLink}>{title}</a>
+                  ) : (
+                    <span className={styles.savedText}>{title}</span>
+                  )}
+                  <span className={styles.savedMeta}>
+                    saved {new Date(item.created_at).toLocaleDateString()}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

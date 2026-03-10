@@ -12,6 +12,21 @@ interface Entitlements {
   features: Record<string, boolean>;
 }
 
+type SavedEntityType = "artist" | "release" | "version" | "label" | "track";
+
+interface SavedItem {
+  id: string;
+  entity_type: SavedEntityType;
+  discogs_id: number;
+  list_type: "favorite" | "want";
+  created_at: string;
+}
+
+interface SavedItemsResponse {
+  items: SavedItem[];
+  count: number;
+}
+
 async function getEntitlements(token: string): Promise<Entitlements | null> {
   try {
     const res = await fetch(`${API_URL}/v1/billing/status`, {
@@ -22,6 +37,20 @@ async function getEntitlements(token: string): Promise<Entitlements | null> {
     return res.json() as Promise<Entitlements>;
   } catch {
     return null;
+  }
+}
+
+async function getFavorites(token: string): Promise<SavedItem[]> {
+  try {
+    const res = await fetch(`${API_URL}/v1/me/saved?list_type=favorite`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as SavedItemsResponse;
+    return data.items ?? [];
+  } catch {
+    return [];
   }
 }
 
@@ -39,7 +68,9 @@ export default async function AccountPage({
     searchParams,
   ]);
 
-  const entitlements = token ? await getEntitlements(token) : null;
+  const [entitlements, favorites] = token
+    ? await Promise.all([getEntitlements(token), getFavorites(token)])
+    : [null, []];
   const checkoutStatus = params.checkout ?? null;
 
   return (
@@ -52,6 +83,7 @@ export default async function AccountPage({
       features={entitlements?.features ?? {}}
       monthlyRequestLimit={entitlements?.monthly_request_limit ?? 500}
       checkoutStatus={checkoutStatus}
+      favorites={favorites}
     />
   );
 }
