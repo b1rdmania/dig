@@ -47,6 +47,20 @@ const VALID_EVENT_NAMES = new Set([
   "market_snapshot_viewed",
   "market_discogs_clicked",
   "web_404_viewed",
+  "favorite_toggled",
+  "favorites_list_viewed",
+  "favorite_reopened",
+  "favorite_removed",
+  "favorites_bulk_remove",
+  "mixtape_add_clicked",
+  "mixtape_add_succeeded",
+  "mixtape_add_failed",
+  "mixtape_upgrade_prompted",
+  "share_clicked",
+  "search_incremental_started",
+  "search_incremental_completed",
+  "search_incremental_aborted",
+  "search_incremental_error",
 ]);
 
 interface EventPayload {

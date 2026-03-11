@@ -191,3 +191,23 @@ export function trackIncrementalSearch(
 ): void {
   track(`search_incremental_${event}`, properties);
 }
+
+export function trackFavoritesListViewed(count: number): void {
+  track("favorites_list_viewed", { count });
+}
+
+export function trackFavoriteReopened(entityType: string, entityId: number, sourceSurface: string): void {
+  track("favorite_reopened", { entity_type: entityType, entity_id: entityId, source_surface: sourceSurface });
+}
+
+export function trackFavoriteRemoved(entityType: string, entityId: number, sourceSurface: string): void {
+  track("favorite_removed", { entity_type: entityType, entity_id: entityId, source_surface: sourceSurface });
+}
+
+export function trackFavoritesBulkRemove(count: number): void {
+  track("favorites_bulk_remove", { count });
+}
+
+export function trackRecentFavoriteClicked(entityType: string, entityId: number, position: number): void {
+  track("favorite_reopened", { entity_type: entityType, entity_id: entityId, source_surface: "recent_rail", position });
+}

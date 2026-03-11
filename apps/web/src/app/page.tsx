@@ -6,6 +6,7 @@ import { SearchResults } from "@/components/SearchResults";
 import { Empty } from "@/components/Empty";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { IncrementalSearchWrapper } from "@/components/IncrementalSearchWrapper";
+import { RecentFavoritesRail } from "@/components/RecentFavoritesRail";
 
 interface Props {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -108,6 +109,7 @@ export default async function SearchPage({ searchParams }: Props) {
           Dig.
         </h1>
       )}
+      {!hasQuery && <RecentFavoritesRail />}
       <Suspense>
         <IncrementalSearchWrapper>
           <SearchContent searchParams={resolved} />
