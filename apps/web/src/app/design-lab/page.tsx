@@ -7,53 +7,59 @@ export const metadata = {
 
 const links = [
   {
+    href: "/design-lab/live-v2",
+    label: "Live v2 (wired) — NEW",
+    status: "Live API",
+    detail: "New Variant-Dig shell with real data across search/artist/release/version/label.",
+  },
+  {
+    href: "/design-lab/live",
+    label: "Live v1 (legacy shell)",
+    status: "Legacy live",
+    detail: "Older Variant3 live shell kept as fallback for side-by-side comparison.",
+  },
+  {
     href: "/design-lab/variant-dig-desktop",
     label: "Variant Dig Desktop (imported)",
     status: "New import",
-    detail: "Design-only import. Not wired to live API data yet.",
+    detail: "Design-only import source (not directly wired).",
   },
   {
     href: "/design-lab/variant-dig-mobile",
     label: "Variant Dig Mobile (imported)",
     status: "New import",
-    detail: "Design-only import. Not wired to live API data yet.",
-  },
-  {
-    href: "/design-lab/live",
-    label: "Live data pages (legacy shell)",
-    status: "Live API",
-    detail: "Uses older Variant3 live shell with real Dig data.",
+    detail: "Design-only import source (not directly wired).",
   },
   {
     href: "/design-lab/variant-2",
     label: "Variant 2",
-    status: "Legacy",
+    status: "Legacy static",
     detail: "Static concept page.",
   },
   {
     href: "/design-lab/variant-3",
     label: "Variant 3",
-    status: "Legacy",
+    status: "Legacy static",
     detail: "Static concept page.",
   },
   {
     href: "/design-lab/variant-4",
     label: "Variant 4",
-    status: "Legacy",
+    status: "Legacy static",
     detail: "Static concept page.",
   },
   {
     href: "/design-lab/variant-5",
     label: "Variant 5",
-    status: "Legacy",
+    status: "Legacy static",
     detail: "Static concept page.",
   },
 ];
 
 export default function DesignLabIndex() {
-  const newImports = links.filter((link) => link.status === "New import");
-  const live = links.filter((link) => link.status === "Live API");
-  const legacy = links.filter((link) => link.status === "Legacy");
+  const live = links.filter((link) => link.status === "Live API" || link.status === "Legacy live");
+  const imports = links.filter((link) => link.status === "New import");
+  const legacy = links.filter((link) => link.status === "Legacy static");
 
   function renderLinks(items: typeof links) {
     return (
@@ -86,24 +92,27 @@ export default function DesignLabIndex() {
   }
 
   return (
-    <main style={{ padding: "2rem 1.5rem", maxWidth: "720px", margin: "0 auto" }}>
+    <main style={{ padding: "2rem 1.5rem", maxWidth: "760px", margin: "0 auto" }}>
       <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>Design Lab</h1>
-      <p style={{ opacity: 0.8, marginBottom: "1.25rem" }}>
+      <p style={{ opacity: 0.8, marginBottom: "0.5rem" }}>
         Isolated template variants. No impact on production flows.
+      </p>
+      <p style={{ opacity: 0.7, marginBottom: "1.25rem", fontSize: "0.9rem" }}>
+        Progress: `Live v2 (wired)` is the current fully plugged test surface. `Live v1` remains for comparison.
       </p>
 
       <section style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>New Imports</h2>
-        {renderLinks(newImports)}
-      </section>
-
-      <section style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>Live Data (Current)</h2>
+        <h2 style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>Live Data Surfaces</h2>
         {renderLinks(live)}
       </section>
 
+      <section style={{ marginBottom: "1.5rem" }}>
+        <h2 style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>New Imports (Design Only)</h2>
+        {renderLinks(imports)}
+      </section>
+
       <section>
-        <h2 style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>Legacy Variants</h2>
+        <h2 style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>Legacy Static Variants</h2>
         {renderLinks(legacy)}
       </section>
     </main>
