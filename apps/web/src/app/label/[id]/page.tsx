@@ -79,7 +79,10 @@ export async function generateMetadata({ params }: Props) {
   try {
     const data = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 });
     if (!isLabelResponse(data)) return { title: "Label — dig" };
-    return entityMetadata({ title: data.label.name, description: data.label.name, path: `/label/${id}`, type: "label" });
+    const l = data.label;
+    const profileSnippet = l.profile ? l.profile.replace(/\[.*?\]/g, "").trim().slice(0, 120) : null;
+    const desc = profileSnippet ? `${l.name}. ${profileSnippet}` : `${l.name} — record label on dig`;
+    return entityMetadata({ title: l.name, description: desc, path: `/label/${id}`, type: "label" });
   } catch {
     return { title: "Label — dig" };
   }

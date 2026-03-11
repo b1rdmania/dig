@@ -464,6 +464,9 @@ export interface UsageWindow {
   errors_total: number;
   telemetry_events_total: number;
   telemetry_by_event: Record<string, number>;
+  shares_total?: number;
+  shares_by_channel?: Record<string, number>;
+  share_to_pageview_ratio?: number | null;
 }
 
 export interface ApiUsageSnapshot {
@@ -484,6 +487,7 @@ export interface ApiUsageSnapshot {
     requests_by_category: Record<string, number>;
     telemetry_events_total: number;
     telemetry_by_event: Record<string, number>;
+    shares_by_channel?: Record<string, number>;
     routes: Array<{
       route: string;
       count: number;

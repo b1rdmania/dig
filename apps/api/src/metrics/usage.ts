@@ -84,6 +84,14 @@ export function recordTelemetryEvent(event: string, sessionId: string): void {
   queueDailyCounter(`event:${event}`);
 }
 
+const VALID_SHARE_CHANNELS = new Set(["copy", "x", "whatsapp", "native"]);
+
+export function recordShareChannel(channel: string): void {
+  if (!VALID_SHARE_CHANNELS.has(channel)) return;
+  queuePersistentCounter(`share_channel:${channel}`, 1);
+  queueDailyCounter("share_channel", channel);
+}
+
 function mapToObject<T extends string>(map: Map<T, number>): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [k, v] of map.entries()) out[k] = v;
@@ -128,6 +136,16 @@ function parseLifetimeCounterRows(rows: Array<{ counter_key: string; counter_val
     else if (key.startsWith("route_elapsed_ms:")) routeElapsed.set(key.slice("route_elapsed_ms:".length), value);
   }
 
+  const sharesByChannel: Record<string, number> = {};
+  for (const row of rows) {
+    if (row.counter_key.startsWith("share_channel:")) {
+      const channel = row.counter_key.slice("share_channel:".length);
+      const rawValue = row.counter_value;
+      const value = typeof rawValue === "number" ? rawValue : Number(rawValue);
+      if (Number.isFinite(value)) sharesByChannel[channel] = value;
+    }
+  }
+
   const routes = [...routeCounts.entries()]
     .map(([route, count]) => {
       const errors = routeErrors.get(route) ?? 0;
@@ -149,6 +167,7 @@ function parseLifetimeCounterRows(rows: Array<{ counter_key: string; counter_val
     requests_by_category: requestsByCategory,
     telemetry_events_total: telemetryEventsTotal,
     telemetry_by_event: telemetryByEventTotals,
+    shares_by_channel: sharesByChannel,
     routes,
   };
 }
@@ -178,6 +197,7 @@ async function getWindowSnapshot(days: number) {
     `.execute(dbRef);
 
     const byEvent: Record<string, number> = {};
+    const sharesByChannel: Record<string, number> = {};
     let requests = 0;
     let errors = 0;
     let telemetry = 0;
@@ -188,15 +208,24 @@ async function getWindowSnapshot(days: number) {
       if (key === "requests") requests += count;
       else if (key === "errors") errors += count;
       else if (key === "telemetry_events") telemetry += count;
-      else if (key.startsWith("event:"))
+      else if (key === "share_channel") {
+        const channel = row.entity_type;
+        if (channel) sharesByChannel[channel] = (sharesByChannel[channel] ?? 0) + count;
+      } else if (key.startsWith("event:"))
         byEvent[key.slice("event:".length)] = (byEvent[key.slice("event:".length)] ?? 0) + count;
     }
+
+    const sharesTotal = Object.values(sharesByChannel).reduce((a, b) => a + b, 0);
+    const pageViews = (byEvent["release_page_viewed"] ?? 0) + (byEvent["version_page_viewed"] ?? 0);
 
     return {
       requests_total: requests,
       errors_total: errors,
       telemetry_events_total: telemetry,
       telemetry_by_event: byEvent,
+      shares_total: sharesTotal,
+      shares_by_channel: sharesByChannel,
+      share_to_pageview_ratio: pageViews > 0 ? Math.round((sharesTotal / pageViews) * 1000) / 1000 : null,
     };
   } catch {
     return null;

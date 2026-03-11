@@ -75,9 +75,16 @@ export default async function UsagePage() {
   const funnelSearches = funnelSource["search_submitted"] ?? 0;
   const funnelClicks = funnelSource["search_result_clicked"] ?? 0;
   const funnelReleaseViews =
-    (funnelSource["release_page_view"] ?? 0) + (funnelSource["version_page_view"] ?? 0);
+    (funnelSource["release_page_viewed"] ?? 0) + (funnelSource["version_page_viewed"] ?? 0);
   const hasFunnel = funnelSearches > 0 || funnelClicks > 0 || funnelReleaseViews > 0;
   const funnelPeriod = apiUsage.windows?.last_7d != null ? "last 7 days" : "lifetime";
+
+  // Share funnel — use 7d window if available
+  const shareWindow = apiUsage.windows?.last_7d ?? null;
+  const sharesTotal = shareWindow?.shares_total ?? 0;
+  const sharesByChannel = shareWindow?.shares_by_channel ?? apiUsage.lifetime?.shares_by_channel ?? {};
+  const shareToPageview = shareWindow?.share_to_pageview_ratio ?? null;
+  const hasShareData = sharesTotal > 0 || Object.keys(sharesByChannel).length > 0;
 
   return (
     <div className={styles.page}>
@@ -170,6 +177,39 @@ export default async function UsagePage() {
                   <td className={styles.tdLabel}>Release / version page views</td>
                   <td className={styles.tdNum}>{formatNumber(funnelReleaseViews)}</td>
                   <td className={styles.tdNum}>{formatPct(funnelReleaseViews, funnelSearches)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {hasShareData && (
+        <section className={styles.section}>
+          <h2>Share funnel (last 7 days)</h2>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.thLabel}>Channel</th>
+                  <th className={styles.thNum}>Shares</th>
+                  <th className={styles.thNum}>% of total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(sharesByChannel).sort((a, b) => b[1] - a[1]).map(([channel, count]) => (
+                  <tr key={channel}>
+                    <td className={styles.tdLabel}>{channel}</td>
+                    <td className={styles.tdNum}>{formatNumber(count)}</td>
+                    <td className={styles.tdNum}>{formatPct(count, sharesTotal)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className={styles.tdLabel}><strong>Total</strong></td>
+                  <td className={styles.tdNum}><strong>{formatNumber(sharesTotal)}</strong></td>
+                  <td className={styles.tdNum}>
+                    {shareToPageview != null ? `${shareToPageview} share/view` : "—"}
+                  </td>
                 </tr>
               </tbody>
             </table>
