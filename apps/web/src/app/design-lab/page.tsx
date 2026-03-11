@@ -7,6 +7,8 @@ export const metadata = {
 
 const links = [
   { href: "/design-lab/live", label: "Live data pages (search/artist/release)" },
+  { href: "/design-lab/variant-dig-desktop", label: "Variant Dig Desktop (imported)" },
+  { href: "/design-lab/variant-dig-mobile", label: "Variant Dig Mobile (imported)" },
   { href: "/design-lab/variant-2", label: "Variant 2" },
   { href: "/design-lab/variant-3", label: "Variant 3" },
   { href: "/design-lab/variant-4", label: "Variant 4" },
