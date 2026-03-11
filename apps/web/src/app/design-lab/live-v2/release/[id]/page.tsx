@@ -37,13 +37,14 @@ export default async function DesignLabLiveV2ReleasePage({ params }: Props) {
   }
 
   const [versionsRes, mainReleaseRes] = await Promise.all([
-    digFetch<TraversalResponse>(`/v1/masters/${id}/releases?limit=40`, { revalidate: 300 }).catch(() => null),
+    digFetch<TraversalResponse>(`/v1/masters/${id}/releases?limit=120`, { revalidate: 300 }).catch(() => null),
     master.main_release_discogs_id
       ? digFetch<ReleaseResponse>(`/v1/releases/${master.main_release_discogs_id}`, { revalidate: 300 }).catch(() => null)
       : Promise.resolve(null),
   ]);
 
   const versions = versionsRes && isTraversalResponse(versionsRes) ? versionsRes.links : [];
+  const versionsTotal = versionsRes && isTraversalResponse(versionsRes) ? versionsRes.pagination.total_estimate : null;
   const mainRelease = mainReleaseRes && isReleaseResponse(mainReleaseRes) ? mainReleaseRes.release : null;
   const tracks = mainRelease?.tracks || [];
   const videos = topVideos(mainRelease?.videos || master.videos || [], 6);
@@ -60,7 +61,7 @@ export default async function DesignLabLiveV2ReleasePage({ params }: Props) {
       facts={[
         { label: "Year", value: master.year ? String(master.year) : "Unknown" },
         { label: "Tracks", value: String(tracks.length) },
-        { label: "Versions", value: String(versions.length) },
+        { label: "Versions", value: versionsTotal ? `${versions.length}/${versionsTotal}` : String(versions.length) },
         { label: "Videos", value: String(videos.length) },
       ]}
       actions={[
@@ -95,6 +96,7 @@ export default async function DesignLabLiveV2ReleasePage({ params }: Props) {
         subtitle: "Artist",
         href: `/design-lab/live-v2/artist/${a.discogs_id}`,
       }))}
+      mediaVideos={videos}
       footerNote="Live v2 status: Release page is fully wired (master + main release + versions). YouTube block is promoted to top-right and hero media." 
     />
   );

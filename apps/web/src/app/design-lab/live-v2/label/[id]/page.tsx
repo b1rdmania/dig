@@ -12,11 +12,12 @@ export default async function DesignLabLiveV2LabelPage({ params }: Props) {
 
   const [labelRes, releasesRes] = await Promise.all([
     digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 }).catch(() => null),
-    digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=40`, { revalidate: 300 }).catch(() => null),
+    digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=120`, { revalidate: 300 }).catch(() => null),
   ]);
 
   const label = labelRes && isLabelResponse(labelRes) ? labelRes.label : null;
   const releases = releasesRes && isTraversalResponse(releasesRes) ? releasesRes.links : [];
+  const releaseTotal = releasesRes && isTraversalResponse(releasesRes) ? releasesRes.pagination.total_estimate : null;
 
   if (!label) {
     return (
@@ -41,7 +42,7 @@ export default async function DesignLabLiveV2LabelPage({ params }: Props) {
       queryValue={label.name}
       searchTarget="/design-lab/live-v2/search"
       facts={[
-        { label: "Catalog", value: String(releases.length) },
+        { label: "Catalog", value: releaseTotal ? `${releases.length}/${releaseTotal}` : String(releases.length) },
         { label: "Parent", value: label.parent_label?.name || "None" },
         { label: "Links", value: String(label.urls.length) },
       ]}

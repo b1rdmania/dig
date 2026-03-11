@@ -32,7 +32,7 @@ export default async function DesignLabLiveV2ArtistPage({ params, searchParams }
   const [artistRes, releasesRes, creditsRes] = await Promise.all([
     digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }).catch(() => null),
     digFetch<TraversalResponse>(
-      `/v1/artists/${id}/catalog_releases?limit=40&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`,
+      `/v1/artists/${id}/catalog_releases?limit=120&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`,
       { revalidate: 300 },
     ).catch(() => null),
     digFetch<ArtistCreditsResponse>(`/v1/artists/${id}/credits?limit=24`, { revalidate: 300 }).catch(() => null),
@@ -40,6 +40,7 @@ export default async function DesignLabLiveV2ArtistPage({ params, searchParams }
 
   const artist = artistRes && isArtistResponse(artistRes) ? artistRes.artist : null;
   const releases = releasesRes && isTraversalResponse(releasesRes) ? releasesRes.links : [];
+  const releaseTotal = releasesRes && isTraversalResponse(releasesRes) ? releasesRes.pagination.total_estimate : null;
   const credits = creditsRes && isArtistCreditsResponse(creditsRes) ? creditsRes.links : [];
 
   if (!artist) {
@@ -69,7 +70,7 @@ export default async function DesignLabLiveV2ArtistPage({ params, searchParams }
       queryValue={artist.name}
       searchTarget="/design-lab/live-v2/search"
       facts={[
-        { label: "Releases", value: String(releases.length) },
+        { label: "Releases", value: releaseTotal ? `${releases.length}/${releaseTotal}` : String(releases.length) },
         { label: "Credits", value: String(credits.length) },
         { label: "Aliases", value: String(artist.aliases.length) },
       ]}

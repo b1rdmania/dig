@@ -81,6 +81,7 @@ export default async function DesignLabLiveV2VersionPage({ params }: Props) {
         subtitle: a.role || "Artist",
         href: `/design-lab/live-v2/artist/${a.discogs_id}`,
       }))}
+      mediaVideos={videos}
       footerNote="Live v2 status: Version page is fully wired (pressing + parent release link + media). Media is promoted to top-right." 
     />
   );

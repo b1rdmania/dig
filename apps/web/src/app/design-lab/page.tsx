@@ -13,12 +13,6 @@ const links = [
     detail: "New Variant-Dig shell with real data across search/artist/release/version/label.",
   },
   {
-    href: "/design-lab/live",
-    label: "Live v1 (legacy shell)",
-    status: "Legacy live",
-    detail: "Older Variant3 live shell kept as fallback for side-by-side comparison.",
-  },
-  {
     href: "/design-lab/variant-dig-desktop",
     label: "Variant Dig Desktop (imported)",
     status: "New import",
@@ -29,6 +23,12 @@ const links = [
     label: "Variant Dig Mobile (imported)",
     status: "New import",
     detail: "Design-only import source (not directly wired).",
+  },
+  {
+    href: "/design-lab/live",
+    label: "Live v1 (legacy shell)",
+    status: "Legacy live",
+    detail: "Older Variant3 live shell kept as fallback for side-by-side comparison.",
   },
   {
     href: "/design-lab/variant-2",
@@ -57,9 +57,9 @@ const links = [
 ];
 
 export default function DesignLabIndex() {
-  const live = links.filter((link) => link.status === "Live API" || link.status === "Legacy live");
+  const live = links.filter((link) => link.status === "Live API");
   const imports = links.filter((link) => link.status === "New import");
-  const legacy = links.filter((link) => link.status === "Legacy static");
+  const legacy = links.filter((link) => link.status === "Legacy static" || link.status === "Legacy live");
 
   function renderLinks(items: typeof links) {
     return (
@@ -98,7 +98,7 @@ export default function DesignLabIndex() {
         Isolated template variants. No impact on production flows.
       </p>
       <p style={{ opacity: 0.7, marginBottom: "1.25rem", fontSize: "0.9rem" }}>
-        Progress: `Live v2 (wired)` is the current fully plugged test surface. `Live v1` remains for comparison.
+        Progress: `Live v2 (wired)` is the current fully plugged test surface. Legacy routes are moved below.
       </p>
 
       <section style={{ marginBottom: "1.5rem" }}>

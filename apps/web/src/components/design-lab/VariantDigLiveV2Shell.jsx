@@ -85,6 +85,7 @@ function CardList({ items }) {
  * sideTopItems?: Array<{title: string; subtitle?: string; href?: string; external?: boolean}>;
  * sideBottomTitle?: string;
  * sideBottomItems?: Array<{title: string; subtitle?: string; href?: string; external?: boolean}>;
+ * mediaVideos?: Array<{title: string; url: string; embedUrl?: string | null; duration?: string; thumb?: string}>;
  * footerNote?: string;
  * }} props
  */
@@ -106,6 +107,7 @@ export default function VariantDigLiveV2Shell(props) {
     sideTopItems = [],
     sideBottomTitle = "More",
     sideBottomItems = [],
+    mediaVideos = [],
     footerNote,
   } = props;
 
@@ -126,9 +128,6 @@ export default function VariantDigLiveV2Shell(props) {
         <nav className={styles.nav}>
           <Link href="/design-lab/live-v2" className={styles.navLink}>
             Live v2
-          </Link>
-          <Link href="/design-lab/live" className={styles.navLink}>
-            Legacy live
           </Link>
         </nav>
       </header>
@@ -172,6 +171,36 @@ export default function VariantDigLiveV2Shell(props) {
                   </Link>
                 ))}
               </div>
+            ) : null}
+
+            {mediaVideos.length > 0 ? (
+              <section className={styles.mediaInline}>
+                <h2 className={styles.mediaInlineTitle}>YouTube</h2>
+                <div className={styles.mediaInlineGrid}>
+                  {mediaVideos.slice(0, 2).map((video, i) => (
+                    <div key={`${video.url}-${i}`} className={styles.mediaInlineCard}>
+                      {video.embedUrl ? (
+                        <iframe
+                          className={styles.mediaFrame}
+                          src={video.embedUrl}
+                          title={video.title}
+                          loading="lazy"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          referrerPolicy="strict-origin-when-cross-origin"
+                          allowFullScreen
+                        />
+                      ) : video.thumb ? (
+                        <a href={video.url} target="_blank" rel="noreferrer" className={styles.mediaThumbLink}>
+                          <img className={styles.mediaThumb} src={video.thumb} alt={video.title} />
+                        </a>
+                      ) : null}
+                      <a href={video.url} target="_blank" rel="noreferrer" className={styles.mediaCaption}>
+                        {video.title}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </section>
             ) : null}
           </div>
         </section>

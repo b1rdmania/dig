@@ -29,14 +29,35 @@ export function topVideos(videos: ReleaseVideo[] | undefined, limit = 6) {
   return videos
     .map((v) => {
       const thumb = youtubeThumbUrl(v.url);
+      const id = v.url ? extractYouTubeIdFromUrl(v.url) : null;
       if (!thumb) return null;
       return {
         url: v.url,
         title: v.title || "Untitled video",
         thumb,
         duration: formatDuration(v.duration_seconds),
+        embedUrl: id ? `https://www.youtube.com/embed/${id}` : null,
       };
     })
-    .filter((v): v is { url: string; title: string; thumb: string; duration: string } => Boolean(v))
+    .filter((v): v is { url: string; title: string; thumb: string; duration: string; embedUrl: string | null } => Boolean(v))
     .slice(0, limit);
+}
+
+function extractYouTubeIdFromUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "youtu.be") {
+      const id = u.pathname.slice(1);
+      return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+    }
+    if (u.hostname.endsWith("youtube.com")) {
+      const vParam = u.searchParams.get("v");
+      if (vParam && /^[A-Za-z0-9_-]{11}$/.test(vParam)) return vParam;
+      const embedMatch = u.pathname.match(/^\/embed\/([A-Za-z0-9_-]{11})$/);
+      if (embedMatch) return embedMatch[1];
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
