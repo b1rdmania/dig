@@ -8,6 +8,9 @@ import styles from "./Nav.module.css";
 
 export function Nav() {
   const pathname = usePathname();
+  const hideOnLiveV2 = pathname?.startsWith("/design-lab/live-v2");
+  if (hideOnLiveV2) return null;
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const [q, setQ] = useState(searchParams.get("q") || "");
