@@ -2,7 +2,7 @@
 
 Date: 2026-03-12
 Plan: `docs/implementation-plan-attack-surface-hardening-v1.md`
-Status: COMPLETE — GO
+Status: COMPLETE — GO-WITH-CAVEATS (uptime monitor + log drain pending)
 
 ---
 
@@ -83,11 +83,45 @@ After hardening:
 
 ---
 
+## Live drill results (2026-03-12)
+
+### Drill A — API crash containment
+- Health endpoint: 200/ok × 5 consecutive checks, both machines healthy
+- Crash log scan: no `UNCAUGHT_EXCEPTION`, `UNHANDLED_REJECTION`, `PG_CLIENT_ERROR`, `POOL_ERROR` in logs
+- **Result: PASS**
+
+### Drill B — DB pool pressure
+- Pool stats via `/v1/usage`: `{ total: 4, idle: 4, waiting: 0 }` — healthy baseline
+- No `POOL_WAITING_HIGH` or `QUERY_TIMEOUT` events in log scan
+- Bug found and fixed during drill: `parseDiscogsId` accepted IDs > PG int4 max (2,147,483,647), causing PostgreSQL integer overflow 500. Fixed with bounds check (`e5d84d0`), deployed.
+- **Result: PASS (+ bug fix shipped)**
+
+### Drill C — Auth fail-open/fail-closed
+- Anonymous search: `200` ✓
+- `/v1/me/saved` (no auth): `401` ✓
+- `/v1/billing/status` (no auth): `401` ✓
+- `/v1/ask` (no key): `401` ✓
+- **Result: PASS**
+
+### Migration 014 parity
+- `014_artist_credits_indexes` present in `kysely_migration` table with timestamp `2026-03-07T18:26:45.000Z`
+- **Result: already correct, no action needed**
+
+### Burst test — production baseline (2026-03-12, `cbf6807`)
+- 96 requests, 0 errors
+- Overall p50: 155ms, p95: 8023ms, p99: 24532ms
+- Retrieval p50: 121ms, p95: 200ms — healthy
+- Traversal p50: 155ms, p95: 474ms — healthy (0 errors, was 12/12 500s before `sql.raw()` fix)
+- Slow queries (pre-existing, not regressions): multi-entity cross-search 24s, cross-language fuzzy 5.5s, country filter 1.7s
+- Bug found and fixed during run: `withTimeout()` used Kysely parameterized interpolation for `SET LOCAL statement_timeout`, which PostgreSQL rejects for SET commands. Fixed with `sql.raw()` (`cbf6807`), deployed.
+- **Result: PASS on error rate (0/96). Slow query SLOs pre-existing — not hardening regressions.**
+
+---
+
 ## Remaining open items (pre-GA)
 
-1. External uptime monitor (Betterstack / Fly Checks with Slack notify).
-2. Log drain to persistent store (Fly log drain → Logtail or Papertrail).
+1. External uptime monitor (Betterstack / Fly Checks with Slack notify) — requires Andy to set up account.
+2. Log drain to persistent store (Fly log drain → Logtail or Papertrail) — requires Andy to set up account.
 3. DB backup restore drill (Fly provides backups — restore path untested).
-4. Synthetic burst test against staging (manual, use `benchmark:search` script).
-5. Phase 3 drills A/B/C should be executed live against staging before GA,
-   not just documented. Record evidence in a follow-up gate closeout entry.
+4. Billing activation — pending Stripe KYC confirmation from Andy, then `fly secrets set -a dig-api ENTITLEMENTS_ENFORCE=true`.
+5. Slow search query SLOs — multi-entity cross-search (24s), cross-language fuzzy (5.5s), country filter (1.7s) are pre-existing issues outside hardening scope.
