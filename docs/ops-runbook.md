@@ -372,11 +372,243 @@ psql "postgresql://postgres:<password>@localhost:15432/dig" -c "
 
 ---
 
-## Monitoring Gaps (Alpha)
+---
 
-These are known gaps in the staging alpha. Not blockers for soft launch, but should be addressed before GA:
+## Monitoring and Alert Patterns
 
-- No external uptime monitoring (Fly health checks only)
-- No alerting pipeline — timeout warnings go to stdout (Fly logs)
-- No dashboards — metrics are in structured JSON logs only
-- No automated backup verification (Fly Postgres has daily backups, but untested restore)
+All API events emit structured JSON to stdout. `fly logs -a dig-api` is the primary log stream. Commands below can be run in any terminal with `flyctl` installed.
+
+### Live log tailing by event code
+
+```bash
+# Process-level crashes (fatal — page immediately)
+fly logs -a dig-api | grep -E '"code":"UNCAUGHT_EXCEPTION|UNHANDLED_REJECTION"'
+
+# DB pool waiting threshold breach (>= 3 waiting connections)
+fly logs -a dig-api | grep '"code":"POOL_WAITING_HIGH"'
+
+# DB client / pool errors (PG connection drops)
+fly logs -a dig-api | grep -E '"code":"POOL_ERROR|PG_CLIENT_ERROR"'
+
+# Auth provider unavailable (Clerk network failure, not bad tokens)
+fly logs -a dig-api | grep '"code":"AUTH_PROVIDER_UNAVAILABLE"'
+
+# Route-level query timeouts
+fly logs -a dig-api | grep '"code":"QUERY_TIMEOUT"'
+
+# All 5xx responses
+fly logs -a dig-api | grep '"status":5'
+```
+
+### Snapshot queries (non-tailing, last N minutes)
+
+```bash
+# 5xx count by route in last 100 log lines
+fly logs -a dig-api --no-tail | grep '"status":5' | jq -r .route | sort | uniq -c | sort -rn
+
+# Timeout count by route
+fly logs -a dig-api --no-tail | grep '"code":"QUERY_TIMEOUT"' | jq -r .route | sort | uniq -c | sort -rn
+
+# Pool waiting events in last 100 lines
+fly logs -a dig-api --no-tail | grep '"code":"POOL_WAITING_HIGH"' | jq '{pool_total,pool_idle,pool_waiting,ts}'
+```
+
+### Alert thresholds (treat as actionable)
+
+| Signal | Threshold | Severity |
+|--------|-----------|----------|
+| `UNCAUGHT_EXCEPTION` or `UNHANDLED_REJECTION` | Any occurrence | P0 — investigate immediately |
+| `POOL_ERROR` or `PG_CLIENT_ERROR` | Any occurrence | P1 — check DB connectivity |
+| `POOL_WAITING_HIGH` | ≥ 3 occurrences within 5 min | P1 — DB under pressure |
+| `AUTH_PROVIDER_UNAVAILABLE` | ≥ 3 occurrences within 5 min | P1 — Clerk outage likely |
+| 5xx on any single route | ≥ 5 in 10 min | P2 — investigate route |
+| `QUERY_TIMEOUT` across all routes | > 5% of requests | P2 — DB or query plan issue |
+
+### Usage/health snapshot
+
+```bash
+# Health + pool stats + timeout rates
+curl -s https://dig-api.fly.dev/v1/health | jq '{status, postgres, timeout_stats}'
+
+# Pool stats from usage endpoint
+curl -s https://dig-api.fly.dev/v1/usage | jq '.pool'
+
+# Machine restart count (check for crash loops)
+fly status -a dig-api
+```
+
+---
+
+## Incident Drills
+
+### Drill A — API process crash
+
+**Trigger signals:**
+- `UNCAUGHT_EXCEPTION` or `UNHANDLED_REJECTION` in logs
+- Fly health check fails, machine restarts
+- Web renders degraded/fallback states
+
+**Diagnosis steps:**
+```bash
+# 1. Check machine state
+fly status -a dig-api
+
+# 2. Find the crash log
+fly logs -a dig-api | grep -E '"code":"UNCAUGHT_EXCEPTION|UNHANDLED_REJECTION"' | jq '{ts,code,message,stack}'
+
+# 3. Check if both machines are healthy (one may still serve)
+fly machines list -a dig-api
+
+# 4. Verify health endpoint is reachable (Fly restarts automatically)
+curl -s https://dig-api.fly.dev/v1/health | jq .status
+```
+
+**Recovery:**
+- Fly auto-restarts crashed machines. If health returns `ok` within 60s: no action needed.
+- If crash repeats (> 2 restarts in 10 min):
+  ```bash
+  # Roll back to last known-good image
+  fly releases -a dig-api
+  fly deploy --image registry.fly.io/dig-api:<previous-id> --config fly.api.toml
+  ```
+- Capture `message` + `stack` from `UNCAUGHT_EXCEPTION` log — file as P0 bug before next deploy.
+
+**Gate criteria for drill:** Log a crash (kill -9 or forced exit), confirm Fly restarts machine within 60s, confirm health returns ok, confirm `UNCAUGHT_EXCEPTION` appears in logs.
+
+---
+
+### Drill B — DB connection exhaustion
+
+**Trigger signals:**
+- `POOL_WAITING_HIGH` recurring in logs
+- `POOL_ERROR` or `PG_CLIENT_ERROR` events
+- API 500s with "connection timeout" or "too many clients" in internal logs
+- `pool.waiting > 0` in `/v1/usage` response
+
+**Diagnosis steps:**
+```bash
+# 1. Check pool stats live
+curl -s https://dig-api.fly.dev/v1/usage | jq '.pool'
+# Expected healthy: { total: <=10, idle: >0, waiting: 0 }
+# Unhealthy: waiting > 0 sustained, or total = max with idle = 0
+
+# 2. Check POOL_WAITING_HIGH frequency
+fly logs -a dig-api --no-tail | grep 'POOL_WAITING_HIGH' | wc -l
+
+# 3. Check actual PG connections
+fly ssh console -a dig-db -C "psql -U postgres dig -c \"SELECT state, count(*) FROM pg_stat_activity GROUP BY state;\""
+
+# 4. Find long-running queries holding connections
+fly ssh console -a dig-db -C "psql -U postgres dig -c \"SELECT pid, state, now() - query_start AS duration, left(query, 80) FROM pg_stat_activity WHERE state = 'active' ORDER BY duration DESC LIMIT 10;\""
+```
+
+**Recovery:**
+- **Idle connections piling up:** Terminate stale idle connections:
+  ```bash
+  fly ssh console -a dig-db -C "psql -U postgres dig -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle' AND query_start < now() - interval '5 minutes';\""
+  ```
+- **Active connections at limit:** A long-running query is blocking the pool. Kill it:
+  ```bash
+  fly ssh console -a dig-db -C "psql -U postgres dig -c \"SELECT pg_cancel_backend(<pid>);\""
+  ```
+- **Sustained exhaustion:** Scale Postgres VM:
+  ```bash
+  fly scale vm shared-cpu-4x --memory 2048 -a dig-db
+  ```
+- **App-side:** Pool is capped at `max: 10`. If 2 API machines × 10 = 20 connections is hitting DB limit, reduce to `max: 8` in `packages/db/src/index.ts` and redeploy.
+
+**Gate criteria for drill:** Observe `POOL_WAITING_HIGH` log at least once (can simulate by temporarily reducing `max` to 2 in a local test), verify warning fires, verify pool stats in `/v1/usage` show the count.
+
+---
+
+### Drill C — Auth provider outage (Clerk)
+
+**Trigger signals:**
+- `AUTH_PROVIDER_UNAVAILABLE` in logs (≥ 3 occurrences in 5 min)
+- Signed-in users can't access `/account` or saved items
+- Anonymous search and entity pages continue to work normally
+
+**Diagnosis steps:**
+```bash
+# 1. Check for AUTH_PROVIDER_UNAVAILABLE logs
+fly logs -a dig-api | grep '"code":"AUTH_PROVIDER_UNAVAILABLE"' | jq '{ts,detail}'
+
+# 2. Verify anonymous search still works (must be unaffected)
+curl -s "https://dig-api.fly.dev/v1/search?q=radiohead&limit=3" | jq '.results | length'
+
+# 3. Verify Clerk status (external)
+# Check: https://status.clerk.com
+
+# 4. Check web fallback — signed-in pages should show auth error, not crash
+curl -s https://app.dig.baby/account -o /dev/null -w "%{http_code}"
+```
+
+**Recovery:**
+- **Clerk outage confirmed:** No action needed on our side. Anonymous search continues. Auth routes return 401. Users see "Sign in required." This is the correct fail-closed behavior.
+- **False positive (our CLERK_SECRET_KEY rotated):** Update secret:
+  ```bash
+  fly secrets set -a dig-api CLERK_SECRET_KEY=sk_live_...
+  fly secrets set -a dig-web CLERK_SECRET_KEY=sk_live_...
+  ```
+- **Partial Clerk degradation:** If JWT verification works but `clerk.users.getUser()` fails, `resolveUser` returns null and paid routes fail closed. Acceptable degradation — no escalation needed unless outage > 30 min.
+
+**Gate criteria for drill:** Set `CLERK_SECRET_KEY` to a garbage value temporarily, confirm `AUTH_PROVIDER_UNAVAILABLE` or `AUTH_VERIFY_FAILED` appears in logs, confirm anonymous search returns 200, confirm `/v1/me/saved` returns 401, restore correct key.
+
+---
+
+## Rollback Playbooks (Type B/C changes)
+
+### Route budget changes (statement_timeout values)
+
+**File:** `apps/api/src/routes/v1/entities.ts`, `traversal.ts`
+
+**Risk:** Lowering a timeout could cause legitimate slow queries to 504 that previously succeeded.
+
+**Rollback:**
+```bash
+# Revert timeout constants and redeploy
+fly releases -a dig-api
+fly deploy --image registry.fly.io/dig-api:<previous-id> --config fly.api.toml
+```
+
+**Signal to rollback:** Spike in 504 `QUERY_TIMEOUT` on routes that were previously stable.
+
+### Rate limit changes
+
+**File:** `apps/api/src/app.ts`, individual route configs
+
+**Risk:** Too-tight limits on legitimate API key holders.
+
+**Rollback:**
+```bash
+# Bump ANON_RATE_LIMIT or remove route-level override, redeploy
+fly deploy --config fly.api.toml --remote-only
+```
+
+**Signal to rollback:** API key holders consistently hitting 429 on non-burst traffic.
+
+### Pool config changes
+
+**File:** `packages/db/src/index.ts` — `POOL_CONFIG`
+
+**Risk:** Reducing `max` could increase `POOL_WAITING_HIGH` frequency; increasing `max` could exhaust DB connections.
+
+**Rollback:** Revert `max` value in `POOL_CONFIG` and redeploy API.
+
+**Signal to rollback:** `POOL_WAITING_HIGH` frequency increases, or `pg_stat_activity` shows connection count near DB limit.
+
+---
+
+## Monitoring Gaps (Remaining)
+
+Closed in hardening v1:
+- ~~No structured crash logging~~ → `UNCAUGHT_EXCEPTION` / `UNHANDLED_REJECTION` in server.ts
+- ~~No pool telemetry~~ → `POOL_WAITING_HIGH` log + pool stats in `/v1/usage`
+- ~~No auth error visibility~~ → `AUTH_PROVIDER_UNAVAILABLE` / `AUTH_VERIFY_FAILED` codes
+- ~~No route-level timeouts on traversal~~ → all routes now have bounded `SET LOCAL` timeouts
+
+Still open (pre-GA):
+- No external uptime monitoring (Fly health checks only — no PagerDuty/Betterstack)
+- No dashboards — all metrics are structured JSON logs, no time-series aggregation
+- No automated backup verification (Fly Postgres has daily backups, restore untested)
+- No log drain — logs are ephemeral in Fly, lost after 7 days unless forwarded
