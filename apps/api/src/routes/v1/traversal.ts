@@ -86,7 +86,8 @@ async function withTimeout<T>(
   fn: (trx: Kysely<Database>) => Promise<T>,
 ): Promise<T> {
   return db.transaction().execute(async (trx) => {
-    await sql`SET LOCAL statement_timeout = ${timeoutMs.toString()}`.execute(trx);
+    // sql.raw() is required — SET LOCAL does not accept parameterized values ($1).
+    await sql`SET LOCAL statement_timeout = ${sql.raw(String(timeoutMs))}`.execute(trx);
     return fn(trx);
   });
 }
