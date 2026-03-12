@@ -22,6 +22,7 @@ This file defines which document to use for what.
 5. `docs/better-than-discogs-track.md` (active quality improvement stream)
 6. `docs/implementation-plan-clerk-stripe-entitlements-v1.md` (auth, billing, entitlement rollout)
 7. `docs/implementation-plan-attack-surface-hardening-v1.md` (active platform resilience and incident hardening)
+8. `docs/implementation-plan-performance-hardening-v2.md` (active query performance and anti-brownout hardening)
 
 ## Contracts and Policies
 
