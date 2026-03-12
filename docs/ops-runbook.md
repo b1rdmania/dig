@@ -612,3 +612,96 @@ Still open (pre-GA):
 - No dashboards — all metrics are structured JSON logs, no time-series aggregation
 - No automated backup verification (Fly Postgres has daily backups, restore untested)
 - No log drain — logs are ephemeral in Fly, lost after 7 days unless forwarded
+
+---
+
+## Performance Protect Mode
+
+Activate when: sustained p99 > 2s, 5xx > 1%, POOL_WAITING_HIGH repeated, or `LOAD_SHED` events spiking.
+
+### Signals
+
+```bash
+# LOAD_SHED events (heavy lane or traversal at concurrency cap)
+fly logs -a dig-api | grep LOAD_SHED
+
+# Timeout rate per search category (15-min window)
+curl -s https://dig-api.fly.dev/v1/health | jq '.timeout_stats'
+
+# Pool pressure
+curl -s https://dig-api.fly.dev/v1/usage | jq '.pool'
+
+# 5xx rate from logs
+fly logs -a dig-api | grep '"statusCode":5' | wc -l
+```
+
+### Triage decision tree
+
+```
+Is pool.waiting >= 3?
+  YES → DB is the bottleneck
+        → Check active queries: fly proxy 15432:5432 -a dig-db && psql -c "SELECT pid, now()-pg_stat_activity.query_start AS elapsed, query FROM pg_stat_activity WHERE state='active' ORDER BY elapsed DESC LIMIT 10;"
+        → Kill long-running queries: SELECT pg_terminate_backend(pid) WHERE elapsed > '30s'
+        → Tighten heavy lane: restart API with HEAVY_LANE_CONCURRENCY=4 (fly secrets set then deploy)
+
+Is LOAD_SHED spiking but pool healthy?
+  YES → Heavy lane at capacity, core lane protected
+        → Monitor: if core lane still degraded, scale API machines (see Scale Up below)
+        → If acceptable: no action (load shedding is working as designed)
+
+Is it a single route causing timeouts?
+  YES → Check SCOPE_TIMEOUT_MS in traversal.ts — reduce timeout for that route
+        → Or temporarily disable route via feature flag / emergency 503
+
+Is it multi-entity search (no type filter)?
+  YES → Consider enforcing type= requirement temporarily via API response hint
+        → This is the known 24s worst case (4 serial DB calls on cold cache)
+```
+
+### Actions by severity
+
+**P0 — Active brownout (users seeing errors now)**
+
+1. Scale API machines immediately:
+   ```bash
+   fly scale count 3 -a dig-api
+   ```
+2. Reduce heavy-lane concurrency (env var — restart required):
+   ```bash
+   # In traversal.ts/search.ts, HEAVY_LANE_CONCURRENCY and TRAVERSAL_HEAVY_CONCURRENCY are
+   # compile-time constants. For immediate relief, scale API machines instead.
+   ```
+3. If DB overwhelmed, kill slow queries:
+   ```bash
+   fly proxy 15432:5432 -a dig-db
+   psql postgresql://postgres@localhost:15432/dig \
+     -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state='active' AND now()-query_start > interval '10 seconds';"
+   ```
+4. Restore machines after incident clears:
+   ```bash
+   fly scale count 2 -a dig-api
+   ```
+
+**P1 — Degraded performance (elevated latency, no hard errors)**
+
+1. Run warmup queries to repopulate DB shared_buffers:
+   ```bash
+   curl -s "https://dig-api.fly.dev/v1/search?q=radiohead&type=artist" > /dev/null
+   curl -s "https://dig-api.fly.dev/v1/search?q=dark+side+moon&type=master" > /dev/null
+   curl -s "https://dig-api.fly.dev/v1/artists/3840/catalog_releases?limit=20" > /dev/null
+   ```
+2. Check for missing index after migration: run `EXPLAIN ANALYZE` on slow query.
+3. If fuzzy search is slow: pg_trgm stats may be stale — `ANALYZE catalog.artists;`
+
+**P2 — Elevated LOAD_SHED rate but no user impact**
+
+1. Monitor for 15 minutes — if LOAD_SHED clears, no action needed.
+2. If sustained, review which clients are hammering filtered release search.
+3. Consider tightening `HEAVY_RATE_LIMIT` from 30/min to 15/min for that route.
+
+### Gate criteria to exit Protect Mode
+
+- LOAD_SHED events < 1% of search requests over 15 minutes
+- pool.waiting = 0 for 5 consecutive `/v1/usage` checks
+- timeout_stats shows no category at > 1% rate
+- `/v1/health` returning 200 on both machines

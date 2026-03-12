@@ -133,6 +133,30 @@ function trackRequest(category: string, timedOut: boolean): void {
   }
 }
 
+/**
+ * Classify a search request as core or heavy lane.
+ *
+ * Heavy lane: release searches with structured filters (genre/style/country/year).
+ * These hit expensive GIN+EXISTS or multi-filter join paths and must not starve
+ * unfiltered FTS queries on smaller entity tables.
+ *
+ * Core lane: everything else — artist/label/master FTS, unfiltered release FTS,
+ * multi-entity text-only queries.
+ */
+export type SearchLane = "core" | "heavy";
+
+export function classifySearchLane(params: SearchParams): SearchLane {
+  const hasFilters = !!(
+    params.genre || params.style || params.country ||
+    params.year !== undefined || params.yearMin !== undefined || params.yearMax !== undefined
+  );
+  // Any filtered query that touches releases (multi-entity or type=release) is heavy.
+  // type=artist/label/master with filters stays core — those tables are small.
+  const touchesRelease = !params.type || params.type === "release";
+  if (hasFilters && touchesRelease) return "heavy";
+  return "core";
+}
+
 /** Expose timeout stats for health/metrics endpoints */
 export function getTimeoutStats(): Record<string, { total: number; timeouts: number; rate: number }> {
   const now = Date.now();

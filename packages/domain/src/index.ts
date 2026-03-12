@@ -13,11 +13,13 @@ export {
   validateSearchParams,
   isBroadQuery,
   getTimeoutStats,
+  classifySearchLane,
   type SearchParams,
   type SearchResponse,
   type SearchResult,
   type SearchEntityType,
   type SearchError,
+  type SearchLane,
 } from "./search.js";
 export {
   getArtist,

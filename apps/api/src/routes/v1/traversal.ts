@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import { sql } from "@dig/db";
+import { Semaphore } from "../../lib/semaphore.js";
 import {
   getArtistReleases,
   getArtistMasters,
@@ -102,6 +103,32 @@ function timeoutReply(reply: any) {
 // Artist catalog_releases and credits involve large joins over 18M+ rows.
 const HEAVY_RATE_LIMIT = { max: 30, timeWindow: "1 minute" };
 
+// Per-machine concurrency cap for heavy traversal (catalog_releases + credits).
+// Rate limits cap throughput; concurrency caps cap simultaneous in-flight requests.
+// At cap, shed immediately with 503 rather than queuing behind 15s transactions.
+const TRAVERSAL_HEAVY_CONCURRENCY = 5;
+const traversalHeavySemaphore = new Semaphore(TRAVERSAL_HEAVY_CONCURRENCY);
+
+function shedTraversal(reply: any, route: string): unknown {
+  console.warn(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      level: "warn",
+      code: "LOAD_SHED",
+      route,
+      lane: "traversal_heavy",
+      semaphore_available: traversalHeavySemaphore.available,
+    }),
+  );
+  return reply.status(503).send({
+    error: {
+      code: "LOAD_SHED",
+      message: "Server is under load. Try again shortly.",
+      details: null,
+    },
+  });
+}
+
 export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Database>) {
   app.get("/v1/artists/:discogs_id/releases", async (req, reply) => {
     const discogsId = parseDiscogsId((req.params as any).discogs_id);
@@ -150,6 +177,8 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
         error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
       });
     }
+    const release = traversalHeavySemaphore.tryAcquire();
+    if (!release) return shedTraversal(reply, "/v1/artists/:discogs_id/catalog_releases");
     try {
       const { batchId, dumpDate } = await getTraversalBatchInfo(db, "artist_catalog_releases");
       const { limit, cursor, sort, releaseType } = parseTraversalQuery(req.query as any);
@@ -159,6 +188,8 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
     } catch (err) {
       if (isPgTimeout(err)) return timeoutReply(reply);
       throw err;
+    } finally {
+      release();
     }
   });
 
@@ -229,6 +260,8 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
         error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
       });
     }
+    const release = traversalHeavySemaphore.tryAcquire();
+    if (!release) return shedTraversal(reply, "/v1/artists/:discogs_id/credits");
     try {
       const { batchId, dumpDate } = await getTraversalBatchInfo(db, "artist_credits");
       const { limit, cursor } = parseTraversalQuery(req.query as any);
@@ -242,6 +275,8 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
     } catch (err) {
       if (isPgTimeout(err)) return timeoutReply(reply);
       throw err;
+    } finally {
+      release();
     }
   });
 

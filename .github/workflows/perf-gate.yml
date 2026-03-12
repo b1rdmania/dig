@@ -1,0 +1,41 @@
+name: Daily Performance Gate
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 8 * * *"  # Daily at 8:00am UTC (30 min after regression smoke)
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run benchmark against production
+        env:
+          BENCHMARK_API_KEY: ${{ secrets.BENCHMARK_API_KEY }}
+        run: |
+          ARGS="--base-url https://dig-api.fly.dev --runs 2"
+          if [ -n "$BENCHMARK_API_KEY" ]; then
+            ARGS="$ARGS --api-key $BENCHMARK_API_KEY"
+          fi
+          npx tsx apps/api/src/benchmark.ts $ARGS | tee benchmark-result.txt
+
+      - name: Upload benchmark artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-gate-${{ github.run_id }}
+          path: benchmark-result.txt
+          retention-days: 90
