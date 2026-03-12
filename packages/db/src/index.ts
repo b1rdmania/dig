@@ -9,6 +9,18 @@ export type { Database } from "./schema.js";
 
 export function createDb(connectionString: string): Kysely<Database> {
   const pool = new pg.Pool({ connectionString });
+  pool.on("connect", (client) => {
+    client.on("error", (err) => {
+      // Checked-out clients can emit "error" and crash the process if no
+      // listener is attached on the client itself.
+      console.error(JSON.stringify({
+        ts: new Date().toISOString(),
+        level: "error",
+        code: "PG_CLIENT_ERROR",
+        message: err.message,
+      }));
+    });
+  });
   pool.on("error", (err) => {
     // Prevent unhandled 'error' event from crashing the Node process.
     // pg emits this when a pooled connection drops unexpectedly (e.g. during
