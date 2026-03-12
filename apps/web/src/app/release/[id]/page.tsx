@@ -287,8 +287,8 @@ async function ReleaseDetails({ mainReleaseId }: { mainReleaseId: number | null 
 
   return (
     <>
-      <Tracklist tracks={mainRelease.tracks} />
       <MediaSection videos={mainRelease.videos} />
+      <Tracklist tracks={mainRelease.tracks} />
       <Credits credits={mainRelease.credits} />
       {mainRelease.notes && (
         <section className={styles.section}>
