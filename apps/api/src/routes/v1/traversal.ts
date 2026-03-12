@@ -54,9 +54,11 @@ function getTraversalBatchInfo(db: Kysely<Database>, scope: TraversalScope) {
   return getBatchForTable(db, SCOPE_TABLE[scope]);
 }
 
+const PG_INT4_MAX = 2_147_483_647;
+
 function parseDiscogsId(raw: string): number | null {
   const id = parseInt(raw, 10);
-  return isNaN(id) || id < 1 ? null : id;
+  return isNaN(id) || id < 1 || id > PG_INT4_MAX ? null : id;
 }
 
 const VALID_SORTS = ["newest", "oldest"] as const;
