@@ -1,6 +1,12 @@
 import type { Kysely } from "@dig/db";
-import { sql } from "@dig/db";
+import { sql, getPoolStats } from "@dig/db";
 import type { Database } from "@dig/db";
+
+interface PgPoolLike {
+  totalCount: number;
+  idleCount: number;
+  waitingCount: number;
+}
 
 type Category = "search" | "retrieval" | "traversal" | "telemetry" | "health" | "other";
 
@@ -22,7 +28,9 @@ const MAX_DAILY_COUNTER_ENTRIES = 10_000;
 const FLUSH_INTERVAL_MS = 10_000;
 
 let dbRef: Kysely<Database> | null = null;
+let poolRef: PgPoolLike | null = null;
 let flushTimer: NodeJS.Timeout | null = null;
+const POOL_WAITING_WARN_THRESHOLD = 3;
 let flushing = false;
 const pendingCounters = new Map<string, number>();
 const pendingDailyCounters = new Map<string, number>();
@@ -285,12 +293,26 @@ async function flushPendingDailyCounters(): Promise<void> {
   }
 }
 
-export function initUsagePersistence(db: Kysely<Database>): void {
+export function initUsagePersistence(db: Kysely<Database> & { _pool?: PgPoolLike }): void {
   dbRef = db;
+  poolRef = db._pool ?? null;
   if (flushTimer) return;
   flushTimer = setInterval(() => {
     void flushPendingCounters();
     void flushPendingDailyCounters();
+    if (poolRef) {
+      const stats = getPoolStats(poolRef);
+      if (stats.waiting >= POOL_WAITING_WARN_THRESHOLD) {
+        console.warn(JSON.stringify({
+          ts: new Date().toISOString(),
+          level: "warn",
+          code: "POOL_WAITING_HIGH",
+          pool_total: stats.total,
+          pool_idle: stats.idle,
+          pool_waiting: stats.waiting,
+        }));
+      }
+    }
   }, FLUSH_INTERVAL_MS);
   flushTimer.unref();
 }
@@ -312,6 +334,8 @@ export async function getUsageSnapshot() {
     getWindowSnapshot(30),
   ]);
 
+  const pool = poolRef ? getPoolStats(poolRef) : null;
+
   return {
     service: "dig-api",
     window: "since_process_start",
@@ -323,6 +347,7 @@ export async function getUsageSnapshot() {
     telemetry_events_total: [...telemetryByEvent.values()].reduce((a, b) => a + b, 0),
     telemetry_by_event: mapToObject(telemetryByEvent),
     unique_sessions_estimate: uniqueSessions.size,
+    pool,
     lifetime,
     windows: {
       last_24h: last24h,

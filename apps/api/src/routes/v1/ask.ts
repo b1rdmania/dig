@@ -747,7 +747,13 @@ interface AskBody {
 const ENTITLEMENTS_ENFORCE = process.env.ENTITLEMENTS_ENFORCE === "true";
 
 export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
-  app.post("/v1/ask", async (req: FastifyRequest<{ Body: AskBody }>, reply) => {
+  app.post("/v1/ask", {
+    config: {
+      // Ask is expensive (LLM + DB). 10 req/min per IP regardless of key.
+      // Private-key holders are trusted but still bounded to prevent runaway loops.
+      rateLimit: { max: 10, timeWindow: "1 minute" },
+    },
+  }, async (req: FastifyRequest<{ Body: AskBody }>, reply) => {
     const auth = requirePrivateKey(req);
     if (!auth.ok) return reply.status(auth.status).send(auth.body);
 
