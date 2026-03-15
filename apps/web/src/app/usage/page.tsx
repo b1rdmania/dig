@@ -49,10 +49,28 @@ function WindowRow({ label, window }: WindowRowProps) {
 }
 
 export default async function UsagePage() {
-  const [apiUsage, mcpUsage] = await Promise.all([
-    digFetch<ApiUsageSnapshot>("/v1/usage", { cache: "no-store" }),
+  const [apiUsageResult, mcpUsageResult] = await Promise.allSettled([
+    // Cache briefly to avoid burst/crawler amplification on API usage route.
+    digFetch<ApiUsageSnapshot>("/v1/usage", { revalidate: 30 }),
     fetchMcpUsage(),
   ]);
+
+  if (apiUsageResult.status !== "fulfilled") {
+    return (
+      <div className={styles.page}>
+        <section className={styles.hero}>
+          <p className={styles.eyebrow}>Usage</p>
+          <h1 className={styles.title}>Dig in the wild.</h1>
+          <p className={styles.warn}>
+            Usage stats are temporarily unavailable. Please check back shortly.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  const apiUsage = apiUsageResult.value;
+  const mcpUsage = mcpUsageResult.status === "fulfilled" ? mcpUsageResult.value : null;
 
   const categoryRows = mapRows(apiUsage.requests_by_category);
   const eventRows = mapRows(apiUsage.telemetry_by_event);
