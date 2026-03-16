@@ -52,27 +52,7 @@ function formatEdgeLabel(edgeType: string, direction: "outbound" | "inbound"): s
   return direction === "inbound" ? `Has ${humanized}` : humanized;
 }
 
-function ArtistTimeline({ events, total }: { events: TimelineEvent[]; total: number }) {
-  if (events.length === 0) return null;
-  return (
-    <section className={styles.section}>
-      <h2 className={styles.heading}>Live Performances{total > events.length ? ` (${total} total)` : ""}</h2>
-      {events.map((e) => (
-        <div className={styles.row} key={e.setlistfm_url}>
-          <a href={e.setlistfm_url} target="_blank" rel="noreferrer" className={styles.item}>
-            {e.venue_name || "Unknown venue"}{e.city_name ? `, ${e.city_name}` : ""}{e.country_code ? ` (${e.country_code})` : ""}
-          </a>
-          <span className={styles.small}>{e.event_date?.slice(0, 10) || "—"}</span>
-        </div>
-      ))}
-      <div className={styles.contextSource}>
-        Source: <a href="https://www.setlist.fm" target="_blank" rel="noreferrer">setlist.fm</a>
-      </div>
-    </section>
-  );
-}
-
-/* ── Async streamed sections ── */
+/* ── Sync render helpers (receive pre-fetched data) ── */
 
 const RELEASE_FILTERS = [
   { value: "all", label: "All" },
@@ -91,25 +71,22 @@ const CREDIT_FILTERS = [
   { value: "other", label: "Other" },
 ] as const;
 
-/** Releases section: fetches catalog releases independently so shell renders without waiting. */
-async function ArtistReleases({ id, releaseType }: { id: string; releaseType: string }) {
-  const defaultTraversal: TraversalResponse = {
-    links: [],
-    pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "catalog_releases", elapsed_ms: 0 },
-  };
-  const mastersUrl = `/v1/artists/${id}/catalog_releases?limit=30&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
-  const mastersData = await digFetch<TraversalResponse>(mastersUrl, { revalidate: 300 })
-    .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
-    .catch(() => defaultTraversal);
-
+function ReleasesSection({
+  id,
+  releaseType,
+  data,
+}: {
+  id: string;
+  releaseType: string;
+  data: TraversalResponse;
+}) {
   return (
     <section className={styles.section}>
       <h2 className={styles.heading}>
-        Releases{mastersData.pagination.total_estimate != null
-          ? ` (${mastersData.pagination.total_estimate})`
-          : mastersData.links.length > 0
-          ? ` (${mastersData.links.length})`
+        Releases{data.pagination.total_estimate != null
+          ? ` (${data.pagination.total_estimate})`
+          : data.links.length > 0
+          ? ` (${data.links.length})`
           : ""}
       </h2>
       <div className={styles.filterChips}>
@@ -123,10 +100,10 @@ async function ArtistReleases({ id, releaseType }: { id: string; releaseType: st
           </Link>
         ))}
       </div>
-      {mastersData.links.length === 0 && (
+      {data.links.length === 0 && (
         <div className={styles.small}>No releases found.</div>
       )}
-      {mastersData.links.map((link) => (
+      {data.links.map((link) => (
         <div className={styles.row} key={link.discogs_id}>
           <Link href={hrefForTraversalLink(link)} className={styles.item}>
             {link.title || `Release ${link.discogs_id}`}
@@ -143,26 +120,23 @@ async function ArtistReleases({ id, releaseType }: { id: string; releaseType: st
   );
 }
 
-/** Credits section: fetches credits independently so shell renders without waiting. */
-async function ArtistCredits({ id, roleFamily }: { id: string; roleFamily: string }) {
-  const defaultCredits: ArtistCreditsResponse = {
-    links: [],
-    pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "credits", elapsed_ms: 0 },
-  };
-  const creditsUrl = `/v1/artists/${id}/credits?limit=30${roleFamily !== "all" ? `&role_family=${roleFamily}` : ""}`;
-  const creditsData = await digFetch<ArtistCreditsResponse>(creditsUrl, { revalidate: 300 })
-    .then((d) => (isArtistCreditsResponse(d) ? d : defaultCredits))
-    .catch(() => defaultCredits);
-
-  if (creditsData.links.length === 0) return null;
+function CreditsSection({
+  id,
+  roleFamily,
+  data,
+}: {
+  id: string;
+  roleFamily: string;
+  data: ArtistCreditsResponse;
+}) {
+  if (data.links.length === 0) return null;
 
   return (
     <section className={styles.section}>
       <h2 className={styles.heading}>
-        Credits &amp; Appearances{creditsData.pagination.total_estimate != null
-          ? ` (${creditsData.pagination.total_estimate})`
-          : ` (${creditsData.links.length})`}
+        Credits &amp; Appearances{data.pagination.total_estimate != null
+          ? ` (${data.pagination.total_estimate})`
+          : ` (${data.links.length})`}
       </h2>
       <div className={styles.filterChips}>
         {CREDIT_FILTERS.map((f) => (
@@ -175,7 +149,7 @@ async function ArtistCredits({ id, roleFamily }: { id: string; roleFamily: strin
           </Link>
         ))}
       </div>
-      {creditsData.links.map((link) => (
+      {data.links.map((link) => (
         <div className={styles.row} key={link.release_discogs_id}>
           <Link href={hrefForArtistCredit(link)} className={styles.item}>
             {link.title || `Release ${link.release_discogs_id}`}
@@ -188,7 +162,7 @@ async function ArtistCredits({ id, roleFamily }: { id: string; roleFamily: strin
           </span>
         </div>
       ))}
-      {creditsData.pagination.has_more && (
+      {data.pagination.has_more && (
         <div className={styles.small} style={{ marginTop: "0.5rem" }}>
           Showing first 30 — <Link href={`/artist/${id}/credits`} className={styles.link}>view all credits</Link>
         </div>
@@ -197,38 +171,15 @@ async function ArtistCredits({ id, roleFamily }: { id: string; roleFamily: strin
   );
 }
 
-/** About section: fetches context + resolves profile names, then renders. */
-async function ArtistAbout({ id, profile }: { id: string; profile: string | null }) {
-  const defaultContext: ContextResponse = {
-    context: [],
-    meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
-  };
-
-  const ctxData = await digFetch<ContextResponse>(`/v1/artists/${id}/context?include_enrichment=true`, { revalidate: 3600 })
-    .then((d) => (isContextResponse(d) ? d : defaultContext))
-    .catch(() => defaultContext);
-
-  // Resolve profile names
-  const resolvedNames: Record<string, string> = {};
-  if (profile) {
-    const refs = extractProfileRefs(profile);
-    const fetches = [
-      ...refs.artists.map(async (aid) => {
-        try {
-          const d = await digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 });
-          if (isArtistResponse(d)) resolvedNames[`a${aid}`] = d.artist.name;
-        } catch { /* skip */ }
-      }),
-      ...refs.labels.map(async (lid) => {
-        try {
-          const d = await digFetch<import("@/lib/types").LabelResponse>(`/v1/labels/${lid}`, { revalidate: 3600 });
-          if ((d as any)?.label?.name) resolvedNames[`l${lid}`] = (d as any).label.name;
-        } catch { /* skip */ }
-      }),
-    ];
-    await Promise.all(fetches);
-  }
-
+function AboutSection({
+  profile,
+  ctxData,
+  resolvedNames,
+}: {
+  profile: string | null;
+  ctxData: ContextResponse;
+  resolvedNames: Record<string, string>;
+}) {
   const bioCtx = ctxData.context.find((c) => c.context_type === "bio");
   const bioSummary = (bioCtx?.content_json as Record<string, unknown>)?.summary as string | undefined;
   const hasContent = profile || bioSummary;
@@ -273,55 +224,42 @@ async function ArtistAbout({ id, profile }: { id: string; profile: string | null
   );
 }
 
-/** Connections section: fetches relationships + timeline + resolves edge names. */
-async function ArtistConnections({
-  id,
+function TimelineSection({ events, total }: { events: TimelineEvent[]; total: number }) {
+  if (events.length === 0) return null;
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>Live Performances{total > events.length ? ` (${total} total)` : ""}</h2>
+      {events.map((e) => (
+        <div className={styles.row} key={e.setlistfm_url}>
+          <a href={e.setlistfm_url} target="_blank" rel="noreferrer" className={styles.item}>
+            {e.venue_name || "Unknown venue"}{e.city_name ? `, ${e.city_name}` : ""}{e.country_code ? ` (${e.country_code})` : ""}
+          </a>
+          <span className={styles.small}>{e.event_date?.slice(0, 10) || "—"}</span>
+        </div>
+      ))}
+      <div className={styles.contextSource}>
+        Source: <a href="https://www.setlist.fm" target="_blank" rel="noreferrer">setlist.fm</a>
+      </div>
+    </section>
+  );
+}
+
+function ConnectionsSection({
   artist,
+  relData,
+  tlData,
+  resolvedNames,
 }: {
-  id: string;
   artist: {
     aliases: Array<{ name: string; discogs_id: number | null }>;
     name_variations: string[];
     members: Array<{ name: string; discogs_id: number | null }>;
     groups: Array<{ name: string; discogs_id: number | null }>;
   };
+  relData: RelationshipsResponse;
+  tlData: TimelineResponse;
+  resolvedNames: Record<string, string>;
 }) {
-  const defaultRelationships: RelationshipsResponse = {
-    edges: [],
-    pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
-  };
-  const defaultTimeline: TimelineResponse = {
-    events: [],
-    meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, total_events: 0 },
-  };
-
-  const [relData, tlData] = await Promise.all([
-    digFetch<RelationshipsResponse>(`/v1/artists/${id}/relationships?include_enrichment=true&limit=50`, { revalidate: 3600 })
-      .then((d) => (isRelationshipsResponse(d) ? d : defaultRelationships))
-      .catch(() => defaultRelationships),
-    digFetch<TimelineResponse>(`/v1/artists/${id}/timeline?include_enrichment=true&limit=20`, { revalidate: 3600 })
-      .then((d) => (isTimelineResponse(d) ? d : defaultTimeline))
-      .catch(() => defaultTimeline),
-  ]);
-
-  // Resolve edge names
-  const resolvedNames: Record<string, string> = {};
-  const idsToResolve = relData.edges
-    .filter((e) => e.target_entity.discogs_id && !e.target_entity.name)
-    .map((e) => e.target_entity.discogs_id!);
-
-  if (idsToResolve.length > 0) {
-    await Promise.all(
-      [...new Set(idsToResolve)].map(async (aid) => {
-        try {
-          const d = await digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 });
-          if (isArtistResponse(d)) resolvedNames[`a${aid}`] = d.artist.name;
-        } catch { /* skip */ }
-      }),
-    );
-  }
-
   const hasAliases = artist.aliases.length > 0 || artist.name_variations.length > 0;
   const hasContent = hasAliases || artist.members.length > 0 || artist.groups.length > 0
     || relData.edges.length > 0 || tlData.events.length > 0;
@@ -408,7 +346,7 @@ async function ArtistConnections({
         </section>
       )}
 
-      {tlData.events.length > 0 && <ArtistTimeline events={tlData.events} total={tlData.meta.total_events} />}
+      {tlData.events.length > 0 && <TimelineSection events={tlData.events} total={tlData.meta.total_events} />}
     </>
   );
 }
@@ -445,12 +383,9 @@ export default async function ArtistPage({ params, searchParams }: Props) {
     ? sp.role_family
     : "all";
 
-  // Shell renders bare layout immediately. Full content (including entity lookup)
-  // streams in via the outer Suspense — prevents slow API responses from producing
-  // error pages. Inner sections are NOT individually wrapped in Suspense; nested
-  // Suspense boundaries on the same page cause concurrent transform stream
-  // collisions (digest 4169818535) under burst load. All sections render together
-  // once ArtistContent resolves.
+  // One streaming boundary — outer Suspense only. ArtistContent fans out all API
+  // calls with Promise.all (parallel), then does name resolution in a second
+  // bounded pass. No nested Suspense = no concurrent transform stream collisions.
   return (
     <div className={styles.page} data-dig-entity="artist" data-dig-id={id}>
       <Suspense fallback={<SectionSkeleton lines={4} />}>
@@ -461,14 +396,85 @@ export default async function ArtistPage({ params, searchParams }: Props) {
 }
 
 async function ArtistContent({ id, releaseType, roleFamily }: { id: string; releaseType: string; roleFamily: string }) {
+  const defaultTraversal: TraversalResponse = {
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: null },
+    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "catalog_releases", elapsed_ms: 0 },
+  };
+  const defaultCredits: ArtistCreditsResponse = {
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: null },
+    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "credits", elapsed_ms: 0 },
+  };
+  const defaultContext: ContextResponse = {
+    context: [],
+    meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
+  };
+  const defaultRelationships: RelationshipsResponse = {
+    edges: [],
+    pagination: { cursor: null, has_more: false, total_estimate: null },
+    meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [], enrichment_edge_count: 0 },
+  };
+  const defaultTimeline: TimelineResponse = {
+    events: [],
+    meta: { source_type: "artist", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, total_events: 0 },
+  };
+
   try {
-    const artistData = await digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 });
+    // Phase 1: fan out all primary fetches in parallel
+    const releasesUrl = `/v1/artists/${id}/catalog_releases?limit=30&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
+    const creditsUrl = `/v1/artists/${id}/credits?limit=30${roleFamily !== "all" ? `&role_family=${roleFamily}` : ""}`;
+
+    const [artistData, releasesData, creditsData, ctxData, relData, tlData] = await Promise.all([
+      digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }),
+      digFetch<TraversalResponse>(releasesUrl, { revalidate: 300 })
+        .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
+        .catch(() => defaultTraversal),
+      digFetch<ArtistCreditsResponse>(creditsUrl, { revalidate: 300 })
+        .then((d) => (isArtistCreditsResponse(d) ? d : defaultCredits))
+        .catch(() => defaultCredits),
+      digFetch<ContextResponse>(`/v1/artists/${id}/context?include_enrichment=true`, { revalidate: 3600 })
+        .then((d) => (isContextResponse(d) ? d : defaultContext))
+        .catch(() => defaultContext),
+      digFetch<RelationshipsResponse>(`/v1/artists/${id}/relationships?include_enrichment=true&limit=50`, { revalidate: 3600 })
+        .then((d) => (isRelationshipsResponse(d) ? d : defaultRelationships))
+        .catch(() => defaultRelationships),
+      digFetch<TimelineResponse>(`/v1/artists/${id}/timeline?include_enrichment=true&limit=20`, { revalidate: 3600 })
+        .then((d) => (isTimelineResponse(d) ? d : defaultTimeline))
+        .catch(() => defaultTimeline),
+    ]);
 
     if (!isArtistResponse(artistData)) {
       return <ErrorMessage message="Unexpected API response format" />;
     }
 
     const artist = artistData.artist;
+
+    // Phase 2: name resolution — collect all IDs from profile refs + relationship edges,
+    // deduplicate, cap at 10 to bound latency, fetch in parallel.
+    const resolvedNames: Record<string, string> = {};
+    const profileRefs = artist.profile ? extractProfileRefs(artist.profile) : { artists: [], labels: [] };
+    const edgeArtistIds = relData.edges
+      .filter((e) => e.target_entity.discogs_id && !e.target_entity.name)
+      .map((e) => e.target_entity.discogs_id!);
+
+    const artistIdsToResolve = [...new Set([...profileRefs.artists, ...edgeArtistIds])].slice(0, 10);
+    const labelIdsToResolve = [...new Set(profileRefs.labels)].slice(0, 5);
+
+    await Promise.all([
+      ...artistIdsToResolve.map(async (aid) => {
+        try {
+          const d = await digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 });
+          if (isArtistResponse(d)) resolvedNames[`a${aid}`] = d.artist.name;
+        } catch { /* skip */ }
+      }),
+      ...labelIdsToResolve.map(async (lid) => {
+        try {
+          const d = await digFetch<import("@/lib/types").LabelResponse>(`/v1/labels/${lid}`, { revalidate: 3600 });
+          if ((d as any)?.label?.name) resolvedNames[`l${lid}`] = (d as any).label.name;
+        } catch { /* skip */ }
+      }),
+    ]);
 
     return (
       <>
@@ -496,18 +502,23 @@ async function ArtistContent({ id, releaseType, roleFamily }: { id: string; rele
           </div>
         </section>
 
-        {/* All sections rendered without individual Suspense — see page comment above */}
-        <ArtistAbout id={id} profile={artist.profile} />
-        <ArtistReleases id={id} releaseType={releaseType} />
-        <ArtistCredits id={id} roleFamily={roleFamily} />
-        <ArtistConnections
-          id={id}
+        <AboutSection
+          profile={artist.profile}
+          ctxData={ctxData}
+          resolvedNames={resolvedNames}
+        />
+        <ReleasesSection id={id} releaseType={releaseType} data={releasesData} />
+        <CreditsSection id={id} roleFamily={roleFamily} data={creditsData} />
+        <ConnectionsSection
           artist={{
             aliases: artist.aliases,
             name_variations: artist.name_variations,
             members: artist.members,
             groups: artist.groups,
           }}
+          relData={relData}
+          tlData={tlData}
+          resolvedNames={resolvedNames}
         />
 
         <JsonLd data={[
@@ -522,7 +533,6 @@ async function ArtistContent({ id, releaseType, roleFamily }: { id: string; rele
     );
   } catch (err) {
     if (err instanceof ApiRequestError && err.code === "NOT_FOUND") notFound();
-    // Slow/failed fetches: show graceful fallback with search link (not an error code)
     return (
       <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
         <p className={styles.copy}>Unable to load this page right now.</p>
