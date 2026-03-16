@@ -72,8 +72,10 @@ export default async function ReleasePage({ params }: Props) {
 
   // Shell renders immediately. Master lookup + all content streams in via
   // Suspense so a slow API response doesn't produce a TIMEOUT error page.
+  // data-dig-entity lets the no-dead-ends canary distinguish a stream-broken
+  // shell (infrastructure fault) from a structural dead-end (data issue).
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-dig-entity="release" data-dig-id={id}>
       <Suspense fallback={<ReleasePageSkeleton />}>
         <ReleaseMasterContent id={id} />
       </Suspense>

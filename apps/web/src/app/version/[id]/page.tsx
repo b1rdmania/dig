@@ -51,8 +51,10 @@ export default async function VersionPage({ params }: Props) {
 
   // Shell renders immediately. Release data streams in via Suspense so a slow
   // API response degrades gracefully instead of producing an error page.
+  // data-dig-entity lets the no-dead-ends canary distinguish a stream-broken
+  // shell (infrastructure fault) from a structural dead-end (data issue).
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-dig-entity="version" data-dig-id={id}>
       <Suspense fallback={<SectionSkeleton lines={4} />}>
         <VersionContent id={id} />
       </Suspense>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { ErrorMessage } from "@/components/ErrorMessage";
 
 export default function Error({
@@ -9,6 +10,18 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    console.error(
+      JSON.stringify({
+        event: "error_boundary",
+        digest: error.digest,
+        message: error.message,
+        path: typeof window !== "undefined" ? window.location.pathname : null,
+        ts: new Date().toISOString(),
+      }),
+    );
+  }, [error]);
+
   return (
     <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "2rem 1rem" }}>
       <ErrorMessage message={error.message || "Something went wrong"} />

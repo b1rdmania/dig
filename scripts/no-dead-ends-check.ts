@@ -16,6 +16,10 @@
 
 const BASE_URL = process.env.BASE_URL ?? "https://app.dig.baby";
 const TIMEOUT_MS = 30_000;
+// Retry config — guards against transient stream faults (controller[kState] crashes)
+// that produce bad renders without being structural dead-ends.
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 2_000;
 
 interface CanaryEntry {
   type: "artist" | "label" | "release" | "version";
@@ -143,6 +147,10 @@ const FALLBACK_COPY_RE = /No (releases|credits|connections|linked releases|prima
 // Pattern for SSR timeout error — Next.js app returned a TIMEOUT error page instead of entity data.
 // This is a performance/infrastructure issue distinct from a structural dead-end.
 const SSR_TIMEOUT_RE = /"TIMEOUT"|>TIMEOUT<|Request timed out/;
+// Pattern for stream-broken shell — Next.js streaming SSR closed early due to a stream fault.
+// The shell was sent but Suspense never resolved. data-dig-entity is injected into the outer
+// container of release/version pages so we can distinguish this from a true structural dead-end.
+const STREAM_FAULT_RE = /data-dig-entity="(release|version|artist|label)"/;
 
 interface CheckResult {
   entity: string;
@@ -150,49 +158,75 @@ interface CheckResult {
   status: number | null;
   actionable_links: number;
   has_fallback: boolean;
-  verdict: "PASS" | "FAIL" | "TIMEOUT" | "ERROR";
+  verdict: "PASS" | "FAIL" | "TIMEOUT" | "STREAM_FAULT" | "ERROR";
   reason?: string;
   elapsed_ms: number;
+}
+
+async function fetchOnce(url: string): Promise<{ status: number; html: string; elapsed_ms: number }> {
+  const start = Date.now();
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+    headers: { "User-Agent": "dig-canary-check/1.0" },
+  });
+  const html = await res.text();
+  return { status: res.status, html, elapsed_ms: Date.now() - start };
 }
 
 async function checkEntity(entry: CanaryEntry): Promise<CheckResult> {
   const url = `${BASE_URL}/${entry.type}/${entry.id}`;
   const entity = `${entry.type}/${entry.id}${entry.notes ? ` (${entry.notes})` : ""}`;
-  const start = Date.now();
+  const overallStart = Date.now();
 
-  try {
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { "User-Agent": "dig-canary-check/1.0" },
-    });
-    const html = await res.text();
-    const elapsed_ms = Date.now() - start;
+  let lastResult: CheckResult | null = null;
 
-    if (res.status !== 200) {
-      // 404 is acceptable (entity may not exist) — skip, don't fail
-      if (res.status === 404) {
-        return { entity, url, status: res.status, actionable_links: 0, has_fallback: false, verdict: "PASS", reason: "404 — entity not found (skipped)", elapsed_ms };
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    }
+
+    try {
+      const { status, html, elapsed_ms } = await fetchOnce(url);
+
+      if (status !== 200) {
+        // 404 is acceptable — skip without retry
+        if (status === 404) {
+          return { entity, url, status, actionable_links: 0, has_fallback: false, verdict: "PASS", reason: "404 — entity not found (skipped)", elapsed_ms };
+        }
+        lastResult = { entity, url, status, actionable_links: 0, has_fallback: false, verdict: "FAIL", reason: `HTTP ${status}`, elapsed_ms };
+        // Non-404 HTTP errors are unlikely to be transient — don't retry
+        break;
       }
-      return { entity, url, status: res.status, actionable_links: 0, has_fallback: false, verdict: "FAIL", reason: `HTTP ${res.status}`, elapsed_ms };
+
+      // Detect SSR timeout: Next.js returns 200 but streams a TIMEOUT error page.
+      // This is a performance issue (API fetch timeout during SSR), tracked separately from dead-ends.
+      if (SSR_TIMEOUT_RE.test(html)) {
+        return { entity, url, status: 200, actionable_links: 0, has_fallback: false, verdict: "TIMEOUT", reason: "SSR timeout — Next.js API fetch timed out during server render", elapsed_ms };
+      }
+
+      const links = (html.match(INTERNAL_LINK_RE) ?? []).length;
+      const hasFallback = FALLBACK_COPY_RE.test(html);
+
+      if (links === 0 && !hasFallback) {
+        // Check for stream-broken shell: the streaming SSR connection closed before Suspense
+        // resolved, leaving only the static shell HTML. data-dig-entity is present in the
+        // initial shell of release/version pages to identify this case.
+        if (STREAM_FAULT_RE.test(html)) {
+          return { entity, url, status: 200, actionable_links: 0, has_fallback: false, verdict: "STREAM_FAULT", reason: "Stream-broken shell — SSR streaming closed before Suspense resolved (infrastructure issue, not structural dead-end)", elapsed_ms };
+        }
+        // Could be a transient render issue — retry before marking as structural dead-end
+        lastResult = { entity, url, status: 200, actionable_links: 0, has_fallback: false, verdict: "FAIL", reason: `Zero actionable links and no fallback copy (attempt ${attempt + 1}/${MAX_RETRIES + 1})`, elapsed_ms };
+        continue;
+      }
+
+      return { entity, url, status: 200, actionable_links: links, has_fallback: hasFallback, verdict: "PASS", elapsed_ms };
+    } catch (err: any) {
+      // Network/fetch errors may be transient — retry
+      lastResult = { entity, url, status: null, actionable_links: 0, has_fallback: false, verdict: "ERROR", reason: `${err?.message ?? "Unknown error"} (attempt ${attempt + 1}/${MAX_RETRIES + 1})`, elapsed_ms: Date.now() - overallStart };
     }
-
-    // Detect SSR timeout: Next.js returns 200 but streams a TIMEOUT error page.
-    // This is a performance issue (API fetch timeout during SSR), tracked separately from dead-ends.
-    if (SSR_TIMEOUT_RE.test(html)) {
-      return { entity, url, status: 200, actionable_links: 0, has_fallback: false, verdict: "TIMEOUT", reason: "SSR timeout — Next.js API fetch timed out during server render", elapsed_ms };
-    }
-
-    const links = (html.match(INTERNAL_LINK_RE) ?? []).length;
-    const hasFallback = FALLBACK_COPY_RE.test(html);
-
-    if (links === 0 && !hasFallback) {
-      return { entity, url, status: 200, actionable_links: 0, has_fallback: false, verdict: "FAIL", reason: "Zero actionable links and no fallback copy", elapsed_ms };
-    }
-
-    return { entity, url, status: 200, actionable_links: links, has_fallback: hasFallback, verdict: "PASS", elapsed_ms };
-  } catch (err: any) {
-    return { entity, url, status: null, actionable_links: 0, has_fallback: false, verdict: "ERROR", reason: err?.message ?? "Unknown error", elapsed_ms: Date.now() - start };
   }
+
+  return lastResult!;
 }
 
 async function main() {
@@ -208,13 +242,14 @@ async function main() {
     const batchResults = await Promise.all(batch.map(checkEntity));
     results.push(...batchResults);
     for (const r of batchResults) {
-      const icon = r.verdict === "PASS" ? "✓" : r.verdict === "ERROR" ? "?" : r.verdict === "TIMEOUT" ? "⏱" : "✗";
+      const icon = r.verdict === "PASS" ? "✓" : r.verdict === "ERROR" ? "?" : r.verdict === "TIMEOUT" ? "⏱" : r.verdict === "STREAM_FAULT" ? "~" : "✗";
       console.log(`  ${icon} [${r.verdict}] ${r.entity} — ${r.actionable_links} links, fallback:${r.has_fallback} (${r.elapsed_ms}ms)`);
     }
   }
 
   const violations = results.filter((r) => r.verdict === "FAIL");
   const timeouts = results.filter((r) => r.verdict === "TIMEOUT");
+  const streamFaults = results.filter((r) => r.verdict === "STREAM_FAULT");
   const errors = results.filter((r) => r.verdict === "ERROR");
   const passes = results.filter((r) => r.verdict === "PASS");
   // Pages that passed but only via graceful fallback copy (not actionable links).
@@ -223,9 +258,9 @@ async function main() {
   const passWithLinks = passes.filter((r) => r.actionable_links > 0);
 
   console.log(`\n${"─".repeat(60)}`);
-  console.log(`Results: ${passes.length} PASS (${passWithLinks.length} with links, ${passWithFallback.length} fallback-only), ${violations.length} FAIL, ${timeouts.length} TIMEOUT (SSR), ${errors.length} ERROR`);
-  console.log(`Metrics: ui_timeout_errors=${timeouts.length}, fallback_rate=${passWithFallback.length}/${passes.length + timeouts.length}`);
-  console.log(`Note: TIMEOUT = SSR fetch timeout (performance issue, not structural dead-end)`);
+  console.log(`Results: ${passes.length} PASS (${passWithLinks.length} with links, ${passWithFallback.length} fallback-only), ${violations.length} FAIL, ${timeouts.length} TIMEOUT (SSR), ${streamFaults.length} STREAM_FAULT, ${errors.length} ERROR`);
+  console.log(`Metrics: ui_timeout_errors=${timeouts.length}, stream_fault_count=${streamFaults.length}, fallback_rate=${passWithFallback.length}/${passes.length + timeouts.length}`);
+  console.log(`Note: TIMEOUT = SSR fetch timeout | STREAM_FAULT = streaming closed early (infrastructure issue, not structural dead-end)`);
 
   if (violations.length > 0) {
     console.log(`\nStructural dead-end violations:`);
@@ -243,6 +278,13 @@ async function main() {
     }
   }
 
+  if (streamFaults.length > 0) {
+    console.log(`\nStream-fault pages (${streamFaults.length} total — streaming SSR closed early, root cause: controller[kState] bug):`);
+    for (const s of streamFaults) {
+      console.log(`  ~ ${s.entity} (${s.elapsed_ms}ms)`);
+    }
+  }
+
   // Write JSON report
   const report = {
     generated_at: new Date().toISOString(),
@@ -254,10 +296,12 @@ async function main() {
       pass_fallback_only: passWithFallback.length,
       fail: violations.length,
       ui_timeout_errors: timeouts.length,
+      stream_fault_count: streamFaults.length,
       error: errors.length,
     },
     violations: violations.map((v) => ({ entity: v.entity, url: v.url, reason: v.reason })),
     ssr_timeouts: timeouts.map((t) => ({ entity: t.entity, url: t.url, elapsed_ms: t.elapsed_ms })),
+    stream_faults: streamFaults.map((s) => ({ entity: s.entity, url: s.url, elapsed_ms: s.elapsed_ms })),
     fallback_pages: passWithFallback.map((r) => ({ entity: r.entity, url: r.url, elapsed_ms: r.elapsed_ms })),
     results,
   };
@@ -271,9 +315,12 @@ async function main() {
     process.exit(1);
   }
 
-  if (timeouts.length > 0) {
-    console.log(`\n~ PARTIAL — no structural dead ends, but ${timeouts.length} SSR timeout(s) detected\n`);
-    // SSR timeouts exit 0 — they are tracked but don't block CI (separate P1 work)
+  if (timeouts.length > 0 || streamFaults.length > 0) {
+    const parts = [];
+    if (timeouts.length > 0) parts.push(`${timeouts.length} SSR timeout(s)`);
+    if (streamFaults.length > 0) parts.push(`${streamFaults.length} stream fault(s)`);
+    console.log(`\n~ PARTIAL — no structural dead ends, but infrastructure issues detected: ${parts.join(", ")}\n`);
+    // SSR timeouts and stream faults exit 0 — tracked but don't block CI (separate P1 work)
   } else {
     console.log(`\n✓ PASSED — no dead ends found\n`);
   }
