@@ -6,12 +6,22 @@
  *   API_URL=http://localhost:3000 WEB_URL=http://localhost:3002 MCP_URL=http://localhost:3001 npx tsx scripts/regression-smoke.ts
  */
 
+type FailureCategory = "QUERY_TIMEOUT" | "EMPTY_SUCCESS_ANOMALY" | "NETWORK_ERROR" | "ASSERTION" | null;
+
 type CheckResult = {
   name: string;
   ok: boolean;
   detail: string;
   blocking: boolean; // false = log only, never fails exit code
+  failureCategory?: FailureCategory;
 };
+
+function classifyFailure(detail: string): FailureCategory {
+  if (/HTTP 504|QUERY_TIMEOUT/.test(detail)) return "QUERY_TIMEOUT";
+  if (/Timeout after|AbortError|TimeoutError|ECONNREFUSED|ENOTFOUND/.test(detail)) return "NETWORK_ERROR";
+  if (/results=0/.test(detail)) return "EMPTY_SUCCESS_ANOMALY";
+  return "ASSERTION";
+}
 
 const API_URL = (process.env.API_URL ?? "https://dig-api.fly.dev").replace(/\/$/, "");
 const WEB_URL = (process.env.WEB_URL ?? "https://app.dig.baby").replace(/\/$/, "");
@@ -97,9 +107,18 @@ async function run(): Promise<void> {
     try {
       const body = await getJson(`${API_URL}${test.path}`);
       const count = asResultsCount(body);
-      checks.push({ name: test.name, ok: count >= test.min, detail: `results=${count}`, blocking: true });
+      const ok = count >= test.min;
+      const detail = `results=${count}`;
+      checks.push({
+        name: test.name,
+        ok,
+        detail,
+        blocking: true,
+        failureCategory: ok ? null : classifyFailure(detail),
+      });
     } catch (err: any) {
-      checks.push({ name: test.name, ok: false, detail: String(err?.message ?? err), blocking: true });
+      const detail = String(err?.message ?? err);
+      checks.push({ name: test.name, ok: false, detail, blocking: true, failureCategory: classifyFailure(detail) });
     }
   }
 
@@ -211,6 +230,16 @@ async function run(): Promise<void> {
   }
 
   if (failedBlocking.length > 0) {
+    // Emit failure category breakdown for diagnosis
+    const categoryCounts: Partial<Record<NonNullable<FailureCategory>, number>> = {};
+    for (const c of failedBlocking) {
+      const cat = c.failureCategory ?? "ASSERTION";
+      categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
+    }
+    console.log(`\nFailure categories:`);
+    for (const [cat, count] of Object.entries(categoryCounts)) {
+      console.log(`  ${cat}: ${count}`);
+    }
     process.exit(1);
   }
 }

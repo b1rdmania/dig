@@ -65,6 +65,11 @@ export function registerSearchRoutes(app: FastifyInstance, db: Kysely<Database>)
       }
       try {
         const result = await search(db, params);
+        if (result.results.length === 0 && result.meta.degraded_reason === "statement_timeout") {
+          return reply.status(504).send({
+            error: { code: "QUERY_TIMEOUT", message: "Search query exceeded timeout", details: null },
+          });
+        }
         return reply.send(result);
       } catch (err: any) {
         const pgCode = err.code ?? err.cause?.code;
@@ -82,6 +87,14 @@ export function registerSearchRoutes(app: FastifyInstance, db: Kysely<Database>)
     // Core lane: no concurrency cap — bounded by 3s statement_timeout inside search()
     try {
       const result = await search(db, params);
+      // Domain catches statement_timeout internally and returns degraded empty results.
+      // Bubble these up as 504 so callers (smoke, clients) get an explicit typed error
+      // instead of an empty-success 200 that is indistinguishable from a real no-match.
+      if (result.results.length === 0 && result.meta.degraded_reason === "statement_timeout") {
+        return reply.status(504).send({
+          error: { code: "QUERY_TIMEOUT", message: "Search query exceeded timeout", details: null },
+        });
+      }
       return reply.send(result);
     } catch (err: any) {
       const pgCode = err.code ?? err.cause?.code;
