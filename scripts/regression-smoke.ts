@@ -17,23 +17,51 @@ const API_URL = (process.env.API_URL ?? "https://dig-api.fly.dev").replace(/\/$/
 const WEB_URL = (process.env.WEB_URL ?? "https://app.dig.baby").replace(/\/$/, "");
 const MCP_URL = (process.env.MCP_URL ?? "https://dig-mcp.fly.dev").replace(/\/$/, "");
 
+const FETCH_TIMEOUT_MS = 20_000;
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 2_000;
+
 async function getJson(path: string): Promise<any> {
-  const res = await fetch(path, { headers: { "user-agent": "dig-regression-smoke/1.0" } });
-  const text = await res.text();
-  let body: any = null;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
+  let lastErr: Error | null = null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    try {
+      const res = await fetch(path, {
+        headers: { "user-agent": "dig-regression-smoke/1.0" },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      const text = await res.text();
+      let body: any = null;
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch {
+        body = text;
+      }
+      if (!res.ok) {
+        // Retry on 5xx (transient server errors); fail immediately on 4xx
+        if (res.status >= 500 && attempt < MAX_RETRIES) {
+          lastErr = new Error(`HTTP ${res.status} ${res.statusText} @ ${path} :: ${typeof body === "string" ? body : JSON.stringify(body)}`);
+          continue;
+        }
+        throw new Error(`HTTP ${res.status} ${res.statusText} @ ${path} :: ${typeof body === "string" ? body : JSON.stringify(body)}`);
+      }
+      return body;
+    } catch (err: any) {
+      if (err?.name === "AbortError" || err?.name === "TimeoutError") {
+        throw new Error(`Timeout after ${FETCH_TIMEOUT_MS}ms @ ${path}`);
+      }
+      lastErr = err instanceof Error ? err : new Error(String(err));
+      if (attempt === MAX_RETRIES) throw lastErr;
+    }
   }
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} ${res.statusText} @ ${path} :: ${typeof body === "string" ? body : JSON.stringify(body)}`);
-  }
-  return body;
+  throw lastErr!;
 }
 
 async function getStatus(path: string): Promise<number> {
-  const res = await fetch(path, { headers: { "user-agent": "dig-regression-smoke/1.0" } });
+  const res = await fetch(path, {
+    headers: { "user-agent": "dig-regression-smoke/1.0" },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
   return res.status;
 }
 
