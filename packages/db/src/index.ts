@@ -7,11 +7,13 @@ export { sql } from "kysely";
 export type { Kysely } from "kysely";
 export type { Database } from "./schema.js";
 
-// Pool size is conservative — Fly shared-cpu-1x has limited file descriptors.
-// connectionTimeoutMillis prevents indefinite queue buildup under bursts.
-// idleTimeoutMillis reclaims idle connections quickly for low-traffic periods.
+// Pool size: 20 per machine. 2 API machines × 20 = 40 total connections.
+// Fly Postgres flex (shared-cpu-2x) defaults to ~100 max_connections, so 40
+// is well within budget. Bumped from 10 to absorb concurrent CI + real traffic.
+// connectionTimeoutMillis: 5s — prevents indefinite queuing under bursts.
+// idleTimeoutMillis: 30s — reclaims idle connections during low-traffic periods.
 const POOL_CONFIG: pg.PoolConfig = {
-  max: 10,
+  max: 20,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,
   keepAlive: true,

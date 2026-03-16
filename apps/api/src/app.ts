@@ -173,6 +173,27 @@ export async function buildApp(deps: AppDeps): Promise<{
         },
       });
     }
+
+    // DB connection pool exhausted — pg-pool throws when connectionTimeoutMillis
+    // expires with no available connection. Return 503 QUERY_TIMEOUT so callers
+    // can distinguish infrastructure saturation from a code error.
+    const isPoolExhaustion = error.message?.includes("timeout exceeded when trying to connect");
+    if (isPoolExhaustion) {
+      console.error(JSON.stringify({
+        ts: new Date().toISOString(),
+        level: "error",
+        code: "POOL_EXHAUSTION",
+        message: error.message,
+      }));
+      return reply.status(503).send({
+        error: {
+          code: "QUERY_TIMEOUT",
+          message: "Database connection pool exhausted — try again shortly",
+          details: null,
+        },
+      });
+    }
+
     const status = error.statusCode ?? 500;
     if (status >= 500) {
       console.error(JSON.stringify({
