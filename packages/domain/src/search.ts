@@ -83,6 +83,10 @@ export interface SearchResponse {
     hint: string | null;
     degraded: boolean;
     degraded_reason: string | null;
+    /** True when primary FTS timed out and a fast-path fallback was used instead. */
+    fallback_used?: boolean;
+    /** Identifies which fallback profile was used, e.g. "artist_fast_path_v1". */
+    fallback_profile?: string | null;
     /** Populated when rescue=true and quality=active returns 0 results. "Did you mean?" candidates. */
     suggested_results?: SearchResult[] | null;
   };
@@ -916,6 +920,11 @@ export async function search(
       let hint: string | null = null;
       let degraded = false;
       let degradedReason: string | null = null;
+      let fallbackUsed = false;
+      let fallbackProfile: string | null = null;
+      // Track which entity types had their primary query time out — used to
+      // identify when subsequent fuzzy results are acting as a fast-path fallback.
+      const primaryTimedOutTypes = new Set<SearchEntityType>();
 
       for (const entityType of types) {
         const batchInfo = batchMap.get(entityType);
@@ -1012,6 +1021,7 @@ export async function search(
               continue;
             }
 
+            primaryTimedOutTypes.add(entityType);
             trackRequest(entityType, true);
             hint = hint ?? "Some results may be incomplete due to query complexity";
             degradedReason = degradedReason ?? "statement_timeout";
@@ -1035,7 +1045,9 @@ export async function search(
         }
       }
 
-      // If FTS returned nothing and we have a query, try fuzzy fallback
+      // If FTS returned nothing and we have a query, try fuzzy fallback.
+      // When the primary query timed out for an entity type, fuzzy success here
+      // constitutes a fast-path fallback — mark the response accordingly.
       if (allResults.length === 0 && params.q && params.q.length >= 4) {
         for (const entityType of types) {
           if (entityType === "release") {
@@ -1048,6 +1060,10 @@ export async function search(
             const fuzzyResults = await fuzzyFallback(conn, entityType, params.q, fuzzyBatch.batchId, fuzzyBatch.dumpDate);
             allResults.push(...fuzzyResults);
             trackRequest(`${entityType}_fuzzy`, false);
+            if (fuzzyResults.length > 0 && primaryTimedOutTypes.has(entityType)) {
+              fallbackUsed = true;
+              fallbackProfile = `${entityType}_fast_path_v1`;
+            }
           } catch (err: any) {
             if (err.code === "57014") {
               trackRequest(`${entityType}_fuzzy`, true);
@@ -1118,6 +1134,8 @@ export async function search(
           hint,
           degraded,
           degraded_reason: degradedReason,
+          fallback_used: fallbackUsed || undefined,
+          fallback_profile: fallbackUsed ? fallbackProfile : undefined,
           suggested_results: suggestedResults,
         },
       };

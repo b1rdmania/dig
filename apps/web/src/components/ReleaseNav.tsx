@@ -8,29 +8,19 @@ interface Props {
   currentMasterId: number | null;
 }
 
-/** Prev/Next navigation through an artist's catalogue. Server component. */
-export async function ReleaseNav({ artistId, currentMasterId }: Props) {
-  if (!currentMasterId) return null;
+type NavLink = { discogs_id: number; year?: number | null; title?: string | null };
 
-  const fallback: TraversalResponse = {
-    links: [],
-    pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "artist", source_discogs_id: artistId, link_type: "catalog_releases", elapsed_ms: 0 },
-  };
-
-  const data = await digFetch<TraversalResponse>(
-    `/v1/artists/${artistId}/catalog_releases?sort=newest&limit=500`,
-    { revalidate: 300 },
-  )
-    .then((d) => (isTraversalResponse(d) ? d : fallback))
-    .catch(() => fallback);
-
-  const masters = data.links;
-  if (masters.length <= 1) return null;
-
+/** Sync renderer — accepts pre-fetched masters array. Use with parallel data fetching. */
+export function ReleaseNavRenderer({
+  masters,
+  currentMasterId,
+}: {
+  masters: NavLink[];
+  currentMasterId: number | null;
+}) {
+  if (!currentMasterId || masters.length <= 1) return null;
   const idx = masters.findIndex((m) => m.discogs_id === currentMasterId);
   if (idx === -1) return null;
-
   const prev = idx > 0 ? masters[idx - 1] : null;
   const next = idx < masters.length - 1 ? masters[idx + 1] : null;
 
@@ -53,4 +43,24 @@ export async function ReleaseNav({ artistId, currentMasterId }: Props) {
       )}
     </nav>
   );
+}
+
+/** Async version — fetches its own data. Use only when a nested Suspense is acceptable. */
+export async function ReleaseNav({ artistId, currentMasterId }: Props) {
+  if (!currentMasterId) return null;
+
+  const fallback: TraversalResponse = {
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: null },
+    meta: { source_type: "artist", source_discogs_id: artistId, link_type: "catalog_releases", elapsed_ms: 0 },
+  };
+
+  const data = await digFetch<TraversalResponse>(
+    `/v1/artists/${artistId}/catalog_releases?sort=newest&limit=500`,
+    { revalidate: 300 },
+  )
+    .then((d) => (isTraversalResponse(d) ? d : fallback))
+    .catch(() => fallback);
+
+  return <ReleaseNavRenderer masters={data.links} currentMasterId={currentMasterId} />;
 }

@@ -23,7 +23,7 @@ import { PageViewTracker } from "@/components/PageViewTracker";
 import { OutboundLink } from "@/components/OutboundLink";
 import { MediaSection } from "@/components/MediaSection";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
-import { ReleaseNav } from "@/components/ReleaseNav";
+import { ReleaseNavRenderer } from "@/components/ReleaseNav";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { AddToMixtapeButton } from "@/components/AddToMixtapeButton";
 import { ShareBar } from "@/components/ShareBar";
@@ -42,11 +42,7 @@ export async function generateMetadata({ params }: Props) {
       const m = data.master;
       const artist = m.artists[0]?.name || "Unknown";
       const title = `${m.title} — ${artist}`;
-      const parts = [m.title, "by", artist];
-      if (m.genres.length) parts.push(m.genres.join(", "));
-      if (m.year) parts.push(String(m.year));
 
-      // Try to get cover art for OG image
       let coverUrl: string | null = null;
       if (m.main_release_discogs_id) {
         coverUrl = await digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${m.main_release_discogs_id}/cover`, { revalidate: 3600 })
@@ -59,8 +55,6 @@ export async function generateMetadata({ params }: Props) {
     }
   } catch {
     // Not a master — page component will redirect to /version/:id.
-    // Do not commit metadata here: if head content is streamed before the
-    // redirect fires, Next.js cannot send a 307 and returns a partial 200.
   }
   return { title: "Release — dig" };
 }
@@ -70,10 +64,8 @@ export default async function ReleasePage({ params }: Props) {
 
   if (!/^\d+$/.test(id)) notFound();
 
-  // Shell renders immediately. Master lookup + all content streams in via
-  // Suspense so a slow API response doesn't produce a TIMEOUT error page.
-  // data-dig-entity lets the no-dead-ends canary distinguish a stream-broken
-  // shell (infrastructure fault) from a structural dead-end (data issue).
+  // One streaming boundary. ReleaseMasterContent fans out all secondary fetches
+  // via Promise.all after the initial master lookup — no nested Suspense boundaries.
   return (
     <div className={styles.page} data-dig-entity="release" data-dig-id={id}>
       <Suspense fallback={<ReleasePageSkeleton />}>
@@ -96,136 +88,7 @@ function ReleasePageSkeleton() {
   );
 }
 
-/** Full page content: streams in so a slow master fetch doesn't error the whole page. */
-async function ReleaseMasterContent({ id }: { id: string }) {
-  // Try master first — this is the "release" in user-facing terms
-  let masterData: MasterResponse | null = null;
-  try {
-    const data = await digFetch<MasterResponse>(`/v1/masters/${id}`, { revalidate: 300 });
-    if (isMasterResponse(data)) masterData = data;
-  } catch (err) {
-    if (err instanceof ApiRequestError && err.code === "NOT_FOUND") {
-      // Not a master — fall through to pressing redirect below
-    } else if (err instanceof ApiRequestError && (err.code === "TIMEOUT" || err.status >= 500)) {
-      // Slow or unavailable — graceful fallback (no TIMEOUT text in HTML)
-      return (
-        <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
-          <p className={styles.copy}>Unable to load this release right now.</p>
-          <p className={styles.small} style={{ marginTop: "0.5rem" }}>
-            <Link href="/" className={styles.link}>Back to search</Link>
-          </p>
-        </section>
-      );
-    } else if (err instanceof ApiRequestError) {
-      return <ErrorMessage code={err.code} message={err.message} />;
-    }
-  }
-
-  // If it's a master, render the full release page
-  if (masterData) {
-    const master = masterData.master;
-    const artistLine = master.artists.map((a) => a.name).join(", ");
-
-    return (
-      <>
-        <PageViewTracker type="release" entityId={master.discogs_id} title={master.title} />
-
-        {/* ── Hero: renders immediately from master data ── */}
-        <section className={styles.hero}>
-          <div className={styles.heroContent}>
-            <div className={styles.cover}>
-              <Suspense fallback={<CoverPlaceholder />}>
-                <ReleaseCover id={id} mainReleaseId={master.main_release_discogs_id} title={master.title} videos={master.videos} />
-              </Suspense>
-            </div>
-            <div className={styles.info}>
-              <h1 className={styles.title}>{master.title}</h1>
-              {artistLine && (
-                <div className={styles.artists}>
-                  {master.artists.map((artist, index) => (
-                    <span key={`${artist.discogs_id}-${index}`}>
-                      <Link href={`/artist/${artist.discogs_id}`} className={styles.artistLink}>
-                        {artist.name}
-                      </Link>
-                      {index < master.artists.length - 1 ? ", " : ""}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className={styles.meta}>
-                {master.year && <span>{master.year}</span>}
-              </div>
-              {(master.genres.length > 0 || master.styles.length > 0) && (
-                <div className={styles.tags}>
-                  {master.genres.map((g) => (
-                    <span className={styles.tag} key={`g-${g}`}>{g}</span>
-                  ))}
-                  {master.styles.map((s) => (
-                    <span className={styles.tag} key={`s-${s}`}>{s}</span>
-                  ))}
-                </div>
-              )}
-              <div className={styles.links}>
-                <OutboundLink
-                  href={discogsUrl("master", master.discogs_id)}
-                  entityType="master"
-                  entityId={master.discogs_id}
-                  className={styles.link}
-                >
-                  Open on Discogs
-                </OutboundLink>
-                <FavoriteButton entityType="release" discogsId={master.discogs_id} />
-                <AddToMixtapeButton
-                  sourceEntityType="master"
-                  sourceDiscogsId={master.discogs_id}
-                  name={master.title}
-                  artist={master.artists[0]?.name ?? null}
-                />
-                <ShareBar
-                  url={`${BASE_URL}/release/${master.discogs_id}`}
-                  title={master.title}
-                  entityType="release"
-                  entityId={master.discogs_id}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Prev/Next artist catalogue navigation ── */}
-        {master.artists[0]?.discogs_id ? (
-          <Suspense fallback={null}>
-            <ReleaseNav artistId={master.artists[0].discogs_id} currentMasterId={master.discogs_id} />
-          </Suspense>
-        ) : null}
-
-        {/* ── Tracklist + Media + Credits + Notes: stream in from main release fetch ── */}
-        <Suspense fallback={<SectionSkeleton lines={6} />}>
-          <ReleaseDetails mainReleaseId={master.main_release_discogs_id} />
-        </Suspense>
-
-        {/* ── Versions: streams in from traversal fetch ── */}
-        <Suspense fallback={<SectionSkeleton lines={4} />}>
-          <ReleaseVersions id={id} />
-        </Suspense>
-
-        <JsonLd data={[
-          musicAlbumJsonLd({ discogs_id: master.discogs_id, title: master.title, year: master.year, artists: master.artists, genres: master.genres }),
-          breadcrumbJsonLd([
-            { name: "dig", url: BASE_URL },
-            { name: master.title, url: `${BASE_URL}/release/${master.discogs_id}` },
-          ]),
-        ]} />
-        <Provenance provenance={master.provenance} />
-      </>
-    );
-  }
-
-  // Not a master — redirect immediately to the pressing page.
-  redirect(`/version/${id}`);
-}
-
-/* ── Async streamed sections ── */
+/* ── Sync render helpers (accept pre-fetched data) ── */
 
 function CoverPlaceholder() {
   return (
@@ -240,88 +103,39 @@ function CoverPlaceholder() {
   );
 }
 
-/** Cover art: fetches cover for main release, falls back to YouTube thumbnail, then placeholder. */
-async function ReleaseCover({ id, mainReleaseId, title, videos }: { id: string; mainReleaseId: number | null; title: string; videos?: Array<{ url?: string | null }> }) {
-  let coverUrl: string | null = null;
-
-  if (mainReleaseId) {
-    const coverData = await digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${mainReleaseId}/cover`, { revalidate: 3600 })
-      .catch(() => null);
-    coverUrl = coverData?.cover?.url ?? null;
-  }
-
+function CoverRenderer({ coverUrl, title, videos }: { coverUrl: string | null; title: string; videos?: Array<{ url?: string | null }> }) {
   if (coverUrl) {
-    return (
-      <img
-        src={coverUrl}
-        alt={`${title} cover art`}
-        className={styles.coverImg}
-        loading="eager"
-      />
-    );
+    return <img src={coverUrl} alt={`${title} cover art`} className={styles.coverImg} loading="eager" />;
   }
-
-  // Fallback: YouTube thumbnail from master videos
   const thumbUrl = firstYoutubeThumb(videos);
   if (thumbUrl) {
-    return (
-      <img
-        src={thumbUrl}
-        alt={`${title} preview`}
-        className={styles.coverImg}
-        loading="eager"
-      />
-    );
+    return <img src={thumbUrl} alt={`${title} preview`} className={styles.coverImg} loading="eager" />;
   }
-
   return <CoverPlaceholder />;
 }
 
-/** Tracklist + Credits + Notes from the main release. */
-async function ReleaseDetails({ mainReleaseId }: { mainReleaseId: number | null }) {
-  if (!mainReleaseId) return null;
-
-  const releaseDetail = await digFetch<ReleaseResponse>(`/v1/releases/${mainReleaseId}`, { revalidate: 300 })
-    .catch(() => null);
-
-  const mainRelease = releaseDetail && isReleaseResponse(releaseDetail) ? releaseDetail.release : null;
-  if (!mainRelease) return null;
-
+function ReleaseDetailsRenderer({ release }: { release: ReleaseResponse["release"] | null }) {
+  if (!release) return null;
   return (
     <>
-      <MediaSection videos={mainRelease.videos} />
-      <Tracklist tracks={mainRelease.tracks} />
-      <Credits credits={mainRelease.credits} />
-      {mainRelease.notes && (
+      <MediaSection videos={release.videos} />
+      <Tracklist tracks={release.tracks} />
+      <Credits credits={release.credits} />
+      {release.notes && (
         <section className={styles.section}>
           <h2 className={styles.heading}>Notes</h2>
-          <p className={styles.copy}>{mainRelease.notes}</p>
+          <p className={styles.copy}>{release.notes}</p>
         </section>
       )}
     </>
   );
 }
 
-/** Versions list: fetches releases traversal for this master. */
-async function ReleaseVersions({ id }: { id: string }) {
-  const defaultTraversal: TraversalResponse = {
-    links: [],
-    pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "master", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
-  };
-
-  const data = await digFetch<TraversalResponse>(`/v1/masters/${id}/releases?limit=40`, { revalidate: 300 })
-    .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
-    .catch(() => defaultTraversal);
-
+function ReleaseVersionsRenderer({ data }: { data: TraversalResponse }) {
   return (
     <section className={styles.section}>
-      <h2 className={styles.heading}>
-        Versions ({data.links.length})
-      </h2>
-      {data.links.length === 0 && (
-        <div className={styles.small}>No versions found.</div>
-      )}
+      <h2 className={styles.heading}>Versions ({data.links.length})</h2>
+      {data.links.length === 0 && <div className={styles.small}>No versions found.</div>}
       {data.links.map((link) => (
         <div key={link.discogs_id} className={styles.versionRow}>
           <Link href={`/version/${link.discogs_id}`} className={styles.releaseTitle}>
@@ -335,5 +149,143 @@ async function ReleaseVersions({ id }: { id: string }) {
         </div>
       ))}
     </section>
+  );
+}
+
+/* ── Main streaming component ── */
+
+async function ReleaseMasterContent({ id }: { id: string }) {
+  // Phase 1: fetch master (needed to determine redirect vs render)
+  let masterData: MasterResponse | null = null;
+  try {
+    const data = await digFetch<MasterResponse>(`/v1/masters/${id}`, { revalidate: 300 });
+    if (isMasterResponse(data)) masterData = data;
+  } catch (err) {
+    if (err instanceof ApiRequestError && err.code === "NOT_FOUND") {
+      // Not a master — fall through to pressing redirect below
+    } else if (err instanceof ApiRequestError && (err.code === "TIMEOUT" || err.status >= 500)) {
+      return (
+        <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
+          <p className={styles.copy}>Unable to load this release right now.</p>
+          <p className={styles.small} style={{ marginTop: "0.5rem" }}>
+            <Link href="/" className={styles.link}>Back to search</Link>
+          </p>
+        </section>
+      );
+    } else if (err instanceof ApiRequestError) {
+      return <ErrorMessage code={err.code} message={err.message} />;
+    }
+  }
+
+  if (!masterData) {
+    redirect(`/version/${id}`);
+  }
+
+  const master = masterData.master;
+  const mainReleaseId = master.main_release_discogs_id;
+  const artistId = master.artists[0]?.discogs_id ?? null;
+
+  const defaultTraversal: TraversalResponse = {
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: null },
+    meta: { source_type: "master", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
+  };
+
+  // Phase 2: fan out all secondary fetches in parallel
+  const [coverUrl, releaseDetail, versionsData, navData] = await Promise.all([
+    mainReleaseId
+      ? digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${mainReleaseId}/cover`, { revalidate: 3600 })
+          .then((d) => d?.cover?.url ?? null)
+          .catch(() => null)
+      : Promise.resolve<string | null>(null),
+    mainReleaseId
+      ? digFetch<ReleaseResponse>(`/v1/releases/${mainReleaseId}`, { revalidate: 300 })
+          .then((d) => (isReleaseResponse(d) ? d.release : null))
+          .catch(() => null)
+      : Promise.resolve(null),
+    digFetch<TraversalResponse>(`/v1/masters/${id}/releases?limit=40`, { revalidate: 300 })
+      .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
+      .catch(() => defaultTraversal),
+    artistId && master.discogs_id
+      ? digFetch<TraversalResponse>(`/v1/artists/${artistId}/catalog_releases?sort=newest&limit=500`, { revalidate: 300 })
+          .then((d) => (isTraversalResponse(d) ? d.links : []))
+          .catch(() => [])
+      : Promise.resolve<TraversalResponse["links"]>([]),
+  ]);
+
+  const artistLine = master.artists.map((a) => a.name).join(", ");
+
+  return (
+    <>
+      <PageViewTracker type="release" entityId={master.discogs_id} title={master.title} />
+
+      <section className={styles.hero}>
+        <div className={styles.heroContent}>
+          <div className={styles.cover}>
+            <CoverRenderer coverUrl={coverUrl} title={master.title} videos={master.videos} />
+          </div>
+          <div className={styles.info}>
+            <h1 className={styles.title}>{master.title}</h1>
+            {artistLine && (
+              <div className={styles.artists}>
+                {master.artists.map((artist, index) => (
+                  <span key={`${artist.discogs_id}-${index}`}>
+                    <Link href={`/artist/${artist.discogs_id}`} className={styles.artistLink}>
+                      {artist.name}
+                    </Link>
+                    {index < master.artists.length - 1 ? ", " : ""}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className={styles.meta}>
+              {master.year && <span>{master.year}</span>}
+            </div>
+            {(master.genres.length > 0 || master.styles.length > 0) && (
+              <div className={styles.tags}>
+                {master.genres.map((g) => <span className={styles.tag} key={`g-${g}`}>{g}</span>)}
+                {master.styles.map((s) => <span className={styles.tag} key={`s-${s}`}>{s}</span>)}
+              </div>
+            )}
+            <div className={styles.links}>
+              <OutboundLink
+                href={discogsUrl("master", master.discogs_id)}
+                entityType="master"
+                entityId={master.discogs_id}
+                className={styles.link}
+              >
+                Open on Discogs
+              </OutboundLink>
+              <FavoriteButton entityType="release" discogsId={master.discogs_id} />
+              <AddToMixtapeButton
+                sourceEntityType="master"
+                sourceDiscogsId={master.discogs_id}
+                name={master.title}
+                artist={master.artists[0]?.name ?? null}
+              />
+              <ShareBar
+                url={`${BASE_URL}/release/${master.discogs_id}`}
+                title={master.title}
+                entityType="release"
+                entityId={master.discogs_id}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <ReleaseNavRenderer masters={navData} currentMasterId={master.discogs_id} />
+      <ReleaseDetailsRenderer release={releaseDetail} />
+      <ReleaseVersionsRenderer data={versionsData} />
+
+      <JsonLd data={[
+        musicAlbumJsonLd({ discogs_id: master.discogs_id, title: master.title, year: master.year, artists: master.artists, genres: master.genres }),
+        breadcrumbJsonLd([
+          { name: "dig", url: BASE_URL },
+          { name: master.title, url: `${BASE_URL}/release/${master.discogs_id}` },
+        ]),
+      ]} />
+      <Provenance provenance={master.provenance} />
+    </>
   );
 }
