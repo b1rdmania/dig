@@ -9,6 +9,12 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Run after no-dead-ends so the two jobs don't compete for DB connections.
+    # no-dead-ends fetches 100 entity pages (5 concurrent), each triggering
+    # multiple API→DB calls. Running smoke in parallel exhausts the pool.
+    needs: [no-dead-ends]
+    # Always run smoke — it's an independent API health check.
+    if: always()
 
     steps:
       - uses: actions/checkout@v4
