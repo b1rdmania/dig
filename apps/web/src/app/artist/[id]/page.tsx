@@ -446,9 +446,13 @@ export default async function ArtistPage({ params, searchParams }: Props) {
     : "all";
 
   // Shell renders bare layout immediately. Full content (including entity lookup)
-  // streams in via Suspense — prevents slow API responses from producing error pages.
+  // streams in via the outer Suspense — prevents slow API responses from producing
+  // error pages. Inner sections are NOT individually wrapped in Suspense; nested
+  // Suspense boundaries on the same page cause concurrent transform stream
+  // collisions (digest 4169818535) under burst load. All sections render together
+  // once ArtistContent resolves.
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-dig-entity="artist" data-dig-id={id}>
       <Suspense fallback={<SectionSkeleton lines={4} />}>
         <ArtistContent id={id} releaseType={releaseType} roleFamily={roleFamily} />
       </Suspense>
@@ -492,33 +496,19 @@ async function ArtistContent({ id, releaseType, roleFamily }: { id: string; rele
           </div>
         </section>
 
-        {/* About: streams in (context + name resolution) */}
-        <Suspense fallback={<SectionSkeleton lines={4} />}>
-          <ArtistAbout id={id} profile={artist.profile} />
-        </Suspense>
-
-        {/* Releases: streams in independently */}
-        <Suspense fallback={<SectionSkeleton lines={5} />}>
-          <ArtistReleases id={id} releaseType={releaseType} />
-        </Suspense>
-
-        {/* Credits: streams in independently */}
-        <Suspense fallback={<SectionSkeleton lines={5} />}>
-          <ArtistCredits id={id} roleFamily={roleFamily} />
-        </Suspense>
-
-        {/* Connections: streams in (relationships + timeline + name resolution) */}
-        <Suspense fallback={<SectionSkeleton lines={3} />}>
-          <ArtistConnections
-            id={id}
-            artist={{
-              aliases: artist.aliases,
-              name_variations: artist.name_variations,
-              members: artist.members,
-              groups: artist.groups,
-            }}
-          />
-        </Suspense>
+        {/* All sections rendered without individual Suspense — see page comment above */}
+        <ArtistAbout id={id} profile={artist.profile} />
+        <ArtistReleases id={id} releaseType={releaseType} />
+        <ArtistCredits id={id} roleFamily={roleFamily} />
+        <ArtistConnections
+          id={id}
+          artist={{
+            aliases: artist.aliases,
+            name_variations: artist.name_variations,
+            members: artist.members,
+            groups: artist.groups,
+          }}
+        />
 
         <JsonLd data={[
           musicGroupJsonLd({ discogs_id: artist.discogs_id, name: artist.name, urls: artist.urls }),
