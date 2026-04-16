@@ -99,8 +99,23 @@ After lease cleanup and DB restart attempts:
    - command outputs above
    - mention control-plane drift (`enable says enabled`, `list/create says not enabled`).
 
-## Operational Risk
+## Resolution (2026-03-16)
 
-Until this is resolved, backup status is not verifiable by CLI.  
-Treat this as a **P1 ops gap** (data protection visibility incomplete).
+Root cause: Tigris secrets were staged but never deployed to the machine. Running
+`fly secrets deploy -a dig-db` pushed the credentials and restarted the machine.
+
+Verified via SSH + pg_stat_archiver:
+- `archived_count = 153` — WAL files streaming to Tigris ✓
+- `last_archived_time > last_failed_time` — transient failures during restart, recovered ✓
+- `barman-cloud-backup-list` returns successfully (empty = no full backup yet, expected) ✓
+
+**First full backup will run automatically within 24h** (`full_backup_frequency = 24h`).
+After 3 full backups accumulate (`minimum_redundancy = 3`) PITR coverage is complete.
+
+## Remaining Open Items
+
+- `fly pg backup list` still returns "backups are not enabled" — this is because the
+  flyctl exec API is dead on this machine (vm health check returning 500s). Cosmetic only;
+  actual backups are running. Worth a Fly support ticket.
+- vm health check 500s — Fly agent inside the VM not responding. Separate from PG health.
 

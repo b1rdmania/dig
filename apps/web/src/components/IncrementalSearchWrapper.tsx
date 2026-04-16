@@ -84,6 +84,11 @@ export function IncrementalSearchWrapper({ children }: Props) {
         </form>
       </div>
 
+      {/* Maintenance notice */}
+      <div style={{ maxWidth: "var(--max-width)", margin: "0.75rem auto 0", textAlign: "center", fontSize: "0.8rem", color: "var(--fg-faint)" }}>
+        under maintenance — back online 26 march
+      </div>
+
       {/* Results area */}
       <div style={{ marginTop: "2rem" }} aria-live="polite">
         {showIncremental ? (

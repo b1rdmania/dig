@@ -6,8 +6,8 @@ Operational reference for the Fly.io staging deployment. For API/MCP usage, see 
 
 | Resource | Name | Region | Spec |
 |----------|------|--------|------|
-| API | dig-api | iad | shared-cpu-1x, 512MB, 2 machines |
-| MCP | dig-mcp | iad | shared-cpu-1x, 512MB, 1 machine |
+| API | dig-api | iad | shared-cpu-1x, 512MB, on-demand (0 min / 1 active / 2 warm burst) |
+| MCP | dig-mcp | iad | shared-cpu-1x, 512MB, on-demand (0 min / 1 active when needed) |
 | Postgres | dig-db | iad | shared-cpu-2x, 4GB RAM, 300GB disk |
 | Redis | dig-redis | iad | Upstash pay-per-use |
 | Frontend | dig-web | iad | shared-cpu-1x, 512MB, 1 machine (Fly) |
@@ -56,14 +56,76 @@ fly logs -a dig-mcp
 **Post-deploy checklist:**
 1. Verify health: `curl -s https://dig-api.fly.dev/v1/health | jq`
 2. If DB was restarted: run `pg_prewarm` (see Search Warmup section below)
-3. Fire warm-up queries to populate batch cache on both API machines:
+3. Fire warm-up queries to populate batch cache on active API machines:
    ```bash
-   # Hit each machine (2 requests to cover both via round-robin)
-   for i in 1 2; do
+   # Use 1 request for the normal on-demand posture.
+   # Set REQUESTS=2 only when you have deliberately scaled dig-api to 2 machines.
+   REQUESTS="${REQUESTS:-1}"
+   for i in $(seq 1 "$REQUESTS"); do
      curl -sS "https://dig-api.fly.dev/v1/search?q=test&limit=1" > /dev/null
    done
    ```
 4. Verify search returns all entity types: `curl -s "https://dig-api.fly.dev/v1/search?q=radiohead&limit=5" | jq '.results[].type'`
+
+## Idle Posture And Recovery
+
+Default idle posture keeps the web app recoverable without paying for always-on API or MCP capacity:
+
+- `dig-api`: keep `auto_stop_machines = "stop"`, `auto_start_machines = true`, `min_machines_running = 0`.
+- `dig-api`: keep machine count at `1` so Fly can stop the machine when idle and cold-start it on the next web or API request.
+- `dig-mcp`: keep the same autostart/autostop settings, but scale count to `0` when you are not actively using MCP.
+
+### Put services into the lean idle posture
+
+```bash
+# Apply the checked-in Fly config
+fly deploy --config fly.api.toml --remote-only
+fly deploy --config fly.mcp.toml --remote-only
+
+# API: keep one machine available for autostart/cold-start behavior
+fly scale count 1 -a dig-api
+
+# MCP: take fully offline until needed again
+fly scale count 0 -a dig-mcp
+
+# Verify current state
+fly status -a dig-api
+fly status -a dig-mcp
+```
+
+### Bring services back
+
+```bash
+# API: standard active posture
+fly scale count 1 -a dig-api
+
+# API: restore the old always-warm posture only when you want it
+fly scale count 2 -a dig-api
+
+# MCP: bring back the single sticky-session machine
+fly scale count 1 -a dig-mcp
+```
+
+Verification order after bring-up:
+
+1. `fly status -a dig-api`
+2. `curl -s https://dig-api.fly.dev/v1/health | jq`
+3. Warm the API with the post-deploy checklist above.
+4. `fly status -a dig-mcp`
+5. `MCP_URL="https://dig-mcp.fly.dev/sse" npx tsx apps/mcp/src/smoke-test.ts`
+6. Optional full check:
+   ```bash
+   API_URL=https://dig-api.fly.dev \
+   WEB_URL=https://app.dig.baby \
+   MCP_URL=https://dig-mcp.fly.dev \
+   npm run smoke:regression
+   ```
+
+### Cold-start acceptance
+
+- First API-backed web request will be slower after idle.
+- `dig-mcp` returns to service only after `fly scale count 1 -a dig-mcp`.
+- If you intentionally scale `dig-api` to `0`, the public web app will fail until you scale it back up.
 
 ## Rollback
 
