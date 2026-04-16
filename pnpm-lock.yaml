@@ -32,9 +32,6 @@ importers:
       fastify:
         specifier: ^5.2.1
         version: 5.7.4
-      fastify-raw-body:
-        specifier: ^5.0.0
-        version: 5.0.0
       ioredis:
         specifier: ^5.4.2
         version: 5.9.3
@@ -1143,10 +1140,6 @@ packages:
   fastify-plugin@5.1.0:
     resolution: {integrity: sha512-FAIDA8eovSt5qcDgcBvDuX/v0Cjz0ohGhENZ/wpc3y+oZCY2afZ9Baqql3g/lC+OHRnciQol4ww7tuthOb9idw==}
 
-  fastify-raw-body@5.0.0:
-    resolution: {integrity: sha512-2qfoaQ3BQDhZ1gtbkKZd6n0kKxJISJGM6u/skD9ljdWItAscjXrtZ1lnjr7PavmXX9j4EyCPmBDiIsLn07d5vA==}
-    engines: {node: '>= 10'}
-
   fastify@5.7.4:
     resolution: {integrity: sha512-e6l5NsRdaEP8rdD8VR0ErJASeyaRbzXYpmkrpr2SuvuMq6Si3lvsaVy5C+7gLanEkvjpMDzBXWE5HPeb/hgTxA==}
 
@@ -1731,9 +1724,6 @@ packages:
 
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
-
-  secure-json-parse@2.7.0:
-    resolution: {integrity: sha512-6aU+Rwsezw7VR8/nyvKTx8QpWH9FrcYiXXlqC4z5d5XQBDRqtbfsRjnwGyqbi3gddNtWHuEk9OANUotL26qKUw==}
 
   secure-json-parse@4.1.0:
     resolution: {integrity: sha512-l4KnYfEyqYJxDwlNVyRfO2E4NTHfMKAWdUuA8J0yve2Dz/E/PdBepY03RvyJpssIpRFwJoCD55wA+mEDs6ByWA==}
@@ -2934,12 +2924,6 @@ snapshots:
 
   fastify-plugin@5.1.0: {}
 
-  fastify-raw-body@5.0.0:
-    dependencies:
-      fastify-plugin: 5.1.0
-      raw-body: 3.0.2
-      secure-json-parse: 2.7.0
-
   fastify@5.7.4:
     dependencies:
       '@fastify/ajv-compiler': 4.0.5
@@ -3706,8 +3690,6 @@ snapshots:
       xmlchars: 2.2.0
 
   scheduler@0.27.0: {}
-
-  secure-json-parse@2.7.0: {}
 
   secure-json-parse@4.1.0: {}
 

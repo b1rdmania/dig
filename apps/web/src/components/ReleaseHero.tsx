@@ -4,9 +4,7 @@ import { formatDescriptions, discogsUrl } from "@/lib/format";
 import { firstYoutubeThumb } from "@/lib/media";
 import { BASE_URL } from "@/lib/seo";
 import { OutboundLink } from "./OutboundLink";
-import { FavoriteButton } from "./FavoriteButton";
 import { ShareBar } from "./ShareBar";
-import { AddToMixtapeButton } from "./AddToMixtapeButton";
 import styles from "./ReleaseHero.module.css";
 
 interface Props {
@@ -110,17 +108,6 @@ export function ReleaseHero({ release, coverUrl, market }: Props) {
         >
           Open on Discogs
         </OutboundLink>
-        <FavoriteButton
-          entityType="version"
-          discogsId={release.discogs_id}
-        />
-        <AddToMixtapeButton
-          sourceEntityType="release"
-          sourceDiscogsId={release.discogs_id}
-          masterDiscogsId={release.master_discogs_id}
-          name={release.title}
-          artist={release.artists[0]?.name ?? null}
-        />
         <ShareBar
           url={`${BASE_URL}/version/${release.discogs_id}`}
           title={release.title}

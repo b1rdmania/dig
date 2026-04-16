@@ -12,7 +12,6 @@
 import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply } from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import cors from "@fastify/cors";
-import rawBody from "fastify-raw-body";
 import Redis from "ioredis";
 import { randomUUID } from "node:crypto";
 import { createDb } from "@dig/db";
@@ -59,9 +58,6 @@ export async function buildApp(deps: AppDeps): Promise<{
   const app = Fastify({ logger: false });
   const db = createDb(deps.databaseUrl);
   initUsagePersistence(db);
-
-  // --- Raw body (for Stripe webhook signature verification) ---
-  await app.register(rawBody, { field: "rawBody", global: false, encoding: false, runFirst: true });
 
   // --- CORS ---
   await app.register(cors, {

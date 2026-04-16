@@ -148,30 +148,6 @@ export function trackMediaShowMoreClicked(remainingCount: number): void {
   });
 }
 
-export function trackFavoriteToggled(entityType: string, entityId: number, saved: boolean): void {
-  track("favorite_toggled", {
-    entity_type: entityType,
-    entity_id: entityId,
-    saved,
-  });
-}
-
-export function trackMixtapeAddClicked(entityType: string, entityId: number): void {
-  track("mixtape_add_clicked", { entity_type: entityType, entity_id: entityId });
-}
-
-export function trackMixtapeAddSucceeded(entityType: string, entityId: number, mixtapeId: string): void {
-  track("mixtape_add_succeeded", { entity_type: entityType, entity_id: entityId, mixtape_id: mixtapeId });
-}
-
-export function trackMixtapeAddFailed(entityType: string, entityId: number, reason: string): void {
-  track("mixtape_add_failed", { entity_type: entityType, entity_id: entityId, reason });
-}
-
-export function trackMixtapeUpgradePrompted(entityType: string, entityId: number): void {
-  track("mixtape_upgrade_prompted", { entity_type: entityType, entity_id: entityId });
-}
-
 export function trackShareClicked(entityType: string | null, entityId: number | null, channel: string): void {
   track("share_clicked", {
     entity_type: entityType,
@@ -190,24 +166,4 @@ export function trackIncrementalSearch(
   },
 ): void {
   track(`search_incremental_${event}`, properties);
-}
-
-export function trackFavoritesListViewed(count: number): void {
-  track("favorites_list_viewed", { count });
-}
-
-export function trackFavoriteReopened(entityType: string, entityId: number, sourceSurface: string): void {
-  track("favorite_reopened", { entity_type: entityType, entity_id: entityId, source_surface: sourceSurface });
-}
-
-export function trackFavoriteRemoved(entityType: string, entityId: number, sourceSurface: string): void {
-  track("favorite_removed", { entity_type: entityType, entity_id: entityId, source_surface: sourceSurface });
-}
-
-export function trackFavoritesBulkRemove(count: number): void {
-  track("favorites_bulk_remove", { count });
-}
-
-export function trackRecentFavoriteClicked(entityType: string, entityId: number, position: number): void {
-  track("favorite_reopened", { entity_type: entityType, entity_id: entityId, source_surface: "recent_rail", position });
 }

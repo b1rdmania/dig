@@ -54,44 +54,12 @@ export {
   type ArtistCreditsResponse,
 } from "./traversal.js";
 export {
-  getEntitlementsByClerkId,
-  upsertUserFromClerk,
-  applyStripeEvent,
-  checkAndIncrementLlmQuota,
-  type Plan,
-  type Entitlements,
-} from "./entitlements.js";
-export {
   classifyEntityQuality,
   getSuppressedEntityKeys,
   QUALITY_VERSION,
   type QualityStatus,
   type QualityScore,
 } from "./quality.js";
-export {
-  upsertSpotifyToken,
-  getSpotifyToken,
-  deleteSpotifyToken,
-  isTokenExpired,
-  createExportJob,
-  getExportJob,
-  listExportJobs,
-  updateExportJob,
-  type StoredSpotifyToken,
-  type ExportJob,
-} from "./spotify-export.js";
-export {
-  createMixtape,
-  listMixtapes,
-  getMixtape,
-  deleteMixtape,
-  addTrack,
-  listTracks,
-  removeTrack,
-  type Mixtape,
-  type MixtapeTrack,
-  type AddTrackInput,
-} from "./mixtapes.js";
 export {
   getArtistRelationships,
   getArtistContext,
