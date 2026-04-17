@@ -119,7 +119,14 @@ export async function getMaster(
       .where("master_discogs_id", "=", discogsId)
       // master_tracks deliberately doesn't carry batch_id — there is at most
       // one canonical tracklist per master in the slim shape.
-      .orderBy(sql`(regexp_replace(position, '[^0-9]', '', 'g'))::int NULLS LAST`)
+      // Sort by leading numeric component of the position string ("A1" → 1,
+      // "10" → 10) but defend against positions with zero digits ("Bonus",
+      // "Side A") — without NULLIF the regex returns '' and ''::int throws
+      // "invalid input syntax for type integer". NULLIF + NULLS LAST sends
+      // those rows to the bottom, then the secondary text sort breaks ties.
+      .orderBy(
+        sql`NULLIF(regexp_replace(position, '[^0-9]', '', 'g'), '')::int NULLS LAST`,
+      )
       .orderBy("position", "asc")
       .execute(),
     db
