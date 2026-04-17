@@ -38,6 +38,9 @@ export interface CatalogArtistsTable {
   data_quality: string;
   batch_id: string;
   search_vector: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  // Slim model (migration 025): denormed alias names, display-only.
+  // Defaults to '{}' so existing rows on dig-db remain valid.
+  aliases_text: Generated<string[]>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
@@ -52,6 +55,8 @@ export interface CatalogLabelsTable {
   parent_label_discogs_id: number | null;
   batch_id: string;
   search_vector: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  // Slim model (migration 025): denormed label aliases, display-only.
+  aliases_text: Generated<string[]>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
@@ -65,8 +70,44 @@ export interface CatalogMastersTable {
   data_quality: string;
   batch_id: string;
   search_vector: ColumnType<string | null, string | null | undefined, string | null | undefined>;
+  // Slim model (migration 025): denormed columns populated at scope-build
+  // by scripts/build-scoped-db.ts. All nullable / default-empty so the
+  // migration is reversible without a backfill.
+  primary_artist_discogs_id: number | null;
+  primary_artist_name: string | null;
+  artists_credit_text: string | null;
+  primary_label_discogs_id: number | null;
+  primary_label_name: string | null;
+  primary_country: string | null;
+  primary_format: string | null;
+  genres: Generated<string[]>;
+  styles: Generated<string[]>;
+  scene_weight: Generated<number>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
+}
+
+export interface CatalogMasterTracksTable {
+  id: Generated<number>;
+  master_discogs_id: number;
+  position: string | null;
+  title: string;
+  duration_seconds: number | null;
+  artists_text: string | null;
+  source_release_discogs_id: number;
+  built_at: Generated<Date>;
+}
+
+export interface CatalogMasterVideosUnifiedTable {
+  id: Generated<number>;
+  master_discogs_id: number;
+  source_type: "master" | "release";
+  source_release_discogs_id: number | null;
+  url: string;
+  title: string | null;
+  duration_seconds: number | null;
+  discogs_release_url: string | null;
+  built_at: Generated<Date>;
 }
 
 export interface CatalogReleasesTable {
@@ -328,6 +369,43 @@ export interface EnrichUsageCountersTable {
   updated_at: Generated<Date>;
 }
 
+export interface EnrichLabelEditorialTable {
+  discogs_label_id: number;
+  tier: "tier1" | "denylist";
+  notes: string | null;
+  source: Generated<string>;
+  added_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface EnrichSceneScopeAuditTable {
+  id: Generated<number>;
+  built_at: Generated<Date>;
+  source_batch_id: string;
+  year_min: number;
+  year_max: number;
+  style_allowlist: string[];
+  quality_filter: boolean;
+  breakbeat_year_gate: number | null;
+  counts: Generated<unknown>;
+  notes: string | null;
+}
+
+export interface CatalogReleaseShadowTable {
+  release_discogs_id: number;
+  master_discogs_id: number | null;
+  title: string;
+  release_year: number | null;
+  country: string | null;
+  label: string | null;
+  format: string | null;
+  is_main_release: Generated<boolean>;
+  has_tracklist_delta: Generated<boolean>;
+  has_remix_signal: Generated<boolean>;
+  discogs_url: string | null;
+  built_at: Generated<Date>;
+}
+
 // --- Database interface ---
 
 export interface Database {
@@ -372,8 +450,15 @@ export interface Database {
   "catalog.tracks": TracksTable;
   "catalog.track_credits": TrackCreditsTable;
 
+  // Catalog: scene-scope shadow + slim master-first derivations (025)
+  "catalog.release_shadow": CatalogReleaseShadowTable;
+  "catalog.master_tracks": CatalogMasterTracksTable;
+  "catalog.master_videos_unified": CatalogMasterVideosUnifiedTable;
+
   // Enrich
   "enrich.entity_quality": EnrichEntityQualityTable;
   "enrich.label_linkouts": EnrichLabelLinkoutsTable;
   "enrich.usage_counters": EnrichUsageCountersTable;
+  "enrich.label_editorial": EnrichLabelEditorialTable;
+  "enrich.scene_scope_audit": EnrichSceneScopeAuditTable;
 }
