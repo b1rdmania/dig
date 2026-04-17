@@ -1,28 +1,81 @@
-:root {
-  --bg: #fff;
-  --fg: #000;
-  --fg-muted: #666;
-  --fg-faint: #999;
-  --line: #ccc;
-  --surface: #f5f5f5;
-  --link: #0000EE;
-  --link-visited: #551A8B;
-  --radius: 4px;
-  --max-width: 720px;
-  color-scheme: light dark;
-}
+/* =============================================================
+ * dig — design tokens (v1, 2026-04-16)
+ *
+ * See docs/design-system.md for the canonical reference.
+ * Paper backdrop, ink-on-paper, label-color identity.
+ * No dark mode in v1 — paper aesthetic depends on the warm backdrop.
+ * ============================================================= */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111;
-    --fg: #e0e0e0;
-    --fg-muted: #999;
-    --fg-faint: #666;
-    --line: #333;
-    --surface: #1a1a1a;
-    --link: #6e9eff;
-    --link-visited: #b89aff;
-  }
+:root {
+  /* Color — base */
+  --paper:        #f4f1e8;
+  --paper-edge:   #ebe6d6;
+  --ink:          #1a1a1a;
+  --ink-soft:     #4a4a4a;
+  --ink-muted:    #8a8a82;
+  --ink-faint:    #b8b3a4;
+  --rule:         #d4cfbe;
+  --rule-bold:    #1a1a1a;
+  --surface:      #faf7ee;
+  --surface-edge: #e5dfca;
+  --ink-inverse:  #f4f1e8;
+
+  /* Color — editorial tones */
+  --tier1-accent:     #c8431f;
+  --tier1-accent-ink: #f4f1e8;
+  --scope-out:        #b8b3a4;
+  --link-underline:   #1a1a1a;
+
+  /* Color — label-color identity (overridden per-page by <Page accent=…>) */
+  --label-accent:     var(--ink);
+  --label-accent-ink: var(--paper);
+
+  /* Type stack */
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular",
+               Menlo, Monaco, Consolas, monospace;
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Söhne",
+               "Inter", system-ui, sans-serif;
+  --font-serif: "Iowan Old Style", "Charter", "Source Serif Pro", "Iowan",
+                Georgia, "Times New Roman", serif;
+
+  /* Type scale */
+  --fs-xs:   11px;
+  --fs-sm:   13px;
+  --fs-base: 15px;
+  --fs-md:   16px;
+  --fs-lg:   20px;
+  --fs-xl:   28px;
+  --fs-2xl:  44px;
+
+  /* Spacing scale */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+  --sp-9: 96px;
+
+  /* Layout */
+  --container-max: 880px;
+  --container-pad: 32px;
+
+  /* Legacy aliases — kept temporarily so unmigrated CSS modules don't
+     break. TODO(redesign): migrate every reference and delete these. */
+  --bg: var(--paper);
+  --fg: var(--ink);
+  --fg-muted: var(--ink-soft);
+  --fg-faint: var(--ink-muted);
+  --line: var(--rule);
+  --link: var(--ink);
+  --link-visited: var(--ink-soft);
+  --max-width: var(--container-max);
+  --radius: 0;
+
+  /* Force light scheme — no system dark inheritance */
+  color-scheme: light;
 }
 
 *,
@@ -38,44 +91,91 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   overflow-x: hidden;
+  background: var(--paper);
 }
 
 body {
-  font-family: "Times New Roman", Times, serif;
-  background: var(--bg);
-  color: var(--fg);
-  line-height: 1.6;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  font-weight: 400;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.55;
   min-height: 100dvh;
   overflow-x: hidden;
   max-width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
+/* Default link treatment — black underline, low offset, never blue/purple. */
 a {
-  color: var(--link);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 80ms linear;
 }
 
 a:hover {
-  text-decoration: underline;
+  text-decoration-color: var(--ink);
 }
 
 a:visited {
-  color: var(--link-visited);
+  color: var(--ink);
 }
 
 input,
 select,
-button {
+button,
+textarea {
   font-family: inherit;
   font-size: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+}
+
+button {
+  cursor: pointer;
+  padding: 0;
 }
 
 main {
-  padding: 60px 20px 40px;
-  min-height: calc(100vh - 120px);
+  padding: var(--sp-7) var(--container-pad) var(--sp-8);
+  min-height: calc(100dvh - 200px);
+  background: var(--paper);
 }
 
 @media (max-width: 768px) {
-  main {
-    padding: 56px 16px 32px;
+  :root {
+    --container-pad: 18px;
   }
+  main {
+    padding: var(--sp-6) var(--container-pad) var(--sp-7);
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --container-pad: 14px;
+  }
+}
+
+/* Reduce motion gracefully */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Selection — paper-cream backdrop calls for a warm selection tone */
+::selection {
+  background: var(--ink);
+  color: var(--paper);
 }

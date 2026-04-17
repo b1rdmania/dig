@@ -44,6 +44,15 @@ describe("LabelDetail shape", () => {
       aliases: [],
       // tier1 example — Planet E is on the editorial tier-1 list in real data.
       tier: "tier1",
+      editorial: {
+        tier: "tier1",
+        palette: { accent: "#1a1a1a", accent_ink: "#f4f1e8" },
+        blurb: "Detroit techno cornerstone — Carl Craig's house.",
+        founded_year: 1991,
+        closed_year: null,
+        is_active: true,
+        location: "Detroit, US",
+      },
       urls: ["https://planet-e.net"],
       provenance: { source: "discogs", dump_date: "2026-02-01", discogs_id: 1 },
     };
@@ -51,6 +60,7 @@ describe("LabelDetail shape", () => {
     expect(label.name).toBe("Planet E");
     expect(label.parent_label.discogs_id).toBeNull();
     expect(label.tier).toBe("tier1");
+    expect(label.editorial.tier).toBe("tier1");
   });
 
   it("supports unrated labels (long-tail)", () => {
@@ -63,10 +73,20 @@ describe("LabelDetail shape", () => {
       data_quality: "Needs Vote",
       aliases: [],
       tier: null,
+      editorial: {
+        tier: null,
+        palette: null,
+        blurb: null,
+        founded_year: null,
+        closed_year: null,
+        is_active: true,
+        location: null,
+      },
       urls: [],
       provenance: { source: "discogs", dump_date: "2026-02-01", discogs_id: 999999 },
     };
     expect(label.tier).toBeNull();
+    expect(label.editorial.palette).toBeNull();
   });
 });
 

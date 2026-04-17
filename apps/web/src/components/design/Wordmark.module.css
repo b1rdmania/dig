@@ -1,0 +1,43 @@
+.mark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.bracket {
+  color: var(--ink-muted);
+  padding: 0 2px;
+}
+
+.body {
+  padding: 0 2px;
+  color: var(--ink);
+}
+
+.stamp {
+  margin-left: var(--sp-3);
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.7em;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: var(--ink-muted);
+  align-self: baseline;
+}
+
+.size-sm {
+  font-size: 14px;
+}
+
+.size-md {
+  font-size: 18px;
+}
+
+.size-lg {
+  font-size: 28px;
+}

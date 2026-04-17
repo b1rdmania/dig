@@ -1,147 +1,125 @@
 .nav {
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 8px 20px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--ink);
+}
+
+.inner {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--sp-3) var(--container-pad);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
+  gap: var(--sp-3);
+  min-height: 44px;
 }
 
 .left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   flex-shrink: 0;
 }
 
 .backBtn {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: var(--fg);
-  font-size: 11px;
-  padding: 4px 8px;
+  background: transparent;
+  border: 0;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  border-radius: 0;
+  padding: 0;
 }
 
 .backBtn:hover {
-  background: var(--surface);
+  color: var(--ink);
 }
 
-.logo {
-  font-size: 14px;
-  font-weight: bold;
-  color: var(--fg);
+.brand {
   text-decoration: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
 }
 
-.logo:hover {
+.brand:hover {
   text-decoration: none;
-}
-
-.beta {
-  font-weight: normal;
-  font-size: 10px;
-  color: var(--fg-faint);
 }
 
 .searchForm {
   display: flex;
   align-items: center;
-  gap: 6px;
-  width: min(400px, 40vw);
+  gap: var(--sp-2);
+  width: min(420px, 50vw);
+  border-bottom: 1px solid var(--ink);
+  padding: 2px 0;
+}
+
+.searchForm:focus-within {
+  border-bottom-width: 2px;
+  margin-bottom: -1px;
+}
+
+.searchPrompt {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+  flex-shrink: 0;
 }
 
 .searchInput {
+  flex: 1;
   width: 100%;
-  min-width: 100px;
-  padding: 4px 8px;
-  border: 1px solid var(--fg);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: var(--fg);
-  font-size: 14px;
+  min-width: 80px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   outline: none;
   -webkit-appearance: none;
   appearance: none;
 }
 
-.searchInput:focus {
-  border-color: var(--fg);
-}
-
 .searchInput::placeholder {
-  color: var(--fg-faint);
+  color: var(--ink-faint);
 }
 
 .searchBtn {
   flex-shrink: 0;
-  border: 1px solid var(--fg);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: var(--fg);
-  font-size: 11px;
-  padding: 4px 8px;
+  background: transparent;
+  border: 0;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--fs-base);
+  padding: 0 var(--sp-2);
   cursor: pointer;
 }
 
 .searchBtn:hover {
-  background: var(--surface);
+  color: var(--ink);
 }
 
-.authArea {
-  flex-shrink: 0;
-}
-
-.authLink {
-  font-size: 12px;
-  color: var(--fg-muted);
-  text-decoration: none;
-  padding: 4px 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-
-.authLink:hover {
-  color: var(--fg);
-  border-color: var(--fg);
-}
-
-@media (max-width: 768px) {
-  .nav {
-    padding: 8px 12px;
-    gap: 8px;
+@media (max-width: 720px) {
+  .inner {
+    padding: var(--sp-3) var(--container-pad);
+    gap: var(--sp-2);
   }
-
-  .left {
-    gap: 6px;
-  }
-
-  .backBtn {
-    padding: 3px 6px;
-    font-size: 10px;
-  }
-
   .searchForm {
-    width: min(220px, 45vw);
-    gap: 4px;
+    width: min(220px, 60vw);
   }
-
-  .searchInput {
-    padding: 3px 6px;
-    font-size: 13px;
-    min-width: 80px;
-  }
-
-  .searchBtn {
-    padding: 3px 6px;
-    font-size: 10px;
-  }
-
 }

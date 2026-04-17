@@ -376,6 +376,14 @@ export interface EnrichLabelEditorialTable {
   source: Generated<string>;
   added_at: Generated<Date>;
   updated_at: Generated<Date>;
+  /** Migration 027: { accent: "#hex", accent_ink: "#hex" } */
+  palette: { accent: string; accent_ink: string } | null;
+  /** Migration 027: ≤50-word editorial blurb. */
+  blurb: string | null;
+  founded_year: number | null;
+  closed_year: number | null;
+  is_active: Generated<boolean>;
+  location: string | null;
 }
 
 export interface EnrichSceneScopeAuditTable {

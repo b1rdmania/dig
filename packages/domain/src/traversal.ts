@@ -276,10 +276,25 @@ export async function getArtistCatalogReleases(
 // ─── Active: label → masters ────────────────────────────────────────────────
 
 /**
- * Returns the masters released on a given label, ranked by scene_weight
- * (most "in-scene" first). Replaces the old release-level traversal which
- * was the only way to find a label's catalog in the full-catalog shape.
+ * Returns the masters released on a given label.
+ *
+ * `sort` modes:
+ *   - "id" (default, stable cursor) — by discogs_id ASC. Used by the legacy
+ *     /v1/labels/:id/releases endpoint and the master page's label badge.
+ *   - "chronological" — by year ASC, discogs_id ASC. Powers the redesigned
+ *     label-page catalog spine. When set, also LEFT JOINs release_shadow on
+ *     the main pressing to surface the catalog number (RS 91040, etc).
+ *
+ * Replaces the old release-level traversal which was the only way to find a
+ * label's catalog in the full-catalog shape.
  */
+export interface LabelMasterLink extends TraversalLink {
+  /** Catalog number from the main pressing — only populated for sort=chronological. */
+  catalog_number?: string | null;
+  /** Primary artist credit text — only populated for sort=chronological. */
+  primary_artist?: string | null;
+}
+
 export async function getLabelReleases(
   db: Kysely<Database>,
   labelDiscogsId: number,
@@ -287,10 +302,71 @@ export async function getLabelReleases(
   dumpDate: string,
   limit = DEFAULT_LIMIT,
   cursor?: string,
+  sort: "id" | "chronological" = "id",
 ): Promise<TraversalResponse> {
   const start = Date.now();
   const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
   const afterId = cursor ? decodeCursor(cursor) : null;
+
+  if (sort === "chronological") {
+    // Year-sorted catalog spine. We fetch up to MAX_LIMIT + 1 in one shot,
+    // then slice in JS — chronological cursor pagination over (year,
+    // discogs_id) gets ugly with NULLs and isn't worth the complexity for
+    // labels with <= 200 in-scope masters (the cap below).
+    const rows = await db
+      .selectFrom("catalog.masters")
+      .leftJoin("catalog.release_shadow", (join) =>
+        join
+          .onRef("catalog.release_shadow.master_discogs_id", "=", "catalog.masters.discogs_id")
+          .on("catalog.release_shadow.is_main_release", "=", true),
+      )
+      .select([
+        "catalog.masters.discogs_id",
+        "catalog.masters.title",
+        "catalog.masters.year",
+        "catalog.masters.primary_country as country",
+        "catalog.masters.primary_format as format",
+        "catalog.masters.scene_weight",
+        "catalog.masters.primary_artist_name as primary_artist",
+        // catalog.release_shadow doesn't currently store catalog_number on
+        // dig-db-scene (the slim shape dropped catalog.release_labels).
+        // Surface it as null for now; if/when we backfill release_shadow
+        // with catalog numbers this returns it for free.
+        sql<string | null>`NULL`.as("catalog_number"),
+      ])
+      .where("catalog.masters.primary_label_discogs_id", "=", labelDiscogsId)
+      .where("catalog.masters.batch_id", "=", batchId)
+      .orderBy("catalog.masters.year", "asc")
+      .orderBy("catalog.masters.discogs_id", "asc")
+      .limit(lim)
+      .execute();
+
+    return {
+      links: rows.map<LabelMasterLink>((r) => ({
+        type: "master",
+        discogs_id: r.discogs_id,
+        title: r.title ?? undefined,
+        year: r.year,
+        country: r.country,
+        format: r.format,
+        scene_weight: r.scene_weight,
+        catalog_number: r.catalog_number,
+        primary_artist: r.primary_artist,
+        provenance: { source: "discogs", dump_date: dumpDate, discogs_id: r.discogs_id },
+      })),
+      pagination: {
+        cursor: null,
+        has_more: rows.length === lim,
+        total_estimate: null,
+      },
+      meta: {
+        source_type: "label",
+        source_discogs_id: labelDiscogsId,
+        link_type: "spine",
+        elapsed_ms: Date.now() - start,
+      },
+    };
+  }
 
   let query = db
     .selectFrom("catalog.masters")
@@ -340,6 +416,90 @@ export async function getLabelReleases(
       // are masters, but the endpoint name in the legacy API is /releases.
       link_type: "releases",
       elapsed_ms: Date.now() - start,
+    },
+  };
+}
+
+// ─── Active: label → roster (top artists by master count) ───────────────────
+
+export interface LabelRosterEntry {
+  artist_discogs_id: number;
+  name: string;
+  master_count: number;
+  first_year: number | null;
+  last_year: number | null;
+}
+
+export interface LabelRosterResponse {
+  roster: LabelRosterEntry[];
+  meta: {
+    source_type: "label";
+    source_discogs_id: number;
+    link_type: "roster";
+    elapsed_ms: number;
+    total_artists: number;
+  };
+}
+
+/**
+ * Returns the top-N artists who appear on a label, ranked by # of in-scope
+ * masters released on that label. Powers the redesigned label-page roster
+ * column. Joins `catalog.master_artists` to `catalog.masters` filtered by
+ * `primary_label_discogs_id`, then to `catalog.artists` for the name.
+ */
+export async function getLabelRoster(
+  db: Kysely<Database>,
+  labelDiscogsId: number,
+  batchId: string,
+  limit = 20,
+): Promise<LabelRosterResponse> {
+  const start = Date.now();
+  const lim = Math.min(Math.max(limit, 1), 100);
+
+  const rows = await sql<{
+    artist_discogs_id: number;
+    name: string;
+    master_count: string;
+    first_year: number | null;
+    last_year: number | null;
+  }>`
+    SELECT
+      ma.artist_discogs_id,
+      a.name,
+      COUNT(*)::text   AS master_count,
+      MIN(m.year)      AS first_year,
+      MAX(m.year)      AS last_year
+    FROM catalog.master_artists ma
+    JOIN catalog.masters m
+      ON m.discogs_id = ma.master_discogs_id
+     AND m.batch_id   = ma.batch_id
+    JOIN catalog.artists a
+      ON a.discogs_id = ma.artist_discogs_id
+     AND a.batch_id   = ma.batch_id
+    WHERE m.primary_label_discogs_id = ${labelDiscogsId}
+      AND m.batch_id = ${batchId}
+    GROUP BY ma.artist_discogs_id, a.name
+    ORDER BY COUNT(*) DESC, MIN(m.year) ASC, a.name ASC
+    LIMIT ${lim + 1}
+  `.execute(db);
+
+  const hasMore = rows.rows.length > lim;
+  const top = hasMore ? rows.rows.slice(0, lim) : rows.rows;
+
+  return {
+    roster: top.map((r) => ({
+      artist_discogs_id: r.artist_discogs_id,
+      name: r.name,
+      master_count: parseInt(r.master_count, 10),
+      first_year: r.first_year,
+      last_year: r.last_year,
+    })),
+    meta: {
+      source_type: "label",
+      source_discogs_id: labelDiscogsId,
+      link_type: "roster",
+      elapsed_ms: Date.now() - start,
+      total_artists: hasMore ? -1 : top.length,
     },
   };
 }

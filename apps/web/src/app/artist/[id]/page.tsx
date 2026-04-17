@@ -357,6 +357,7 @@ async function ArtistContent({ id, releaseType }: { id: string; releaseType: str
     return (
       <>
         <section className={styles.hero}>
+          <div className={styles.eyebrow}>ARTIST · #{artist.discogs_id}</div>
           <h1 className={styles.title}>{artist.name}</h1>
           {artist.real_name && <div className={styles.subtitle}>Real name: {artist.real_name}</div>}
           <div className={styles.links}>
@@ -369,7 +370,7 @@ async function ArtistContent({ id, releaseType }: { id: string; releaseType: str
               </a>
             ))}
           </div>
-          <div style={{ marginTop: "0.6rem" }}>
+          <div style={{ marginTop: "var(--sp-3)" }}>
             <ShareBar
               url={`${BASE_URL}/artist/${artist.discogs_id}`}
               title={artist.name}

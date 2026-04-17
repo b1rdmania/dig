@@ -1,0 +1,154 @@
+.spine {
+  display: flex;
+  flex-direction: column;
+}
+
+.headerRow,
+.row {
+  display: grid;
+  grid-template-columns:
+    32px              /* # */
+    52px              /* Year */
+    1fr               /* Title */
+    minmax(120px, 200px)  /* Artist */
+    72px;             /* Format */
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.headerRow {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  padding-bottom: var(--sp-1);
+}
+
+.row {
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+}
+
+.row:hover {
+  background: var(--surface);
+}
+
+.outOfScope {
+  color: var(--ink-faint);
+}
+
+.outOfScope .titleLink {
+  color: var(--ink-faint);
+  text-decoration: none;
+  cursor: default;
+}
+
+.colNum {
+  color: var(--ink-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.colYear {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.colTitle {
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+}
+
+.titleLink {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
+}
+
+.titleLink:hover {
+  text-decoration-color: var(--ink);
+}
+
+.catalogNumber {
+  display: inline-flex;
+}
+
+.colArtist {
+  color: var(--ink-soft);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.colMeta {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dim {
+  color: var(--ink-faint);
+}
+
+.decadeMarker {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-5) 0 var(--sp-2);
+}
+
+.decadeLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.decadeRule {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+.empty {
+  font-family: var(--font-sans);
+  color: var(--ink-soft);
+  padding: var(--sp-5) 0;
+  font-size: var(--fs-base);
+}
+
+@media (max-width: 720px) {
+  .headerRow,
+  .row {
+    grid-template-columns: 28px 48px 1fr 60px;
+    gap: var(--sp-2);
+  }
+  .colArtist {
+    grid-column: 3;
+    color: var(--ink-soft);
+    font-size: var(--fs-sm);
+    margin-top: -2px;
+    order: 4;
+  }
+  .colTitle {
+    font-size: var(--fs-sm);
+  }
+  .colMeta {
+    grid-column: 4;
+    grid-row: 1;
+  }
+}

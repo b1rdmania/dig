@@ -1,15 +1,38 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
+import { IBM_Plex_Sans, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import "./globals.css";
 
+const sans = IBM_Plex_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600"],
+  variable: "--font-sans-body",
+  display: "swap",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono-body",
+  display: "swap",
+});
+
+const serif = Source_Serif_4({
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["italic", "normal"],
+  variable: "--font-serif-body",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "dig (beta)",
-  description: "music search, fixed.",
+  title: "dig — alpha",
+  description: "A music data layer. For the long-tail of recorded music.",
   metadataBase: new URL("https://app.dig.baby"),
   openGraph: {
-    title: "dig (beta)",
+    title: "dig — alpha",
     siteName: "dig",
     locale: "en_US",
   },
@@ -21,10 +44,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#111111" },
-  ],
+  themeColor: "#f4f1e8",
 };
 
 export default function RootLayout({
@@ -33,7 +53,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={`${sans.variable} ${mono.variable} ${serif.variable}`}
+      style={{
+        // Bind next/font CSS variables to the design-system aliases so any
+        // `var(--font-sans)` reference picks up the loaded webfont.
+        // Stacks fall back to the system fonts already declared in
+        // globals.css if the webfont is still loading.
+        ["--font-sans" as string]:
+          `var(--font-sans-body), -apple-system, BlinkMacSystemFont, "Söhne", Inter, system-ui, sans-serif`,
+        ["--font-mono" as string]:
+          `var(--font-mono-body), ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace`,
+        ["--font-serif" as string]:
+          `var(--font-serif-body), "Iowan Old Style", Charter, Georgia, "Times New Roman", serif`,
+      }}
+    >
       <body>
         <Suspense fallback={null}>
           <Nav />

@@ -62,35 +62,33 @@ export function IncrementalSearchWrapper({ children }: Props) {
 
   return (
     <>
-      {/* Search input */}
-      <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
+      <div style={{ maxWidth: "var(--container-max)", margin: "0 auto" }}>
         <form className={styles.wrapper} onSubmit={onSubmit}>
+          <span className={styles.prompt} aria-hidden>/</span>
           <input
             className={styles.input}
             type="search"
-            placeholder="Search artists, labels, releases..."
+            placeholder="search artists, labels, releases…"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onFocus={onFocus}
             onBlur={onBlur}
             autoCorrect="off"
             autoCapitalize="off"
+            spellCheck={false}
             autoFocus
             aria-label="Search the music catalog"
           />
-          <button className={styles.submit} type="submit">
-            Search
-          </button>
+          <button className={styles.submit} type="submit">↵</button>
         </form>
       </div>
 
-      {/* Maintenance notice */}
-      <div style={{ maxWidth: "var(--max-width)", margin: "0.75rem auto 0", textAlign: "center", fontSize: "0.8rem", color: "var(--fg-faint)" }}>
-        under maintenance — back online 26 march
-      </div>
-
-      {/* Results area */}
-      <div style={{ marginTop: "2rem" }} aria-live="polite">
+      <div
+        style={{
+          marginTop: "var(--sp-5)",
+        }}
+        aria-live="polite"
+      >
         {showIncremental ? (
           <IncrementalResults
             results={results}

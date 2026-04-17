@@ -1,0 +1,130 @@
+.listing {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.meta {
+  font-size: 11px;
+  color: var(--ink-muted);
+  letter-spacing: 0.04em;
+  padding-bottom: var(--sp-3);
+}
+
+.headerRow,
+.row {
+  display: grid;
+  grid-template-columns:
+    60px            /* type */
+    minmax(180px, 2fr) /* title */
+    minmax(120px, 1fr) /* artist */
+    minmax(100px, 1fr) /* label */
+    52px            /* year */
+    36px            /* cc */
+    72px;           /* match */
+  gap: var(--sp-3);
+  align-items: baseline;
+  padding: var(--sp-2) 0;
+}
+
+.headerRow {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  padding-bottom: var(--sp-1);
+}
+
+.row {
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.row:hover {
+  background: var(--surface);
+}
+
+.colType {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.type-master { color: var(--ink); font-weight: 600; }
+.type-artist { color: var(--ink-soft); }
+.type-label  { color: var(--ink-soft); }
+.type-release { color: var(--ink-muted); }
+
+.colTitle {
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.colArtist,
+.colLabel {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.colYear,
+.colCountry {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+.colConfidence {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+}
+
+.dim {
+  color: var(--ink-faint);
+}
+
+.dotActive {
+  color: var(--ink-soft);
+}
+
+.dotInactive {
+  color: var(--ink-faint);
+}
+
+.empty {
+  font-family: var(--font-sans);
+  color: var(--ink-soft);
+  padding: var(--sp-7) 0;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .headerRow,
+  .row {
+    grid-template-columns:
+      52px               /* type */
+      1fr                /* title */
+      48px               /* year */
+      54px;              /* match */
+    gap: var(--sp-2);
+  }
+  .colArtist,
+  .colLabel,
+  .colCountry {
+    display: none;
+  }
+}

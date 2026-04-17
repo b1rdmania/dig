@@ -60,6 +60,16 @@ export interface SearchResult {
   master_discogs_id: number | null;
   name: string | null;
   title: string | null;
+  /**
+   * For type="master": denormed primary artist name from catalog.masters.
+   * Null for other entity types (or when the master row has no primary artist).
+   */
+  primary_artist: string | null;
+  /**
+   * For type="master": denormed primary label name from catalog.masters.
+   * Null for other entity types (or when the master row has no primary label).
+   */
+  primary_label: string | null;
   year: number | null;
   country: string | null;
   data_quality: string;
@@ -310,6 +320,8 @@ async function searchRanked(
     query = query.select([
       "year",
       "primary_country as country",
+      "primary_artist_name",
+      "primary_label_name",
     ] as any[]);
 
     if (params.year !== undefined) {
@@ -361,6 +373,8 @@ async function searchRanked(
       master_discogs_id: null,
       name: isNameType ? row.display_name : null,
       title: isNameType ? null : row.display_name,
+      primary_artist: type === "master" ? (row.primary_artist_name ?? null) : null,
+      primary_label: type === "master" ? (row.primary_label_name ?? null) : null,
       year: row.year ?? null,
       country: row.country ?? null,
       data_quality: row.data_quality,
@@ -409,6 +423,8 @@ async function fuzzyFallback(
     master_discogs_id: null,
     name: isNameType ? row.display_name : null,
     title: isNameType ? null : row.display_name,
+    primary_artist: null,
+    primary_label: null,
     year: null,
     country: null,
     data_quality: row.data_quality,

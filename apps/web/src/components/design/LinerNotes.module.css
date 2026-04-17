@@ -1,0 +1,54 @@
+.notes {
+  border: 1px solid var(--ink);
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  background: var(--paper);
+  position: relative;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  position: absolute;
+  top: -8px;
+  left: 16px;
+  background: var(--paper);
+  padding: 0 8px;
+}
+
+.section {
+  padding: var(--sp-3) 0;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.section:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0 0 var(--sp-2);
+}
+
+.body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.body :global(p) {
+  margin: 0 0 var(--sp-2);
+}
+.body :global(p:last-child) {
+  margin-bottom: 0;
+}

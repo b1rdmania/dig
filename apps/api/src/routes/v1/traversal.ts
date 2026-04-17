@@ -5,6 +5,7 @@ import { sql } from "@dig/db";
 import {
   getArtistMasters,
   getLabelReleases,
+  getLabelRoster,
   getMasterReleases,
   getMasterVideos,
   getBatchForTable,
@@ -130,8 +131,34 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
     try {
       const { batchId, dumpDate } = await getTraversalBatchInfo(db, "label_releases");
       const { limit, cursor } = parseTraversalQuery(req.query as any);
+      const sortRaw = (req.query as any)?.sort;
+      const sort: "id" | "chronological" =
+        sortRaw === "chronological" ? "chronological" : "id";
+      // Catalog spine view bumps the limit cap so a single request returns
+      // the full chronology for most tier-1 labels.
+      const effLim = sort === "chronological" ? Math.min(Math.max(limit, 1), 200) : limit;
       return reply.send(await withTimeout(db, SCOPE_TIMEOUT_MS.label_releases, (trx) =>
-        getLabelReleases(trx, discogsId, batchId, dumpDate, limit, cursor),
+        getLabelReleases(trx, discogsId, batchId, dumpDate, effLim, cursor, sort),
+      ));
+    } catch (err) {
+      if (isPgTimeout(err)) return timeoutReply(reply);
+      throw err;
+    }
+  });
+
+  app.get("/v1/labels/:discogs_id/roster", async (req, reply) => {
+    const discogsId = parseDiscogsId((req.params as any).discogs_id);
+    if (!discogsId) {
+      return reply.status(400).send({
+        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
+      });
+    }
+    try {
+      const { batchId } = await getTraversalBatchInfo(db, "label_releases");
+      const rawLimit = parseInt(String((req.query as any)?.limit ?? "20"), 10);
+      const limit = Number.isNaN(rawLimit) ? 20 : Math.min(Math.max(rawLimit, 1), 100);
+      return reply.send(await withTimeout(db, SCOPE_TIMEOUT_MS.label_releases, (trx) =>
+        getLabelRoster(trx, discogsId, batchId, limit),
       ));
     } catch (err) {
       if (isPgTimeout(err)) return timeoutReply(reply);

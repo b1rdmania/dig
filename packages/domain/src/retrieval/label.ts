@@ -7,8 +7,29 @@ import type { Database } from "@dig/db";
  * Reads from:
  *   - catalog.labels (denormed `aliases_text TEXT[]`)
  *   - catalog.label_urls (preserved as a relational table)
- *   - enrich.label_editorial (tier1 / denylist signal — drives "Scene canon" UI)
+ *   - enrich.label_editorial (tier1 / denylist signal + redesign metadata —
+ *     drives the label-color identity, blurb, founded/closed dates that the
+ *     new label page depends on. See migration 027.)
  */
+export interface LabelEditorial {
+  /** "tier1" = canonical scene label, "denylist" = excluded. */
+  tier: "tier1" | "denylist" | null;
+  /**
+   * 2-colour palette used to tint the label page chrome (catalog number
+   * sticker, hairline above the label name, dot in search results).
+   * `null` for unrated long-tail labels — the page should fall back to
+   * ink-on-paper without the palette.
+   */
+  palette: { accent: string; accent_ink: string } | null;
+  /** ≤50-word hand-written editorial blurb (serif italic on the page). */
+  blurb: string | null;
+  founded_year: number | null;
+  closed_year: number | null;
+  is_active: boolean;
+  /** "Ghent, BE" / "Berlin, DE" / etc. */
+  location: string | null;
+}
+
 export interface LabelDetail {
   discogs_id: number;
   name: string;
@@ -18,8 +39,13 @@ export interface LabelDetail {
   data_quality: string;
   /** Denormed aliases (no per-alias discogs_id in the slim shape) */
   aliases: string[];
-  /** Editorial tier from enrich.label_editorial. null = unrated (long-tail). */
+  /**
+   * @deprecated kept for backwards compat. Prefer `editorial.tier`.
+   * Will be removed once the web client switches to reading from `editorial`.
+   */
   tier: "tier1" | "denylist" | null;
+  /** Full editorial metadata for the redesign. */
+  editorial: LabelEditorial;
   urls: string[];
   provenance: { source: "discogs"; dump_date: string; discogs_id: number };
 }
@@ -64,11 +90,20 @@ export async function getLabel(
       .execute(),
     db
       .selectFrom("enrich.label_editorial")
-      .select("tier")
+      .select([
+        "tier",
+        "palette",
+        "blurb",
+        "founded_year",
+        "closed_year",
+        "is_active",
+        "location",
+      ])
       .where("discogs_label_id", "=", discogsId)
       .executeTakeFirst(),
   ]);
 
+  const tier = editorial?.tier ?? null;
   return {
     discogs_id: label.discogs_id,
     name: label.name,
@@ -80,7 +115,16 @@ export async function getLabel(
     },
     data_quality: label.data_quality,
     aliases: label.aliases_text ?? [],
-    tier: editorial?.tier ?? null,
+    tier,
+    editorial: {
+      tier,
+      palette: editorial?.palette ?? null,
+      blurb: editorial?.blurb ?? null,
+      founded_year: editorial?.founded_year ?? null,
+      closed_year: editorial?.closed_year ?? null,
+      is_active: editorial?.is_active ?? true,
+      location: editorial?.location ?? null,
+    },
     urls: urls.map((u) => u.url),
     provenance: { source: "discogs", dump_date: dumpDate, discogs_id: label.discogs_id },
   };

@@ -1,0 +1,22 @@
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.bracket {
+  color: var(--ink-muted);
+  padding: 0 2px;
+}
+
+.body {
+  padding: 0 2px;
+}

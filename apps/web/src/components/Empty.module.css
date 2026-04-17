@@ -1,25 +1,30 @@
 .wrapper {
   text-align: center;
-  padding: 4rem 1rem 2rem;
-  max-width: var(--max-width);
+  padding: var(--sp-7) var(--container-pad) var(--sp-6);
+  max-width: var(--container-max);
   margin: 0 auto;
 }
 
 .tagline {
-  font-size: 1.4rem;
-  color: var(--fg);
-  margin-bottom: 0.5rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--fs-lg);
+  color: var(--ink-soft);
+  margin-bottom: var(--sp-2);
 }
 
 .sub {
-  font-size: 0.9rem;
-  color: var(--fg-muted);
-  margin-bottom: 2rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--ink-muted);
+  margin-bottom: var(--sp-5);
+  letter-spacing: 0.04em;
 }
 
 .message {
-  font-size: 1.1rem;
-  color: var(--fg-muted);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  color: var(--ink-soft);
 }
 
 .suggestions {
@@ -27,35 +32,29 @@
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
 }
 
 .tryLabel {
-  font-size: 0.75rem;
-  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .chip {
-  font-size: 0.8rem;
-  color: var(--link);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 0.25rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  padding: 4px 8px;
   text-decoration: none;
+  letter-spacing: 0.04em;
 }
 
 .chip:hover {
-  background: var(--surface);
+  border-color: var(--ink);
   text-decoration: none;
-}
-
-@media (max-width: 768px) {
-  .wrapper {
-    padding: 2rem 1rem 1.5rem;
-  }
-
-  .tagline {
-    font-size: 1.2rem;
-  }
 }

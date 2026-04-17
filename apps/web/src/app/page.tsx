@@ -48,12 +48,12 @@ async function SearchContent({
       const suggestions = data.meta.suggested_results;
       if (suggestions && suggestions.length > 0) {
         return (
-          <Empty message="No results found">
+          <Empty message="No results.">
             <DidYouMean suggestions={suggestions} />
           </Empty>
         );
       }
-      return <Empty message="No results found" />;
+      return <Empty message="No results." />;
     }
 
     return <SearchResults data={data} />;
@@ -65,49 +65,110 @@ async function SearchContent({
   }
 }
 
-function DidYouMean({ suggestions }: { suggestions: NonNullable<SearchResponse["meta"]["suggested_results"]> }) {
+function DidYouMean({
+  suggestions,
+}: {
+  suggestions: NonNullable<SearchResponse["meta"]["suggested_results"]>;
+}) {
   return (
-    <div style={{ marginTop: "1.25rem", textAlign: "left" }}>
-      <p style={{ fontSize: "0.8rem", color: "var(--fg-faint)", marginBottom: "0.5rem" }}>
-        Did you mean?
+    <div
+      style={{
+        marginTop: "var(--sp-5)",
+        textAlign: "left",
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--sp-2)",
+        fontFamily: "var(--font-mono)",
+      }}
+    >
+      <p
+        style={{
+          fontSize: "var(--fs-xs)",
+          color: "var(--ink-muted)",
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+        }}
+      >
+        Did you mean
       </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-        {suggestions.map((s) => (
-          <Link
-            key={s.discogs_id}
-            href={`/artist/${s.discogs_id}`}
-            style={{ fontSize: "0.95rem", color: "var(--fg)", textDecoration: "underline", textUnderlineOffset: "3px" }}
-          >
-            {s.name || s.title || `Artist ${s.discogs_id}`}
-          </Link>
-        ))}
-      </div>
+      {suggestions.map((s) => (
+        <Link
+          key={s.discogs_id}
+          href={`/artist/${s.discogs_id}`}
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: "var(--fs-base)",
+            color: "var(--ink)",
+            textDecoration: "underline",
+            textDecorationColor: "var(--rule)",
+            textUnderlineOffset: "3px",
+          }}
+        >
+          {s.name || s.title || `Artist ${s.discogs_id}`}
+        </Link>
+      ))}
     </div>
+  );
+}
+
+function HomeHero() {
+  return (
+    <section
+      style={{
+        maxWidth: "var(--container-max)",
+        margin: "0 auto var(--sp-5)",
+        padding: "var(--sp-7) 0 var(--sp-5)",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "11px",
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          color: "var(--ink-muted)",
+          fontWeight: 600,
+          marginBottom: "var(--sp-3)",
+        }}
+      >
+        [ index ] · 24M+ records · CC0
+      </div>
+      <h1
+        style={{
+          fontFamily: "var(--font-sans)",
+          fontWeight: 600,
+          fontSize: "clamp(2.4rem, 7vw, 4.4rem)",
+          lineHeight: 1.02,
+          letterSpacing: "-0.02em",
+          margin: 0,
+          color: "var(--ink)",
+        }}
+      >
+        Dig.
+      </h1>
+      <p
+        style={{
+          fontFamily: "var(--font-serif)",
+          fontStyle: "italic",
+          fontSize: "var(--fs-lg)",
+          color: "var(--ink-soft)",
+          marginTop: "var(--sp-3)",
+          maxWidth: "48ch",
+        }}
+      >
+        A music data layer. For the long-tail of recorded music — labels, artists, every pressing.
+      </p>
+    </section>
   );
 }
 
 export default async function SearchPage({ searchParams }: Props) {
   const resolved = await searchParams;
-  const hasQuery =
-    typeof resolved.q === "string" && resolved.q.trim().length > 0;
+  const hasQuery = typeof resolved.q === "string" && resolved.q.trim().length > 0;
 
   return (
     <>
-      {!hasQuery && (
-        <h1
-          style={{
-            fontSize: "clamp(3.5rem, 10vw, 7rem)",
-            fontWeight: 400,
-            color: "var(--fg)",
-            textAlign: "center",
-            margin: "0 auto",
-            padding: "2rem 0 1.5rem",
-            lineHeight: 1,
-          }}
-        >
-          Dig.
-        </h1>
-      )}
+      {!hasQuery && <HomeHero />}
       <Suspense>
         <IncrementalSearchWrapper>
           <SearchContent searchParams={resolved} />

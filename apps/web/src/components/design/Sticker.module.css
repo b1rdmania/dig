@@ -1,0 +1,44 @@
+.sticker {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  white-space: nowrap;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.size-md {
+  font-size: var(--fs-xs);
+  padding: 4px 7px;
+}
+
+.size-sm {
+  font-size: 10px;
+  padding: 3px 5px;
+}
+
+.label {
+  background: var(--label-accent);
+  color: var(--label-accent-ink);
+}
+
+.tier1 {
+  background: var(--tier1-accent);
+  color: var(--tier1-accent-ink);
+}
+
+.ink {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+  padding: 3px 6px;
+}

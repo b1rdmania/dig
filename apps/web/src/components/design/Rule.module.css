@@ -1,0 +1,32 @@
+.rule {
+  border: 0;
+  width: 100%;
+}
+
+.default {
+  border-top: 1px solid var(--rule);
+}
+
+.bold {
+  border-top: 1px solid var(--rule-bold);
+}
+
+.accent {
+  border-top: 2px solid var(--label-accent);
+}
+
+.spacing-none {
+  margin: 0;
+}
+
+.spacing-sm {
+  margin: var(--sp-3) 0;
+}
+
+.spacing-md {
+  margin: var(--sp-5) 0;
+}
+
+.spacing-lg {
+  margin: var(--sp-7) 0;
+}

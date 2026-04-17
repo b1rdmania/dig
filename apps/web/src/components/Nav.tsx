@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Wordmark } from "@/components/design";
 import styles from "./Nav.module.css";
 
 export function Nav() {
@@ -27,32 +28,39 @@ export function Nav() {
 
   return (
     <nav className={styles.nav}>
-      <div className={styles.left}>
-        {isSubpage && (
-          <button type="button" onClick={() => router.back()} className={styles.backBtn}>
-            &larr;
-          </button>
-        )}
-        <Link href="/" className={styles.logo}>
-          Dig <span className={styles.beta}>[beta]</span>
-        </Link>
+      <div className={styles.inner}>
+        <div className={styles.left}>
+          {isSubpage && (
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className={styles.backBtn}
+              aria-label="Back"
+            >
+              ←
+            </button>
+          )}
+          <Link href="/" className={styles.brand}>
+            <Wordmark size="md" />
+          </Link>
+        </div>
+        {isSubpage ? (
+          <form className={styles.searchForm} onSubmit={onSearchSubmit}>
+            <span className={styles.searchPrompt} aria-hidden>/</span>
+            <input
+              className={styles.searchInput}
+              type="search"
+              placeholder="search artists, labels, releases…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+            <button className={styles.searchBtn} type="submit">↵</button>
+          </form>
+        ) : null}
       </div>
-      {isSubpage ? (
-        <form className={styles.searchForm} onSubmit={onSearchSubmit}>
-          <input
-            className={styles.searchInput}
-            type="search"
-            placeholder="Search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            autoCorrect="off"
-            autoCapitalize="off"
-          />
-          <button className={styles.searchBtn} type="submit">
-            Search
-          </button>
-        </form>
-      ) : null}
     </nav>
   );
 }

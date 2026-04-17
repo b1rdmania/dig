@@ -1,0 +1,22 @@
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+
+.cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.sep {
+  color: var(--ink-faint);
+  margin-right: var(--sp-2);
+}

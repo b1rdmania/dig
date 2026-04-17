@@ -6,10 +6,12 @@ import {
   isMasterResponse,
   isReleaseShadowResponse,
   isTraversalResponse,
+  isLabelResponse,
   type MasterResponse,
   type ReleaseShadowResponse,
   type TraversalResponse,
   type LabelResponse,
+  type LabelEditorial,
 } from "@/lib/types";
 import { discogsUrl, formatDuration } from "@/lib/format";
 import { entityMetadata, BASE_URL } from "@/lib/seo";
@@ -24,6 +26,7 @@ import { OutboundLink } from "@/components/OutboundLink";
 import { ShareBar } from "@/components/ShareBar";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ReleaseNavRenderer } from "@/components/ReleaseNav";
+import { Page, Sticker, Stamp, LinerNotes } from "@/components/design";
 import styles from "./page.module.css";
 
 interface Props {
@@ -83,13 +86,8 @@ export default async function MasterPage({ params }: Props) {
   const { id } = await params;
   if (!/^\d+$/.test(id)) notFound();
 
-  // Resolve the master (or shadow → redirect) BEFORE opening Suspense.
-  // permanentRedirect works by throwing NEXT_REDIRECT for upstream Next.js
-  // to intercept; if we let it fire from inside <Suspense> the response
-  // headers are already locked to 200 and Next falls back to a meta-refresh
-  // tag instead of a real 308. Doing this lookup at the page boundary adds
-  // ~80ms of blocking TTFB but eliminates the meta-refresh hop on every
-  // /release/:id → /master/:release_id → /master/:master_id chain.
+  // Resolve the master (or shadow → redirect) BEFORE opening Suspense so that
+  // permanentRedirect can fire as a real HTTP 308. Same reasoning as before.
   let masterData: MasterResponse | null = null;
   let masterErr: ApiRequestError | null = null;
   try {
@@ -101,9 +99,6 @@ export default async function MasterPage({ params }: Props) {
 
   if (!masterData) {
     if (!masterErr || masterErr.code === "NOT_FOUND") {
-      // Try shadow lookup (this id might be a release id, not a master id).
-      // Wrap only the FETCH in try/catch — call permanentRedirect outside,
-      // otherwise the NEXT_REDIRECT throw would be swallowed.
       let shadowMasterId: number | null = null;
       try {
         const data = await digFetch<ReleaseShadowResponse>(`/v1/release_shadow/${id}`, {
@@ -122,33 +117,28 @@ export default async function MasterPage({ params }: Props) {
     }
     if (masterErr.code === "TIMEOUT" || masterErr.status >= 500) {
       return (
-        <div className={styles.page}>
-          <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
-            <p className={styles.copy}>Unable to load this master right now.</p>
-            <p className={styles.small} style={{ marginTop: "0.5rem" }}>
-              <Link href="/" className={styles.link}>Back to search</Link>
-            </p>
-          </section>
-        </div>
+        <Page entityType="master" entityId={id}>
+          <p className={styles.error}>
+            Unable to load this master right now. <Link href="/">Back to search</Link>.
+          </p>
+        </Page>
       );
     }
     return (
-      <div className={styles.page}>
+      <Page entityType="master" entityId={id}>
         <ErrorMessage code={masterErr.code} message={masterErr.message} />
-      </div>
+      </Page>
     );
   }
 
   return (
-    <div className={styles.page} data-dig-entity="master" data-dig-id={id}>
-      <Suspense fallback={<SectionSkeleton lines={4} />}>
-        <MasterContent id={id} masterData={masterData} />
-      </Suspense>
-    </div>
+    <Suspense fallback={<SectionSkeleton lines={6} />}>
+      <MasterContent id={id} masterData={masterData} />
+    </Suspense>
   );
 }
 
-/* ── Render helpers ─────────────────────────────────────────────────── */
+/* ── Cover ─────────────────────────────────────────────────────────── */
 
 function CoverPlaceholder() {
   return (
@@ -173,28 +163,65 @@ function CoverRenderer({
   videos: Array<{ url: string }>;
 }) {
   if (coverUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
     return <img src={coverUrl} alt={`${title} cover art`} className={styles.coverImg} loading="eager" />;
   }
   const thumbUrl = firstYoutubeThumb(videos);
   if (thumbUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
     return <img src={thumbUrl} alt={`${title} preview`} className={styles.coverImg} loading="eager" />;
   }
   return <CoverPlaceholder />;
 }
 
+/* ── Tracklist (side-aware) ────────────────────────────────────────── */
+
+function detectSide(position: string | null): string | null {
+  if (!position) return null;
+  const m = position.trim().match(/^([A-Z])\d+/);
+  return m ? m[1] : null;
+}
+
 function MasterTracklistRenderer({ tracks }: { tracks: MasterResponse["master"]["tracks"] }) {
   if (tracks.length === 0) return null;
+
+  // Group by detected side label (A/B/C/D…). If no sides detected, the
+  // single bucket renders without any side heading.
+  const groups: Array<{ side: string | null; tracks: typeof tracks }> = [];
+  let current: { side: string | null; tracks: typeof tracks } | null = null;
+  for (const t of tracks) {
+    const side = detectSide(t.position);
+    if (!current || current.side !== side) {
+      current = { side, tracks: [] };
+      groups.push(current);
+    }
+    current.tracks.push(t);
+  }
+  const sided = groups.some((g) => g.side !== null);
+
   return (
     <section className={styles.section}>
-      <h2 className={styles.heading}>Tracklist</h2>
-      {tracks.map((t, i) => (
-        <div key={`${t.position ?? i}-${i}`} className={styles.track}>
-          <span className={styles.position}>{t.position ?? "—"}</span>
-          <span className={styles.trackTitle}>
-            {t.title ?? "(untitled)"}
-            {t.artists_text && <span className={styles.trackArtists}>— {t.artists_text}</span>}
-          </span>
-          <span className={styles.duration}>{formatDuration(t.duration_seconds)}</span>
+      <header className={styles.sectionHead}>
+        <h2 className={styles.sectionTitle}>Tracklist</h2>
+        <span className={styles.sectionMeta}>
+          {tracks.length} track{tracks.length === 1 ? "" : "s"}
+        </span>
+      </header>
+      {groups.map((g, gi) => (
+        <div key={`side-${gi}`}>
+          {sided && g.side && (
+            <div className={styles.sideHeading}>Side {g.side}</div>
+          )}
+          {g.tracks.map((t, i) => (
+            <div key={`${gi}-${t.position ?? i}-${i}`} className={styles.track}>
+              <span className={styles.position}>{t.position ?? "—"}</span>
+              <span className={styles.trackTitle}>
+                {t.title ?? "(untitled)"}
+                {t.artists_text && <span className={styles.trackArtists}>— {t.artists_text}</span>}
+              </span>
+              <span className={styles.duration}>{formatDuration(t.duration_seconds)}</span>
+            </div>
+          ))}
         </div>
       ))}
     </section>
@@ -211,19 +238,22 @@ function NotableVersionsRenderer({
   if (data.links.length === 0) return null;
   return (
     <section className={styles.section}>
-      <h2 className={styles.heading}>Notable Versions ({data.links.length})</h2>
+      <header className={styles.sectionHead}>
+        <h2 className={styles.sectionTitle}>Notable Versions</h2>
+        <span className={styles.sectionMeta}>{data.links.length}</span>
+      </header>
       {data.links.map((link) => {
         const video = videosByRelease.get(link.discogs_id);
         const isMain = (link as unknown as { is_main_release?: boolean }).is_main_release === true;
         return (
           <div key={link.discogs_id} className={styles.versionRow}>
             <span className={styles.versionMain}>
-              {isMain && <span className={styles.mainBadge}>Main</span>}
+              {isMain && <Sticker tone="ink" size="sm">Main</Sticker>}
               <span className={styles.versionTitle}>{link.title || `Version ${link.discogs_id}`}</span>
             </span>
             <span className={styles.versionMeta}>
-              {link.format && <span className={styles.versionTag}>{link.format}</span>}
-              {link.country && <span className={styles.versionTag}>{link.country}</span>}
+              {link.format && <Stamp>{link.format}</Stamp>}
+              {link.country && <Stamp>{link.country}</Stamp>}
               <span>{link.year || "—"}</span>
               {video && (
                 <a
@@ -270,8 +300,8 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
     meta: { source_type: "master", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
   };
 
-  // Phase 2: parallel — cover art, notable versions, label tier, artist nav rail.
-  const [coverUrl, versionsData, labelTier, navData] = await Promise.all([
+  // Phase 2: parallel — cover art, notable versions, label palette/tier, artist nav rail.
+  const [coverUrl, versionsData, labelMeta, navData] = await Promise.all([
     mainReleaseId
       ? digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${mainReleaseId}/cover`, {
           revalidate: 3600,
@@ -284,9 +314,15 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
       .catch(() => defaultTraversal),
     primaryLabelId
       ? digFetch<LabelResponse>(`/v1/labels/${primaryLabelId}`, { revalidate: 3600 })
-          .then((d) => (d as LabelResponse | undefined)?.label?.tier ?? null)
+          .then((d) => {
+            if (!isLabelResponse(d)) return null;
+            return {
+              tier: d.label.editorial?.tier ?? d.label.tier,
+              editorial: d.label.editorial ?? null,
+            };
+          })
           .catch(() => null)
-      : Promise.resolve<"tier1" | "denylist" | null>(null),
+      : Promise.resolve<{ tier: "tier1" | "denylist" | null; editorial: LabelEditorial | null } | null>(null),
     primaryArtistId
       ? digFetch<TraversalResponse>(`/v1/artists/${primaryArtistId}/masters?sort=newest&limit=500`, {
           revalidate: 300,
@@ -297,7 +333,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
   ]);
 
   // Build a map: release_id → first YouTube video for that pressing.
-  // Lets us put "▶ Listen" buttons inline with each Notable Version row.
   const videosByRelease = new Map<number, { url: string; title: string | null }>();
   for (const v of master.videos) {
     if (
@@ -309,51 +344,93 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
     }
   }
 
-  const isTier1 = labelTier === "tier1";
+  const isTier1 = labelMeta?.tier === "tier1";
+  const palette = labelMeta?.editorial?.palette ?? null;
 
   return (
-    <>
+    <Page
+      entityType="master"
+      entityId={master.discogs_id}
+      accent={palette?.accent}
+      accentInk={palette?.accent_ink}
+    >
       <PageViewTracker type="release" entityId={master.discogs_id} title={master.title} />
 
       <section className={styles.hero}>
-        <div className={styles.heroContent}>
+        {palette && <div className={styles.accentRule} aria-hidden />}
+        <div className={styles.eyebrow}>
+          <span>RELEASE</span>
+          <span className={styles.eyebrowSep}>·</span>
+          <span>#{master.discogs_id}</span>
+          {master.year && (
+            <>
+              <span className={styles.eyebrowSep}>·</span>
+              <span>{master.year}</span>
+            </>
+          )}
+        </div>
+
+        <div className={styles.heroBody}>
           <div className={styles.cover}>
             <CoverRenderer coverUrl={coverUrl} title={master.title} videos={master.videos} />
           </div>
           <div className={styles.info}>
             <div className={styles.titleRow}>
               <h1 className={styles.title}>{master.title}</h1>
-              {isTier1 && <span className={styles.tier1Badge} title="Canonical scene label">Tier 1</span>}
+              {isTier1 && (
+                <Sticker tone="tier1" size="md" title="Canonical scene label">
+                  Tier 1
+                </Sticker>
+              )}
             </div>
 
             {(primaryArtistName || primaryLabelName) && (
               <div className={styles.byline}>
-                {primaryArtistName && (
-                  primaryArtistId ? (
-                    <Link href={`/artist/${primaryArtistId}`} className={styles.artistLink}>
+                {primaryArtistName &&
+                  (primaryArtistId ? (
+                    <Link href={`/artist/${primaryArtistId}`} className={styles.bylineLink}>
                       {primaryArtistName}
                     </Link>
                   ) : (
                     <span>{primaryArtistName}</span>
-                  )
-                )}
-                {primaryArtistName && primaryLabelName && " · "}
-                {primaryLabelName && (
-                  primaryLabelId ? (
-                    <Link href={`/label/${primaryLabelId}`} className={styles.labelLink}>
+                  ))}
+                {primaryArtistName && primaryLabelName && <span className={styles.bylineSep}>·</span>}
+                {primaryLabelName &&
+                  (primaryLabelId ? (
+                    <Link href={`/label/${primaryLabelId}`} className={styles.bylineLink}>
                       {primaryLabelName}
                     </Link>
                   ) : (
                     <span>{primaryLabelName}</span>
-                  )
-                )}
+                  ))}
               </div>
             )}
 
-            <div className={styles.meta}>
-              {master.year && <span>{master.year}</span>}
-              {master.primary_country && <span>{master.primary_country}</span>}
-              {master.primary_format && <span>{master.primary_format}</span>}
+            <div className={styles.metaStrip}>
+              {master.primary_country && (
+                <span className={styles.metaItem}>
+                  <span className={styles.metaKey}>Country</span>
+                  <span className={styles.metaVal}>{master.primary_country}</span>
+                </span>
+              )}
+              {master.primary_format && (
+                <span className={styles.metaItem}>
+                  <span className={styles.metaKey}>Format</span>
+                  <span className={styles.metaVal}>{master.primary_format}</span>
+                </span>
+              )}
+              {master.tracks.length > 0 && (
+                <span className={styles.metaItem}>
+                  <span className={styles.metaKey}>Tracks</span>
+                  <span className={styles.metaVal}>{master.tracks.length}</span>
+                </span>
+              )}
+              {versionsData.links.length > 0 && (
+                <span className={styles.metaItem}>
+                  <span className={styles.metaKey}>Versions</span>
+                  <span className={styles.metaVal}>{versionsData.links.length}</span>
+                </span>
+              )}
             </div>
 
             {(master.genres.length > 0 || master.styles.length > 0) && (
@@ -363,12 +440,12 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
               </div>
             )}
 
-            <div className={styles.links}>
+            <div className={styles.actions}>
               <OutboundLink
                 href={discogsUrl("master", master.discogs_id)}
                 entityType="master"
                 entityId={master.discogs_id}
-                className={styles.link}
+                className={styles.discogsLink}
               >
                 Open on Discogs
               </OutboundLink>
@@ -397,6 +474,21 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
 
       <NotableVersionsRenderer data={versionsData} videosByRelease={videosByRelease} />
 
+      {master.artists_credit_text && (
+        <div className={styles.section}>
+          <LinerNotes eyebrow="LINER NOTES">
+            <LinerNotes.Section label="Credits">
+              <p>{master.artists_credit_text}</p>
+            </LinerNotes.Section>
+            {master.genres.length + master.styles.length > 0 && (
+              <LinerNotes.Section label="Genres &amp; styles">
+                <p>{[...master.genres, ...master.styles].join(" · ")}</p>
+              </LinerNotes.Section>
+            )}
+          </LinerNotes>
+        </div>
+      )}
+
       <JsonLd
         data={[
           musicAlbumJsonLd({
@@ -413,7 +505,9 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
         ]}
       />
 
-      <Provenance provenance={master.provenance} />
-    </>
+      <div className={styles.provenanceWrap}>
+        <Provenance provenance={master.provenance} />
+      </div>
+    </Page>
   );
 }

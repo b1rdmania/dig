@@ -13,6 +13,10 @@ export interface SearchResult {
   master_discogs_id: number | null;
   name: string | null;
   title: string | null;
+  /** For type="master": denormed primary artist name. Null for other types. */
+  primary_artist?: string | null;
+  /** For type="master": denormed primary label name. Null for other types. */
+  primary_label?: string | null;
   year: number | null;
   country: string | null;
   data_quality: string;
@@ -224,7 +228,20 @@ export interface ArtistResponse {
   artist: Artist;
 }
 
-// Label detail (slim shape)
+// Label detail (slim shape + redesign editorial)
+export interface LabelEditorial {
+  tier: "tier1" | "denylist" | null;
+  /** 2-colour palette for label-color identity. null = unrated, page falls back to ink-on-paper. */
+  palette: { accent: string; accent_ink: string } | null;
+  /** ≤50-word hand-written editorial blurb. Renders serif italic. */
+  blurb: string | null;
+  founded_year: number | null;
+  closed_year: number | null;
+  is_active: boolean;
+  /** "Ghent, BE" / "Berlin, DE" / etc. */
+  location: string | null;
+}
+
 export interface Label {
   discogs_id: number;
   name: string;
@@ -234,15 +251,46 @@ export interface Label {
   data_quality: string;
   /** Denormed alias text from catalog.labels.aliases_text */
   aliases: string[];
-  /** Editorial tier from enrich.label_editorial. tier1 = canonical scene label,
-      denylist = excluded, null = unrated long-tail. */
+  /** @deprecated Use `editorial.tier`. Kept for backward compat. */
   tier: "tier1" | "denylist" | null;
+  /**
+   * Editorial metadata for the redesign — palette, blurb, founded year, etc.
+   * Optional: API versions before 2026-04-16 don't include this; fall back
+   * to `tier` only with no palette/blurb in that case.
+   */
+  editorial?: LabelEditorial;
   urls: string[];
   provenance: Provenance;
 }
 
 export interface LabelResponse {
   label: Label;
+}
+
+// Label roster (top artists by master count on the label)
+export interface LabelRosterEntry {
+  artist_discogs_id: number;
+  name: string;
+  master_count: number;
+  first_year: number | null;
+  last_year: number | null;
+}
+
+export interface LabelRosterResponse {
+  roster: LabelRosterEntry[];
+  meta: {
+    source_type: "label";
+    source_discogs_id: number;
+    link_type: "roster";
+    elapsed_ms: number;
+    total_artists: number;
+  };
+}
+
+export function isLabelRosterResponse(data: unknown): data is LabelRosterResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return Array.isArray(d.roster) && d.meta !== undefined;
 }
 
 // Traversal

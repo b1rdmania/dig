@@ -1,46 +1,89 @@
 .footer {
-  padding: 20px;
+  border-top: 1px solid var(--ink);
+  background: var(--paper);
+  margin-top: var(--sp-8);
+}
+
+.inner {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--sp-5) var(--container-pad) var(--sp-6);
   display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.top {
+  display: flex;
+  flex-direction: row;
   justify-content: space-between;
-  align-items: center;
-  border-top: 1px solid var(--line);
+  align-items: flex-start;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
 }
 
-.left {
+.brand {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: var(--sp-2);
 }
 
-.logo {
-  font-size: 14px;
-  color: var(--fg-faint);
-}
-
-.note {
-  font-size: 13px;
-  color: var(--fg-faint);
+.tagline {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
 }
 
 .links {
   display: flex;
-  gap: 16px;
+  gap: var(--sp-4);
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .link {
-  font-size: 13px;
-  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  text-decoration: none;
+  letter-spacing: 0.02em;
 }
 
 .link:hover {
-  color: var(--fg-muted);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--ink);
+  text-underline-offset: 3px;
 }
 
-@media (max-width: 768px) {
-  .footer {
+.attribution {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+  line-height: 1.6;
+  border-top: 1px dashed var(--rule);
+  padding-top: var(--sp-3);
+  letter-spacing: 0.02em;
+}
+
+.attribution a {
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+}
+
+.attribution a:hover {
+  color: var(--ink);
+  text-decoration-color: var(--ink);
+}
+
+@media (max-width: 720px) {
+  .top {
     flex-direction: column;
-    gap: 8px;
-    text-align: center;
+    align-items: flex-start;
+  }
+  .links {
+    justify-content: flex-start;
   }
 }
