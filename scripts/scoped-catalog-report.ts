@@ -11,6 +11,7 @@
  *   DATABASE_URL=postgres://... pnpm exec tsx scripts/scoped-catalog-report.ts
  *   DATABASE_URL=postgres://... pnpm exec tsx scripts/scoped-catalog-report.ts --year-min 1990 --year-max 1999
  *   DATABASE_URL=postgres://... pnpm exec tsx scripts/scoped-catalog-report.ts --genre House --genre Techno --style "Deep House"
+ *   DATABASE_URL=postgres://... pnpm exec tsx scripts/scoped-catalog-report.ts --quality-active-only
  */
 
 import { createDb, sql } from "@dig/db";
@@ -35,12 +36,17 @@ const DEFAULT_STYLES = [
   "Tribal House",
 ];
 
+const DEFAULT_TOP_LIMIT = 25;
+
 interface Args {
   yearMin: number;
   yearMax: number;
   genres: string[];
   styles: string[];
   includeMasterVersions: boolean;
+  qualityActiveOnly: boolean;
+  topLimit: number;
+  profileName: string | null;
 }
 
 function printHelp(): void {
@@ -56,6 +62,9 @@ Options:
   --no-default-genres         Start with no default genres; only use explicit --genre values
   --no-default-styles         Start with no default styles; only use explicit --style values
   --exclude-master-versions   Keep only directly matched releases, not every version on matched masters
+  --quality-active-only       Require enrich.entity_quality.quality_status = 'active' for masters/releases (also prints before/after comparison)
+  --top <n>                   How many top labels and top artists to print. Default: ${DEFAULT_TOP_LIMIT}
+  --profile <name>            Label a run (printed in output). Useful when comparing variants.
   --help                      Show this help
 `);
 }
@@ -69,6 +78,9 @@ function parseArgs(argv: string[]): Args {
   let useDefaultGenres = true;
   let useDefaultStyles = true;
   let includeMasterVersions = true;
+  let qualityActiveOnly = false;
+  let topLimit = DEFAULT_TOP_LIMIT;
+  let profileName: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -104,6 +116,18 @@ function parseArgs(argv: string[]): Args {
       includeMasterVersions = false;
       continue;
     }
+    if (arg === "--quality-active-only") {
+      qualityActiveOnly = true;
+      continue;
+    }
+    if (arg === "--top" && args[i + 1]) {
+      topLimit = parseInt(args[++i], 10);
+      continue;
+    }
+    if (arg === "--profile" && args[i + 1]) {
+      profileName = args[++i];
+      continue;
+    }
     console.error(`Unknown argument: ${arg}`);
     printHelp();
     process.exit(1);
@@ -111,6 +135,11 @@ function parseArgs(argv: string[]): Args {
 
   if (Number.isNaN(yearMin) || Number.isNaN(yearMax) || yearMin > yearMax) {
     console.error("Invalid year range. Expected --year-min <= --year-max.");
+    process.exit(1);
+  }
+
+  if (Number.isNaN(topLimit) || topLimit < 1) {
+    console.error("Invalid --top value. Expected a positive integer.");
     process.exit(1);
   }
 
@@ -128,6 +157,9 @@ function parseArgs(argv: string[]): Args {
     genres: finalGenres,
     styles: finalStyles,
     includeMasterVersions,
+    qualityActiveOnly,
+    topLimit,
+    profileName,
   };
 }
 
@@ -166,18 +198,26 @@ async function main() {
     const genreArray = textArray(args.genres);
     const styleArray = textArray(args.styles);
 
-    console.log("[scope] Building 90s house/techno scope report");
+    console.log("[scope] Building scene-scope report");
+    if (args.profileName) {
+      console.log(`[scope] profile=${args.profileName}`);
+    }
     console.log(`[scope] batch_id=${batchId} dump_date=${dumpDate}`);
     console.log(`[scope] years=${args.yearMin}-${args.yearMax}`);
     console.log(`[scope] genres=${args.genres.join(", ")}`);
     console.log(`[scope] styles=${args.styles.join(", ")}`);
     console.log(`[scope] include_master_versions=${args.includeMasterVersions}`);
+    console.log(`[scope] quality_active_only=${args.qualityActiveOnly}`);
+    console.log(`[scope] top_limit=${args.topLimit}`);
 
     await db.connection().execute(async (conn) => {
+      // Clean slate
       await sql`DROP TABLE IF EXISTS tmp_scope_matched_release_ids`.execute(conn);
       await sql`DROP TABLE IF EXISTS tmp_scope_matched_master_ids`.execute(conn);
       await sql`DROP TABLE IF EXISTS tmp_scope_seed_release_ids`.execute(conn);
+      await sql`DROP TABLE IF EXISTS tmp_scope_master_ids_raw`.execute(conn);
       await sql`DROP TABLE IF EXISTS tmp_scope_master_ids`.execute(conn);
+      await sql`DROP TABLE IF EXISTS tmp_scope_release_ids_raw`.execute(conn);
       await sql`DROP TABLE IF EXISTS tmp_scope_release_ids`.execute(conn);
       await sql`DROP TABLE IF EXISTS tmp_scope_track_ids`.execute(conn);
       await sql`DROP TABLE IF EXISTS tmp_scope_base_artist_ids`.execute(conn);
@@ -233,6 +273,7 @@ async function main() {
         `.execute(conn);
       }
 
+      // Seed releases: release matched and year in window
       await sql`
         CREATE TEMP TABLE tmp_scope_seed_release_ids AS
         SELECT DISTINCT scoped.discogs_id
@@ -260,8 +301,9 @@ async function main() {
       `.execute(conn);
       await sql`CREATE UNIQUE INDEX ON tmp_scope_seed_release_ids (discogs_id)`.execute(conn);
 
+      // Raw master set (before quality filter)
       await sql`
-        CREATE TEMP TABLE tmp_scope_master_ids AS
+        CREATE TEMP TABLE tmp_scope_master_ids_raw AS
         SELECT DISTINCT master_discogs_id AS discogs_id
         FROM catalog.releases
         WHERE batch_id = ${batchId}
@@ -275,11 +317,30 @@ async function main() {
         WHERE m.batch_id = ${batchId}
           AND m.year BETWEEN ${args.yearMin} AND ${args.yearMax}
       `.execute(conn);
+      await sql`CREATE UNIQUE INDEX ON tmp_scope_master_ids_raw (discogs_id)`.execute(conn);
+
+      // Apply quality gate to masters (fail-open: missing quality rows are treated as active)
+      if (args.qualityActiveOnly) {
+        await sql`
+          CREATE TEMP TABLE tmp_scope_master_ids AS
+          SELECT mr.discogs_id
+          FROM tmp_scope_master_ids_raw mr
+          LEFT JOIN enrich.entity_quality eq
+            ON eq.entity_type = 'master' AND eq.discogs_id = mr.discogs_id
+          WHERE eq.quality_status IS NULL OR eq.quality_status = 'active'
+        `.execute(conn);
+      } else {
+        await sql`
+          CREATE TEMP TABLE tmp_scope_master_ids AS
+          SELECT discogs_id FROM tmp_scope_master_ids_raw
+        `.execute(conn);
+      }
       await sql`CREATE UNIQUE INDEX ON tmp_scope_master_ids (discogs_id)`.execute(conn);
 
+      // Raw release set (before quality filter)
       if (args.includeMasterVersions) {
         await sql`
-          CREATE TEMP TABLE tmp_scope_release_ids AS
+          CREATE TEMP TABLE tmp_scope_release_ids_raw AS
           SELECT DISTINCT scoped.discogs_id
           FROM (
             SELECT discogs_id
@@ -294,9 +355,26 @@ async function main() {
         `.execute(conn);
       } else {
         await sql`
-          CREATE TEMP TABLE tmp_scope_release_ids AS
+          CREATE TEMP TABLE tmp_scope_release_ids_raw AS
           SELECT discogs_id
           FROM tmp_scope_seed_release_ids
+        `.execute(conn);
+      }
+      await sql`CREATE UNIQUE INDEX ON tmp_scope_release_ids_raw (discogs_id)`.execute(conn);
+
+      if (args.qualityActiveOnly) {
+        await sql`
+          CREATE TEMP TABLE tmp_scope_release_ids AS
+          SELECT rr.discogs_id
+          FROM tmp_scope_release_ids_raw rr
+          LEFT JOIN enrich.entity_quality eq
+            ON eq.entity_type = 'release' AND eq.discogs_id = rr.discogs_id
+          WHERE eq.quality_status IS NULL OR eq.quality_status = 'active'
+        `.execute(conn);
+      } else {
+        await sql`
+          CREATE TEMP TABLE tmp_scope_release_ids AS
+          SELECT discogs_id FROM tmp_scope_release_ids_raw
         `.execute(conn);
       }
       await sql`CREATE UNIQUE INDEX ON tmp_scope_release_ids (discogs_id)`.execute(conn);
@@ -334,6 +412,17 @@ async function main() {
         WHERE tc.batch_id = ${batchId}
       `.execute(conn);
       await sql`CREATE UNIQUE INDEX ON tmp_scope_base_artist_ids (discogs_id)`.execute(conn);
+
+      // If quality filter is on, drop suppressed artists from the base set as well.
+      if (args.qualityActiveOnly) {
+        await sql`
+          DELETE FROM tmp_scope_base_artist_ids b
+          USING enrich.entity_quality eq
+          WHERE eq.entity_type = 'artist'
+            AND eq.discogs_id = b.discogs_id
+            AND eq.quality_status <> 'active'
+        `.execute(conn);
+      }
 
       await sql`
         CREATE TEMP TABLE tmp_scope_artist_ids AS
@@ -375,6 +464,16 @@ async function main() {
       `.execute(conn);
       await sql`CREATE UNIQUE INDEX ON tmp_scope_base_label_ids (discogs_id)`.execute(conn);
 
+      if (args.qualityActiveOnly) {
+        await sql`
+          DELETE FROM tmp_scope_base_label_ids b
+          USING enrich.entity_quality eq
+          WHERE eq.entity_type = 'label'
+            AND eq.discogs_id = b.discogs_id
+            AND eq.quality_status <> 'active'
+        `.execute(conn);
+      }
+
       await sql`
         CREATE TEMP TABLE tmp_scope_label_ids AS
         SELECT discogs_id
@@ -387,6 +486,12 @@ async function main() {
           AND parent_label_discogs_id IS NOT NULL
       `.execute(conn);
       await sql`CREATE UNIQUE INDEX ON tmp_scope_label_ids (discogs_id)`.execute(conn);
+
+      // Before/after counts if quality filter on
+      const rawMasterCount = await countTable(conn, "tmp_scope_master_ids_raw");
+      const filteredMasterCount = await countTable(conn, "tmp_scope_master_ids");
+      const rawReleaseCount = await countTable(conn, "tmp_scope_release_ids_raw");
+      const filteredReleaseCount = await countTable(conn, "tmp_scope_release_ids");
 
       const entityQualityCounts = await Promise.all([
         countQuery(conn, sql<{ count: number }>`
@@ -417,8 +522,8 @@ async function main() {
 
       const counts = {
         seed_releases: await countTable(conn, "tmp_scope_seed_release_ids"),
-        masters: await countTable(conn, "tmp_scope_master_ids"),
-        releases: await countTable(conn, "tmp_scope_release_ids"),
+        masters: filteredMasterCount,
+        releases: filteredReleaseCount,
         tracks: await countTable(conn, "tmp_scope_track_ids"),
         artists: await countTable(conn, "tmp_scope_artist_ids"),
         labels: await countTable(conn, "tmp_scope_label_ids"),
@@ -460,14 +565,29 @@ async function main() {
       `),
       };
 
-      const topLabels = await sql<{ label_name: string; releases: number }>`
-      SELECT rl.label_name, COUNT(*)::int AS releases
+      const topLabels = await sql<{ label_name: string; label_discogs_id: number; releases: number }>`
+      SELECT rl.label_name, rl.label_discogs_id, COUNT(*)::int AS releases
       FROM catalog.release_labels rl
       WHERE rl.batch_id = ${batchId}
         AND rl.release_discogs_id IN (SELECT discogs_id FROM tmp_scope_release_ids)
-      GROUP BY rl.label_name
+        AND rl.label_discogs_id IN (SELECT discogs_id FROM tmp_scope_label_ids)
+      GROUP BY rl.label_name, rl.label_discogs_id
       ORDER BY releases DESC, rl.label_name ASC
-      LIMIT 10
+      LIMIT ${args.topLimit}
+    `.execute(conn);
+
+      const topArtists = await sql<{ artist_name: string; artist_discogs_id: number; masters: number }>`
+      SELECT a.name AS artist_name, a.discogs_id AS artist_discogs_id, COUNT(DISTINCT ma.master_discogs_id)::int AS masters
+      FROM catalog.master_artists ma
+      INNER JOIN catalog.artists a
+        ON a.discogs_id = ma.artist_discogs_id
+       AND a.batch_id = ${batchId}
+      WHERE ma.batch_id = ${batchId}
+        AND ma.master_discogs_id IN (SELECT discogs_id FROM tmp_scope_master_ids)
+        AND ma.artist_discogs_id IN (SELECT discogs_id FROM tmp_scope_artist_ids)
+      GROUP BY a.name, a.discogs_id
+      ORDER BY masters DESC, a.name ASC
+      LIMIT ${args.topLimit}
     `.execute(conn);
 
       const yearSpread = await sql<{ release_year: number | null; releases: number }>`
@@ -479,6 +599,16 @@ async function main() {
       ORDER BY r.release_year ASC NULLS LAST
     `.execute(conn);
 
+      if (args.qualityActiveOnly) {
+        console.log("\n[scope] Quality filter impact (active-only)");
+        const mDropped = rawMasterCount - filteredMasterCount;
+        const rDropped = rawReleaseCount - filteredReleaseCount;
+        const mPct = rawMasterCount > 0 ? ((mDropped / rawMasterCount) * 100).toFixed(2) : "0";
+        const rPct = rawReleaseCount > 0 ? ((rDropped / rawReleaseCount) * 100).toFixed(2) : "0";
+        console.log(`  masters:  ${rawMasterCount.toLocaleString()} -> ${filteredMasterCount.toLocaleString()}  (dropped ${mDropped.toLocaleString()}, ${mPct}%)`);
+        console.log(`  releases: ${rawReleaseCount.toLocaleString()} -> ${filteredReleaseCount.toLocaleString()}  (dropped ${rDropped.toLocaleString()}, ${rPct}%)`);
+      }
+
       console.log("\n[scope] Core entity counts");
       for (const [label, value] of Object.entries(counts).slice(0, 6)) {
         console.log(`  ${label}: ${value.toLocaleString()}`);
@@ -489,9 +619,14 @@ async function main() {
         console.log(`  ${label}: ${value.toLocaleString()}`);
       }
 
-      console.log("\n[scope] Top labels by included releases");
+      console.log(`\n[scope] Top ${args.topLimit} labels by included releases`);
       for (const row of topLabels.rows) {
-        console.log(`  ${row.label_name}: ${row.releases.toLocaleString()}`);
+        console.log(`  ${row.label_discogs_id}\t${row.releases.toLocaleString().padStart(7)}\t${row.label_name}`);
+      }
+
+      console.log(`\n[scope] Top ${args.topLimit} artists by in-scope master count`);
+      for (const row of topArtists.rows) {
+        console.log(`  ${row.artist_discogs_id}\t${row.masters.toLocaleString().padStart(7)}\t${row.artist_name}`);
       }
 
       const nonNullYears = yearSpread.rows.filter((row) => row.release_year !== null);
@@ -506,6 +641,7 @@ async function main() {
       console.log("\n[scope] Notes");
       console.log("  - Artists and labels become Dig-scoped, not full Discogs-complete.");
       console.log("  - When include_master_versions=true, reissues tied to in-scope masters are kept for master/version completeness.");
+      console.log("  - Quality filter fail-open: entities without an enrich.entity_quality row are treated as active.");
       console.log("  - This report is non-destructive: it only creates temp tables in the current session.");
     });
   } finally {

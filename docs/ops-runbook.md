@@ -8,9 +8,12 @@ Operational reference for the Fly.io staging deployment. For API/MCP usage, see 
 |----------|------|--------|------|
 | API | dig-api | iad | shared-cpu-1x, 512MB, on-demand (0 min / 1 active / 2 warm burst) |
 | MCP | dig-mcp | iad | shared-cpu-1x, 512MB, on-demand (0 min / 1 active when needed) |
-| Postgres | dig-db | iad | shared-cpu-2x, 4GB RAM, 300GB disk |
+| **Postgres (active)** | **dig-db-scene** | **lhr** | **shared-cpu-1x, 1GB, 10GB disk — scene-scoped slim DB (~3GB)** |
+| Postgres (legacy, rollback) | dig-db | iad | shared-cpu-2x, 4GB RAM, 300GB disk — kept warm 7d post-cutover |
 | Redis | dig-redis | iad | Upstash pay-per-use |
 | Frontend | dig-web | iad | shared-cpu-1x, 512MB, 1 machine (Fly) |
+
+**Note (2026-04-17):** dig-api now reads from `dig-db-scene` (lhr). dig-db (iad) is the rollback target and holds the full pre-scope dataset. Cross-region latency from iad → lhr adds ~70ms per query; acceptable for slim DB throughput. See "Database cutover and rollback" below.
 
 URLs:
 - API: https://dig-api.fly.dev/v1/
@@ -126,6 +129,135 @@ Verification order after bring-up:
 - First API-backed web request will be slower after idle.
 - `dig-mcp` returns to service only after `fly scale count 1 -a dig-mcp`.
 - If you intentionally scale `dig-api` to `0`, the public web app will fail until you scale it back up.
+
+## Database cutover and rollback (dig-db ⇄ dig-db-scene)
+
+The scene-scoped slim catalog lives in `dig-db-scene` (lhr). The legacy full
+catalog lives in `dig-db` (iad). Cutover is a one-line secret swap on `dig-api`;
+`dig-mcp` and `dig-web` do not need changes (web only talks to the API; MCP is
+scaled to 0 and has its own staged DATABASE_URL secret to flip when re-enabled).
+
+### Cutover sequence (executed 2026-04-17)
+
+1. Verify `dig-db-scene` is healthy and has the expected counts:
+   ```bash
+   fly status -a dig-db-scene
+   fly proxy 15433:5432 -a dig-db-scene &
+   PGPASSWORD=$OPERATOR_PASSWORD psql "postgresql://postgres@localhost:15433/dig" -c "
+     SELECT 'masters' AS tbl, count(*) FROM catalog.masters
+     UNION ALL SELECT 'release_shadow', count(*) FROM catalog.release_shadow
+     UNION ALL SELECT 'artists', count(*) FROM catalog.artists
+     UNION ALL SELECT 'labels', count(*) FROM catalog.labels;
+   "
+   # Expected baseline: ~81k masters, ~2.3M release_shadow, ~112k artists, ~168k labels
+   ```
+   (`OPERATOR_PASSWORD` is on the dig-db-scene machine env — `fly ssh console -a
+   dig-db-scene --command "/bin/bash -c 'env | grep PASSWORD'"`.)
+
+2. Ensure `dig_api` has SELECT on `catalog`, `enrich`, `ingest`, plus
+   write grants on `enrich.performance_events`, `enrich.usage_daily`,
+   `enrich.match_review_queue`. (Idempotent — safe to re-run.)
+
+3. Flip `DATABASE_URL` on `dig-api`:
+   ```bash
+   PW=<dig_api password>
+   fly secrets set -a dig-api \
+     DATABASE_URL="postgres://dig_api:${PW}@dig-db-scene.flycast:5432/dig?sslmode=disable"
+   ```
+   This triggers a rolling redeploy. Health check at `/v1/health` will gate
+   traffic switchover.
+
+4. Stage the same secret on `dig-mcp` so it picks up the new DB on next start:
+   ```bash
+   fly secrets set --stage -a dig-mcp \
+     DATABASE_URL="postgres://dig_api:${PW}@dig-db-scene.flycast:5432/dig?sslmode=disable"
+   ```
+
+5. Smoke verify (see "Cutover smoke test" below).
+
+### Rollback (return to dig-db)
+
+If the slim DB causes user-visible regressions, roll back to dig-db. The legacy
+`DATABASE_URL` for `dig_api` against `dig-db` is **not stored anywhere** — Fly
+masks secret values once written. To roll back:
+
+```bash
+# 1. Reset the dig_api password on dig-db (legacy) so we own the credential
+fly proxy 15432:5432 -a dig-db &
+PGPASSWORD=<dig-db OPERATOR_PASSWORD> psql "postgresql://postgres@localhost:15432/dig" \
+  -c "ALTER USER dig_api WITH PASSWORD '<rollback-pw>';"
+
+# 2. Flip dig-api back
+fly secrets set -a dig-api \
+  DATABASE_URL="postgres://dig_api:<rollback-pw>@dig-db.flycast:5432/dig?sslmode=disable"
+
+# 3. Roll back the API image too if frontend or MCP code is incompatible
+fly releases -a dig-api  # find pre-cutover release id
+fly deploy --image registry.fly.io/dig-api:<previous-id> --config fly.api.toml
+
+# 4. Verify
+curl -s https://dig-api.fly.dev/v1/health | jq .status
+```
+
+**Rollback grace window:** Keep `dig-db` running with current spec until
+**2026-04-24** (7d). After that, scale `dig-db` to shared-cpu-1x/512MB to keep
+it warm-but-cheap. Do not destroy the volume until at least **2026-05-08**
+(28d) and only after a recovery archive is exported.
+
+### Cutover smoke test
+
+Run after any DATABASE_URL flip on dig-api:
+
+```bash
+# 1. Health
+curl -s https://dig-api.fly.dev/v1/health | jq
+
+# 2. FTS search (defaults to type=master in scene mode)
+curl -s "https://dig-api.fly.dev/v1/search?q=plastic+dreams&limit=3" | jq '.results[].type, .results[].discogs_id'
+
+# 3. Master detail (Plastic Dreams)
+curl -s https://dig-api.fly.dev/v1/masters/7360 | jq '.master.title, .master.primary_artist, .master.scene_weight, .master.tracks | length'
+
+# 4. Notable versions for that master
+curl -s "https://dig-api.fly.dev/v1/masters/7360/releases?limit=10" | jq '.links | length'
+
+# 5. Artist (Jaydee, discogs_id 1923)
+curl -s https://dig-api.fly.dev/v1/artists/1923 | jq '.artist.name, .artist.aliases'
+curl -s "https://dig-api.fly.dev/v1/artists/1923/masters?limit=5" | jq '.links | length'
+
+# 6. Label tier (any tier1 label) — confirm tier field present
+curl -s https://dig-api.fly.dev/v1/labels/1 | jq '.label.name, .label.tier, .label.aliases'
+
+# 7. release_shadow redirect resolver — pick any historical release id
+curl -s https://dig-api.fly.dev/v1/release_shadow/22 | jq
+
+# 8. Confirm /v1/releases is gone (410 with successor link)
+curl -s -o /dev/null -w "%{http_code}\n" https://dig-api.fly.dev/v1/releases/22
+
+# 9. Web smoke
+curl -s -o /dev/null -w "/                    %{http_code}\n" "https://app.dig.baby/"
+curl -s -o /dev/null -w "/?q=plastic+dreams   %{http_code}\n" "https://app.dig.baby/?q=plastic+dreams"
+curl -s -o /dev/null -w "/master/7360         %{http_code}\n" "https://app.dig.baby/master/7360"
+curl -s -o /dev/null -w "/artist/3840         %{http_code}\n" "https://app.dig.baby/artist/3840"
+curl -s -o /dev/null -w "/label/281           %{http_code}\n" "https://app.dig.baby/label/281"
+curl -s -o /dev/null -w "/release/3 (308)     %{http_code}\n" "https://app.dig.baby/release/3"
+curl -s -o /dev/null -w "/version/3 (308)     %{http_code}\n" "https://app.dig.baby/version/3"
+curl -s -o /dev/null -w "/release/abc (404)   %{http_code}\n" "https://app.dig.baby/release/abc"
+curl -sI https://app.dig.baby/release/22 | head -3   # expect HTTP/2 308 + location: /master/22
+
+# 10. MCP smoke (only if dig-mcp scaled up)
+fly scale count 1 -a dig-mcp
+MCP_URL="https://dig-mcp.fly.dev/sse" npx tsx apps/mcp/src/smoke-test.ts
+```
+
+Pass criteria: `/v1/health` returns ok, all entity reads return 200 with the
+slim shape (`scene_weight`, `primary_artist`, `tracks`, `videos`,
+`tier`, `aliases`), `/v1/releases/*` returns 410, and web routes match the
+above status codes — in particular numeric `/release/:id` and `/version/:id`
+return a real HTTP 308 to `/master/:id` (handled at the framework level via
+`apps/web/next.config.ts`, **not** page-level `permanentRedirect`, so the
+status is set before any HTML streaming begins). Non-numeric paths under
+those prefixes must return a real 404, not a 200 with a 404 body.
 
 ## Rollback
 

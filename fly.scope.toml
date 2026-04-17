@@ -1,0 +1,26 @@
+# Fly.io config for dig-scope-runner — ephemeral build runner.
+# Deploy: fly deploy --config fly.scope.toml --remote-only
+# Tear down when done: fly apps destroy dig-scope-runner --yes
+#
+# This app exists solely to execute scripts/build-scoped-db.ts from inside
+# Fly's private network so the build is not affected by laptop sleep or
+# local fly proxy disconnects. It exposes no http service. After the slim
+# build is verified on dig-db-scene we destroy this app entirely.
+
+app = "dig-scope-runner"
+primary_region = "iad"  # co-located with dig-db (source) for read-heavy SQL phases
+
+[build]
+  dockerfile = "Dockerfile.scope"
+
+[deploy]
+  strategy = "immediate"
+
+[env]
+  NODE_ENV = "production"
+
+# No [http_service] — this is a worker, not a web app.
+
+[[vm]]
+  size = "performance-2x"
+  memory = "4gb"
