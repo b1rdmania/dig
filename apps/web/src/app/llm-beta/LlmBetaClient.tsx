@@ -81,7 +81,7 @@ function VideoCard({ item }: { item: MediaItem }) {
         </button>
       )}
       <div className={styles.videoMeta}>
-        <Link href={`/release/${item.discogs_id}`} className={styles.videoTitle} target="_blank" rel="noopener noreferrer">
+        <Link href={`/master/${item.discogs_id}`} className={styles.videoTitle} target="_blank" rel="noopener noreferrer">
           {item.title}
         </Link>
         <span className={styles.videoArtist}>{item.artist}</span>

@@ -1,9 +1,8 @@
 import { SkeletonHeading, SkeletonLine, SkeletonBlock } from "@/components/Skeleton";
 
-export default function ReleaseLoading() {
+export default function MasterLoading() {
   return (
     <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
-      {/* Hero skeleton with cover art placeholder */}
       <div style={{ display: "flex", gap: "1.5rem", padding: "1.5rem 0", borderBottom: "1px solid var(--line)" }}>
         <div
           style={{
@@ -22,7 +21,6 @@ export default function ReleaseLoading() {
           <SkeletonLine width="short" />
         </div>
       </div>
-      {/* Tracklist skeleton */}
       <div style={{ height: "1rem" }} />
       {Array.from({ length: 6 }).map((_, i) => (
         <SkeletonLine key={i} />

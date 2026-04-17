@@ -19,6 +19,7 @@ import { labelJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "@/components/JsonLd";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
+import { CollapsibleList } from "@/components/CollapsibleList";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ShareBar } from "@/components/ShareBar";
@@ -43,7 +44,44 @@ function InstagramIcon() {
   );
 }
 
-/* ── Sync render helpers (accept pre-fetched data) ── */
+/* ── Sync render helpers ─────────────────────────────────────────────── */
+
+function Tier1Badge() {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "2px 8px",
+        marginLeft: "0.6rem",
+        fontSize: "0.7rem",
+        fontWeight: 600,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        background: "linear-gradient(135deg, #ffd06b 0%, #ff7e45 100%)",
+        color: "#1a1004",
+        borderRadius: 4,
+        verticalAlign: "middle",
+      }}
+      title="Canonical scene label (editorial tier 1)"
+    >
+      Tier 1
+    </span>
+  );
+}
+
+function LabelAliasesRenderer({ aliases }: { aliases: string[] }) {
+  if (aliases.length === 0) return null;
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.heading}>Also known as</h2>
+      <CollapsibleList maxVisible={8} className={styles.list}>
+        {aliases.map((name) => (
+          <span className={styles.pill} key={`alias-${name}`}>{name}</span>
+        ))}
+      </CollapsibleList>
+    </section>
+  );
+}
 
 function LabelLinkoutsRenderer({ linkouts }: { linkouts: LabelLinkout[] }) {
   if (linkouts.length === 0) return null;
@@ -126,7 +164,7 @@ function LabelDetailsRenderer({
   );
 }
 
-/* ── Page ── */
+/* ── Page ─────────────────────────────────────────────────────────────── */
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -138,8 +176,11 @@ export async function generateMetadata({ params }: Props) {
     const data = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 });
     if (!isLabelResponse(data)) return { title: "Label — dig" };
     const l = data.label;
+    const tierTag = l.tier === "tier1" ? "Canonical scene label. " : "";
     const profileSnippet = l.profile ? l.profile.replace(/\[.*?\]/g, "").trim().slice(0, 120) : null;
-    const desc = profileSnippet ? `${l.name}. ${profileSnippet}` : `${l.name} — record label on dig`;
+    const desc = profileSnippet
+      ? `${tierTag}${l.name}. ${profileSnippet}`
+      : `${tierTag}${l.name} — record label on dig`;
     return entityMetadata({ title: l.name, description: desc, path: `/label/${id}`, type: "label" });
   } catch {
     return { title: "Label — dig" };
@@ -148,10 +189,6 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function LabelPage({ params }: Props) {
   const { id } = await params;
-
-  // One streaming boundary. LabelContent fans out all secondary fetches
-  // via Promise.all — no nested Suspense boundaries.
-  // data-dig-entity lets the no-dead-ends canary classify stream faults correctly.
   return (
     <div className={styles.page} data-dig-entity="label" data-dig-id={id}>
       <Suspense fallback={<SectionSkeleton lines={4} />}>
@@ -163,7 +200,6 @@ export default async function LabelPage({ params }: Props) {
 
 async function LabelContent({ id }: { id: string }) {
   try {
-    // Phase 1: fetch label entity
     const labelData = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 });
 
     if (!isLabelResponse(labelData)) {
@@ -182,7 +218,8 @@ async function LabelContent({ id }: { id: string }) {
       meta: { source_type: "label", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [] },
     };
 
-    // Phase 2: fan out all secondary fetches in parallel
+    // Phase 2 — fan out releases + linkouts + name resolution. Linkouts are
+    // best-effort enrichment so we tolerate failures silently.
     const profileRefs = label.profile ? extractProfileRefs(label.profile) : { artists: [], labels: [] };
     const artistIdsToResolve = [...new Set(profileRefs.artists)].slice(0, 10);
     const labelIdsToResolve = [...new Set(profileRefs.labels)].slice(0, 5);
@@ -214,7 +251,10 @@ async function LabelContent({ id }: { id: string }) {
     return (
       <>
         <section className={styles.hero}>
-          <h1 className={styles.title}>{label.name}</h1>
+          <h1 className={styles.title}>
+            {label.name}
+            {label.tier === "tier1" && <Tier1Badge />}
+          </h1>
           {label.parent_label?.name && (
             <div className={styles.subtitle}>
               Parent: {label.parent_label.discogs_id ? (
@@ -239,6 +279,7 @@ async function LabelContent({ id }: { id: string }) {
           </div>
         </section>
 
+        <LabelAliasesRenderer aliases={label.aliases ?? []} />
         <LabelReleasesRenderer data={releasesData} />
         <LabelDetailsRenderer
           profile={label.profile}

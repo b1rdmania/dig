@@ -11,28 +11,42 @@ import type { TraversalLink, SearchResult, ArtistCreditLink, Provenance } from "
 const PROVENANCE: Provenance = { source: "test", dump_date: "2024-01-01", discogs_id: 1 };
 
 describe("hrefForMasterId", () => {
-  it("routes master to /release/:id", () => {
-    expect(hrefForMasterId(21004)).toBe("/release/21004");
-    expect(hrefForMasterId("21004")).toBe("/release/21004");
+  it("routes master to /master/:id", () => {
+    expect(hrefForMasterId(21004)).toBe("/master/21004");
+    expect(hrefForMasterId("21004")).toBe("/master/21004");
   });
 });
 
 describe("hrefForReleaseId", () => {
-  it("routes pressing to /version/:id", () => {
-    expect(hrefForReleaseId(9267745)).toBe("/version/9267745");
-    expect(hrefForReleaseId("9267745")).toBe("/version/9267745");
+  it("routes release to /master/:release_id when no master is known (server resolves)", () => {
+    expect(hrefForReleaseId(9267745)).toBe("/master/9267745");
+    expect(hrefForReleaseId("9267745")).toBe("/master/9267745");
+  });
+
+  it("prefers master_discogs_id when provided", () => {
+    expect(hrefForReleaseId(9267745, 21004)).toBe("/master/21004");
   });
 });
 
 describe("hrefForTraversalLink", () => {
-  it("master link → /release/:id", () => {
+  it("master link → /master/:id", () => {
     const link: TraversalLink = { type: "master", discogs_id: 21004, provenance: PROVENANCE };
-    expect(hrefForTraversalLink(link)).toBe("/release/21004");
+    expect(hrefForTraversalLink(link)).toBe("/master/21004");
   });
 
-  it("release link → /version/:id", () => {
+  it("release link with master_discogs_id → /master/:master_id", () => {
+    const link: TraversalLink = {
+      type: "release",
+      discogs_id: 9267745,
+      master_discogs_id: 21004,
+      provenance: PROVENANCE,
+    };
+    expect(hrefForTraversalLink(link)).toBe("/master/21004");
+  });
+
+  it("release link without master_discogs_id → /master/:release_id (server resolves)", () => {
     const link: TraversalLink = { type: "release", discogs_id: 9267745, provenance: PROVENANCE };
-    expect(hrefForTraversalLink(link)).toBe("/version/9267745");
+    expect(hrefForTraversalLink(link)).toBe("/master/9267745");
   });
 
   it("artist link → /artist/:id", () => {
@@ -47,7 +61,7 @@ describe("hrefForTraversalLink", () => {
 });
 
 describe("hrefForArtistCredit", () => {
-  it("always routes to /version/:id (pressing IDs)", () => {
+  it("routes credit links through /master/:release_id (resolves to master via shadow)", () => {
     const credit: ArtistCreditLink = {
       release_discogs_id: 9267745,
       title: "Loveless",
@@ -59,12 +73,12 @@ describe("hrefForArtistCredit", () => {
       role_family: "production",
       provenance: PROVENANCE,
     };
-    expect(hrefForArtistCredit(credit)).toBe("/version/9267745");
+    expect(hrefForArtistCredit(credit)).toBe("/master/9267745");
   });
 });
 
 describe("hrefForSearchResult", () => {
-  it("release with master_discogs_id → canonical /release/:master_id", () => {
+  it("release with master_discogs_id → canonical /master/:master_id", () => {
     const result: SearchResult = {
       type: "release",
       discogs_id: 9267745,
@@ -77,10 +91,10 @@ describe("hrefForSearchResult", () => {
       relevance: 1,
       provenance: PROVENANCE,
     };
-    expect(hrefForSearchResult(result)).toBe("/release/21004");
+    expect(hrefForSearchResult(result)).toBe("/master/21004");
   });
 
-  it("release without master_discogs_id → /version/:id", () => {
+  it("release without master_discogs_id → /master/:release_id (server resolves)", () => {
     const result: SearchResult = {
       type: "release",
       discogs_id: 9267745,
@@ -93,10 +107,10 @@ describe("hrefForSearchResult", () => {
       relevance: 1,
       provenance: PROVENANCE,
     };
-    expect(hrefForSearchResult(result)).toBe("/version/9267745");
+    expect(hrefForSearchResult(result)).toBe("/master/9267745");
   });
 
-  it("master → /release/:id", () => {
+  it("master → /master/:id", () => {
     const result: SearchResult = {
       type: "master",
       discogs_id: 21004,
@@ -109,7 +123,7 @@ describe("hrefForSearchResult", () => {
       relevance: 1,
       provenance: PROVENANCE,
     };
-    expect(hrefForSearchResult(result)).toBe("/release/21004");
+    expect(hrefForSearchResult(result)).toBe("/master/21004");
   });
 
   it("artist → /artist/:id", () => {

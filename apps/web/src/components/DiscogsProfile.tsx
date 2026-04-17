@@ -88,7 +88,7 @@ function parseDiscogsMarkup(
       const name = names?.[`m${match[3]}`];
       if (name) {
         parts.push(
-          <Link key={match.index} href={`/release/${match[3]}`}>{name}</Link>
+          <Link key={match.index} href={`/master/${match[3]}`}>{name}</Link>
         );
       } else {
         parts.push(
@@ -98,10 +98,12 @@ function parseDiscogsMarkup(
         );
       }
     } else if (match[4]) {
+      // Pressing-level release IDs — point through /master/:release_id and let
+      // the master page redirect via /v1/release_shadow/:id when available.
       const name = names?.[`r${match[4]}`];
       if (name) {
         parts.push(
-          <Link key={match.index} href={`/version/${match[4]}`}>{name}</Link>
+          <Link key={match.index} href={`/master/${match[4]}`}>{name}</Link>
         );
       } else {
         parts.push(

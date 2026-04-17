@@ -130,12 +130,29 @@ export interface ReleaseResponse {
   release: Release;
 }
 
-// Master detail
+// Master detail (slim / scene-scoped shape)
 export interface MasterArtist {
   discogs_id: number;
   name: string;
   role: string | null;
   join_relation: string | null;
+}
+
+export interface MasterTrack {
+  position: string | null;
+  title: string | null;
+  duration_seconds: number | null;
+  artists_text: string | null;
+  source_release_discogs_id: number | null;
+}
+
+export interface MasterVideo {
+  url: string;
+  title: string | null;
+  duration_seconds: number | null;
+  source_type: "master" | "release";
+  source_release_discogs_id: number | null;
+  discogs_release_url: string | null;
 }
 
 export interface Master {
@@ -144,15 +161,48 @@ export interface Master {
   year: number | null;
   main_release_discogs_id: number | null;
   data_quality: string;
+  scene_weight: number;
+  primary_artist: { discogs_id: number | null; name: string | null };
+  primary_label: { discogs_id: number | null; name: string | null };
+  artists_credit_text: string | null;
+  primary_country: string | null;
+  primary_format: string | null;
   artists: MasterArtist[];
   genres: string[];
   styles: string[];
-  videos: Array<{ url: string; title: string | null; duration_seconds: number | null }>;
+  tracks: MasterTrack[];
+  videos: MasterVideo[];
   provenance: Provenance;
 }
 
 export interface MasterResponse {
   master: Master;
+}
+
+// Release shadow — minimal release info for redirecting old /version/:id URLs
+// to the canonical /master/:master_id page.
+export interface ReleaseShadow {
+  release_discogs_id: number;
+  master_discogs_id: number | null;
+  title: string;
+  release_year: number | null;
+  country: string | null;
+  label: string | null;
+  format: string | null;
+  is_main_release: boolean;
+  has_tracklist_delta: boolean;
+  has_remix_signal: boolean;
+  discogs_url: string | null;
+}
+
+export interface ReleaseShadowResponse {
+  release_shadow: ReleaseShadow;
+}
+
+export function isReleaseShadowResponse(data: unknown): data is ReleaseShadowResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return d.release_shadow !== undefined && typeof d.release_shadow === "object";
 }
 
 // Artist detail
@@ -174,7 +224,7 @@ export interface ArtistResponse {
   artist: Artist;
 }
 
-// Label detail
+// Label detail (slim shape)
 export interface Label {
   discogs_id: number;
   name: string;
@@ -182,6 +232,11 @@ export interface Label {
   contact_info: string | null;
   parent_label: { discogs_id: number | null; name: string | null };
   data_quality: string;
+  /** Denormed alias text from catalog.labels.aliases_text */
+  aliases: string[];
+  /** Editorial tier from enrich.label_editorial. tier1 = canonical scene label,
+      denylist = excluded, null = unrated long-tail. */
+  tier: "tier1" | "denylist" | null;
   urls: string[];
   provenance: Provenance;
 }
@@ -203,6 +258,8 @@ export interface TraversalLink {
   release_type?: "album" | "single_ep" | "compilation" | "other";
   release_type_label?: "LP" | "EP" | "Single" | "Comp" | "Other";
   master_discogs_id?: number | null;
+  /** Set on Notable Versions (master_releases) — flags the canonical pressing */
+  is_main_release?: boolean;
   provenance: Provenance;
 }
 

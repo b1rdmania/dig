@@ -27,7 +27,7 @@ export function ReleaseNavRenderer({
   return (
     <nav className={styles.nav} aria-label="Artist catalogue navigation">
       {prev ? (
-        <Link href={`/release/${prev.discogs_id}`} className={styles.btn} prefetch={false}>
+        <Link href={`/master/${prev.discogs_id}`} className={styles.btn} prefetch={false}>
           ← {prev.year ?? prev.title ?? prev.discogs_id}
         </Link>
       ) : (
@@ -35,7 +35,7 @@ export function ReleaseNavRenderer({
       )}
       <span className={styles.counter}>{idx + 1} / {masters.length}</span>
       {next ? (
-        <Link href={`/release/${next.discogs_id}`} className={styles.btn} prefetch={false}>
+        <Link href={`/master/${next.discogs_id}`} className={styles.btn} prefetch={false}>
           {next.year ?? next.title ?? next.discogs_id} →
         </Link>
       ) : (
@@ -52,11 +52,11 @@ export async function ReleaseNav({ artistId, currentMasterId }: Props) {
   const fallback: TraversalResponse = {
     links: [],
     pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "artist", source_discogs_id: artistId, link_type: "catalog_releases", elapsed_ms: 0 },
+    meta: { source_type: "artist", source_discogs_id: artistId, link_type: "masters", elapsed_ms: 0 },
   };
 
   const data = await digFetch<TraversalResponse>(
-    `/v1/artists/${artistId}/catalog_releases?sort=newest&limit=500`,
+    `/v1/artists/${artistId}/masters?sort=newest&limit=500`,
     { revalidate: 300 },
   )
     .then((d) => (isTraversalResponse(d) ? d : fallback))

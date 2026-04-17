@@ -33,7 +33,7 @@ export default function NotFound() {
         <Link href="/artist/3840" style={{ fontSize: "0.8rem", color: "var(--fg-muted)", textDecoration: "underline", textUnderlineOffset: "2px" }}>
           Radiohead
         </Link>
-        <Link href="/release/21004" style={{ fontSize: "0.8rem", color: "var(--fg-muted)", textDecoration: "underline", textUnderlineOffset: "2px" }}>
+        <Link href="/master/21004" style={{ fontSize: "0.8rem", color: "var(--fg-muted)", textDecoration: "underline", textUnderlineOffset: "2px" }}>
           OK Computer
         </Link>
         <Link href="/label/281" style={{ fontSize: "0.8rem", color: "var(--fg-muted)", textDecoration: "underline", textUnderlineOffset: "2px" }}>

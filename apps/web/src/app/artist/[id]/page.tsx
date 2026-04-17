@@ -5,15 +5,13 @@ import { ApiRequestError, digFetch } from "@/lib/api";
 import {
   isArtistResponse,
   isTraversalResponse,
-  isArtistCreditsResponse,
-  isRelationshipsResponse,
   isContextResponse,
+  isRelationshipsResponse,
   isTimelineResponse,
   type ArtistResponse,
   type TraversalResponse,
-  type ArtistCreditsResponse,
-  type RelationshipsResponse,
   type ContextResponse,
+  type RelationshipsResponse,
   type TimelineResponse,
   type TimelineEvent,
 } from "@/lib/types";
@@ -27,10 +25,10 @@ import { CollapsibleList } from "@/components/CollapsibleList";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ShareBar } from "@/components/ShareBar";
-import { hrefForTraversalLink, hrefForArtistCredit } from "@/lib/routes";
+import { hrefForTraversalLink } from "@/lib/routes";
 import styles from "./page.module.css";
 
-/* ── Helpers ── */
+/* ── Helpers ─────────────────────────────────────────────────────────── */
 
 function formatEdgeLabel(edgeType: string, direction: "outbound" | "inbound"): string {
   const LABELS: Record<string, [string, string]> = {
@@ -51,7 +49,7 @@ function formatEdgeLabel(edgeType: string, direction: "outbound" | "inbound"): s
   return direction === "inbound" ? `Has ${humanized}` : humanized;
 }
 
-/* ── Sync render helpers (receive pre-fetched data) ── */
+/* ── Sync render helpers (receive pre-fetched data) ──────────────────── */
 
 const RELEASE_FILTERS = [
   { value: "all", label: "All" },
@@ -61,16 +59,7 @@ const RELEASE_FILTERS = [
   { value: "other", label: "Other" },
 ] as const;
 
-const CREDIT_FILTERS = [
-  { value: "all", label: "All" },
-  { value: "writing", label: "Writing" },
-  { value: "arranging", label: "Arranging" },
-  { value: "performance", label: "Performance" },
-  { value: "production", label: "Production" },
-  { value: "other", label: "Other" },
-] as const;
-
-function ReleasesSection({
+function MastersSection({
   id,
   releaseType,
   data,
@@ -115,57 +104,6 @@ function ReleasesSection({
           </span>
         </div>
       ))}
-    </section>
-  );
-}
-
-function CreditsSection({
-  id,
-  roleFamily,
-  data,
-}: {
-  id: string;
-  roleFamily: string;
-  data: ArtistCreditsResponse;
-}) {
-  if (data.links.length === 0) return null;
-
-  return (
-    <section className={styles.section}>
-      <h2 className={styles.heading}>
-        Credits &amp; Appearances{data.pagination.total_estimate != null
-          ? ` (${data.pagination.total_estimate})`
-          : ` (${data.links.length})`}
-      </h2>
-      <div className={styles.filterChips}>
-        {CREDIT_FILTERS.map((f) => (
-          <Link
-            key={f.value}
-            href={f.value === "all" ? `/artist/${id}` : `/artist/${id}?role_family=${f.value}`}
-            className={roleFamily === f.value ? styles.chipActive : styles.chip}
-          >
-            {f.label}
-          </Link>
-        ))}
-      </div>
-      {data.links.map((link) => (
-        <div className={styles.row} key={link.release_discogs_id}>
-          <Link href={hrefForArtistCredit(link)} className={styles.item}>
-            {link.title || `Release ${link.release_discogs_id}`}
-          </Link>
-          <span className={styles.releaseRight}>
-            {link.roles.slice(0, 2).map((r) => (
-              <span key={r} className={styles.badge}>{r}</span>
-            ))}
-            <span className={styles.small}>{link.year || "—"}</span>
-          </span>
-        </div>
-      ))}
-      {data.pagination.has_more && (
-        <div className={styles.small} style={{ marginTop: "0.5rem" }}>
-          Showing first 30 — <Link href={`/artist/${id}/credits`} className={styles.link}>view all credits</Link>
-        </div>
-      )}
     </section>
   );
 }
@@ -243,81 +181,31 @@ function TimelineSection({ events, total }: { events: TimelineEvent[]; total: nu
   );
 }
 
-function ConnectionsSection({
-  artist,
+function AliasesAndRelations({
+  aliases,
   relData,
   tlData,
   resolvedNames,
 }: {
-  artist: {
-    aliases: Array<{ name: string; discogs_id: number | null }>;
-    name_variations: string[];
-    members: Array<{ name: string; discogs_id: number | null }>;
-    groups: Array<{ name: string; discogs_id: number | null }>;
-  };
+  aliases: string[];
   relData: RelationshipsResponse;
   tlData: TimelineResponse;
   resolvedNames: Record<string, string>;
 }) {
-  const hasAliases = artist.aliases.length > 0 || artist.name_variations.length > 0;
-  const hasContent = hasAliases || artist.members.length > 0 || artist.groups.length > 0
-    || relData.edges.length > 0 || tlData.events.length > 0;
-
+  const hasAliases = aliases.length > 0;
+  const hasContent = hasAliases || relData.edges.length > 0 || tlData.events.length > 0;
   if (!hasContent) return null;
 
   return (
     <>
       {hasAliases && (
         <section className={styles.section}>
-          <h2 className={styles.heading}>Aliases</h2>
+          <h2 className={styles.heading}>Also known as</h2>
           <CollapsibleList maxVisible={8} className={styles.list}>
-            {artist.aliases.map((alias) =>
-              alias.discogs_id ? (
-                <Link href={`/artist/${alias.discogs_id}`} className={styles.pillLink} key={`alias-${alias.discogs_id}`}>
-                  {alias.name}
-                </Link>
-              ) : (
-                <span className={styles.pill} key={`alias-${alias.name}`}>{alias.name}</span>
-              ),
-            )}
-            {artist.name_variations.map((nv) => (
-              <span className={styles.pill} key={`nv-${nv}`}>{nv}</span>
+            {aliases.map((name) => (
+              <span className={styles.pill} key={`alias-${name}`}>{name}</span>
             ))}
           </CollapsibleList>
-        </section>
-      )}
-
-      {artist.members.length > 0 && (
-        <section className={styles.section}>
-          <h2 className={styles.heading}>Members</h2>
-          <div className={styles.list}>
-            {artist.members.map((member) =>
-              member.discogs_id ? (
-                <Link href={`/artist/${member.discogs_id}`} className={styles.pillLink} key={`member-${member.discogs_id}`}>
-                  {member.name}
-                </Link>
-              ) : (
-                <span className={styles.pill} key={`member-${member.name}`}>{member.name}</span>
-              ),
-            )}
-          </div>
-        </section>
-      )}
-
-      {artist.groups.length > 0 && (
-        <section className={styles.section}>
-          <h2 className={styles.heading}>Groups</h2>
-          <div className={styles.list}>
-            {artist.groups.map((group) =>
-              group.discogs_id ? (
-                <Link href={`/artist/${group.discogs_id}`} className={styles.pillLink} key={`group-${group.discogs_id}`}>
-                  {group.name}
-                </Link>
-              ) : (
-                <span className={styles.pill} key={`group-${group.name}`}>{group.name}</span>
-              ),
-            )}
-          </div>
         </section>
       )}
 
@@ -345,12 +233,14 @@ function ConnectionsSection({
         </section>
       )}
 
-      {tlData.events.length > 0 && <TimelineSection events={tlData.events} total={tlData.meta.total_events} />}
+      {tlData.events.length > 0 && (
+        <TimelineSection events={tlData.events} total={tlData.meta.total_events} />
+      )}
     </>
   );
 }
 
-/* ── Main page ── */
+/* ── Main page ───────────────────────────────────────────────────────── */
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -375,35 +265,25 @@ export async function generateMetadata({ params }: Props) {
 export default async function ArtistPage({ params, searchParams }: Props) {
   const { id } = await params;
   const sp = await searchParams;
-  const releaseType = typeof sp.release_type === "string" && ["album", "single_ep", "compilation", "other"].includes(sp.release_type)
+  const releaseType = typeof sp.release_type === "string"
+    && ["album", "single_ep", "compilation", "other"].includes(sp.release_type)
     ? sp.release_type
     : "all";
-  const roleFamily = typeof sp.role_family === "string" && ["writing", "arranging", "performance", "production", "other"].includes(sp.role_family)
-    ? sp.role_family
-    : "all";
 
-  // One streaming boundary — outer Suspense only. ArtistContent fans out all API
-  // calls with Promise.all (parallel), then does name resolution in a second
-  // bounded pass. No nested Suspense = no concurrent transform stream collisions.
   return (
     <div className={styles.page} data-dig-entity="artist" data-dig-id={id}>
       <Suspense fallback={<SectionSkeleton lines={4} />}>
-        <ArtistContent id={id} releaseType={releaseType} roleFamily={roleFamily} />
+        <ArtistContent id={id} releaseType={releaseType} />
       </Suspense>
     </div>
   );
 }
 
-async function ArtistContent({ id, releaseType, roleFamily }: { id: string; releaseType: string; roleFamily: string }) {
+async function ArtistContent({ id, releaseType }: { id: string; releaseType: string }) {
   const defaultTraversal: TraversalResponse = {
     links: [],
     pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "catalog_releases", elapsed_ms: 0 },
-  };
-  const defaultCredits: ArtistCreditsResponse = {
-    links: [],
-    pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "credits", elapsed_ms: 0 },
+    meta: { source_type: "artist", source_discogs_id: Number(id), link_type: "masters", elapsed_ms: 0 },
   };
   const defaultContext: ContextResponse = {
     context: [],
@@ -420,18 +300,13 @@ async function ArtistContent({ id, releaseType, roleFamily }: { id: string; rele
   };
 
   try {
-    // Phase 1: fan out all primary fetches in parallel
-    const releasesUrl = `/v1/artists/${id}/catalog_releases?limit=30&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
-    const creditsUrl = `/v1/artists/${id}/credits?limit=30${roleFamily !== "all" ? `&role_family=${roleFamily}` : ""}`;
+    const mastersUrl = `/v1/artists/${id}/masters?limit=30&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
 
-    const [artistData, releasesData, creditsData, ctxData, relData, tlData] = await Promise.all([
+    const [artistData, mastersData, ctxData, relData, tlData] = await Promise.all([
       digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }),
-      digFetch<TraversalResponse>(releasesUrl, { revalidate: 300 })
+      digFetch<TraversalResponse>(mastersUrl, { revalidate: 300 })
         .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
         .catch(() => defaultTraversal),
-      digFetch<ArtistCreditsResponse>(creditsUrl, { revalidate: 300 })
-        .then((d) => (isArtistCreditsResponse(d) ? d : defaultCredits))
-        .catch(() => defaultCredits),
       digFetch<ContextResponse>(`/v1/artists/${id}/context?include_enrichment=true`, { revalidate: 3600 })
         .then((d) => (isContextResponse(d) ? d : defaultContext))
         .catch(() => defaultContext),
@@ -448,9 +323,12 @@ async function ArtistContent({ id, releaseType, roleFamily }: { id: string; rele
     }
 
     const artist = artistData.artist;
+    // Slim shape: aliases come back denormed with discogs_id=null. We only
+    // care about the names here — the alias linkout died with the dropped
+    // catalog.artist_aliases relational table.
+    const aliasNames = artist.aliases.map((a) => a.name).filter(Boolean);
 
-    // Phase 2: name resolution — collect all IDs from profile refs + relationship edges,
-    // deduplicate, cap at 10 to bound latency, fetch in parallel.
+    // Phase 2 — name resolution for profile refs + relationship edges, capped.
     const resolvedNames: Record<string, string> = {};
     const profileRefs = artist.profile ? extractProfileRefs(artist.profile) : { artists: [], labels: [] };
     const edgeArtistIds = relData.edges
@@ -470,7 +348,8 @@ async function ArtistContent({ id, releaseType, roleFamily }: { id: string; rele
       ...labelIdsToResolve.map(async (lid) => {
         try {
           const d = await digFetch<import("@/lib/types").LabelResponse>(`/v1/labels/${lid}`, { revalidate: 3600 });
-          if ((d as any)?.label?.name) resolvedNames[`l${lid}`] = (d as any).label.name;
+          const name = (d as { label?: { name?: string } } | undefined)?.label?.name;
+          if (name) resolvedNames[`l${lid}`] = name;
         } catch { /* skip */ }
       }),
     ]);
@@ -500,20 +379,10 @@ async function ArtistContent({ id, releaseType, roleFamily }: { id: string; rele
           </div>
         </section>
 
-        <AboutSection
-          profile={artist.profile}
-          ctxData={ctxData}
-          resolvedNames={resolvedNames}
-        />
-        <ReleasesSection id={id} releaseType={releaseType} data={releasesData} />
-        <CreditsSection id={id} roleFamily={roleFamily} data={creditsData} />
-        <ConnectionsSection
-          artist={{
-            aliases: artist.aliases,
-            name_variations: artist.name_variations,
-            members: artist.members,
-            groups: artist.groups,
-          }}
+        <AboutSection profile={artist.profile} ctxData={ctxData} resolvedNames={resolvedNames} />
+        <MastersSection id={id} releaseType={releaseType} data={mastersData} />
+        <AliasesAndRelations
+          aliases={aliasNames}
           relData={relData}
           tlData={tlData}
           resolvedNames={resolvedNames}

@@ -48,7 +48,7 @@ export function musicAlbumJsonLd(master: {
     "@context": "https://schema.org",
     "@type": "MusicAlbum",
     name: master.title,
-    url: `${BASE_URL}/release/${master.discogs_id}`,
+    url: `${BASE_URL}/master/${master.discogs_id}`,
     sameAs: `${DISCOGS_BASE}/master/${master.discogs_id}`,
     byArtist: master.artists.slice(0, 3).map((a) => ({
       "@type": "MusicGroup",
@@ -58,39 +58,6 @@ export function musicAlbumJsonLd(master: {
   };
   if (master.year) obj.datePublished = String(master.year);
   if (master.genres.length) obj.genre = master.genres;
-  return obj;
-}
-
-export function versionJsonLd(release: {
-  discogs_id: number;
-  title: string;
-  release_year: number | null;
-  artists: Array<{ discogs_id: number; name: string }>;
-  genres: string[];
-  country: string | null;
-  master_discogs_id: number | null;
-}) {
-  const obj: Record<string, unknown> = {
-    "@context": "https://schema.org",
-    "@type": "MusicAlbum",
-    name: release.title,
-    url: `${BASE_URL}/version/${release.discogs_id}`,
-    sameAs: `${DISCOGS_BASE}/release/${release.discogs_id}`,
-    byArtist: release.artists.slice(0, 3).map((a) => ({
-      "@type": "MusicGroup",
-      name: a.name,
-      url: `${BASE_URL}/artist/${a.discogs_id}`,
-    })),
-  };
-  if (release.release_year) obj.datePublished = String(release.release_year);
-  if (release.genres.length) obj.genre = release.genres;
-  if (release.country) obj.locationCreated = release.country;
-  if (release.master_discogs_id) {
-    obj.inAlbum = {
-      "@type": "MusicAlbum",
-      url: `${BASE_URL}/release/${release.master_discogs_id}`,
-    };
-  }
   return obj;
 }
 
