@@ -83,10 +83,66 @@ export default async function MasterPage({ params }: Props) {
   const { id } = await params;
   if (!/^\d+$/.test(id)) notFound();
 
+  // Resolve the master (or shadow → redirect) BEFORE opening Suspense.
+  // permanentRedirect works by throwing NEXT_REDIRECT for upstream Next.js
+  // to intercept; if we let it fire from inside <Suspense> the response
+  // headers are already locked to 200 and Next falls back to a meta-refresh
+  // tag instead of a real 308. Doing this lookup at the page boundary adds
+  // ~80ms of blocking TTFB but eliminates the meta-refresh hop on every
+  // /release/:id → /master/:release_id → /master/:master_id chain.
+  let masterData: MasterResponse | null = null;
+  let masterErr: ApiRequestError | null = null;
+  try {
+    const data = await digFetch<MasterResponse>(`/v1/masters/${id}`, { revalidate: 300 });
+    if (isMasterResponse(data)) masterData = data;
+  } catch (err) {
+    if (err instanceof ApiRequestError) masterErr = err;
+  }
+
+  if (!masterData) {
+    if (!masterErr || masterErr.code === "NOT_FOUND") {
+      // Try shadow lookup (this id might be a release id, not a master id).
+      // Wrap only the FETCH in try/catch — call permanentRedirect outside,
+      // otherwise the NEXT_REDIRECT throw would be swallowed.
+      let shadowMasterId: number | null = null;
+      try {
+        const data = await digFetch<ReleaseShadowResponse>(`/v1/release_shadow/${id}`, {
+          revalidate: 300,
+        });
+        if (isReleaseShadowResponse(data) && data.release_shadow.master_discogs_id) {
+          shadowMasterId = data.release_shadow.master_discogs_id;
+        }
+      } catch {
+        // No shadow row either → genuine 404 below.
+      }
+      if (shadowMasterId !== null) {
+        permanentRedirect(`/master/${shadowMasterId}`);
+      }
+      notFound();
+    }
+    if (masterErr.code === "TIMEOUT" || masterErr.status >= 500) {
+      return (
+        <div className={styles.page}>
+          <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
+            <p className={styles.copy}>Unable to load this master right now.</p>
+            <p className={styles.small} style={{ marginTop: "0.5rem" }}>
+              <Link href="/" className={styles.link}>Back to search</Link>
+            </p>
+          </section>
+        </div>
+      );
+    }
+    return (
+      <div className={styles.page}>
+        <ErrorMessage code={masterErr.code} message={masterErr.message} />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page} data-dig-entity="master" data-dig-id={id}>
       <Suspense fallback={<SectionSkeleton lines={4} />}>
-        <MasterContent id={id} />
+        <MasterContent id={id} masterData={masterData} />
       </Suspense>
     </div>
   );
@@ -198,45 +254,7 @@ function NotableVersionsRenderer({
 
 /* ── Main streaming component ───────────────────────────────────────── */
 
-async function MasterContent({ id }: { id: string }) {
-  let masterData: MasterResponse | null = null;
-  let masterErr: ApiRequestError | null = null;
-
-  try {
-    const data = await digFetch<MasterResponse>(`/v1/masters/${id}`, { revalidate: 300 });
-    if (isMasterResponse(data)) masterData = data;
-  } catch (err) {
-    if (err instanceof ApiRequestError) masterErr = err;
-  }
-
-  // If the master isn't found, see if this is actually a release ID and 301 to its master.
-  if (!masterData) {
-    if (!masterErr || masterErr.code === "NOT_FOUND") {
-      try {
-        const shadow = await digFetch<ReleaseShadowResponse>(`/v1/release_shadow/${id}`, { revalidate: 300 });
-        if (isReleaseShadowResponse(shadow) && shadow.release_shadow.master_discogs_id) {
-          permanentRedirect(`/master/${shadow.release_shadow.master_discogs_id}`);
-        }
-      } catch {
-        // fall through to notFound
-      }
-      notFound();
-    }
-
-    if (masterErr.code === "TIMEOUT" || masterErr.status >= 500) {
-      return (
-        <section className={styles.section} style={{ paddingTop: "3rem", textAlign: "center" }}>
-          <p className={styles.copy}>Unable to load this master right now.</p>
-          <p className={styles.small} style={{ marginTop: "0.5rem" }}>
-            <Link href="/" className={styles.link}>Back to search</Link>
-          </p>
-        </section>
-      );
-    }
-
-    return <ErrorMessage code={masterErr.code} message={masterErr.message} />;
-  }
-
+async function MasterContent({ id, masterData }: { id: string; masterData: MasterResponse }) {
   const master = masterData.master;
   const mainReleaseId = master.main_release_discogs_id;
   const primaryArtistId =
