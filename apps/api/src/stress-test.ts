@@ -18,28 +18,30 @@ interface Query {
   path: string;
 }
 
+// Scene-scoped catalog: master is the canonical entity. Release detail and
+// per-release credits were dropped (return 410). Search defaults to type=master.
 const QUERY_MIX: Query[] = [
   // Search — heaviest queries
-  { category: "search", description: "FTS release", path: "/v1/search?q=dark+side&type=release" },
+  { category: "search", description: "FTS master", path: "/v1/search?q=dark+side&type=master" },
   { category: "search", description: "FTS artist", path: "/v1/search?q=radiohead&type=artist" },
-  { category: "search", description: "Common term", path: "/v1/search?q=Love&type=release" },
+  { category: "search", description: "Common term", path: "/v1/search?q=Love&type=master" },
   { category: "search", description: "Cross-entity", path: "/v1/search?q=blue" },
   { category: "search", description: "Fuzzy", path: "/v1/search?q=Radiohed&type=artist" },
-  { category: "search", description: "Filtered", path: "/v1/search?q=house&type=release&genre=Electronic" },
+  { category: "search", description: "Filtered", path: "/v1/search?q=house&type=master&genre=Electronic" },
   { category: "search", description: "Unicode", path: "/v1/search?q=Bjork&type=artist" },
-  { category: "search", description: "Multi-word", path: "/v1/search?q=ok+computer&type=release" },
+  { category: "search", description: "Multi-word", path: "/v1/search?q=ok+computer&type=master" },
 
   // Retrieval — fast lookups
   { category: "retrieval", description: "Artist detail", path: "/v1/artists/3840" },
   { category: "retrieval", description: "Label detail", path: "/v1/labels/1" },
   { category: "retrieval", description: "Master detail", path: "/v1/masters/10362" },
-  { category: "retrieval", description: "Release detail", path: "/v1/releases/1" },
+  { category: "retrieval", description: "Release shadow", path: "/v1/release_shadow/1" },
 
   // Traversal — join-heavy
-  { category: "traversal", description: "Artist releases", path: "/v1/artists/1/releases?limit=20" },
   { category: "traversal", description: "Artist masters", path: "/v1/artists/3840/masters?limit=20" },
   { category: "traversal", description: "Label releases", path: "/v1/labels/1/releases?limit=20" },
-  { category: "traversal", description: "Release credits", path: "/v1/releases/1/credits?limit=20" },
+  { category: "traversal", description: "Master releases", path: "/v1/masters/10362/releases?limit=20" },
+  { category: "traversal", description: "Master videos", path: "/v1/masters/10362/videos?limit=20" },
 ];
 
 interface Result {

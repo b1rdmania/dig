@@ -1,13 +1,23 @@
 /**
- * Direct graph traversal — v1 scope only.
+ * Direct graph traversal — slim master-first shape.
  *
- * Supported links:
- * - artist → releases (via release_artists)
- * - artist → masters (via master_artists)
- * - artist → credits (via release_credits + track_credits)
- * - label → releases (via release_labels)
- * - master → releases (via releases.master_discogs_id)
- * - release → credits (via release_credits)
+ * Supported in dig-db-scene:
+ *   - artist  → masters       (catalog.master_artists)
+ *   - label   → masters       (catalog.masters.primary_label_discogs_id)
+ *   - master  → releases      (catalog.release_shadow — "Notable Versions")
+ *   - master  → videos        (catalog.master_videos_unified)
+ *
+ * Deprecated (returns empty + degraded shape) — release-level data has
+ * been removed from the slim DB:
+ *   - artist  → releases       (no catalog.releases / release_artists)
+ *   - artist  → catalog_releases (replaced by artist → masters)
+ *   - artist  → credits        (no release_credits / track_credits)
+ *   - label   → releases       (replaced by label → masters via primary_label)
+ *   - release → credits        (no release_credits)
+ *
+ * The deprecated functions are retained as exports so that the API/MCP
+ * layer continues to typecheck during the cutover; phase4-api/mcp will
+ * remove these endpoints entirely (returning 410 Gone).
  */
 
 import { type Kysely, sql } from "kysely";
@@ -27,6 +37,12 @@ export interface TraversalLink {
   format?: string | null;
   release_type?: ReleaseType;
   release_type_label?: ReleaseTypeLabel;
+  /** Optional editorial signal — populated for master links from dig-db-scene */
+  scene_weight?: number;
+  /** Set on Notable Versions (master_releases) — flags the canonical pressing */
+  is_main_release?: boolean;
+  /** Back-pointer for release links so callers can route to /master/:master_id */
+  master_discogs_id?: number | null;
   provenance: { source: "discogs"; dump_date: string; discogs_id: number };
 }
 
@@ -42,6 +58,8 @@ export interface TraversalResponse {
     source_discogs_id: number;
     link_type: string;
     elapsed_ms: number;
+    degraded?: boolean;
+    degraded_reason?: string;
   };
 }
 
@@ -50,6 +68,8 @@ export interface MasterVideo {
   title: string | null;
   duration_seconds: number | null;
   release_discogs_id: number;
+  source_type: "master" | "release";
+  discogs_release_url: string | null;
   provenance: { source: "discogs"; dump_date: string; discogs_id: number };
 }
 
@@ -66,39 +86,35 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const MASTERS_FETCH_CAP = 500;
 
-/** Deterministic release-type classifier from format descriptions. */
+/**
+ * Deterministic release-type classifier from a primary format string.
+ * The slim shape stores `primary_format` as a single text value rather
+ * than a list of descriptions — we still match against the same vocabulary.
+ */
 export function classifyReleaseType(
-  descriptions: string[],
+  formatHints: string[],
   title?: string | null,
 ): { release_type: ReleaseType; release_type_label: ReleaseTypeLabel } {
-  const lower = descriptions.map((d) => d.toLowerCase());
+  const lower = formatHints.map((d) => d.toLowerCase());
   const titleLower = (title || "").toLowerCase();
 
-  // Priority 1: Album / LP
-  if (lower.some((d) => d === "album" || d === "lp")) {
+  if (lower.some((d) => d === "album" || d === "lp" || d.includes("album"))) {
     return { release_type: "album", release_type_label: "LP" };
   }
-
-  // Priority 2: Single / 7"
-  if (lower.some((d) => d === "single" || d === '7"')) {
+  if (lower.some((d) => d === "single" || d === '7"' || d.includes("single"))) {
     return { release_type: "single_ep", release_type_label: "Single" };
   }
-
-  // Priority 3: EP / 12"
-  if (lower.some((d) => d === "ep" || d === '12"')) {
+  if (lower.some((d) => d === "ep" || d === '12"' || d.includes("ep") || d.includes('12"'))) {
     return { release_type: "single_ep", release_type_label: "EP" };
   }
-
-  // Priority 4: Compilation
   if (
-    lower.some((d) => d === "compilation") ||
+    lower.some((d) => d === "compilation" || d.includes("comp")) ||
     titleLower.includes("greatest hits") ||
     titleLower.includes("best of") ||
     titleLower.includes("anthology")
   ) {
     return { release_type: "compilation", release_type_label: "Comp" };
   }
-
   return { release_type: "other", release_type_label: "Other" };
 }
 
@@ -115,66 +131,32 @@ function decodeCursor(cursor: string): number | null {
   }
 }
 
+// ─── Deprecated: artist → releases ───────────────────────────────────────────
+
+/** @deprecated Slim shape carries no release-level data. Use getArtistMasters. */
 export async function getArtistReleases(
-  db: Kysely<Database>,
+  _db: Kysely<Database>,
   artistDiscogsId: number,
-  batchId: string,
-  dumpDate: string,
-  limit = DEFAULT_LIMIT,
-  cursor?: string,
+  _batchId: string,
+  _dumpDate: string,
+  _limit = DEFAULT_LIMIT,
+  _cursor?: string,
 ): Promise<TraversalResponse> {
-  const start = Date.now();
-  const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
-  const afterId = cursor ? decodeCursor(cursor) : null;
-
-  let query = db
-    .selectFrom("catalog.release_artists")
-    .innerJoin("catalog.releases", (join) =>
-      join
-        .onRef("catalog.releases.discogs_id", "=", "catalog.release_artists.release_discogs_id")
-        .on("catalog.releases.batch_id", "=", batchId),
-    )
-    .select([
-      "catalog.releases.discogs_id",
-      "catalog.releases.title",
-      "catalog.releases.release_year as year",
-    ])
-    .where("catalog.release_artists.artist_discogs_id", "=", artistDiscogsId)
-    .where("catalog.release_artists.batch_id", "=", batchId)
-    .orderBy("catalog.releases.discogs_id", "asc")
-    .limit(lim + 1);
-
-  if (afterId !== null) {
-    query = query.where("catalog.releases.discogs_id", ">", afterId);
-  }
-
-  const rows = await query.execute();
-  const hasMore = rows.length > lim;
-  const resultRows = hasMore ? rows.slice(0, lim) : rows;
-
   return {
-    links: resultRows.map((r) => ({
-      type: "release",
-      discogs_id: r.discogs_id,
-      title: r.title,
-      year: r.year,
-      provenance: { source: "discogs", dump_date: dumpDate, discogs_id: r.discogs_id },
-    })),
-    pagination: {
-      cursor: hasMore && resultRows.length > 0
-        ? encodeCursor(resultRows[resultRows.length - 1].discogs_id)
-        : null,
-      has_more: hasMore,
-      total_estimate: null,
-    },
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: 0 },
     meta: {
       source_type: "artist",
       source_discogs_id: artistDiscogsId,
       link_type: "releases",
-      elapsed_ms: Date.now() - start,
+      elapsed_ms: 0,
+      degraded: true,
+      degraded_reason: "release_traversal_disabled",
     },
   };
 }
+
+// ─── Active: artist → masters ───────────────────────────────────────────────
 
 export async function getArtistMasters(
   db: Kysely<Database>,
@@ -190,8 +172,8 @@ export async function getArtistMasters(
   const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
   const afterId = cursor ? decodeCursor(cursor) : null;
 
-  // Fetch all masters with aggregated format descriptions via subquery.
-  // Most artists have <200 masters so fetching all is fine for classification + filtering.
+  // Read denormed primary_format directly from masters — no join to dropped
+  // release_formats. Most artists have <200 masters → fetch all then sort.
   const rows = await db
     .selectFrom("catalog.master_artists")
     .innerJoin("catalog.masters", (join) =>
@@ -203,34 +185,31 @@ export async function getArtistMasters(
       "catalog.masters.discogs_id",
       "catalog.masters.title",
       "catalog.masters.year",
+      "catalog.masters.primary_format",
+      "catalog.masters.scene_weight",
     ])
-    .select(
-      sql<string[] | null>`(
-        SELECT array_agg(DISTINCT d)
-        FROM catalog.release_formats rf,
-             unnest(rf.descriptions) AS d
-        WHERE rf.release_discogs_id = catalog.masters.main_release_discogs_id
-          AND rf.batch_id = ${batchId}
-      )`.as("format_descriptions"),
-    )
     .where("catalog.master_artists.artist_discogs_id", "=", artistDiscogsId)
     .where("catalog.master_artists.batch_id", "=", batchId)
     .limit(MASTERS_FETCH_CAP)
     .execute();
 
-  // Classify each master
   const classified = rows.map((r) => {
-    const descs = (r as any).format_descriptions as string[] | null;
-    const { release_type, release_type_label } = classifyReleaseType(descs ?? [], r.title);
-    return { discogs_id: r.discogs_id, title: r.title, year: r.year, release_type, release_type_label };
+    const fmt = r.primary_format ? [r.primary_format] : [];
+    const { release_type, release_type_label } = classifyReleaseType(fmt, r.title);
+    return {
+      discogs_id: r.discogs_id,
+      title: r.title,
+      year: r.year,
+      scene_weight: r.scene_weight,
+      release_type,
+      release_type_label,
+    };
   });
 
-  // Filter by release type
   const filtered = releaseType === "all"
     ? classified
     : classified.filter((r) => r.release_type === releaseType);
 
-  // Sort
   filtered.sort((a, b) => {
     const dir = sort === "newest" ? -1 : 1;
     const ya = a.year ?? (sort === "newest" ? -Infinity : Infinity);
@@ -239,7 +218,6 @@ export async function getArtistMasters(
     return (a.discogs_id - b.discogs_id) * dir;
   });
 
-  // Paginate using cursor (discogs_id)
   let startIdx = 0;
   if (afterId !== null) {
     const cursorIdx = filtered.findIndex((r) => r.discogs_id === afterId);
@@ -257,6 +235,7 @@ export async function getArtistMasters(
       year: r.year,
       release_type: r.release_type,
       release_type_label: r.release_type_label,
+      scene_weight: r.scene_weight,
       provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: r.discogs_id },
     })),
     pagination: {
@@ -275,6 +254,11 @@ export async function getArtistMasters(
   };
 }
 
+/**
+ * Slim shim for the legacy "catalog releases" endpoint that previously
+ * merged masters + standalone releases. In the slim shape there are no
+ * standalone releases → this is just `getArtistMasters` under a different name.
+ */
 export async function getArtistCatalogReleases(
   db: Kysely<Database>,
   artistDiscogsId: number,
@@ -285,184 +269,17 @@ export async function getArtistCatalogReleases(
   sort: "newest" | "oldest" = "newest",
   releaseType: ReleaseType | "all" = "all",
 ): Promise<TraversalResponse> {
-  const start = Date.now();
-  const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
-  const afterId = cursor ? decodeCursor(cursor) : null;
-
-  // Query 1 — masters path (same as getArtistMasters)
-  const masterRows = await db
-    .selectFrom("catalog.master_artists")
-    .innerJoin("catalog.masters", (join) =>
-      join
-        .onRef("catalog.masters.discogs_id", "=", "catalog.master_artists.master_discogs_id")
-        .on("catalog.masters.batch_id", "=", batchId),
-    )
-    .select([
-      "catalog.masters.discogs_id",
-      "catalog.masters.title",
-      "catalog.masters.year",
-    ])
-    .select(
-      sql<string[] | null>`(
-        SELECT array_agg(DISTINCT d)
-        FROM catalog.release_formats rf,
-             unnest(rf.descriptions) AS d
-        WHERE rf.release_discogs_id = catalog.masters.main_release_discogs_id
-          AND rf.batch_id = ${batchId}
-      )`.as("format_descriptions"),
-    )
-    .where("catalog.master_artists.artist_discogs_id", "=", artistDiscogsId)
-    .where("catalog.master_artists.batch_id", "=", batchId)
-    .limit(MASTERS_FETCH_CAP)
-    .execute();
-
-  // Query 2 — release primary path (release_artists)
-  const releaseRows = await db
-    .selectFrom("catalog.release_artists")
-    .innerJoin("catalog.releases", (join) =>
-      join
-        .onRef("catalog.releases.discogs_id", "=", "catalog.release_artists.release_discogs_id")
-        .on("catalog.releases.batch_id", "=", batchId),
-    )
-    .select([
-      "catalog.releases.discogs_id",
-      "catalog.releases.title",
-      "catalog.releases.release_year as year",
-      "catalog.releases.master_discogs_id",
-    ])
-    .select(
-      sql<string[] | null>`(
-        SELECT array_agg(DISTINCT d)
-        FROM catalog.release_formats rf,
-             unnest(rf.descriptions) AS d
-        WHERE rf.release_discogs_id = catalog.releases.discogs_id
-          AND rf.batch_id = ${batchId}
-      )`.as("format_descriptions"),
-    )
-    .where("catalog.release_artists.artist_discogs_id", "=", artistDiscogsId)
-    .where("catalog.release_artists.batch_id", "=", batchId)
-    .limit(MASTERS_FETCH_CAP)
-    .execute();
-
-  // Merge + deduplicate: key = "m:<master_id>" or "r:<release_id>"
-  type CatalogEntry = {
-    key: string;
-    type: "master" | "release";
-    discogs_id: number;
-    title: string | null;
-    year: number | null;
-    format_descriptions: string[] | null;
-  };
-
-  const map = new Map<string, CatalogEntry>();
-
-  // First pass: add all masters
-  for (const r of masterRows) {
-    const key = `m:${r.discogs_id}`;
-    map.set(key, {
-      key,
-      type: "master",
-      discogs_id: r.discogs_id,
-      title: r.title,
-      year: r.year,
-      format_descriptions: (r as any).format_descriptions as string[] | null,
-    });
-  }
-
-  // Second pass: add release_artists rows, deduplicating against masters
-  for (const r of releaseRows) {
-    const masterDiscogs = (r as any).master_discogs_id as number | null;
-    if (masterDiscogs != null) {
-      const masterKey = `m:${masterDiscogs}`;
-      if (map.has(masterKey)) {
-        // Master already present — skip, master wins
-        continue;
-      }
-      // Master referenced but not in our master_artists results —
-      // represent via master key so it won't duplicate if we see it again
-      map.set(masterKey, {
-        key: masterKey,
-        type: "master",
-        discogs_id: masterDiscogs,
-        title: r.title,
-        year: (r as any).year as number | null,
-        format_descriptions: (r as any).format_descriptions as string[] | null,
-      });
-    } else {
-      // No master link — standalone release
-      const key = `r:${r.discogs_id}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          type: "release",
-          discogs_id: r.discogs_id,
-          title: r.title,
-          year: (r as any).year as number | null,
-          format_descriptions: (r as any).format_descriptions as string[] | null,
-        });
-      }
-    }
-  }
-
-  // Classify each entry
-  const classified = Array.from(map.values()).map((entry) => {
-    const { release_type, release_type_label } = classifyReleaseType(
-      entry.format_descriptions ?? [],
-      entry.title,
-    );
-    return { ...entry, release_type, release_type_label };
-  });
-
-  // Filter by release type
-  const filtered = releaseType === "all"
-    ? classified
-    : classified.filter((r) => r.release_type === releaseType);
-
-  // Sort by year + discogs_id
-  filtered.sort((a, b) => {
-    const dir = sort === "newest" ? -1 : 1;
-    const ya = a.year ?? (sort === "newest" ? -Infinity : Infinity);
-    const yb = b.year ?? (sort === "newest" ? -Infinity : Infinity);
-    if (ya !== yb) return (ya - yb) * dir;
-    return (a.discogs_id - b.discogs_id) * dir;
-  });
-
-  // Cursor paginate after sort
-  let startIdx = 0;
-  if (afterId !== null) {
-    const cursorIdx = filtered.findIndex((r) => r.discogs_id === afterId);
-    startIdx = cursorIdx >= 0 ? cursorIdx + 1 : 0;
-  }
-
-  const page = filtered.slice(startIdx, startIdx + lim);
-  const hasMore = startIdx + lim < filtered.length;
-
-  return {
-    links: page.map((r) => ({
-      type: r.type,
-      discogs_id: r.discogs_id,
-      title: r.title ?? undefined,
-      year: r.year,
-      release_type: r.release_type,
-      release_type_label: r.release_type_label,
-      provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: r.discogs_id },
-    })),
-    pagination: {
-      cursor: hasMore && page.length > 0
-        ? encodeCursor(page[page.length - 1].discogs_id)
-        : null,
-      has_more: hasMore,
-      total_estimate: filtered.length,
-    },
-    meta: {
-      source_type: "artist",
-      source_discogs_id: artistDiscogsId,
-      link_type: "catalog_releases",
-      elapsed_ms: Date.now() - start,
-    },
-  };
+  const r = await getArtistMasters(db, artistDiscogsId, batchId, dumpDate, limit, cursor, sort, releaseType);
+  return { ...r, meta: { ...r.meta, link_type: "catalog_releases" } };
 }
 
+// ─── Active: label → masters ────────────────────────────────────────────────
+
+/**
+ * Returns the masters released on a given label, ranked by scene_weight
+ * (most "in-scene" first). Replaces the old release-level traversal which
+ * was the only way to find a label's catalog in the full-catalog shape.
+ */
 export async function getLabelReleases(
   db: Kysely<Database>,
   labelDiscogsId: number,
@@ -476,85 +293,16 @@ export async function getLabelReleases(
   const afterId = cursor ? decodeCursor(cursor) : null;
 
   let query = db
-    .selectFrom("catalog.release_labels")
-    .innerJoin("catalog.releases", (join) =>
-      join
-        .onRef("catalog.releases.discogs_id", "=", "catalog.release_labels.release_discogs_id")
-        .on("catalog.releases.batch_id", "=", batchId),
-    )
-    .select([
-      "catalog.releases.discogs_id",
-      "catalog.releases.title",
-      "catalog.releases.release_year as year",
-      "catalog.releases.master_discogs_id",
-    ])
-    .where("catalog.release_labels.label_discogs_id", "=", labelDiscogsId)
-    .where("catalog.release_labels.batch_id", "=", batchId)
-    .orderBy("catalog.releases.discogs_id", "asc")
-    .limit(lim + 1);
-
-  if (afterId !== null) {
-    query = query.where("catalog.releases.discogs_id", ">", afterId);
-  }
-
-  const rows = await query.execute();
-  const hasMore = rows.length > lim;
-  const resultRows = hasMore ? rows.slice(0, lim) : rows;
-
-  return {
-    links: resultRows.map((r) => ({
-      type: "release",
-      discogs_id: r.discogs_id,
-      title: r.title,
-      year: r.year,
-      master_discogs_id: (r as any).master_discogs_id ?? null,
-      provenance: { source: "discogs", dump_date: dumpDate, discogs_id: r.discogs_id },
-    })),
-    pagination: {
-      cursor: hasMore && resultRows.length > 0
-        ? encodeCursor(resultRows[resultRows.length - 1].discogs_id)
-        : null,
-      has_more: hasMore,
-      total_estimate: null,
-    },
-    meta: {
-      source_type: "label",
-      source_discogs_id: labelDiscogsId,
-      link_type: "releases",
-      elapsed_ms: Date.now() - start,
-    },
-  };
-}
-
-export async function getMasterReleases(
-  db: Kysely<Database>,
-  masterDiscogsId: number,
-  batchId: string,
-  dumpDate: string,
-  limit = DEFAULT_LIMIT,
-  cursor?: string,
-): Promise<TraversalResponse> {
-  const start = Date.now();
-  const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
-  const afterId = cursor ? decodeCursor(cursor) : null;
-
-  let query = db
-    .selectFrom("catalog.releases")
+    .selectFrom("catalog.masters")
     .select([
       "discogs_id",
       "title",
-      "release_year as year",
-      "country",
+      "year",
+      "primary_country as country",
+      "primary_format as format",
+      "scene_weight",
     ])
-    .select(
-      sql<string | null>`(
-        SELECT f.name FROM catalog.release_formats f
-        WHERE f.release_discogs_id = catalog.releases.discogs_id
-          AND f.batch_id = catalog.releases.batch_id
-        ORDER BY f.position LIMIT 1
-      )`.as("format"),
-    )
-    .where("master_discogs_id", "=", masterDiscogsId)
+    .where("primary_label_discogs_id", "=", labelDiscogsId)
     .where("batch_id", "=", batchId)
     .orderBy("discogs_id", "asc")
     .limit(lim + 1);
@@ -569,13 +317,91 @@ export async function getMasterReleases(
 
   return {
     links: resultRows.map((r) => ({
-      type: "release",
+      type: "master" as const,
       discogs_id: r.discogs_id,
       title: r.title,
       year: r.year,
-      country: (r as any).country ?? null,
-      format: (r as any).format ?? null,
-      provenance: { source: "discogs", dump_date: dumpDate, discogs_id: r.discogs_id },
+      country: r.country,
+      format: r.format,
+      scene_weight: r.scene_weight,
+      provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: r.discogs_id },
+    })),
+    pagination: {
+      cursor: hasMore && resultRows.length > 0
+        ? encodeCursor(resultRows[resultRows.length - 1].discogs_id)
+        : null,
+      has_more: hasMore,
+      total_estimate: null,
+    },
+    meta: {
+      source_type: "label",
+      source_discogs_id: labelDiscogsId,
+      // Kept as "releases" for API contract continuity; the linked entities
+      // are masters, but the endpoint name in the legacy API is /releases.
+      link_type: "releases",
+      elapsed_ms: Date.now() - start,
+    },
+  };
+}
+
+// ─── Active: master → releases (Notable Versions) ───────────────────────────
+
+/**
+ * Returns the alternate releases of a master from `catalog.release_shadow`.
+ * This is the "Notable Versions" surface on the slim master page — minimal
+ * metadata, no rich detail page.
+ *
+ * Ordering: main release first, then by year ascending, then discogs_id.
+ * `_batchId` is accepted for API parity but ignored (release_shadow is built
+ * once per scope and doesn't carry batch_id).
+ */
+export async function getMasterReleases(
+  db: Kysely<Database>,
+  masterDiscogsId: number,
+  _batchId: string,
+  dumpDate: string,
+  limit = DEFAULT_LIMIT,
+  cursor?: string,
+): Promise<TraversalResponse> {
+  const start = Date.now();
+  const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
+  const afterId = cursor ? decodeCursor(cursor) : null;
+
+  let query = db
+    .selectFrom("catalog.release_shadow")
+    .select([
+      "release_discogs_id as discogs_id",
+      "title",
+      "release_year as year",
+      "country",
+      "format",
+      "is_main_release",
+    ])
+    .where("master_discogs_id", "=", masterDiscogsId)
+    .orderBy("is_main_release", "desc")
+    .orderBy("release_year", "asc")
+    .orderBy("release_discogs_id", "asc")
+    .limit(lim + 1);
+
+  if (afterId !== null) {
+    query = query.where("release_discogs_id", ">", afterId);
+  }
+
+  const rows = await query.execute();
+  const hasMore = rows.length > lim;
+  const resultRows = hasMore ? rows.slice(0, lim) : rows;
+
+  return {
+    links: resultRows.map((r) => ({
+      type: "release" as const,
+      discogs_id: r.discogs_id,
+      title: r.title,
+      year: r.year,
+      country: r.country,
+      format: r.format,
+      is_main_release: r.is_main_release,
+      master_discogs_id: masterDiscogsId,
+      provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: r.discogs_id },
     })),
     pagination: {
       cursor: hasMore && resultRows.length > 0
@@ -593,10 +419,17 @@ export async function getMasterReleases(
   };
 }
 
+// ─── Active: master → videos ────────────────────────────────────────────────
+
+/**
+ * Returns the unified video feed for a master from
+ * `catalog.master_videos_unified`. Built once at scope-build time from
+ * master + release videos with deduplication by URL.
+ */
 export async function getMasterVideos(
   db: Kysely<Database>,
   masterDiscogsId: number,
-  batchId: string,
+  _batchId: string,
   dumpDate: string,
   limit = 200,
 ): Promise<MasterVideosResponse> {
@@ -604,23 +437,19 @@ export async function getMasterVideos(
   const lim = Math.min(Math.max(limit, 1), 500);
 
   const rows = await db
-    .selectFrom("catalog.releases as r")
-    .innerJoin("catalog.release_videos as rv", (join) =>
-      join
-        .onRef("rv.release_discogs_id", "=", "r.discogs_id")
-        .onRef("rv.batch_id", "=", "r.batch_id"),
-    )
+    .selectFrom("catalog.master_videos_unified")
     .select([
-      "rv.url",
-      "rv.title",
-      "rv.duration_seconds",
-      "rv.release_discogs_id",
+      "url",
+      "title",
+      "duration_seconds",
+      "source_type",
+      "source_release_discogs_id",
+      "discogs_release_url",
     ])
-    .where("r.master_discogs_id", "=", masterDiscogsId)
-    .where("r.batch_id", "=", batchId)
-    .orderBy("r.is_main_release", "desc")
-    .orderBy("r.release_year", "asc")
-    .orderBy("r.discogs_id", "asc")
+    .where("master_discogs_id", "=", masterDiscogsId)
+    // Master-sourced videos first, then release-sourced
+    .orderBy("source_type", "asc")
+    .orderBy("id", "asc")
     .limit(lim)
     .execute();
 
@@ -629,8 +458,14 @@ export async function getMasterVideos(
       url: row.url,
       title: row.title,
       duration_seconds: row.duration_seconds,
-      release_discogs_id: row.release_discogs_id,
-      provenance: { source: "discogs", dump_date: dumpDate, discogs_id: row.release_discogs_id },
+      release_discogs_id: row.source_release_discogs_id ?? masterDiscogsId,
+      source_type: row.source_type as "master" | "release",
+      discogs_release_url: row.discogs_release_url,
+      provenance: {
+        source: "discogs",
+        dump_date: dumpDate,
+        discogs_id: row.source_release_discogs_id ?? masterDiscogsId,
+      },
     })),
     meta: {
       source_type: "master",
@@ -640,59 +475,32 @@ export async function getMasterVideos(
   };
 }
 
+// ─── Deprecated: release → credits ──────────────────────────────────────────
+
+/** @deprecated Slim shape carries no release_credits. */
 export async function getReleaseCredits(
-  db: Kysely<Database>,
+  _db: Kysely<Database>,
   releaseDiscogsId: number,
-  batchId: string,
-  dumpDate: string,
-  limit = DEFAULT_LIMIT,
-  cursor?: string,
+  _batchId: string,
+  _dumpDate: string,
+  _limit = DEFAULT_LIMIT,
+  _cursor?: string,
 ): Promise<TraversalResponse> {
-  const start = Date.now();
-  const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
-  const afterId = cursor ? decodeCursor(cursor) : null;
-
-  let query = db
-    .selectFrom("catalog.release_credits")
-    .select(["artist_discogs_id as discogs_id", "artist_name as name", "role"])
-    .where("release_discogs_id", "=", releaseDiscogsId)
-    .where("batch_id", "=", batchId)
-    .orderBy("artist_discogs_id", "asc")
-    .limit(lim + 1);
-
-  if (afterId !== null) {
-    query = query.where("artist_discogs_id", ">", afterId);
-  }
-
-  const rows = await query.execute();
-  const hasMore = rows.length > lim;
-  const resultRows = hasMore ? rows.slice(0, lim) : rows;
-
   return {
-    links: resultRows.map((r) => ({
-      type: "artist",
-      discogs_id: r.discogs_id,
-      name: r.name,
-      role: r.role,
-      provenance: { source: "discogs", dump_date: dumpDate, discogs_id: r.discogs_id },
-    })),
-    pagination: {
-      cursor: hasMore && resultRows.length > 0
-        ? encodeCursor(resultRows[resultRows.length - 1].discogs_id)
-        : null,
-      has_more: hasMore,
-      total_estimate: null,
-    },
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: 0 },
     meta: {
       source_type: "release",
       source_discogs_id: releaseDiscogsId,
       link_type: "credits",
-      elapsed_ms: Date.now() - start,
+      elapsed_ms: 0,
+      degraded: true,
+      degraded_reason: "release_traversal_disabled",
     },
   };
 }
 
-// ─── Role-family classifier ───────────────────────────────────────────────────
+// ─── Role-family classifier (kept as a pure helper) ─────────────────────────
 
 export type RoleFamily = "writing" | "arranging" | "performance" | "production" | "other";
 
@@ -711,7 +519,7 @@ export function classifyRoleFamily(role: string | null): RoleFamily {
   return "other";
 }
 
-// ─── Artist credits response shape ───────────────────────────────────────────
+// ─── Deprecated: artist → credits ───────────────────────────────────────────
 
 export interface ArtistCreditLink {
   release_discogs_id: number;
@@ -737,165 +545,35 @@ export interface ArtistCreditsResponse {
     source_discogs_id: number;
     link_type: "credits";
     elapsed_ms: number;
+    degraded?: boolean;
+    degraded_reason?: string;
   };
 }
 
-// ─── getArtistCredits ─────────────────────────────────────────────────────────
-
+/** @deprecated Slim shape carries no release_credits / track_credits. */
 export async function getArtistCredits(
-  db: Kysely<Database>,
+  _db: Kysely<Database>,
   artistDiscogsId: number,
-  batchId: string,
-  dumpDate: string,
-  limit = DEFAULT_LIMIT,
-  cursor?: string,
-  roleFamily?: RoleFamily | "all",
+  _batchId: string,
+  _dumpDate: string,
+  _limit = DEFAULT_LIMIT,
+  _cursor?: string,
+  _roleFamily?: RoleFamily | "all",
 ): Promise<ArtistCreditsResponse> {
-  const start = Date.now();
-  const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
-  const afterId = cursor ? decodeCursor(cursor) : null;
-
-  // Fetch release-level credits
-  const releaseCreditRows = await sql<{
-    release_discogs_id: number;
-    role: string | null;
-    title: string | null;
-    year: number | null;
-    country: string | null;
-  }>`
-    SELECT
-      rc.release_discogs_id,
-      rc.role,
-      r.title,
-      r.release_year AS year,
-      r.country
-    FROM catalog.release_credits rc
-    LEFT JOIN catalog.releases r
-      ON r.discogs_id = rc.release_discogs_id
-      AND r.batch_id = ${batchId}::uuid
-    WHERE rc.artist_discogs_id = ${artistDiscogsId}
-      AND rc.batch_id = ${batchId}::uuid
-      ${afterId !== null ? sql`AND rc.release_discogs_id > ${afterId}` : sql``}
-    ORDER BY rc.release_discogs_id ASC
-  `.execute(db);
-
-  // Fetch track-level credits (join to tracks to get release_discogs_id)
-  const trackCreditRows = await sql<{
-    release_discogs_id: number;
-    role: string | null;
-    title: string | null;
-    year: number | null;
-    country: string | null;
-  }>`
-    SELECT
-      t.release_discogs_id,
-      tc.role,
-      r.title,
-      r.release_year AS year,
-      r.country
-    FROM catalog.track_credits tc
-    JOIN catalog.tracks t
-      ON t.id = tc.track_id
-      AND t.batch_id = ${batchId}::uuid
-    LEFT JOIN catalog.releases r
-      ON r.discogs_id = t.release_discogs_id
-      AND r.batch_id = ${batchId}::uuid
-    WHERE tc.artist_discogs_id = ${artistDiscogsId}
-      AND tc.batch_id = ${batchId}::uuid
-      ${afterId !== null ? sql`AND t.release_discogs_id > ${afterId}` : sql``}
-    ORDER BY t.release_discogs_id ASC
-  `.execute(db);
-
-  // Merge and group by release_discogs_id
-  type MergedEntry = {
-    title: string | null;
-    year: number | null;
-    country: string | null;
-    releaseRoles: Set<string>;
-    trackRoles: Set<string>;
-  };
-
-  const byRelease = new Map<number, MergedEntry>();
-
-  for (const row of releaseCreditRows.rows) {
-    if (!byRelease.has(row.release_discogs_id)) {
-      byRelease.set(row.release_discogs_id, {
-        title: row.title,
-        year: row.year,
-        country: row.country,
-        releaseRoles: new Set(),
-        trackRoles: new Set(),
-      });
-    }
-    if (row.role) byRelease.get(row.release_discogs_id)!.releaseRoles.add(row.role);
-  }
-
-  for (const row of trackCreditRows.rows) {
-    if (!byRelease.has(row.release_discogs_id)) {
-      byRelease.set(row.release_discogs_id, {
-        title: row.title,
-        year: row.year,
-        country: row.country,
-        releaseRoles: new Set(),
-        trackRoles: new Set(),
-      });
-    }
-    if (row.role) byRelease.get(row.release_discogs_id)!.trackRoles.add(row.role);
-  }
-
-  // Build sorted link list
-  let allLinks: ArtistCreditLink[] = Array.from(byRelease.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([releaseId, entry]) => {
-      const roles = Array.from(new Set([...entry.releaseRoles, ...entry.trackRoles]));
-      const creditSource: "release" | "track" | "both" =
-        entry.releaseRoles.size > 0 && entry.trackRoles.size > 0
-          ? "both"
-          : entry.releaseRoles.size > 0
-          ? "release"
-          : "track";
-      // Dominant role family: first non-"other" wins, else "other"
-      let dominantFamily: RoleFamily = "other";
-      for (const r of roles) {
-        const f = classifyRoleFamily(r);
-        if (f !== "other") { dominantFamily = f; break; }
-      }
-      return {
-        release_discogs_id: releaseId,
-        title: entry.title,
-        year: entry.year,
-        country: entry.country,
-        roles,
-        role_count: roles.length,
-        credit_source: creditSource,
-        role_family: dominantFamily,
-        provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: releaseId },
-      };
-    });
-
-  // Apply role_family filter in JS (dataset bounded per artist)
-  if (roleFamily && roleFamily !== "all") {
-    allLinks = allLinks.filter((l) => l.role_family === roleFamily);
-  }
-
-  // Paginate
-  const hasMore = allLinks.length > lim;
-  const page = hasMore ? allLinks.slice(0, lim) : allLinks;
-
+  // Reference sql to keep it as an explicit dependency for the file even
+  // though we no longer issue a query — preserves grep-discoverability when
+  // re-introducing a credits surface in a future enrichment pass.
+  void sql;
   return {
-    links: page,
-    pagination: {
-      cursor: hasMore && page.length > 0
-        ? encodeCursor(page[page.length - 1].release_discogs_id)
-        : null,
-      has_more: hasMore,
-      total_estimate: allLinks.length,
-    },
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: 0 },
     meta: {
       source_type: "artist",
       source_discogs_id: artistDiscogsId,
       link_type: "credits",
-      elapsed_ms: Date.now() - start,
+      elapsed_ms: 0,
+      degraded: true,
+      degraded_reason: "credits_traversal_disabled",
     },
   };
 }

@@ -1,13 +1,16 @@
 /**
- * @dig/mcp — MCP server for the Dig music catalog.
+ * @dig/mcp — MCP server for the Dig scene-scoped music catalog.
  *
  * Transport: SSE (HTTP, remote) via express + @modelcontextprotocol/sdk
  *
- * All tools delegate to @dig/domain retrieval services.
- * Tool outputs match REST response contracts (docs/phase2-response-contracts.md)
- * including degraded, degraded_reason, and provenance fields.
+ * Catalog scope: ~80k 90s house & techno masters (with adjacent electro / IDM /
+ * ambient techno / UK rave / Italo proto). Master is the canonical entity.
+ * Per-release detail and per-release credits are NOT served — the slim DB
+ * stores only a release_shadow (master_discogs_id + identifying metadata) so
+ * callers can resolve a release ID to its master.
  *
- * Error taxonomy matches REST: INVALID_REQUEST, NOT_FOUND, QUERY_TIMEOUT, INTERNAL_ERROR.
+ * All tools delegate to @dig/domain retrieval services.
+ * Error taxonomy: INVALID_REQUEST, NOT_FOUND, GONE, QUERY_TIMEOUT, INTERNAL_ERROR.
  */
 
 import express from "express";
@@ -22,12 +25,11 @@ import {
   getArtist,
   getLabel,
   getMaster,
-  getRelease,
-  getArtistReleases,
+  getReleaseShadow,
   getArtistMasters,
   getLabelReleases,
   getMasterReleases,
-  getReleaseCredits,
+  getMasterVideos,
   getBatchForTable,
   type SearchEntityType,
 } from "@dig/domain";
@@ -214,26 +216,31 @@ function rateLimitMiddleware(req: express.Request, res: express.Response, next: 
 
 const server = new McpServer({
   name: "dig-catalog",
-  version: "0.1.0",
+  version: "0.2.0-scene",
 });
 
 // ---------------------------------------------------------------------------
 // Tool: search_catalog
 // ---------------------------------------------------------------------------
 
+// "release" is accepted for back-compat but the domain returns degraded empty
+// results (release-as-entity was dropped — masters are canonical). Default to
+// master when no type is given.
 const VALID_TYPES = ["artist", "label", "master", "release"] as const;
 
 server.tool(
   "search_catalog",
-  "Search the Dig music catalog (24M+ records from Discogs). " +
-  "Supports FTS, fuzzy matching for artist/label/master typos, " +
-  "and structured filters (genre, style, year, country). " +
-  "Query must be 2-200 characters. Max 50 results per page.",
+  "Search the Dig scene-scoped music catalog (~80k 90s house & techno masters " +
+  "from Discogs, plus their artists and labels). Supports FTS, fuzzy matching " +
+  "for artist/label/master typos, and structured filters (genre, style, year, " +
+  "country). When no type is given, search defaults to masters. Searching for " +
+  "type=release returns a degraded empty result — release-as-entity is no " +
+  "longer served. Query 2-200 chars; max 50 results per page.",
   {
     query: z.string().describe("Free-text search query (2-200 chars). Can be empty if filters are provided."),
-    type: z.enum(VALID_TYPES).optional().describe("Entity type filter: artist, label, master, or release"),
-    genre: z.string().optional().describe("Genre filter (e.g. 'Electronic', 'Rock', 'Jazz')"),
-    style: z.string().optional().describe("Style filter (e.g. 'Deep House', 'Ambient', 'Punk')"),
+    type: z.enum(VALID_TYPES).optional().describe("Entity type filter. Default: master. 'release' is deprecated."),
+    genre: z.string().optional().describe("Genre filter (e.g. 'House', 'Techno', 'Electronic')"),
+    style: z.string().optional().describe("Style filter (e.g. 'Deep House', 'Detroit Techno', 'Acid House')"),
     year: z.number().int().optional().describe("Exact release year filter"),
     year_min: z.number().int().optional().describe("Minimum release year (inclusive)"),
     year_max: z.number().int().optional().describe("Maximum release year (inclusive)"),
@@ -248,7 +255,7 @@ server.tool(
     let errorCode: string | null = null;
     const params = {
       q: query,
-      type: type as SearchEntityType | undefined,
+      type: (type ?? "master") as SearchEntityType,
       genre,
       style,
       year,
@@ -305,8 +312,10 @@ server.tool(
 
 server.tool(
   "get_artist",
-  "Get full details for an artist by Discogs ID. " +
-  "Returns name, real name, profile, aliases, members, groups, URLs, and provenance.",
+  "Get full details for an artist by Discogs ID. Returns name, real name, " +
+  "profile, aliases (denormalized text), genres/styles inferred from their " +
+  "in-scope catalog, URLs, and provenance. Slim shape: members, groups, and " +
+  "name_variations are no longer populated.",
   {
     discogs_id: z.number().int().min(1).describe("Discogs artist ID"),
   },
@@ -341,8 +350,10 @@ server.tool(
 
 server.tool(
   "get_label",
-  "Get full details for a record label by Discogs ID. " +
-  "Returns name, profile, contact info, parent label, URLs, and provenance.",
+  "Get full details for a record label by Discogs ID. Returns name, profile, " +
+  "contact info, parent label, sublabels, aliases, URLs, editorial tier " +
+  "(tier1 for canonical scene labels e.g. Tresor, Warp; denylist; or null), " +
+  "and provenance.",
   {
     discogs_id: z.number().int().min(1).describe("Discogs label ID"),
   },
@@ -377,8 +388,11 @@ server.tool(
 
 server.tool(
   "get_master",
-  "Get full details for a master release by Discogs ID. " +
-  "Returns title, year, artists, genres, styles, videos, and provenance.",
+  "Get full details for a master release by Discogs ID — the canonical entity " +
+  "in the scene-scoped catalog. Returns title, year, primary_artist, " +
+  "primary_label, full artists list, denormalized genres + styles, " +
+  "scene_weight (curation score), a synthesized 'frankenstein' tracklist, " +
+  "deduped YouTube videos, and provenance.",
   {
     discogs_id: z.number().int().min(1).describe("Discogs master release ID"),
   },
@@ -408,16 +422,18 @@ server.tool(
 );
 
 // ---------------------------------------------------------------------------
-// Tool: get_release
+// Tool: get_release_shadow
 // ---------------------------------------------------------------------------
 
 server.tool(
-  "get_release",
-  "Get full details for a specific release by Discogs ID. " +
-  "Returns title, artists, labels, formats, tracks with credits, " +
-  "genres, styles, identifiers, companies, videos, and provenance.",
+  "get_release_shadow",
+  "Resolve a Discogs release ID to its master in the scene-scoped catalog. " +
+  "Returns the minimal shadow row { master_discogs_id, title, year, format, " +
+  "country, label } so callers can redirect to /master/<master_discogs_id> " +
+  "and then call get_master. The full release detail (per-pressing tracks " +
+  "+ credits) is no longer served.",
   {
-    discogs_id: z.number().int().min(1).describe("Discogs release ID"),
+    discogs_id: z.number().int().min(1).describe("Discogs release ID (a specific pressing/version)"),
   },
   async ({ discogs_id }) => {
     const requestId = createRequestId();
@@ -425,22 +441,49 @@ server.tool(
     let status: "ok" | "error" = "ok";
     let errorCode: string | null = null;
     try {
-      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.releases");
-      const release = await getRelease(db, discogs_id, batchId, dumpDate);
-      if (!release) {
+      const shadow = await getReleaseShadow(db, discogs_id);
+      if (!shadow) {
         status = "error";
         errorCode = "NOT_FOUND";
-        return toolError("NOT_FOUND", `Release ${discogs_id} not found`, { tool: "get_release", requestId });
+        return toolError(
+          "NOT_FOUND",
+          `Release ${discogs_id} not in scope (only releases attached to in-scope masters are stored)`,
+          { tool: "get_release_shadow", requestId },
+        );
       }
-      return toolResult({ release }, { tool: "get_release", requestId });
+      return toolResult({ release_shadow: shadow }, { tool: "get_release_shadow", requestId });
     } catch (err: any) {
-      console.error("[mcp] get_release error:", err);
+      console.error("[mcp] get_release_shadow error:", err);
       status = "error";
       errorCode = "INTERNAL_ERROR";
-      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_release", requestId });
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_release_shadow", requestId });
     } finally {
-      logToolInvocation(requestId, "get_release", status, Date.now() - started, errorCode);
+      logToolInvocation(requestId, "get_release_shadow", status, Date.now() - started, errorCode);
     }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Tool: get_release (deprecated → GONE)
+// ---------------------------------------------------------------------------
+
+server.tool(
+  "get_release",
+  "DEPRECATED. Per-release detail is no longer served. Use get_release_shadow " +
+  "to resolve the release ID to a master_discogs_id, then call get_master.",
+  {
+    discogs_id: z.number().int().min(1).describe("Discogs release ID"),
+  },
+  async ({ discogs_id }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    logToolInvocation(requestId, "get_release", "error", Date.now() - started, "GONE");
+    return toolError(
+      "GONE",
+      "Per-release detail is no longer served in the scene-scoped catalog. Call get_release_shadow to resolve the master, then get_master.",
+      { tool: "get_release", requestId },
+      { successor: "get_release_shadow", master_resolver: "get_master", discogs_id },
+    );
   },
 );
 
@@ -449,21 +492,23 @@ server.tool(
 // ---------------------------------------------------------------------------
 
 const LINK_TYPES = [
-  "artist_releases",
   "artist_masters",
   "label_releases",
   "master_releases",
-  "release_credits",
+  "master_videos",
 ] as const;
 
 server.tool(
   "traverse_links",
-  "Navigate relationships in the music graph. " +
-  "Supported link types: artist_releases, artist_masters, label_releases, " +
-  "master_releases, release_credits. Returns paginated results.",
+  "Navigate relationships in the scene-scoped graph. Supported link types: " +
+  "artist_masters (an artist's masters), label_releases (masters released " +
+  "on a label), master_releases (the Notable Versions / pressings of a " +
+  "master, from release_shadow), master_videos (deduped YouTube videos for " +
+  "a master, sourced from master + release-level videos). Returns paginated " +
+  "results. Removed: artist_releases, release_credits.",
   {
     link_type: z.enum(LINK_TYPES).describe(
-      "Relationship type: artist_releases, artist_masters, label_releases, master_releases, or release_credits",
+      "Relationship type: artist_masters, label_releases, master_releases, or master_videos",
     ),
     discogs_id: z.number().int().min(1).describe("Source entity Discogs ID"),
     limit: z.number().int().min(1).max(100).default(20).describe("Max results (1-100, default 20)"),
@@ -476,21 +521,19 @@ server.tool(
     let errorCode: string | null = null;
     try {
       const LINK_TABLE: Record<string, string> = {
-        artist_releases: "catalog.release_artists",
         artist_masters: "catalog.master_artists",
-        label_releases: "catalog.release_labels",
-        master_releases: "catalog.releases",
-        release_credits: "catalog.release_credits",
+        label_releases: "catalog.masters",
+        master_releases: "catalog.release_shadow",
+        master_videos: "catalog.master_videos_unified",
       };
-      const table = LINK_TABLE[link_type] ?? "catalog.releases";
+      const table = LINK_TABLE[link_type] ?? "catalog.masters";
       const { batchId, dumpDate } = await getBatchForTable(db, table);
 
       const handlers: Record<string, () => Promise<any>> = {
-        artist_releases: () => getArtistReleases(db, discogs_id, batchId, dumpDate, limit, cursor),
         artist_masters: () => getArtistMasters(db, discogs_id, batchId, dumpDate, limit, cursor),
         label_releases: () => getLabelReleases(db, discogs_id, batchId, dumpDate, limit, cursor),
         master_releases: () => getMasterReleases(db, discogs_id, batchId, dumpDate, limit, cursor),
-        release_credits: () => getReleaseCredits(db, discogs_id, batchId, dumpDate, limit, cursor),
+        master_videos: () => getMasterVideos(db, discogs_id, batchId, dumpDate, limit),
       };
 
       const handler = handlers[link_type];
@@ -599,5 +642,6 @@ app.listen(PORT, () => {
   console.log(`[dig-mcp] MCP server listening on http://localhost:${PORT}`);
   console.log(`[dig-mcp]   SSE endpoint : GET  /sse`);
   console.log(`[dig-mcp]   Post endpoint: POST /messages?sessionId=<id>`);
-  console.log(`[dig-mcp]   Tools: search_catalog, get_artist, get_label, get_master, get_release, traverse_links`);
+  console.log(`[dig-mcp]   Scope        : 90s house & techno (~80k masters)`);
+  console.log(`[dig-mcp]   Tools        : search_catalog, get_artist, get_label, get_master, get_release_shadow, traverse_links (+ get_release [GONE])`);
 });

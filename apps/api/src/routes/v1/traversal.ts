@@ -2,54 +2,44 @@ import type { FastifyInstance } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import { sql } from "@dig/db";
-import { Semaphore } from "../../lib/semaphore.js";
 import {
-  getArtistReleases,
   getArtistMasters,
-  getArtistCatalogReleases,
-  getArtistCredits,
   getLabelReleases,
   getMasterReleases,
   getMasterVideos,
-  getReleaseCredits,
   getBatchForTable,
-  type RoleFamily,
 } from "@dig/domain";
 
+// ---------------------------------------------------------------------------
+// Scope of traversal in the slim/scene-scoped DB.
+// Removed: artist_releases, artist_catalog_releases, artist_credits,
+// release_credits — backing tables (catalog.releases, catalog.release_credits,
+// catalog.release_artists) were dropped in migration 026.
+// ---------------------------------------------------------------------------
 type TraversalScope =
-  | "artist_releases"
   | "artist_masters"
-  | "artist_catalog_releases"
-  | "artist_credits"
   | "label_releases"
   | "master_releases"
-  | "master_videos"
-  | "release_credits";
+  | "master_videos";
 
+// Batch resolution table per scope. The two derived tables built by the scope
+// pipeline (release_shadow, master_videos_unified, master_tracks) have no
+// batch_id of their own — they are atomically rebuilt from the active batch
+// each time. We resolve their batch context via catalog.masters which is
+// always rebuilt in lockstep and carries batch_id.
 const SCOPE_TABLE: Record<TraversalScope, string> = {
-  artist_releases: "catalog.release_artists",
   artist_masters: "catalog.master_artists",
-  artist_catalog_releases: "catalog.master_artists",
-  artist_credits: "catalog.release_credits",
-  label_releases: "catalog.release_labels",
-  master_releases: "catalog.releases",
-  master_videos: "catalog.release_videos",
-  release_credits: "catalog.release_credits",
+  label_releases: "catalog.masters",
+  master_releases: "catalog.masters",
+  master_videos: "catalog.masters",
 };
 
-// Statement timeouts per traversal type — heavier joins get more time but are bounded.
 const SCOPE_TIMEOUT_MS: Record<TraversalScope, number> = {
-  artist_catalog_releases: 15_000,
-  artist_credits: 15_000,
-  release_credits: 10_000,
-  artist_releases: 10_000,
-  artist_masters: 10_000,
-  label_releases: 10_000,
-  master_releases: 10_000,
+  artist_masters: 8_000,
+  label_releases: 8_000,
+  master_releases: 8_000,
   master_videos: 5_000,
 };
-
-const VALID_ROLE_FAMILIES = ["writing", "arranging", "performance", "production", "other", "all"] as const;
 
 function getTraversalBatchInfo(db: Kysely<Database>, scope: TraversalScope) {
   return getBatchForTable(db, SCOPE_TABLE[scope]);
@@ -87,7 +77,6 @@ async function withTimeout<T>(
   fn: (trx: Kysely<Database>) => Promise<T>,
 ): Promise<T> {
   return db.transaction().execute(async (trx) => {
-    // sql.raw() is required — SET LOCAL does not accept parameterized values ($1).
     await sql`SET LOCAL statement_timeout = ${sql.raw(String(timeoutMs))}`.execute(trx);
     return fn(trx);
   });
@@ -99,55 +88,18 @@ function timeoutReply(reply: any) {
   });
 }
 
-// Per-route rate limit config for heavy traversal endpoints.
-// Artist catalog_releases and credits involve large joins over 18M+ rows.
-const HEAVY_RATE_LIMIT = { max: 30, timeWindow: "1 minute" };
-
-// Per-machine concurrency cap for heavy traversal (catalog_releases + credits).
-// Rate limits cap throughput; concurrency caps cap simultaneous in-flight requests.
-// At cap, shed immediately with 503 rather than queuing behind 15s transactions.
-const TRAVERSAL_HEAVY_CONCURRENCY = 5;
-const traversalHeavySemaphore = new Semaphore(TRAVERSAL_HEAVY_CONCURRENCY);
-
-function shedTraversal(reply: any, route: string): unknown {
-  console.warn(
-    JSON.stringify({
-      ts: new Date().toISOString(),
-      level: "warn",
-      code: "LOAD_SHED",
-      route,
-      lane: "traversal_heavy",
-      semaphore_available: traversalHeavySemaphore.available,
-    }),
-  );
-  return reply.status(503).send({
+function gone(reply: any, message: string, successor?: string) {
+  return reply.status(410).send({
     error: {
-      code: "LOAD_SHED",
-      message: "Server is under load. Try again shortly.",
-      details: null,
+      code: "GONE",
+      message,
+      details: successor ? { successor } : null,
     },
   });
 }
 
 export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Database>) {
-  app.get("/v1/artists/:discogs_id/releases", async (req, reply) => {
-    const discogsId = parseDiscogsId((req.params as any).discogs_id);
-    if (!discogsId) {
-      return reply.status(400).send({
-        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
-      });
-    }
-    try {
-      const { batchId, dumpDate } = await getTraversalBatchInfo(db, "artist_releases");
-      const { limit, cursor } = parseTraversalQuery(req.query as any);
-      return reply.send(await withTimeout(db, SCOPE_TIMEOUT_MS.artist_releases, (trx) =>
-        getArtistReleases(trx, discogsId, batchId, dumpDate, limit, cursor),
-      ));
-    } catch (err) {
-      if (isPgTimeout(err)) return timeoutReply(reply);
-      throw err;
-    }
-  });
+  // --- Active routes (slim shape) --------------------------------------------
 
   app.get("/v1/artists/:discogs_id/masters", async (req, reply) => {
     const discogsId = parseDiscogsId((req.params as any).discogs_id);
@@ -165,31 +117,6 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
     } catch (err) {
       if (isPgTimeout(err)) return timeoutReply(reply);
       throw err;
-    }
-  });
-
-  app.get("/v1/artists/:discogs_id/catalog_releases", {
-    config: { rateLimit: HEAVY_RATE_LIMIT },
-  }, async (req, reply) => {
-    const discogsId = parseDiscogsId((req.params as any).discogs_id);
-    if (!discogsId) {
-      return reply.status(400).send({
-        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
-      });
-    }
-    const release = traversalHeavySemaphore.tryAcquire();
-    if (!release) return shedTraversal(reply, "/v1/artists/:discogs_id/catalog_releases");
-    try {
-      const { batchId, dumpDate } = await getTraversalBatchInfo(db, "artist_catalog_releases");
-      const { limit, cursor, sort, releaseType } = parseTraversalQuery(req.query as any);
-      return reply.send(await withTimeout(db, SCOPE_TIMEOUT_MS.artist_catalog_releases, (trx) =>
-        getArtistCatalogReleases(trx, discogsId, batchId, dumpDate, limit, cursor, sort, releaseType),
-      ));
-    } catch (err) {
-      if (isPgTimeout(err)) return timeoutReply(reply);
-      throw err;
-    } finally {
-      release();
     }
   });
 
@@ -251,51 +178,35 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
     }
   });
 
-  app.get("/v1/artists/:discogs_id/credits", {
-    config: { rateLimit: HEAVY_RATE_LIMIT },
-  }, async (req, reply) => {
-    const discogsId = parseDiscogsId((req.params as any).discogs_id);
-    if (!discogsId) {
-      return reply.status(400).send({
-        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
-      });
-    }
-    const release = traversalHeavySemaphore.tryAcquire();
-    if (!release) return shedTraversal(reply, "/v1/artists/:discogs_id/credits");
-    try {
-      const { batchId, dumpDate } = await getTraversalBatchInfo(db, "artist_credits");
-      const { limit, cursor } = parseTraversalQuery(req.query as any);
-      const roleFamilyRaw = (req.query as any).role_family as string | undefined;
-      const roleFamily = VALID_ROLE_FAMILIES.includes(roleFamilyRaw as any)
-        ? (roleFamilyRaw as RoleFamily | "all")
-        : "all";
-      return reply.send(await withTimeout(db, SCOPE_TIMEOUT_MS.artist_credits, (trx) =>
-        getArtistCredits(trx, discogsId, batchId, dumpDate, limit, cursor, roleFamily),
-      ));
-    } catch (err) {
-      if (isPgTimeout(err)) return timeoutReply(reply);
-      throw err;
-    } finally {
-      release();
-    }
-  });
+  // --- Removed routes (return 410 Gone) --------------------------------------
 
-  app.get("/v1/releases/:discogs_id/credits", async (req, reply) => {
-    const discogsId = parseDiscogsId((req.params as any).discogs_id);
-    if (!discogsId) {
-      return reply.status(400).send({
-        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
-      });
-    }
-    try {
-      const { batchId, dumpDate } = await getTraversalBatchInfo(db, "release_credits");
-      const { limit, cursor } = parseTraversalQuery(req.query as any);
-      return reply.send(await withTimeout(db, SCOPE_TIMEOUT_MS.release_credits, (trx) =>
-        getReleaseCredits(trx, discogsId, batchId, dumpDate, limit, cursor),
-      ));
-    } catch (err) {
-      if (isPgTimeout(err)) return timeoutReply(reply);
-      throw err;
-    }
-  });
+  app.get("/v1/artists/:discogs_id/releases", async (req, reply) =>
+    gone(
+      reply,
+      "Artist releases are no longer served. The scoped catalog only tracks masters; use /v1/artists/:discogs_id/masters.",
+      `/v1/artists/${(req.params as any).discogs_id}/masters`,
+    ),
+  );
+
+  app.get("/v1/artists/:discogs_id/catalog_releases", async (req, reply) =>
+    gone(
+      reply,
+      "catalog_releases is no longer served. Use /v1/artists/:discogs_id/masters for the artist's catalog.",
+      `/v1/artists/${(req.params as any).discogs_id}/masters`,
+    ),
+  );
+
+  app.get("/v1/artists/:discogs_id/credits", async (_req, reply) =>
+    gone(
+      reply,
+      "Per-release artist credits are no longer served in the scene-scoped catalog.",
+    ),
+  );
+
+  app.get("/v1/releases/:discogs_id/credits", async (_req, reply) =>
+    gone(
+      reply,
+      "Per-release credits are no longer served in the scene-scoped catalog.",
+    ),
+  );
 }

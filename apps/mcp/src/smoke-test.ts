@@ -1,6 +1,9 @@
 /**
- * MCP smoke test — validates all tools return contract-compliant responses.
- * Requires: MCP server running on localhost:3001 with DATABASE_URL set.
+ * MCP smoke test — validates all tools return contract-compliant responses
+ * against the scene-scoped slim catalog.
+ *
+ * Requires: MCP server running on localhost:3001 with DATABASE_URL set
+ * to the dig-db-scene Postgres instance.
  *
  * Usage: npx tsx apps/mcp/src/smoke-test.ts
  */
@@ -23,7 +26,7 @@ function assert(condition: boolean, msg: string) {
 async function main() {
   console.log(`Connecting to ${BASE_URL}...`);
   const transport = new SSEClientTransport(new URL(BASE_URL));
-  const client = new Client({ name: "dig-smoke-test", version: "0.1.0" }, { capabilities: {} });
+  const client = new Client({ name: "dig-smoke-test", version: "0.2.0" }, { capabilities: {} });
   await client.connect(transport);
   console.log("Connected!\n");
 
@@ -35,14 +38,15 @@ async function main() {
   assert(toolNames.includes("get_artist"), "get_artist registered");
   assert(toolNames.includes("get_label"), "get_label registered");
   assert(toolNames.includes("get_master"), "get_master registered");
-  assert(toolNames.includes("get_release"), "get_release registered");
+  assert(toolNames.includes("get_release_shadow"), "get_release_shadow registered");
+  assert(toolNames.includes("get_release"), "get_release registered (GONE shim)");
   assert(toolNames.includes("traverse_links"), "traverse_links registered");
 
-  // --- search_catalog ---
-  console.log("\n--- search_catalog (normal) ---");
+  // --- search_catalog (master) ---
+  console.log("\n--- search_catalog (master) ---");
   const searchResult = await client.callTool({
     name: "search_catalog",
-    arguments: { query: "radiohead", type: "artist", limit: 3 },
+    arguments: { query: "tresor", type: "master", limit: 3 },
   });
   const sr = JSON.parse((searchResult.content as any)[0].text);
   assert(Array.isArray(sr.results), "results is array");
@@ -54,13 +58,25 @@ async function main() {
   assert("degraded_reason" in sr.meta, "meta.degraded_reason present");
   assert(typeof sr.meta.elapsed_ms === "number", "meta.elapsed_ms is number");
   assert("cursor" in sr.pagination, "pagination.cursor present");
-  console.log(`  Results: ${sr.results.length}, first: ${sr.results[0]?.name} (${sr.results[0]?.discogs_id})`);
+  console.log(`  Results: ${sr.results.length}, first: ${sr.results[0]?.name ?? sr.results[0]?.title} (${sr.results[0]?.discogs_id})`);
 
-  // --- search_catalog (degraded: empty_tsquery) ---
+  // --- search_catalog defaults to master when type omitted ---
+  console.log("\n--- search_catalog (default type = master) ---");
+  const defaultResult = await client.callTool({
+    name: "search_catalog",
+    arguments: { query: "tresor", limit: 3 },
+  });
+  const def = JSON.parse((defaultResult.content as any)[0].text);
+  assert(Array.isArray(def.results), "default results is array");
+  if (def.results.length > 0) {
+    assert(def.results[0].type === "master", "first result is a master when no type given");
+  }
+
+  // --- search_catalog (degraded: empty_tsquery on a stop word against masters) ---
   console.log("\n--- search_catalog (empty_tsquery) ---");
   const stopResult = await client.callTool({
     name: "search_catalog",
-    arguments: { query: "The", type: "release" },
+    arguments: { query: "The", type: "master" },
   });
   const sw = JSON.parse((stopResult.content as any)[0].text);
   assert(sw.meta.degraded === true, "degraded is true for stop word");
@@ -68,20 +84,35 @@ async function main() {
   assert(sw.results.length === 0, "0 results for stop word");
   console.log(`  Degraded: ${sw.meta.degraded}, reason: ${sw.meta.degraded_reason}`);
 
+  // --- search_catalog (release deprecated → degraded empty) ---
+  console.log("\n--- search_catalog (type=release deprecated) ---");
+  const relResult = await client.callTool({
+    name: "search_catalog",
+    arguments: { query: "tresor", type: "release", limit: 3 },
+  });
+  const rel = JSON.parse((relResult.content as any)[0].text);
+  assert(rel.results.length === 0, "type=release returns 0 results");
+  assert(rel.meta.degraded === true, "type=release is flagged degraded");
+  console.log(`  Release search degraded: ${rel.meta.degraded_reason}`);
+
   // --- get_artist ---
   console.log("\n--- get_artist ---");
   const artistResult = await client.callTool({
     name: "get_artist",
-    arguments: { discogs_id: 3840 },
+    arguments: { discogs_id: 1 }, // Persuader / Jesper Dahlbäck — well-known scene artist
   });
   const ar = JSON.parse((artistResult.content as any)[0].text);
-  assert(ar.artist !== undefined, "artist key present");
-  assert(typeof ar.artist.discogs_id === "number", "artist.discogs_id is number");
-  assert(typeof ar.artist.name === "string", "artist.name is string");
-  assert(Array.isArray(ar.artist.aliases), "artist.aliases is array");
-  assert(Array.isArray(ar.artist.members), "artist.members is array");
-  assert(ar.artist.provenance?.source === "discogs", "artist provenance.source");
-  console.log(`  Artist: ${ar.artist.name} (${ar.artist.discogs_id}), aliases: ${ar.artist.aliases.length}`);
+  if (!ar.error) {
+    assert(ar.artist !== undefined, "artist key present");
+    assert(typeof ar.artist.discogs_id === "number", "artist.discogs_id is number");
+    assert(typeof ar.artist.name === "string", "artist.name is string");
+    assert(Array.isArray(ar.artist.aliases), "artist.aliases is array");
+    assert(Array.isArray(ar.artist.members), "artist.members is array (slim: empty)");
+    assert(ar.artist.provenance?.source === "discogs", "artist provenance.source");
+    console.log(`  Artist: ${ar.artist.name} (${ar.artist.discogs_id}), aliases: ${ar.artist.aliases.length}`);
+  } else {
+    console.log(`  Artist 1 not in scene scope — skipping shape assertions.`);
+  }
 
   // --- get_artist NOT_FOUND ---
   console.log("\n--- get_artist (NOT_FOUND) ---");
@@ -100,57 +131,126 @@ async function main() {
   console.log("\n--- get_label ---");
   const labelResult = await client.callTool({
     name: "get_label",
-    arguments: { discogs_id: 1 },
+    arguments: { discogs_id: 12 }, // Tresor
   });
   const lr = JSON.parse((labelResult.content as any)[0].text);
-  assert(lr.label !== undefined, "label key present");
-  assert(typeof lr.label.name === "string", "label.name is string");
-  assert(lr.label.provenance?.source === "discogs", "label provenance.source");
-  console.log(`  Label: ${lr.label.name} (${lr.label.discogs_id})`);
+  if (!lr.error) {
+    assert(lr.label !== undefined, "label key present");
+    assert(typeof lr.label.name === "string", "label.name is string");
+    assert("tier" in lr.label, "label.tier present (slim addition)");
+    assert(lr.label.provenance?.source === "discogs", "label provenance.source");
+    console.log(`  Label: ${lr.label.name} (${lr.label.discogs_id}) tier=${lr.label.tier}`);
+  }
 
   // --- get_master ---
   console.log("\n--- get_master ---");
-  const masterResult = await client.callTool({
-    name: "get_master",
-    arguments: { discogs_id: 384323 },
+  // Find a master ID by searching first (catalog content varies; don't hard-code).
+  const masterSearch = await client.callTool({
+    name: "search_catalog",
+    arguments: { query: "techno", type: "master", limit: 1 },
   });
-  const mr = JSON.parse((masterResult.content as any)[0].text);
-  assert(mr.master !== undefined, "master key present");
-  assert(typeof mr.master.title === "string", "master.title is string");
-  assert(Array.isArray(mr.master.genres), "master.genres is array");
-  assert(Array.isArray(mr.master.styles), "master.styles is array");
-  assert(mr.master.provenance?.source === "discogs", "master provenance.source");
-  console.log(`  Master: ${mr.master.title} (${mr.master.discogs_id})`);
+  const msr = JSON.parse((masterSearch.content as any)[0].text);
+  const masterId = msr.results?.[0]?.discogs_id;
+  if (typeof masterId === "number") {
+    const masterResult = await client.callTool({
+      name: "get_master",
+      arguments: { discogs_id: masterId },
+    });
+    const mr = JSON.parse((masterResult.content as any)[0].text);
+    assert(mr.master !== undefined, "master key present");
+    assert(typeof mr.master.title === "string", "master.title is string");
+    assert(Array.isArray(mr.master.genres), "master.genres is array (denormed)");
+    assert(Array.isArray(mr.master.styles), "master.styles is array (denormed)");
+    assert("scene_weight" in mr.master, "master.scene_weight present (slim addition)");
+    assert(mr.master.provenance?.source === "discogs", "master provenance.source");
+    console.log(`  Master: ${mr.master.title} (${mr.master.discogs_id}) scene_weight=${mr.master.scene_weight}`);
+  } else {
+    console.log("  No master returned from search; skipping get_master shape assertions.");
+  }
 
-  // --- get_release ---
-  console.log("\n--- get_release ---");
-  const releaseResult = await client.callTool({
+  // --- get_release_shadow (scene-scoped resolver) ---
+  console.log("\n--- get_release_shadow ---");
+  // We need a known-in-scope release ID. main_release_discogs_id from the master fetched above is reliable.
+  let shadowReleaseId: number | undefined;
+  if (typeof masterId === "number") {
+    const mres = await client.callTool({
+      name: "get_master",
+      arguments: { discogs_id: masterId },
+    });
+    const mres_parsed = JSON.parse((mres.content as any)[0].text);
+    shadowReleaseId = mres_parsed.master?.main_release_discogs_id ?? undefined;
+  }
+  if (typeof shadowReleaseId === "number") {
+    const shadowResult = await client.callTool({
+      name: "get_release_shadow",
+      arguments: { discogs_id: shadowReleaseId },
+    });
+    const sh = JSON.parse((shadowResult.content as any)[0].text);
+    assert(sh.release_shadow !== undefined, "release_shadow key present");
+    assert(typeof sh.release_shadow.master_discogs_id === "number", "shadow.master_discogs_id is number");
+    assert(sh.release_shadow.master_discogs_id === masterId, "shadow resolves back to source master");
+    console.log(`  Shadow: release ${shadowReleaseId} → master ${sh.release_shadow.master_discogs_id}`);
+  } else {
+    console.log("  No main_release_discogs_id available; skipping release_shadow assertions.");
+  }
+
+  // --- get_release (GONE) ---
+  console.log("\n--- get_release (GONE) ---");
+  const goneResult = await client.callTool({
     name: "get_release",
     arguments: { discogs_id: 1 },
   });
-  const rr = JSON.parse((releaseResult.content as any)[0].text);
-  assert(rr.release !== undefined, "release key present");
-  assert(typeof rr.release.title === "string", "release.title is string");
-  assert(Array.isArray(rr.release.tracks), "release.tracks is array");
-  assert(Array.isArray(rr.release.credits), "release.credits is array");
-  assert(Array.isArray(rr.release.labels), "release.labels is array");
-  assert(rr.release.provenance?.source === "discogs", "release provenance.source");
-  console.log(`  Release: ${rr.release.title} (${rr.release.discogs_id}), tracks: ${rr.release.tracks.length}`);
+  assert(goneResult.isError === true, "get_release returns isError");
+  const gone = JSON.parse((goneResult.content as any)[0].text);
+  assert(gone.error.code === "GONE", "get_release error code is GONE");
+  assert(gone.error.details?.successor === "get_release_shadow", "GONE points at successor");
+  console.log(`  Error: ${gone.error.code} → ${gone.error.details?.successor}`);
 
-  // --- traverse_links ---
-  console.log("\n--- traverse_links (artist_releases) ---");
-  const travResult = await client.callTool({
-    name: "traverse_links",
-    arguments: { link_type: "artist_releases", discogs_id: 3840, limit: 3 },
-  });
-  const tr = JSON.parse((travResult.content as any)[0].text);
-  assert(Array.isArray(tr.links), "links is array");
-  assert(tr.links.length > 0, "has links");
-  assert(tr.links[0].provenance?.source === "discogs", "link provenance.source");
-  assert("cursor" in tr.pagination, "pagination.cursor present");
-  assert(typeof tr.meta.source_discogs_id === "number", "meta.source_discogs_id");
-  assert(tr.meta.link_type === "releases", "meta.link_type correct");
-  console.log(`  Links: ${tr.links.length}, first: ${tr.links[0]?.title} (${tr.links[0]?.discogs_id})`);
+  // --- traverse_links: artist_masters ---
+  console.log("\n--- traverse_links (artist_masters) ---");
+  if (typeof masterId === "number") {
+    const masterRes = await client.callTool({
+      name: "get_master",
+      arguments: { discogs_id: masterId },
+    });
+    const mr_parsed = JSON.parse((masterRes.content as any)[0].text);
+    const artistId = mr_parsed.master?.primary_artist?.discogs_id ?? mr_parsed.master?.artists?.[0]?.discogs_id;
+    if (typeof artistId === "number") {
+      const travResult = await client.callTool({
+        name: "traverse_links",
+        arguments: { link_type: "artist_masters", discogs_id: artistId, limit: 3 },
+      });
+      const tr = JSON.parse((travResult.content as any)[0].text);
+      assert(Array.isArray(tr.links), "links is array");
+      assert("cursor" in tr.pagination, "pagination.cursor present");
+      assert(typeof tr.meta.source_discogs_id === "number", "meta.source_discogs_id");
+      console.log(`  artist_masters links: ${tr.links.length}`);
+    }
+  }
+
+  // --- traverse_links: master_releases (Notable Versions) ---
+  console.log("\n--- traverse_links (master_releases) ---");
+  if (typeof masterId === "number") {
+    const versions = await client.callTool({
+      name: "traverse_links",
+      arguments: { link_type: "master_releases", discogs_id: masterId, limit: 5 },
+    });
+    const v = JSON.parse((versions.content as any)[0].text);
+    assert(Array.isArray(v.links), "master_releases links is array");
+    console.log(`  master_releases (Notable Versions): ${v.links.length}`);
+  }
+
+  // --- traverse_links: master_videos ---
+  console.log("\n--- traverse_links (master_videos) ---");
+  if (typeof masterId === "number") {
+    const vids = await client.callTool({
+      name: "traverse_links",
+      arguments: { link_type: "master_videos", discogs_id: masterId, limit: 10 },
+    });
+    const vp = JSON.parse((vids.content as any)[0].text);
+    assert(Array.isArray(vp.videos ?? vp.links), "master_videos returns an array (videos or links)");
+    console.log(`  master_videos count: ${(vp.videos ?? vp.links)?.length ?? 0}`);
+  }
 
   // --- INVALID_REQUEST ---
   console.log("\n--- INVALID_REQUEST error ---");

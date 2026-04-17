@@ -126,10 +126,10 @@ export async function buildApp(deps: AppDeps): Promise<{
     if (route.includes("/events")) category = "telemetry";
     else if (route.includes("/search")) category = "search";
     else if (route.includes("/health")) category = "health";
-    else if (route.includes("/credits")) category = "traversal";
-    else if (route.includes("/releases") || route.includes("/masters")) {
-      category = route.includes("/:discogs_id/") ? "traversal" : "retrieval";
-    } else if (route.includes("/artists") || route.includes("/labels")) {
+    else if (route.includes("/release_shadow")) category = "retrieval";
+    else if (route.includes("/cover")) category = "retrieval";
+    else if (route.includes("/market")) category = "retrieval";
+    else if (route.includes("/masters") || route.includes("/artists") || route.includes("/labels") || route.includes("/releases")) {
       category = route.includes("/:discogs_id/") ? "traversal" : "retrieval";
     }
 

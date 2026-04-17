@@ -26,10 +26,12 @@ export {
   getLabel,
   getMaster,
   getRelease,
+  getReleaseShadow,
   type ArtistDetail,
   type LabelDetail,
   type MasterDetail,
   type ReleaseDetail,
+  type ReleaseShadow,
 } from "./retrieval/index.js";
 export { getCoverUrl, type CoverResult } from "./covers.js";
 export {

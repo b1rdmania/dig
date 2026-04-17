@@ -1,12 +1,29 @@
 import type { Kysely } from "kysely";
 import type { Database } from "@dig/db";
 
+/**
+ * Artist detail for the slim, master-first dig-db-scene shape.
+ *
+ * Reads from:
+ *   - catalog.artists (with denormed `aliases_text TEXT[]`)
+ *   - catalog.artist_urls (preserved as a relational table)
+ *
+ * Dropped from v1:
+ *   - aliases (relational join → replaced by denormed `aliases_text`)
+ *   - name_variations  (no UI surface in slim product)
+ *   - members / groups (no UI surface in slim product)
+ *
+ * The shape keeps the dropped fields as empty arrays to preserve the API
+ * response contract during the soft-alpha cutover. They become hard-removed
+ * once the API/MCP/frontend are updated to stop reading them.
+ */
 export interface ArtistDetail {
   discogs_id: number;
   name: string;
   real_name: string | null;
   profile: string | null;
   data_quality: string;
+  /** Denormed alias names (no per-alias discogs_id in the slim shape) */
   aliases: Array<{ discogs_id: number | null; name: string }>;
   name_variations: string[];
   members: Array<{ discogs_id: number | null; name: string }>;
@@ -23,40 +40,21 @@ export async function getArtist(
 ): Promise<ArtistDetail | null> {
   const artist = await db
     .selectFrom("catalog.artists")
-    .select(["discogs_id", "name", "real_name", "profile", "data_quality"])
+    .select(["discogs_id", "name", "real_name", "profile", "data_quality", "aliases_text"])
     .where("discogs_id", "=", discogsId)
     .where("batch_id", "=", batchId)
     .executeTakeFirst();
 
   if (!artist) return null;
 
-  const [aliases, nameVars, members, groups, urls] = await Promise.all([
-    db.selectFrom("catalog.artist_aliases")
-      .select(["alias_discogs_id as discogs_id", "alias_name as name"])
-      .where("artist_discogs_id", "=", discogsId)
-      .where("batch_id", "=", batchId)
-      .execute(),
-    db.selectFrom("catalog.artist_name_variations")
-      .select("name")
-      .where("artist_discogs_id", "=", discogsId)
-      .where("batch_id", "=", batchId)
-      .execute(),
-    db.selectFrom("catalog.artist_members")
-      .select(["member_discogs_id as discogs_id", "member_name as name"])
-      .where("artist_discogs_id", "=", discogsId)
-      .where("batch_id", "=", batchId)
-      .execute(),
-    db.selectFrom("catalog.artist_groups")
-      .select(["group_discogs_id as discogs_id", "group_name as name"])
-      .where("artist_discogs_id", "=", discogsId)
-      .where("batch_id", "=", batchId)
-      .execute(),
-    db.selectFrom("catalog.artist_urls")
-      .select("url")
-      .where("artist_discogs_id", "=", discogsId)
-      .where("batch_id", "=", batchId)
-      .execute(),
-  ]);
+  const urls = await db
+    .selectFrom("catalog.artist_urls")
+    .select("url")
+    .where("artist_discogs_id", "=", discogsId)
+    .where("batch_id", "=", batchId)
+    .execute();
+
+  const aliasNames = artist.aliases_text ?? [];
 
   return {
     discogs_id: artist.discogs_id,
@@ -64,10 +62,10 @@ export async function getArtist(
     real_name: artist.real_name,
     profile: artist.profile,
     data_quality: artist.data_quality,
-    aliases: aliases.map((a) => ({ discogs_id: a.discogs_id, name: a.name })),
-    name_variations: nameVars.map((v) => v.name),
-    members: members.map((m) => ({ discogs_id: m.discogs_id, name: m.name })),
-    groups: groups.map((g) => ({ discogs_id: g.discogs_id, name: g.name })),
+    aliases: aliasNames.map((name) => ({ discogs_id: null, name })),
+    name_variations: [],
+    members: [],
+    groups: [],
     urls: urls.map((u) => u.url),
     provenance: { source: "discogs", dump_date: dumpDate, discogs_id: artist.discogs_id },
   };

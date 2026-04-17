@@ -1,14 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
-import { sql } from "@dig/db";
 import {
   search,
   getArtist,
   getLabel,
   getMaster,
-  getArtistCatalogReleases,
-  getArtistCredits,
+  getArtistMasters,
   getLabelReleases,
   getBatchForTable,
 } from "@dig/domain";
@@ -20,9 +18,9 @@ import {
 const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-sonnet-4-6";
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_TURNS = 6;
-const ANTHROPIC_CALL_TIMEOUT_MS = 30_000;  // 30s per Anthropic call
-const TOOL_EXEC_TIMEOUT_MS = 15_000;       // 15s per tool/DB call
-const LOOP_DEADLINE_MS = 60_000;           // 60s total for the agentic loop
+const ANTHROPIC_CALL_TIMEOUT_MS = 30_000;
+const TOOL_EXEC_TIMEOUT_MS = 15_000;
+const LOOP_DEADLINE_MS = 60_000;
 
 const PRIVATE_KEYS = new Set(
   (process.env.LLM_BETA_KEYS ?? "")
@@ -32,21 +30,18 @@ const PRIVATE_KEYS = new Set(
 );
 
 // ---------------------------------------------------------------------------
-// Personality — no output format instructions, no guardrails
+// Personality — scene-scoped catalog (90s house & techno masters)
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You work in a record shop. You know everything — every genre, scene, era, lineage, influence, footnote. All of it. Use that knowledge freely when it helps someone understand what they're looking for or why something matters.
+const SYSTEM_PROMPT = `You work in a record shop specialising in 90s house and techno. You know the era cold — Detroit, Chicago, NYC garage, UK rave/hardcore, Berlin techno, Italo, IDM, ambient techno, electro. Use that knowledge freely when it helps someone understand what they're looking for or why something matters.
 
 CRITICAL RULES — follow these without exception:
 1. You access a DATABASE, not websites. Never say "I can't access URLs" or "I don't have internet access". You have tools — use them.
 2. NEVER say "not in Dig" or "not found" without actually calling search_catalog first.
-3. When get_artist_releases returns 0 or very few results, you MUST immediately call get_artist_credits — many artists are catalogued through credits (Producer, Written-By, Remixer) rather than direct artist links.
-4. Format Dig links as markdown: [Title](https://app.dig.baby/release/ID) for albums/masters, [Name](https://app.dig.baby/artist/ID) for artists, [Label](https://app.dig.baby/label/ID) for labels. Never send anyone to Discogs, Bandcamp, NTS, Spotify, or any external site. If data is thin, say so and offer to search related artists or labels instead.
+3. The catalog is scene-scoped: ~80,000 master releases curated to 90s house and techno (with adjacent electro / IDM / ambient techno / UK rave / Italo proto). If something is outside the scene (rock, jazz, hip-hop, etc.) tell the user honestly — don't pretend.
+4. Format Dig links as markdown: [Title](https://app.dig.baby/master/ID) for masters, [Name](https://app.dig.baby/artist/ID) for artists, [Label](https://app.dig.baby/label/ID) for labels. Never link to external sites (Discogs, Bandcamp, NTS, Spotify) unless the user explicitly asks.
 5. Videos show automatically below your response — never tell users to "click through". Don't mention has_video or raw database fields.
-7. ALWAYS use get_artist_releases when recommending music by an artist — this is what surfaces videos. For every artist you mention as a recommendation, call get_artist_releases. Don't skip this even if you know the discography from memory. The video rail only works if you've called the tool in this turn.
-6. NEVER call get_master() with a discogs_id from get_label_releases results. Label release IDs are VERSION IDs — using them with get_master pulls a completely unrelated record and shows wrong videos. If master_discogs_id is non-null in a label release result, you may call get_master(master_discogs_id). If master_discogs_id is null, skip get_master for that pressing.
-
-When you look things up, you use Dig (app.dig.baby) — 24 million records, credits, connections, label catalogs, the lot. Search it, follow threads, pull context. Use get_connections for band history. Use get_context for biography and background. Use get_label_releases for imprint catalogs. The data is there.
+6. ALWAYS use get_artist_masters when recommending music by an artist — this is what surfaces videos. For every artist you mention as a recommendation, call get_artist_masters. Don't skip this even if you know the discography from memory. The video rail only works if you've called the tool in this turn.
 
 You're terse. One or two things that are actually worth knowing, not an exhaustive list. No bullet points. No numbered lists. No bold headers. Just talk like a person.
 
@@ -62,17 +57,17 @@ const TOOLS = [
   {
     name: "search_catalog",
     description:
-      "Search the Dig music catalog (24M+ Discogs records). Use to find artists, labels, or releases by name, genre, style, or keywords. Returns matching entities with IDs you can use in follow-up calls.",
+      "Search the Dig scene-scoped catalog (~80k 90s house/techno masters, plus their artists and labels). Use to find artists, labels, or masters by name, genre, style, or keywords. Returns matching entities with IDs you can use in follow-up calls.",
     input_schema: {
       type: "object" as const,
       properties: {
-        q: { type: "string", description: "Search query — artist name, album title, label, genre term, etc." },
+        q: { type: "string", description: "Search query — artist name, master title, label, genre term, etc." },
         type: {
           type: "string",
-          enum: ["artist", "label", "master", "release"],
-          description: "Filter to a specific entity type. Omit to search all types.",
+          enum: ["artist", "label", "master"],
+          description: "Filter to a specific entity type. Omit to search masters (the default).",
         },
-        genre: { type: "string", description: "Filter by genre (e.g. 'Electronic', 'Jazz', 'Rock', 'House')" },
+        genre: { type: "string", description: "Filter by genre (e.g. 'House', 'Techno', 'Electronic')" },
         limit: { type: "number", description: "Results to return (1–10, default 8)" },
       },
       required: ["q"],
@@ -81,7 +76,7 @@ const TOOLS = [
   {
     name: "get_artist",
     description:
-      "Get full details for an artist by Discogs ID: genres, styles, members, aliases, biography. Use after search_catalog returns an artist ID.",
+      "Get full details for an artist by Discogs ID: name, aliases, genres, styles, biography. Use after search_catalog returns an artist ID.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -93,7 +88,7 @@ const TOOLS = [
   {
     name: "get_label",
     description:
-      "Get full details for a record label by Discogs ID: parent label, sublabels, profile.",
+      "Get full details for a record label by Discogs ID: parent label, sublabels, profile, editorial tier (tier1 means a canonical scene label like Tresor or Warp).",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -105,7 +100,7 @@ const TOOLS = [
   {
     name: "get_master",
     description:
-      "Get full details for a master release by Discogs ID: tracklist, credits, year, formats. A 'master' is the canonical recording; individual pressings are 'releases'.",
+      "Get full details for a master release by Discogs ID: tracklist, primary artist, primary label, year, genres, styles, scene_weight (curation score), and YouTube videos. The master is the canonical recording.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -115,9 +110,9 @@ const TOOLS = [
     },
   },
   {
-    name: "get_artist_releases",
+    name: "get_artist_masters",
     description:
-      "Get an artist's catalog — albums, EPs, singles. When releases are thin (< 3), automatically also returns credits (productions, remixes, features). Always try this first for any artist catalog query.",
+      "Get an artist's catalog of masters in the scene — albums, EPs, singles. Always try this first for any artist catalog query. Returns titles, years, and Dig URLs you should link.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -127,20 +122,7 @@ const TOOLS = [
           enum: ["album", "single_ep", "compilation", "all"],
           description: "Filter by type. Use 'album' for main studio releases, 'all' for everything. Default: 'all'.",
         },
-        limit: { type: "number", description: "Number of releases to return (1–20, default 12)" },
-      },
-      required: ["discogs_id"],
-    },
-  },
-  {
-    name: "get_artist_credits",
-    description:
-      "Get releases an artist is credited on as producer, writer, remixer, or performer — even when not listed as the primary artist. Essential for producers and DJs. Use alongside get_artist_releases, especially when that returns few results.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        discogs_id: { type: "number", description: "Discogs artist ID" },
-        limit: { type: "number", description: "Number of credits to return (1–20, default 15)" },
+        limit: { type: "number", description: "Number of masters to return (1–20, default 12)" },
       },
       required: ["discogs_id"],
     },
@@ -148,36 +130,12 @@ const TOOLS = [
   {
     name: "get_label_releases",
     description:
-      "Get releases that came out on a specific label — useful for 'what's on Warp Records' or 'show me the Tresor catalog'. Returns titles, artists, years.",
+      "Get masters released on a specific label — useful for 'what's on Warp Records' or 'show me the Tresor catalog'. Returns titles, primary artists, years.",
     input_schema: {
       type: "object" as const,
       properties: {
         discogs_id: { type: "number", description: "Discogs label ID" },
-        limit: { type: "number", description: "Number of releases (1–20, default 15)" },
-      },
-      required: ["discogs_id"],
-    },
-  },
-  {
-    name: "get_connections",
-    description:
-      "Get an artist's connections from the relationship graph — band memberships, collaborations, teacher/student relationships, family. Use to answer 'who was in X band', 'what other projects did X have', 'who did X work with'.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        discogs_id: { type: "number", description: "Discogs artist ID" },
-      },
-      required: ["discogs_id"],
-    },
-  },
-  {
-    name: "get_context",
-    description:
-      "Get biographical context, location history, or timeline notes for an artist from the enrichment layer (sourced from Wikidata). Use when you want background on who an artist is, where they're from, or their history.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        discogs_id: { type: "number", description: "Discogs artist ID" },
+        limit: { type: "number", description: "Number of masters (1–20, default 15)" },
       },
       required: ["discogs_id"],
     },
@@ -196,7 +154,7 @@ export interface MediaItem {
 }
 
 export interface EvidenceItem {
-  type: "artist" | "label" | "master" | "release";
+  type: "artist" | "label" | "master";
   discogs_id: number;
   title: string;
   dig_url: string;
@@ -237,8 +195,8 @@ async function executeTool(
       const limit = Math.min(Math.max(Number(input.limit ?? 8), 1), 10);
       const sr = await search(db, { q, type, genre, limit, quality: "all" });
       for (const r of sr.results.slice(0, 3)) {
-        const entityType = r.type === "master" ? "master" : r.type === "artist" ? "artist" : r.type === "label" ? "label" : "release";
-        const path = r.type === "master" ? "release" : r.type === "artist" ? "artist" : r.type === "label" ? "label" : "version";
+        const entityType = r.type === "master" ? "master" : r.type === "artist" ? "artist" : "label";
+        const path = r.type === "master" ? "master" : r.type === "artist" ? "artist" : "label";
         evidenceCollector.push({ type: entityType as any, discogs_id: r.discogs_id, title: r.name ?? r.title ?? "", dig_url: `https://app.dig.baby/${path}/${r.discogs_id}` });
         if (r.type === "master") allowedMasterIds.add(r.discogs_id);
       }
@@ -266,7 +224,6 @@ async function executeTool(
         real_name: d.real_name ?? null,
         genres: d.genres ?? [],
         styles: d.styles ?? [],
-        members: d.members?.map((m: any) => m.name) ?? [],
         aliases: d.aliases?.map((a: any) => a.name) ?? [],
         profile: d.profile ? String(d.profile).slice(0, 600) : null,
         dig_url: `https://app.dig.baby/artist/${d.discogs_id}`,
@@ -284,6 +241,7 @@ async function executeTool(
         name: d.name,
         parent_label: d.parent_label?.name ?? null,
         sublabels: d.sublabels?.map((s: any) => s.name).slice(0, 10) ?? [],
+        tier: d.tier ?? null,
         profile: d.profile ? String(d.profile).slice(0, 600) : null,
         dig_url: `https://app.dig.baby/label/${d.discogs_id}`,
       };
@@ -293,16 +251,16 @@ async function executeTool(
       const id = Number(input.discogs_id);
       // Server-side guard: reject if this ID was never established as a master ID
       if (!allowedMasterIds.has(id)) {
-        return { error: "Invalid master ID — this appears to be a release/version ID, not a master ID. Use master_discogs_id from label releases, or search for the track first to get its master ID." };
+        return { error: "Invalid master ID — this ID was not established as a master in this conversation. Search first, then use the resulting master IDs." };
       }
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.masters");
       const d = await getMaster(db, id, batchId, dumpDate) as any;
-      if (!d) { errorRef.count++; return { error: "Release not found" }; }
+      if (!d) { errorRef.count++; return { error: "Master not found" }; }
 
-      evidenceCollector.push({ type: "master", discogs_id: d.discogs_id, title: d.title, dig_url: `https://app.dig.baby/release/${d.discogs_id}` });
+      evidenceCollector.push({ type: "master", discogs_id: d.discogs_id, title: d.title, dig_url: `https://app.dig.baby/master/${d.discogs_id}` });
 
       // Collect YouTube videos
-      const artistName = d.artists?.[0]?.name ?? "Unknown";
+      const artistName = d.primary_artist?.name ?? d.artists?.[0]?.name ?? "Unknown";
       for (const v of (d.videos ?? []).slice(0, 3)) {
         if (v?.url && extractYouTubeId(v.url)) {
           mediaCollector.push({
@@ -318,111 +276,64 @@ async function executeTool(
         discogs_id: d.discogs_id,
         title: d.title,
         year: d.year,
+        primary_artist: d.primary_artist?.name ?? null,
+        primary_label: d.primary_label?.name ?? null,
         artists: d.artists?.map((a: any) => a.name) ?? [],
         genres: d.genres ?? [],
         styles: d.styles ?? [],
+        scene_weight: d.scene_weight ?? null,
         tracklist: d.tracklist?.slice(0, 20).map((t: any) => ({
           position: t.position,
           title: t.title,
           duration: t.duration ?? null,
         })) ?? [],
-        credits: d.credits?.slice(0, 10).map((c: any) => ({
-          name: c.name,
-          role: c.role,
-        })) ?? [],
         notes: d.notes ? String(d.notes).slice(0, 300) : null,
         has_video: mediaCollector.some((m) => m.discogs_id === d.discogs_id),
-        dig_url: `https://app.dig.baby/release/${d.discogs_id}`,
+        dig_url: `https://app.dig.baby/master/${d.discogs_id}`,
       };
     }
 
-    if (name === "get_artist_releases") {
+    if (name === "get_artist_masters") {
       const id = Number(input.discogs_id);
       const releaseType = (input.release_type as any) ?? "all";
       const limit = Math.min(Math.max(Number(input.limit ?? 12), 1), 20);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.master_artists");
-      const result = await getArtistCatalogReleases(db, id, batchId, dumpDate, limit, undefined, "newest", releaseType);
-      const releases = result.links.map((l: any) => ({
+      const result = await getArtistMasters(db, id, batchId, dumpDate, limit, undefined, "newest", releaseType);
+      const masters = result.links.map((l: any) => ({
         discogs_id: l.discogs_id,
         title: l.title,
         year: l.year ?? null,
         type: l.release_type_label ?? l.release_type ?? null,
-        dig_url: l.type === "master"
-          ? `https://app.dig.baby/release/${l.discogs_id}`
-          : `https://app.dig.baby/version/${l.discogs_id}`,
+        dig_url: `https://app.dig.baby/master/${l.discogs_id}`,
       }));
-      for (const r of releases.slice(0, 5)) {
-        evidenceCollector.push({ type: r.dig_url.includes("/release/") ? "master" : "release", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
-        if (r.dig_url.includes("/release/")) allowedMasterIds.add(r.discogs_id);
+      for (const m of masters.slice(0, 5)) {
+        evidenceCollector.push({ type: "master", discogs_id: m.discogs_id, title: m.title, dig_url: m.dig_url });
+        allowedMasterIds.add(m.discogs_id);
       }
 
       // Auto-collect videos from top masters so videos appear without requiring an explicit get_master call
-      const masterReleases = releases.filter((r) => r.dig_url.includes("/release/")).slice(0, 3);
-      await Promise.all(masterReleases.map(async (r) => {
+      const top = masters.slice(0, 3);
+      await Promise.all(top.map(async (m) => {
         try {
           const { batchId: mb, dumpDate: md } = await getBatchForTable(db, "catalog.masters");
-          const m = await getMaster(db, r.discogs_id, mb, md) as any;
-          if (!m) return;
-          const artistName = m.artists?.[0]?.name ?? r.title;
-          for (const v of (m.videos ?? []).slice(0, 2)) {
+          const detail = await getMaster(db, m.discogs_id, mb, md) as any;
+          if (!detail) return;
+          const artistName = detail.primary_artist?.name ?? detail.artists?.[0]?.name ?? m.title;
+          for (const v of (detail.videos ?? []).slice(0, 2)) {
             if (v?.url && extractYouTubeId(v.url)) {
-              mediaCollector.push({ discogs_id: r.discogs_id, title: v.title ?? r.title, artist: artistName, youtube_url: v.url });
+              mediaCollector.push({ discogs_id: m.discogs_id, title: v.title ?? m.title, artist: artistName, youtube_url: v.url });
             }
           }
         } catch { /* fail open */ }
       }));
 
-      // Auto-fetch credits when releases are thin — many artists are catalogued via credits only
-      let credits: any[] = [];
-      if (releases.length < 3) {
-        try {
-          const { batchId: creditsBatchId, dumpDate: creditsDumpDate } = await getBatchForTable(db, "catalog.release_credits");
-          const creditResult = await getArtistCredits(db, id, creditsBatchId, creditsDumpDate, limit) as any;
-          credits = (creditResult.links ?? []).map((l: any) => ({
-            discogs_id: l.release_discogs_id ?? l.discogs_id,
-            title: l.title,
-            year: l.year ?? null,
-            roles: l.roles ?? [],
-            dig_url: `https://app.dig.baby/version/${l.release_discogs_id ?? l.discogs_id}`,
-          }));
-          for (const c of credits.slice(0, 5)) {
-            evidenceCollector.push({ type: "release", discogs_id: c.discogs_id, title: c.title, dig_url: c.dig_url });
-          }
-        } catch { /* fail open */ }
-      }
-
       return {
-        releases,
-        credits: credits ?? [],
+        masters,
         total: result.pagination.total_estimate ?? result.links.length,
         has_more: result.pagination.has_more,
-        note: releases.length === 0 && credits.length === 0
-          ? "No releases or credits found. Try searching by label name instead."
-          : releases.length < 3 && credits.length > 0
-          ? "Few direct releases — catalog mainly found via credits below."
+        note: masters.length === 0
+          ? "No masters found in scope. Try searching by label name, or check if this artist falls outside the 90s house/techno scene."
           : undefined,
-      };
-    }
-
-    if (name === "get_artist_credits") {
-      const id = Number(input.discogs_id);
-      const limit = Math.min(Math.max(Number(input.limit ?? 15), 1), 20);
-      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.release_credits");
-      const result = await getArtistCredits(db, id, batchId, dumpDate, limit) as any;
-      const credits = (result.links ?? []).map((l: any) => ({
-        discogs_id: l.release_discogs_id ?? l.discogs_id,
-        title: l.title,
-        year: l.year ?? null,
-        roles: l.roles ?? [],
-        role_family: l.role_family ?? null,
-        dig_url: `https://app.dig.baby/version/${l.release_discogs_id ?? l.discogs_id}`,
-      }));
-      for (const c of credits.slice(0, 5)) {
-        evidenceCollector.push({ type: "release", discogs_id: c.discogs_id, title: c.title, dig_url: c.dig_url });
-      }
-      return {
-        credits,
-        total: result.pagination?.total_estimate ?? (result.links?.length ?? 0),
       };
     }
 
@@ -431,74 +342,21 @@ async function executeTool(
       const limit = Math.min(Math.max(Number(input.limit ?? 15), 1), 20);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.labels");
       const result = await getLabelReleases(db, id, batchId, dumpDate, limit) as any;
-      const labelReleases = (result.links ?? []).map((l: any) => ({
+      const labelMasters = (result.links ?? []).map((l: any) => ({
         discogs_id: l.discogs_id,
-        master_discogs_id: l.master_discogs_id ?? null,
         title: l.title,
         year: l.year ?? null,
         artist: l.artist ?? null,
-        dig_url: l.master_discogs_id
-          ? `https://app.dig.baby/release/${l.master_discogs_id}`
-          : `https://app.dig.baby/version/${l.discogs_id}`,
+        dig_url: `https://app.dig.baby/master/${l.discogs_id}`,
       }));
-      for (const r of labelReleases.slice(0, 3)) {
-        evidenceCollector.push({ type: "release", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
-        if (r.master_discogs_id != null) allowedMasterIds.add(r.master_discogs_id);
+      for (const r of labelMasters.slice(0, 3)) {
+        evidenceCollector.push({ type: "master", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
+        allowedMasterIds.add(r.discogs_id);
       }
       return {
-        releases: labelReleases,
+        masters: labelMasters,
         total: result.pagination?.total_estimate ?? (result.links?.length ?? 0),
         has_more: result.pagination?.has_more ?? false,
-      };
-    }
-
-    if (name === "get_connections") {
-      const id = Number(input.discogs_id);
-      const rows = await sql<any>`
-        SELECT re.edge_type, re.target_entity_type, re.target_discogs_id,
-               a.name as target_name, re.valid_from, re.valid_to
-        FROM enrich.relationship_edges re
-        LEFT JOIN catalog.artists a
-          ON a.discogs_id = re.target_discogs_id
-         AND re.target_entity_type = 'artist'
-        WHERE re.source_discogs_id = ${id}
-          AND re.source_entity_type = 'artist'
-        LIMIT 20
-      `.execute(db);
-
-      return {
-        connections: rows.rows.map((r: any) => ({
-          type: r.edge_type,
-          entity_type: r.target_entity_type,
-          discogs_id: r.target_discogs_id,
-          name: r.target_name ?? null,
-          from: r.valid_from ?? null,
-          to: r.valid_to ?? null,
-        })),
-        total: rows.rows.length,
-      };
-    }
-
-    if (name === "get_context") {
-      const id = Number(input.discogs_id);
-      const rows = await sql<any>`
-        SELECT context_type, content_json, source
-        FROM enrich.entity_context
-        WHERE entity_type = 'artist' AND discogs_id = ${id}
-        ORDER BY context_type
-        LIMIT 6
-      `.execute(db);
-
-      if (rows.rows.length === 0) return { context: null };
-
-      return {
-        context: rows.rows.map((r: any) => {
-          const content = r.content_json;
-          const text = typeof content === "string"
-            ? content
-            : content?.text ?? content?.value ?? JSON.stringify(content);
-          return { type: r.context_type, text: String(text).slice(0, 500) };
-        }),
       };
     }
 
@@ -683,7 +541,6 @@ async function runAgenticLoop(params: {
 
   log("ask:max_rounds_exceeded", { tool_calls: toolCallCount });
 
-  // Exceeded max rounds — ask Claude for a final answer without tools
   const finalMessages: AnthropicMessage[] = [
     ...messages,
     {
@@ -767,7 +624,6 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       });
     }
 
-    // Sanitise history
     const rawHistory = Array.isArray(body.history) ? body.history : [];
     const history: AnthropicMessage[] = rawHistory
       .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
@@ -791,7 +647,6 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         log,
       });
 
-      // Deduplicate media by youtube_url
       const seenUrls = new Set<string>();
       const dedupedMedia = media.filter((m) => {
         if (seenUrls.has(m.youtube_url)) return false;
@@ -799,7 +654,6 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         return true;
       });
 
-      // Deduplicate evidence by dig_url
       const seenEvidence = new Set<string>();
       const dedupedEvidence = evidence.filter((e) => {
         if (seenEvidence.has(e.dig_url)) return false;

@@ -20,26 +20,27 @@ interface QueryPair {
   requiresAuth: boolean;
 }
 
+// Scene-scoped catalog: master is the canonical entity. Discogs path mappings
+// retained for the master/artist/label endpoints; Dig no longer exposes
+// /releases/:id detail or /artists/:id/releases (use /artists/:id/masters).
 const QUERY_PAIRS: QueryPair[] = [
   // Search (requires Discogs auth)
   { category: "Search: exact artist", description: "Radiohead", digPath: "/v1/search?q=Radiohead&type=artist", discogsPath: "/database/search?q=Radiohead&type=artist", requiresAuth: true },
-  { category: "Search: album title", description: "OK Computer", digPath: "/v1/search?q=ok+computer&type=release", discogsPath: "/database/search?q=ok+computer&type=release", requiresAuth: true },
-  { category: "Search: common term", description: "Love", digPath: "/v1/search?q=Love&type=release", discogsPath: "/database/search?q=Love&type=release", requiresAuth: true },
+  { category: "Search: master title", description: "OK Computer", digPath: "/v1/search?q=ok+computer&type=master", discogsPath: "/database/search?q=ok+computer&type=master", requiresAuth: true },
+  { category: "Search: common term", description: "Love", digPath: "/v1/search?q=Love&type=master", discogsPath: "/database/search?q=Love&type=master", requiresAuth: true },
   { category: "Search: cross-entity", description: "blue", digPath: "/v1/search?q=blue", discogsPath: "/database/search?q=blue", requiresAuth: true },
   { category: "Search: label", description: "Warp Records", digPath: "/v1/search?q=warp+records&type=label", discogsPath: "/database/search?q=warp+records&type=label", requiresAuth: true },
-  { category: "Search: filtered", description: "house electronic", digPath: "/v1/search?q=house&type=release&genre=Electronic", discogsPath: "/database/search?q=house&type=release&genre=Electronic", requiresAuth: true },
+  { category: "Search: filtered", description: "house electronic", digPath: "/v1/search?q=house&type=master&genre=Electronic", discogsPath: "/database/search?q=house&type=master&genre=Electronic", requiresAuth: true },
 
   // Retrieval (no auth needed)
   { category: "Artist detail", description: "Radiohead (#3840)", digPath: "/v1/artists/3840", discogsPath: "/artists/3840", requiresAuth: false },
   { category: "Artist detail", description: "Prince (#28795)", digPath: "/v1/artists/28795", discogsPath: "/artists/28795", requiresAuth: false },
   { category: "Label detail", description: "Planet E (#1)", digPath: "/v1/labels/1", discogsPath: "/labels/1", requiresAuth: false },
   { category: "Master detail", description: "OK Computer (#10362)", digPath: "/v1/masters/10362", discogsPath: "/masters/10362", requiresAuth: false },
-  { category: "Release detail", description: "Release #1", digPath: "/v1/releases/1", discogsPath: "/releases/1", requiresAuth: false },
-  { category: "Release detail", description: "Release #249504", digPath: "/v1/releases/249504", discogsPath: "/releases/249504", requiresAuth: false },
 
   // Traversal
-  { category: "Artist releases", description: "Radiohead releases", digPath: "/v1/artists/3840/releases?limit=20", discogsPath: "/artists/3840/releases?page=1&per_page=20", requiresAuth: false },
-  { category: "Artist releases", description: "Prince releases", digPath: "/v1/artists/28795/releases?limit=20", discogsPath: "/artists/28795/releases?page=1&per_page=20", requiresAuth: false },
+  { category: "Artist masters", description: "Radiohead masters", digPath: "/v1/artists/3840/masters?limit=20", discogsPath: "/artists/3840/releases?page=1&per_page=20", requiresAuth: false },
+  { category: "Artist masters", description: "Prince masters", digPath: "/v1/artists/28795/masters?limit=20", discogsPath: "/artists/28795/releases?page=1&per_page=20", requiresAuth: false },
   { category: "Label releases", description: "Planet E releases", digPath: "/v1/labels/1/releases?limit=20", discogsPath: "/labels/1/releases?page=1&per_page=20", requiresAuth: false },
 ];
 

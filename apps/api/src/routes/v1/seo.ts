@@ -68,6 +68,8 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
         `.execute(db);
         ids = result.rows.map((r) => r.discogs_id);
       } else if (cohortType === "releases") {
+        // Slim catalog: genres are denormalized onto catalog.masters (TEXT[]),
+        // master_genres table dropped. Quality filter retained via enrich.entity_quality.
         const result = await sql<{ discogs_id: number }>`
           SELECT m.discogs_id
           FROM catalog.masters m
@@ -77,27 +79,24 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
            AND eq.quality_status = 'active'
           WHERE m.batch_id = ${batchId}::uuid
             AND m.main_release_discogs_id IS NOT NULL
-            AND EXISTS (
-              SELECT 1 FROM catalog.master_genres mg
-              WHERE mg.master_discogs_id = m.discogs_id
-                AND mg.batch_id = ${batchId}::uuid
-            )
-          ORDER BY m.year DESC NULLS LAST, m.discogs_id ASC
+            AND coalesce(cardinality(m.genres), 0) > 0
+          ORDER BY m.scene_weight DESC NULLS LAST, m.year DESC NULLS LAST, m.discogs_id ASC
           LIMIT ${limit}
           OFFSET ${offset}
         `.execute(db);
         ids = result.rows.map((r) => r.discogs_id);
       } else {
-        // EXISTS + LIMIT 1 uses idx_release_labels_batch_label; avoids full GROUP BY scan.
+        // Slim catalog: release_labels dropped. A label is indexable when
+        // at least one in-scope master is attributed to it via primary_label_discogs_id.
         const result = await sql<{ discogs_id: number }>`
           SELECT l.discogs_id
           FROM catalog.labels l
           WHERE l.batch_id = ${batchId}::uuid
             AND l.name NOT IN ('Not On Label', 'Unknown', 'Various')
             AND EXISTS (
-              SELECT 1 FROM catalog.release_labels rl
-              WHERE rl.label_discogs_id = l.discogs_id
-                AND rl.batch_id = ${batchId}::uuid
+              SELECT 1 FROM catalog.masters m
+              WHERE m.primary_label_discogs_id = l.discogs_id
+                AND m.batch_id = ${batchId}::uuid
               LIMIT 1
             )
           ORDER BY l.discogs_id ASC

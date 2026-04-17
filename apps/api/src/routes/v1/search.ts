@@ -4,11 +4,14 @@ import type { Database } from "@dig/db";
 import { search, validateSearchParams, classifySearchLane, type SearchEntityType } from "@dig/domain";
 import { Semaphore } from "../../lib/semaphore.js";
 
+// Scene-scoped DB: release-as-entity removed; only artist | label | master.
+// "release" still parses (domain returns degraded empty) so legacy callers
+// don't 400, but we do not advertise it.
 const VALID_TYPES = new Set(["artist", "label", "master", "release"]);
 
-// Per-machine concurrency cap for heavy-lane search (genre/style/country/year on releases).
-// Prevents expensive filter+FTS join scans from starving unfiltered core-lane queries.
-// At cap, the route sheds immediately with 429 rather than queuing.
+// Per-machine concurrency cap for heavy-lane search (genre/style/year filters
+// on master). Prevents expensive filter+FTS joins from starving unfiltered
+// core-lane queries. At cap, the route sheds immediately with 429.
 const HEAVY_LANE_CONCURRENCY = 8;
 const heavyLaneSemaphore = new Semaphore(HEAVY_LANE_CONCURRENCY);
 
@@ -29,9 +32,16 @@ export function registerSearchRoutes(app: FastifyInstance, db: Kysely<Database>)
   app.get("/v1/search", async (req, reply) => {
     const query = req.query as Record<string, string | undefined>;
 
+    // In the scene-scoped catalog, master is the canonical entity.
+    // If a caller doesn't specify a type, prefer masters.
+    const rawType = query.type;
+    const type: SearchEntityType | undefined = rawType
+      ? (VALID_TYPES.has(rawType) ? (rawType as SearchEntityType) : undefined)
+      : "master";
+
     const params = {
       q: query.q ?? "",
-      type: VALID_TYPES.has(query.type ?? "") ? (query.type as SearchEntityType) : undefined,
+      type,
       genre: query.genre,
       style: query.style,
       year: query.year ? parseInt(query.year, 10) : undefined,
@@ -84,12 +94,9 @@ export function registerSearchRoutes(app: FastifyInstance, db: Kysely<Database>)
       }
     }
 
-    // Core lane: no concurrency cap — bounded by 3s statement_timeout inside search()
+    // Core lane: bounded by 3s statement_timeout inside search()
     try {
       const result = await search(db, params);
-      // Domain catches statement_timeout internally and returns degraded empty results.
-      // Bubble these up as 504 so callers (smoke, clients) get an explicit typed error
-      // instead of an empty-success 200 that is indistinguishable from a real no-match.
       if (result.results.length === 0 && result.meta.degraded_reason === "statement_timeout") {
         return reply.status(504).send({
           error: { code: "QUERY_TIMEOUT", message: "Search query exceeded timeout", details: null },
