@@ -504,6 +504,154 @@ export async function getLabelRoster(
   };
 }
 
+// ─── Active: label → style breakdown (genre profile) ───────────────────────
+
+export interface LabelStyleEntry {
+  /** Style name (e.g. "Detroit Techno", "Acid House"). */
+  style: string;
+  /** Number of in-scope masters tagged with this style under this label. */
+  master_count: number;
+  /** Share of the label's total tagged masters (0–1, rounded to 4dp). */
+  share: number;
+}
+
+export interface LabelStylesResponse {
+  styles: LabelStyleEntry[];
+  meta: {
+    source_type: "label";
+    source_discogs_id: number;
+    link_type: "styles";
+    /** Sum of master_count across all styles in the response. */
+    total_tagged_masters: number;
+    elapsed_ms: number;
+  };
+}
+
+/**
+ * Returns the top-N styles for a label by master count, with the share of
+ * total tagged masters. Drives the genre-breakdown ASCII bar on the label
+ * page. `styles` are unnested from the `catalog.masters.styles TEXT[]`
+ * column — no join needed.
+ *
+ * Note: `share` is computed against the label's *tagged* masters only —
+ * if the label has 100 masters but only 60 carry style tags, a style with
+ * 30 hits reports 30/60 = 0.5, not 30/100. This matches user mental model
+ * ("most of what's tagged is house") more closely than a raw release share.
+ */
+export async function getLabelStyles(
+  db: Kysely<Database>,
+  labelDiscogsId: number,
+  batchId: string,
+  limit = 8,
+): Promise<LabelStylesResponse> {
+  const start = Date.now();
+  const lim = Math.min(Math.max(limit, 1), 30);
+
+  const rows = await sql<{
+    style: string;
+    master_count: string;
+  }>`
+    WITH per_master AS (
+      SELECT m.discogs_id, unnest(m.styles) AS style
+      FROM catalog.masters m
+      WHERE m.primary_label_discogs_id = ${labelDiscogsId}
+        AND m.batch_id = ${batchId}
+        AND cardinality(m.styles) > 0
+    )
+    SELECT style, COUNT(*)::text AS master_count
+    FROM per_master
+    GROUP BY style
+    ORDER BY COUNT(*) DESC, style ASC
+    LIMIT ${lim}
+  `.execute(db);
+
+  const totalRows = await sql<{ n: string }>`
+    SELECT COUNT(DISTINCT m.discogs_id)::text AS n
+    FROM catalog.masters m
+    WHERE m.primary_label_discogs_id = ${labelDiscogsId}
+      AND m.batch_id = ${batchId}
+      AND cardinality(m.styles) > 0
+  `.execute(db);
+
+  const totalTagged = parseInt(totalRows.rows[0]?.n ?? "0", 10);
+
+  return {
+    styles: rows.rows.map((r) => {
+      const n = parseInt(r.master_count, 10);
+      return {
+        style: r.style,
+        master_count: n,
+        share: totalTagged > 0 ? Math.round((n / totalTagged) * 10000) / 10000 : 0,
+      };
+    }),
+    meta: {
+      source_type: "label",
+      source_discogs_id: labelDiscogsId,
+      link_type: "styles",
+      total_tagged_masters: totalTagged,
+      elapsed_ms: Date.now() - start,
+    },
+  };
+}
+
+// ─── Active: artist → primary labels (for "Labelmates" derivation) ─────────
+
+export interface ArtistPrimaryLabelEntry {
+  /** Discogs label ID. */
+  discogs_label_id: number;
+  /** Display name (denormed from catalog.masters.primary_label_name). */
+  name: string;
+  /** Number of in-scope masters by this artist on this label. */
+  master_count: number;
+}
+
+/**
+ * Returns the labels an artist has the most in-scope masters on, ordered
+ * descending by master count. Used to derive the "primary label" for the
+ * Labelmates surface on the artist page (we take the top result and call
+ * `getLabelRoster` on it, excluding the source artist).
+ *
+ * Important: `catalog.master_artists` carries every artist credit per
+ * master; we DISTINCT-COUNT by `m.discogs_id` so a credit on a 3-artist
+ * collab still only counts as one master for each artist.
+ */
+export async function getArtistPrimaryLabels(
+  db: Kysely<Database>,
+  artistDiscogsId: number,
+  batchId: string,
+  limit = 5,
+): Promise<ArtistPrimaryLabelEntry[]> {
+  const lim = Math.min(Math.max(limit, 1), 20);
+
+  const rows = await sql<{
+    discogs_label_id: number;
+    name: string;
+    master_count: string;
+  }>`
+    SELECT
+      m.primary_label_discogs_id AS discogs_label_id,
+      m.primary_label_name       AS name,
+      COUNT(DISTINCT m.discogs_id)::text AS master_count
+    FROM catalog.master_artists ma
+    JOIN catalog.masters m
+      ON m.discogs_id = ma.master_discogs_id
+     AND m.batch_id   = ma.batch_id
+    WHERE ma.artist_discogs_id = ${artistDiscogsId}
+      AND ma.batch_id          = ${batchId}
+      AND m.primary_label_discogs_id IS NOT NULL
+      AND m.primary_label_name       IS NOT NULL
+    GROUP BY m.primary_label_discogs_id, m.primary_label_name
+    ORDER BY COUNT(DISTINCT m.discogs_id) DESC, m.primary_label_name ASC
+    LIMIT ${lim}
+  `.execute(db);
+
+  return rows.rows.map((r) => ({
+    discogs_label_id: r.discogs_label_id,
+    name: r.name,
+    master_count: parseInt(r.master_count, 10),
+  }));
+}
+
 // ─── Active: master → releases (Notable Versions) ───────────────────────────
 
 /**

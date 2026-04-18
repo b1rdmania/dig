@@ -78,8 +78,46 @@ export interface SearchResult {
   provenance: { source: "discogs"; dump_date: string; discogs_id: number };
 }
 
+/**
+ * Pinned "top match" card. Returned on the response root (separate from
+ * `results`) when the query string is an exact (case-insensitive trim) match
+ * to a label name OR artist name. Drives the label-first / artist-first
+ * card pinned above the listing on the search page.
+ *
+ * For labels we attach the editorial palette/blurb/tier so the frontend
+ * can render the catalog stamp without a second round trip.
+ */
+export interface SearchTopMatch {
+  type: "label" | "artist";
+  discogs_id: number;
+  name: string;
+  /** Label-only — tier1 / denylist / null. */
+  tier: "tier1" | "denylist" | null;
+  /** Label-only — { accent, accent_ink } when seeded; null otherwise. */
+  palette: { accent: string; accent_ink: string } | null;
+  /** Label-only — editorial blurb when seeded. */
+  blurb: string | null;
+}
+
+/**
+ * Approximate per-type counts. Each is the number of matches found up to
+ * `TYPE_COUNT_LIMIT` (100); above that we expose `100+` semantics by leaving
+ * the count at 100 and setting `*_capped` to true. Used to render the
+ * type tabs (`ALL · LABELS · ARTISTS · RELEASES`) without a follow-up call.
+ */
+export interface SearchTypeCounts {
+  artist: number;
+  label: number;
+  master: number;
+  artist_capped?: boolean;
+  label_capped?: boolean;
+  master_capped?: boolean;
+}
+
 export interface SearchResponse {
   results: SearchResult[];
+  /** Pinned top match (exact label/artist name hit). Null if no exact match. */
+  top_match: SearchTopMatch | null;
   pagination: {
     cursor: string | null;
     has_more: boolean;
@@ -96,6 +134,8 @@ export interface SearchResponse {
     fallback_used?: boolean;
     fallback_profile?: string | null;
     suggested_results?: SearchResult[] | null;
+    /** Approximate counts across all three searchable types. */
+    type_counts?: SearchTypeCounts;
   };
 }
 
@@ -468,6 +508,124 @@ function scoreSearchResult(result: SearchResult, rawQuery: string, explicitType?
   return typeWeight[result.type] + relevanceScore + bonus;
 }
 
+// --- Top-match + per-type counts (for label-first product) -----------------
+
+/** Bound the per-type COUNT to keep the query cheap. */
+const TYPE_COUNT_LIMIT = 100;
+
+/**
+ * Find an exact (case-insensitive trim) name hit on labels then artists.
+ * Returns at most one match — labels win ties because the product is
+ * label-anchored. The query attaches editorial fields when present.
+ *
+ * Cheap: each lookup is a single equality on `lower(trim(name))` against
+ * the same name column the search uses; we already have a trgm index on
+ * `name`, but for exact matches Postgres uses the equality.
+ */
+async function findTopMatch(
+  db: Kysely<Database>,
+  query: string,
+  batchMap: Map<SearchEntityType, { batchId: string; dumpDate: string }>,
+): Promise<SearchTopMatch | null> {
+  const q = query.trim();
+  if (q.length < 2) return null;
+
+  const labelBatch = batchMap.get("label");
+  if (labelBatch) {
+    const row = await sql<{
+      discogs_id: number;
+      name: string;
+      tier: "tier1" | "denylist" | null;
+      palette: { accent: string; accent_ink: string } | null;
+      blurb: string | null;
+    }>`
+      SELECT l.discogs_id, l.name, e.tier, e.palette, e.blurb
+      FROM catalog.labels l
+      LEFT JOIN enrich.label_editorial e ON e.discogs_label_id = l.discogs_id
+      WHERE l.batch_id = ${labelBatch.batchId}
+        AND lower(trim(l.name)) = lower(trim(${q}))
+      ORDER BY (e.tier = 'tier1') DESC NULLS LAST, l.discogs_id ASC
+      LIMIT 1
+    `.execute(db).catch(() => ({ rows: [] }));
+    if (row.rows.length > 0) {
+      const r = row.rows[0];
+      return {
+        type: "label",
+        discogs_id: r.discogs_id,
+        name: r.name,
+        tier: r.tier ?? null,
+        palette: r.palette ?? null,
+        blurb: r.blurb ?? null,
+      };
+    }
+  }
+
+  const artistBatch = batchMap.get("artist");
+  if (artistBatch) {
+    const row = await sql<{ discogs_id: number; name: string }>`
+      SELECT discogs_id, name
+      FROM catalog.artists
+      WHERE batch_id = ${artistBatch.batchId}
+        AND lower(trim(name)) = lower(trim(${q}))
+      ORDER BY discogs_id ASC
+      LIMIT 1
+    `.execute(db).catch(() => ({ rows: [] }));
+    if (row.rows.length > 0) {
+      const r = row.rows[0];
+      return {
+        type: "artist",
+        discogs_id: r.discogs_id,
+        name: r.name,
+        tier: null,
+        palette: null,
+        blurb: null,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Approximate per-type FTS counts, bounded by TYPE_COUNT_LIMIT.
+ * Three short queries; runs on the same connection inside the search txn so
+ * we inherit the 3s statement_timeout.
+ */
+async function getTypeCounts(
+  db: Kysely<Database>,
+  query: string,
+  batchMap: Map<SearchEntityType, { batchId: string; dumpDate: string }>,
+): Promise<SearchTypeCounts> {
+  const counts: SearchTypeCounts = { artist: 0, label: 0, master: 0 };
+  if (!query || query.trim().length < MIN_QUERY_LENGTH) return counts;
+
+  for (const type of ["artist", "label", "master"] as const) {
+    const batch = batchMap.get(type);
+    if (!batch) continue;
+    const tableName = type === "artist" ? "catalog.artists"
+                    : type === "label"  ? "catalog.labels"
+                                        : "catalog.masters";
+    try {
+      const row = await sql<{ n: number }>`
+        SELECT COUNT(*)::int AS n FROM (
+          SELECT 1 FROM ${sql.table(tableName)}
+          WHERE batch_id = ${batch.batchId}
+            AND search_vector @@ plainto_tsquery('english', ${query})
+          LIMIT ${TYPE_COUNT_LIMIT}
+        ) sub
+      `.execute(db);
+      const n = row.rows[0]?.n ?? 0;
+      counts[type] = n;
+      if (n >= TYPE_COUNT_LIMIT) {
+        counts[`${type}_capped`] = true;
+      }
+    } catch {
+      // Fail-open — leave count at 0 for this type
+    }
+  }
+  return counts;
+}
+
 // --- Main entry point ------------------------------------------------------
 
 export async function search(
@@ -483,6 +641,7 @@ export async function search(
   if (params.q && isEmptyTsquery(params.q)) {
     return {
       results: [],
+      top_match: null,
       pagination: { cursor: null, has_more: false, total_estimate: null },
       meta: {
         query: params.q,
@@ -500,6 +659,7 @@ export async function search(
   if (params.type === "release") {
     return {
       results: [],
+      top_match: null,
       pagination: { cursor: null, has_more: false, total_estimate: null },
       meta: {
         query: params.q || "",
@@ -643,8 +803,31 @@ export async function search(
         ? encodeCursor(lastResult.discogs_id, lastResult.relevance)
         : null;
 
+      // Pinned top-match + per-type counts. Both are best-effort and run
+      // inside the same connection so they share the 3s statement_timeout.
+      // Skipped when the caller asks for a specific type — the tabs already
+      // give the user the type-filtered view; pinning the same entity above
+      // it would be noise.
+      let topMatch: SearchTopMatch | null = null;
+      let typeCounts: SearchTypeCounts | undefined;
+      if (params.q && params.q.length >= MIN_QUERY_LENGTH && !cursorData) {
+        if (!params.type) {
+          try {
+            topMatch = await findTopMatch(conn, params.q, batchMap);
+          } catch {
+            // non-blocking
+          }
+        }
+        try {
+          typeCounts = await getTypeCounts(conn, params.q, batchMap);
+        } catch {
+          // non-blocking
+        }
+      }
+
       return {
         results: allResults,
+        top_match: topMatch,
         pagination: {
           cursor: nextCursor,
           has_more: hasMore,
@@ -661,6 +844,7 @@ export async function search(
           fallback_used: fallbackUsed || undefined,
           fallback_profile: fallbackUsed ? fallbackProfile : undefined,
           suggested_results: suggestedResults,
+          type_counts: typeCounts,
         },
       };
     } finally {

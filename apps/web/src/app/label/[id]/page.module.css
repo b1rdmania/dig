@@ -131,6 +131,11 @@
   gap: var(--sp-5);
 }
 
+.sideBlock {
+  display: flex;
+  flex-direction: column;
+}
+
 .sectionHead {
   display: flex;
   align-items: baseline;

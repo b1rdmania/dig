@@ -132,6 +132,14 @@ describe("SearchResponse shape", () => {
           },
         },
       ],
+      top_match: {
+        type: "artist",
+        discogs_id: 3840,
+        name: "Radiohead",
+        tier: null,
+        palette: null,
+        blurb: null,
+      },
       pagination: {
         cursor: "eyJkaXNjb2dzX2lkIjozODQwfQ==",
         has_more: true,
@@ -145,10 +153,13 @@ describe("SearchResponse shape", () => {
         hint: null,
         degraded: false,
         degraded_reason: null,
+        type_counts: { artist: 12, label: 0, master: 23 },
       },
     };
 
     expect(response.results).toHaveLength(1);
+    expect(response.top_match?.type).toBe("artist");
+    expect(response.meta.type_counts?.master).toBe(23);
     expect(response.results[0].type).toBe("artist");
     expect(response.results[0].name).toBe("Radiohead");
     expect(response.results[0].title).toBeNull();
@@ -178,6 +189,7 @@ describe("SearchResponse shape", () => {
           provenance: { source: "discogs", dump_date: "2026-02-01", discogs_id: 12345 },
         },
       ],
+      top_match: null,
       pagination: { cursor: "abc", has_more: true, total_estimate: null },
       meta: {
         query: "love",
@@ -198,6 +210,7 @@ describe("SearchResponse shape", () => {
   it("supports empty results", () => {
     const response: SearchResponse = {
       results: [],
+      top_match: null,
       pagination: { cursor: null, has_more: false, total_estimate: null },
       meta: { query: "nonexistent", type: null, filters_applied: {}, elapsed_ms: 5, hint: "Try a different spelling", degraded: false, degraded_reason: null },
     };

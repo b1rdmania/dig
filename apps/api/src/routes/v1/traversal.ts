@@ -4,8 +4,10 @@ import type { Database } from "@dig/db";
 import { sql } from "@dig/db";
 import {
   getArtistMasters,
+  getArtistPrimaryLabels,
   getLabelReleases,
   getLabelRoster,
+  getLabelStyles,
   getMasterReleases,
   getMasterVideos,
   getBatchForTable,
@@ -160,6 +162,54 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
       return reply.send(await withTimeout(db, SCOPE_TIMEOUT_MS.label_releases, (trx) =>
         getLabelRoster(trx, discogsId, batchId, limit),
       ));
+    } catch (err) {
+      if (isPgTimeout(err)) return timeoutReply(reply);
+      throw err;
+    }
+  });
+
+  app.get("/v1/labels/:discogs_id/styles", async (req, reply) => {
+    const discogsId = parseDiscogsId((req.params as any).discogs_id);
+    if (!discogsId) {
+      return reply.status(400).send({
+        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
+      });
+    }
+    try {
+      const { batchId } = await getTraversalBatchInfo(db, "label_releases");
+      const rawLimit = parseInt(String((req.query as any)?.limit ?? "8"), 10);
+      const limit = Number.isNaN(rawLimit) ? 8 : Math.min(Math.max(rawLimit, 1), 30);
+      return reply.send(await withTimeout(db, SCOPE_TIMEOUT_MS.label_releases, (trx) =>
+        getLabelStyles(trx, discogsId, batchId, limit),
+      ));
+    } catch (err) {
+      if (isPgTimeout(err)) return timeoutReply(reply);
+      throw err;
+    }
+  });
+
+  app.get("/v1/artists/:discogs_id/labels", async (req, reply) => {
+    const discogsId = parseDiscogsId((req.params as any).discogs_id);
+    if (!discogsId) {
+      return reply.status(400).send({
+        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
+      });
+    }
+    try {
+      const { batchId } = await getTraversalBatchInfo(db, "artist_masters");
+      const rawLimit = parseInt(String((req.query as any)?.limit ?? "5"), 10);
+      const limit = Number.isNaN(rawLimit) ? 5 : Math.min(Math.max(rawLimit, 1), 20);
+      const labels = await withTimeout(db, SCOPE_TIMEOUT_MS.artist_masters, (trx) =>
+        getArtistPrimaryLabels(trx, discogsId, batchId, limit),
+      );
+      return reply.send({
+        labels,
+        meta: {
+          source_type: "artist",
+          source_discogs_id: discogsId,
+          link_type: "primary_labels",
+        },
+      });
     } catch (err) {
       if (isPgTimeout(err)) return timeoutReply(reply);
       throw err;

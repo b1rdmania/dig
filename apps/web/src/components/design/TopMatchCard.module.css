@@ -1,0 +1,93 @@
+/* TopMatchCard — pinned label/artist hit above the search listing.
+   The whole surface is a link. Colour comes from --label-accent /
+   --label-accent-ink so a tier-1 palette tints the card; un-paletted
+   labels and all artist matches fall back to ink-on-paper. */
+
+.card {
+  display: block;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  padding: var(--sp-4) var(--sp-5);
+  text-decoration: none;
+  position: relative;
+  transition: transform 80ms ease;
+}
+
+.card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.card:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* Tier-1 palette — accent fills the left rail and the eyebrow stripe. */
+.cardWithPalette {
+  border-color: var(--ink);
+  background: var(--label-accent);
+  color: var(--label-accent-ink);
+}
+
+.cardWithPalette:hover {
+  box-shadow: 2px 2px 0 var(--label-accent-ink);
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: var(--sp-2);
+  opacity: 0.9;
+}
+
+.eyebrowSep {
+  opacity: 0.5;
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 3.6vw, 2.2rem);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--sp-3);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.blurb {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--fs-base);
+  line-height: 1.45;
+  margin: var(--sp-3) 0 0;
+  max-width: 56ch;
+  opacity: 0.94;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.arrow {
+  font-family: var(--font-mono);
+}

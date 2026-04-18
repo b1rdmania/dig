@@ -32,12 +32,16 @@ export function registerSearchRoutes(app: FastifyInstance, db: Kysely<Database>)
   app.get("/v1/search", async (req, reply) => {
     const query = req.query as Record<string, string | undefined>;
 
-    // In the scene-scoped catalog, master is the canonical entity.
-    // If a caller doesn't specify a type, prefer masters.
+    // No type → mixed-type fan-out (artist + label + master) ranked together.
+    // Domain layer applies the master-first / exact-match weighting, and the
+    // response carries a top_match (label/artist exact name hit) plus
+    // per-type counts so the frontend can render the pinned card and tabs.
+    // Pre-Phase-B this defaulted to "master", which silently hid all label
+    // and artist hits from the homepage search — see docs/redesign-phase-b-shipped.md.
     const rawType = query.type;
     const type: SearchEntityType | undefined = rawType
       ? (VALID_TYPES.has(rawType) ? (rawType as SearchEntityType) : undefined)
-      : "master";
+      : undefined;
 
     const params = {
       q: query.q ?? "",

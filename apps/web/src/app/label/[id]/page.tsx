@@ -7,11 +7,13 @@ import {
   isTraversalResponse,
   isLinkoutsResponse,
   isLabelRosterResponse,
+  isLabelStylesResponse,
   isArtistResponse,
   type LabelResponse,
   type TraversalResponse,
   type LabelLinkoutsResponse,
   type LabelRosterResponse,
+  type LabelStylesResponse,
   type ArtistResponse,
 } from "@/lib/types";
 import { discogsUrl, urlLabel } from "@/lib/format";
@@ -29,6 +31,10 @@ import {
   CatalogSpine,
   RosterColumn,
   LinerNotes,
+  GenreBar,
+  SublabelTree,
+  LabelWordmark,
+  hasCuratedWordmark,
   type SpineRow,
   type RosterRow,
 } from "@/components/design";
@@ -105,12 +111,16 @@ async function LabelContent({ id }: { id: string }) {
     roster: [],
     meta: { source_type: "label", source_discogs_id: Number(id), link_type: "roster", elapsed_ms: 0, total_artists: 0 },
   };
+  const defaultStyles: LabelStylesResponse = {
+    styles: [],
+    meta: { source_type: "label", source_discogs_id: Number(id), link_type: "styles", total_tagged_masters: 0, elapsed_ms: 0 },
+  };
 
   const profileRefs = label.profile ? extractProfileRefs(label.profile) : { artists: [], labels: [] };
   const artistIdsToResolve = [...new Set(profileRefs.artists)].slice(0, 10);
   const labelIdsToResolve = [...new Set(profileRefs.labels)].slice(0, 5);
 
-  const [releasesData, rosterData, linkoutsData, ...nameResults] = await Promise.all([
+  const [releasesData, rosterData, linkoutsData, stylesData, ...nameResults] = await Promise.all([
     digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=200&sort=chronological`, { revalidate: 300 })
       .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
       .catch(() => defaultTraversal),
@@ -120,6 +130,9 @@ async function LabelContent({ id }: { id: string }) {
     digFetch<LabelLinkoutsResponse>(`/v1/labels/${id}/linkouts?include_enrichment=true`, { revalidate: 3600 })
       .then((d) => (isLinkoutsResponse(d) ? d : defaultLinkouts))
       .catch(() => defaultLinkouts),
+    digFetch<LabelStylesResponse>(`/v1/labels/${id}/styles?limit=8`, { revalidate: 600 })
+      .then((d) => (isLabelStylesResponse(d) ? d : defaultStyles))
+      .catch(() => defaultStyles),
     ...artistIdsToResolve.map((aid) =>
       digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 })
         .then((d) => (isArtistResponse(d) ? [`a${aid}`, d.artist.name] as [string, string] : null))
@@ -191,7 +204,16 @@ async function LabelContent({ id }: { id: string }) {
           )}
         </div>
         <h1 className={styles.title}>
-          <span>{label.name}</span>
+          {hasCuratedWordmark(label.discogs_id) || (tier === "tier1" && palette) ? (
+            <LabelWordmark
+              discogsId={label.discogs_id}
+              name={label.name}
+              palette={palette}
+              size="md"
+            />
+          ) : (
+            <span>{label.name}</span>
+          )}
           {tier === "tier1" && (
             <span className={styles.tier1Sticker}>
               <Sticker tone="tier1" size="md" title="Canonical scene label (editorial tier 1)">
@@ -266,9 +288,48 @@ async function LabelContent({ id }: { id: string }) {
         </div>
 
         <div className={styles.sideCol}>
-          {rosterRows.length > 0 ? (
+          {rosterRows.length > 0 && (
             <RosterColumn rows={rosterRows} title="Roster" maxVisible={12} />
-          ) : null}
+          )}
+
+          {(label.parent_label?.discogs_id || (label.sublabels && label.sublabels.length > 0)) && (
+            <section className={styles.sideBlock}>
+              <header className={styles.sectionHead}>
+                <h2 className={styles.sectionTitle}>Family Tree</h2>
+                <span className={styles.sectionMeta}>
+                  {label.sublabels?.length
+                    ? `${label.sublabels.length} sublabel${label.sublabels.length === 1 ? "" : "s"}`
+                    : "parent label"}
+                </span>
+              </header>
+              <SublabelTree
+                parent={{ discogs_id: label.discogs_id, name: label.name }}
+                grandParent={
+                  label.parent_label?.discogs_id && label.parent_label.name
+                    ? {
+                        discogs_id: label.parent_label.discogs_id,
+                        name: label.parent_label.name,
+                      }
+                    : null
+                }
+                children={label.sublabels ?? []}
+                maxVisible={12}
+              />
+            </section>
+          )}
+
+          {stylesData.styles.length > 0 && (
+            <section className={styles.sideBlock}>
+              <header className={styles.sectionHead}>
+                <h2 className={styles.sectionTitle}>Genre Profile</h2>
+                <span className={styles.sectionMeta}>top {stylesData.styles.length}</span>
+              </header>
+              <GenreBar
+                styles={stylesData.styles}
+                totalTagged={stylesData.meta.total_tagged_masters}
+              />
+            </section>
+          )}
         </div>
       </div>
 

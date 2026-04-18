@@ -1,0 +1,55 @@
+/* TypeTabs — segmented mono pills for filtering search results.
+   Sits between the pinned top match (if any) and the listing.
+   Active tab uses ink-on-paper; inactive use rule-bordered ghost. */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: var(--sp-4) 0 var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 4px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-radius: 0;
+  line-height: 1;
+  transition: border-color 80ms ease, color 80ms ease;
+}
+
+.tab:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.tab[aria-current="page"] {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+  font-weight: 700;
+}
+
+.count {
+  font-weight: 600;
+  font-feature-settings: "tnum";
+  opacity: 0.85;
+}
+
+.tab[aria-current="page"] .count {
+  opacity: 1;
+}
+
+.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}

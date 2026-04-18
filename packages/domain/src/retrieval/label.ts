@@ -30,6 +30,12 @@ export interface LabelEditorial {
   location: string | null;
 }
 
+/** A child label with parent_label_discogs_id pointing at this label. */
+export interface SublabelLink {
+  discogs_id: number;
+  name: string;
+}
+
 export interface LabelDetail {
   discogs_id: number;
   name: string;
@@ -46,6 +52,12 @@ export interface LabelDetail {
   tier: "tier1" | "denylist" | null;
   /** Full editorial metadata for the redesign. */
   editorial: LabelEditorial;
+  /**
+   * Sublabels that point at this label via parent_label_discogs_id. Capped
+   * at 50 (alphabetical) — for big imprint families (R&S has 30+, Tresor
+   * has 10+) we can paginate later if needed. Empty when the label has none.
+   */
+  sublabels: SublabelLink[];
   urls: string[];
   provenance: { source: "discogs"; dump_date: string; discogs_id: number };
 }
@@ -73,7 +85,7 @@ export async function getLabel(
 
   if (!label) return null;
 
-  const [parent, urls, editorial] = await Promise.all([
+  const [parent, urls, editorial, sublabels] = await Promise.all([
     label.parent_label_discogs_id
       ? db
           .selectFrom("catalog.labels")
@@ -101,6 +113,14 @@ export async function getLabel(
       ])
       .where("discogs_label_id", "=", discogsId)
       .executeTakeFirst(),
+    db
+      .selectFrom("catalog.labels")
+      .select(["discogs_id", "name"])
+      .where("parent_label_discogs_id", "=", discogsId)
+      .where("batch_id", "=", batchId)
+      .orderBy("name", "asc")
+      .limit(50)
+      .execute(),
   ]);
 
   const tier = editorial?.tier ?? null;
@@ -125,6 +145,7 @@ export async function getLabel(
       is_active: editorial?.is_active ?? true,
       location: editorial?.location ?? null,
     },
+    sublabels: sublabels.map((s) => ({ discogs_id: s.discogs_id, name: s.name })),
     urls: urls.map((u) => u.url),
     provenance: { source: "discogs", dump_date: dumpDate, discogs_id: label.discogs_id },
   };

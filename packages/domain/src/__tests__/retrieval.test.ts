@@ -53,6 +53,10 @@ describe("LabelDetail shape", () => {
         is_active: true,
         location: "Detroit, US",
       },
+      sublabels: [
+        { discogs_id: 12345, name: "Planet E Communications" },
+        { discogs_id: 67890, name: "C2" },
+      ],
       urls: ["https://planet-e.net"],
       provenance: { source: "discogs", dump_date: "2026-02-01", discogs_id: 1 },
     };
@@ -82,11 +86,13 @@ describe("LabelDetail shape", () => {
         is_active: true,
         location: null,
       },
+      sublabels: [],
       urls: [],
       provenance: { source: "discogs", dump_date: "2026-02-01", discogs_id: 999999 },
     };
     expect(label.tier).toBeNull();
     expect(label.editorial.palette).toBeNull();
+    expect(label.sublabels).toEqual([]);
   });
 });
 

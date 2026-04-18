@@ -26,6 +26,7 @@ import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile"
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ShareBar } from "@/components/ShareBar";
 import { hrefForTraversalLink } from "@/lib/routes";
+import { Labelmates } from "@/components/design";
 import styles from "./page.module.css";
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
@@ -382,6 +383,9 @@ async function ArtistContent({ id, releaseType }: { id: string; releaseType: str
 
         <AboutSection profile={artist.profile} ctxData={ctxData} resolvedNames={resolvedNames} />
         <MastersSection id={id} releaseType={releaseType} data={mastersData} />
+        <Suspense fallback={null}>
+          <Labelmates artistDiscogsId={artist.discogs_id} limit={6} />
+        </Suspense>
         <AliasesAndRelations
           aliases={aliasNames}
           relData={relData}

@@ -31,6 +31,25 @@ export interface Pagination {
   total_estimate: number | null;
 }
 
+export interface SearchTopMatch {
+  type: "label" | "artist";
+  discogs_id: number;
+  name: string;
+  /** Label-only — tier1 / denylist / null. */
+  tier: "tier1" | "denylist" | null;
+  palette: { accent: string; accent_ink: string } | null;
+  blurb: string | null;
+}
+
+export interface SearchTypeCounts {
+  artist: number;
+  label: number;
+  master: number;
+  artist_capped?: boolean;
+  label_capped?: boolean;
+  master_capped?: boolean;
+}
+
 export interface SearchMeta {
   query: string;
   type: string | null;
@@ -40,10 +59,13 @@ export interface SearchMeta {
   degraded: boolean;
   degraded_reason: string | null;
   suggested_results?: SearchResult[] | null;
+  type_counts?: SearchTypeCounts;
 }
 
 export interface SearchResponse {
   results: SearchResult[];
+  /** Pinned exact-name match (label/artist). Optional for back-compat with older API. */
+  top_match?: SearchTopMatch | null;
   pagination: Pagination;
   meta: SearchMeta;
 }
@@ -242,6 +264,11 @@ export interface LabelEditorial {
   location: string | null;
 }
 
+export interface SublabelLink {
+  discogs_id: number;
+  name: string;
+}
+
 export interface Label {
   discogs_id: number;
   name: string;
@@ -259,6 +286,11 @@ export interface Label {
    * to `tier` only with no palette/blurb in that case.
    */
   editorial?: LabelEditorial;
+  /**
+   * Children pointing at this label via parent_label_discogs_id. Optional
+   * for back-compat with API versions before 2026-04-17.
+   */
+  sublabels?: SublabelLink[];
   urls: string[];
   provenance: Provenance;
 }
@@ -291,6 +323,53 @@ export function isLabelRosterResponse(data: unknown): data is LabelRosterRespons
   if (!data || typeof data !== "object") return false;
   const d = data as Record<string, unknown>;
   return Array.isArray(d.roster) && d.meta !== undefined;
+}
+
+// Label genre/style breakdown (Phase B — drives the ASCII bar)
+export interface LabelStyleEntry {
+  style: string;
+  master_count: number;
+  /** Share of label's tagged masters (0–1). */
+  share: number;
+}
+
+export interface LabelStylesResponse {
+  styles: LabelStyleEntry[];
+  meta: {
+    source_type: "label";
+    source_discogs_id: number;
+    link_type: "styles";
+    total_tagged_masters: number;
+    elapsed_ms: number;
+  };
+}
+
+export function isLabelStylesResponse(data: unknown): data is LabelStylesResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return Array.isArray(d.styles) && d.meta !== undefined;
+}
+
+// Artist → primary labels (Phase B — drives Labelmates derivation)
+export interface ArtistPrimaryLabelEntry {
+  discogs_label_id: number;
+  name: string;
+  master_count: number;
+}
+
+export interface ArtistPrimaryLabelsResponse {
+  labels: ArtistPrimaryLabelEntry[];
+  meta: {
+    source_type: "artist";
+    source_discogs_id: number;
+    link_type: "primary_labels";
+  };
+}
+
+export function isArtistPrimaryLabelsResponse(data: unknown): data is ArtistPrimaryLabelsResponse {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return Array.isArray(d.labels) && d.meta !== undefined;
 }
 
 // Traversal

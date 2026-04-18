@@ -1,0 +1,59 @@
+/* GenreBar — ASCII-style horizontal bar of a label's top styles.
+   Mono everything. The bar fill uses solid block characters so it
+   looks like a printed monitor rather than a hard SVG bar. */
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--ink);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(80px, 22%) 1fr 48px;
+  align-items: baseline;
+  gap: var(--sp-3);
+  line-height: 1.3;
+}
+
+.style {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barTrack {
+  font-family: var(--font-mono);
+  letter-spacing: -0.05em;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  font-size: 13px;
+}
+
+.barTrackInactive {
+  color: var(--ink-faint);
+  margin-left: 2px;
+}
+
+.share {
+  font-feature-settings: "tnum";
+  text-align: right;
+  color: var(--ink-soft);
+}
+
+.foot {
+  margin-top: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
