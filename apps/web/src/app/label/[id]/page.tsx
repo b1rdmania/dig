@@ -158,7 +158,11 @@ async function LabelContent({ id }: { id: string }) {
   const yearLine = formatYearLine(ed?.founded_year ?? null, ed?.closed_year ?? null, ed?.is_active ?? true);
   const spineRows: SpineRow[] = releasesData.links.map((link, idx) => ({
     position: idx + 1,
-    master_discogs_id: typeof link.master_discogs_id === "number" ? link.master_discogs_id : link.discogs_id,
+    // For type="master" links the API now sets master_discogs_id explicitly
+    // (mirrors discogs_id). The discogs_id fallback stays for older deploys
+    // / cached responses, but is no longer the load-bearing path.
+    master_discogs_id:
+      typeof link.master_discogs_id === "number" ? link.master_discogs_id : link.discogs_id,
     title: link.title ?? null,
     artist: typeof link.role === "string" ? null : null,
     year: link.year ?? null,

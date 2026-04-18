@@ -41,7 +41,11 @@ export interface TraversalLink {
   scene_weight?: number;
   /** Set on Notable Versions (master_releases) — flags the canonical pressing */
   is_main_release?: boolean;
-  /** Back-pointer for release links so callers can route to /master/:master_id */
+  /**
+   * Back-pointer for release links so callers can route to /master/:master_id.
+   * For type="master" links this mirrors `discogs_id` so callers can rely on
+   * `link.master_discogs_id` regardless of link kind without a fallback.
+   */
   master_discogs_id?: number | null;
   provenance: { source: "discogs"; dump_date: string; discogs_id: number };
 }
@@ -231,6 +235,7 @@ export async function getArtistMasters(
     links: page.map((r) => ({
       type: "master" as const,
       discogs_id: r.discogs_id,
+      master_discogs_id: r.discogs_id,
       title: r.title,
       year: r.year,
       release_type: r.release_type,
@@ -345,6 +350,7 @@ export async function getLabelReleases(
       links: rows.map<LabelMasterLink>((r) => ({
         type: "master",
         discogs_id: r.discogs_id,
+        master_discogs_id: r.discogs_id,
         title: r.title ?? undefined,
         year: r.year,
         country: r.country,
@@ -395,6 +401,7 @@ export async function getLabelReleases(
     links: resultRows.map((r) => ({
       type: "master" as const,
       discogs_id: r.discogs_id,
+      master_discogs_id: r.discogs_id,
       title: r.title,
       year: r.year,
       country: r.country,
