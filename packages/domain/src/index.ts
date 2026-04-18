@@ -76,6 +76,22 @@ export {
   type QualityScore,
 } from "./quality.js";
 export {
+  listScenes,
+  getScene,
+  getSceneWall,
+  type SceneAxis,
+  type SceneRole,
+  type BridgeKind,
+  type ScenePalette,
+  type SceneSummary,
+  type SceneLabelMember,
+  type SceneBridgeLink,
+  type SceneDetail,
+  type WallStripRelease,
+  type WallStripLabel,
+  type SceneWall,
+} from "./scenes.js";
+export {
   getArtistRelationships,
   getArtistContext,
   getArtistTimeline,

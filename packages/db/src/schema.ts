@@ -399,6 +399,60 @@ export interface EnrichSceneScopeAuditTable {
   notes: string | null;
 }
 
+/**
+ * Migration 028: curated scenes for the catalog wall.
+ *
+ * `axis` classifies the scene: geography (Detroit, Berlin), sound (Dub Techno,
+ * IDM), era (Acid 88), cluster (Basic Channel family), bridge (Detroit↔Berlin),
+ * micro (a tight micro-scene). `palette` overrides the hero label palette
+ * when set. `parent_slug` allows nesting (e.g. dub-techno under berlin-techno).
+ */
+export interface EnrichScenesTable {
+  slug: string;
+  name: string;
+  city: string | null;
+  era_start: number | null;
+  era_end: number | null;
+  parent_slug: string | null;
+  axis: "geography" | "sound" | "era" | "cluster" | "bridge" | "micro";
+  depth: Generated<number>;
+  blurb: string | null;
+  hero_label_id: number | null;
+  palette: { accent: string; accent_ink: string } | null;
+  added_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+/**
+ * Migration 028: scene → label membership.
+ *
+ * `role` is core (spine), adjacent (satellite), or bridge (shared with another
+ * scene). `rank` controls strip ordering on the wall (lower = more prominent).
+ */
+export interface EnrichSceneLabelsTable {
+  scene_slug: string;
+  discogs_label_id: number;
+  role: Generated<"core" | "adjacent" | "bridge">;
+  rank: Generated<number>;
+  added_at: Generated<Date>;
+}
+
+/**
+ * Migration 028: directed bridges between scenes.
+ *
+ * `via_kind` describes what carries the connection (artist, label, or sound).
+ * `via_id` is the discogs id of the carrier when applicable.
+ */
+export interface EnrichSceneBridgesTable {
+  from_slug: string;
+  to_slug: string;
+  via_kind: "artist" | "label" | "sound";
+  via_id: number | null;
+  via_name: string | null;
+  blurb: string | null;
+  added_at: Generated<Date>;
+}
+
 export interface CatalogReleaseShadowTable {
   release_discogs_id: number;
   master_discogs_id: number | null;
@@ -469,4 +523,8 @@ export interface Database {
   "enrich.usage_counters": EnrichUsageCountersTable;
   "enrich.label_editorial": EnrichLabelEditorialTable;
   "enrich.scene_scope_audit": EnrichSceneScopeAuditTable;
+  // Phase C catalog wall (028)
+  "enrich.scenes": EnrichScenesTable;
+  "enrich.scene_labels": EnrichSceneLabelsTable;
+  "enrich.scene_bridges": EnrichSceneBridgesTable;
 }

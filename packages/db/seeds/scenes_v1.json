@@ -1,0 +1,284 @@
+{
+  "$schema": "scenes_v1.schema.json",
+  "version": 1,
+  "notes": "Initial scene seed for the catalog wall. Built from the 41 hand-curated tier-1 labels in label_editorial_v2.csv. Membership is name-based (resolved to discogs_label_id at seed time). Ranks are intentional editorial ordering, not alphabetical.",
+  "scenes": [
+    {
+      "slug": "detroit-core",
+      "name": "Detroit Core",
+      "city": "Detroit, US",
+      "era_start": 1985,
+      "era_end": 2003,
+      "axis": "geography",
+      "hero_label_name": "Underground Resistance",
+      "blurb": "The labels that built Detroit techno: the Belleville Three's imprints, UR's militant collective, and the second wave that took the form into the 90s.",
+      "labels": [
+        { "name": "Underground Resistance", "role": "core", "rank": 1 },
+        { "name": "Transmat", "role": "core", "rank": 2 },
+        { "name": "Metroplex", "role": "core", "rank": 3 },
+        { "name": "KMS", "role": "core", "rank": 4 },
+        { "name": "Axis", "role": "core", "rank": 5 },
+        { "name": "Planet E", "role": "core", "rank": 6 },
+        { "name": "M-Plant", "role": "core", "rank": 7 },
+        { "name": "430 West", "role": "core", "rank": 8 },
+        { "name": "Plus 8 Records", "role": "adjacent", "rank": 9 }
+      ]
+    },
+    {
+      "slug": "chicago-house",
+      "name": "Chicago House",
+      "city": "Chicago, US",
+      "era_start": 1984,
+      "era_end": 2003,
+      "axis": "geography",
+      "hero_label_name": "Trax Records",
+      "blurb": "The labels that named the form. Trax put house music on the international map; Dance Mania mutated it into ghetto-house in the next room.",
+      "labels": [
+        { "name": "Trax Records", "role": "core", "rank": 1 },
+        { "name": "Dance Mania", "role": "core", "rank": 2 }
+      ]
+    },
+    {
+      "slug": "berlin-techno",
+      "name": "Berlin Techno",
+      "city": "Berlin, DE",
+      "era_start": 1991,
+      "era_end": 2003,
+      "axis": "geography",
+      "hero_label_name": "Tresor Records",
+      "blurb": "The bunker, the wall coming down, and the labels that turned post-reunification Berlin into the centre of European techno. Tresor as the mothership; Hard Wax as the curator; Basic Channel and friends as the harmonic underground.",
+      "labels": [
+        { "name": "Tresor Records", "role": "core", "rank": 1 },
+        { "name": "Hard Wax", "role": "core", "rank": 2 },
+        { "name": "Basic Channel", "role": "core", "rank": 3 },
+        { "name": "Chain Reaction", "role": "core", "rank": 4 },
+        { "name": "Rhythm & Sound", "role": "core", "rank": 5 },
+        { "name": "Maurizio", "role": "core", "rank": 6 },
+        { "name": "Perlon", "role": "core", "rank": 7 }
+      ]
+    },
+    {
+      "slug": "dub-techno",
+      "name": "Dub Techno",
+      "city": "Berlin, DE",
+      "era_start": 1993,
+      "era_end": 2003,
+      "axis": "sound",
+      "parent_slug": "berlin-techno",
+      "hero_label_name": "Basic Channel",
+      "blurb": "The harmonic deep end of Berlin's nineties. Plain-sleeve 12-inches, numbered series, Hard Wax as the only counter that mattered.",
+      "labels": [
+        { "name": "Basic Channel", "role": "core", "rank": 1 },
+        { "name": "Chain Reaction", "role": "core", "rank": 2 },
+        { "name": "Rhythm & Sound", "role": "core", "rank": 3 },
+        { "name": "Maurizio", "role": "core", "rank": 4 }
+      ]
+    },
+    {
+      "slug": "uk-warp-bleep",
+      "name": "Warp & UK Bleep",
+      "city": "Sheffield, UK",
+      "era_start": 1989,
+      "era_end": 2003,
+      "axis": "geography",
+      "hero_label_name": "Warp Records",
+      "blurb": "Sheffield's record-shop label that became the most influential electronic imprint of the 90s. Bleep techno, then IDM, then everything that didn't fit a genre.",
+      "labels": [
+        { "name": "Warp Records", "role": "core", "rank": 1 }
+      ]
+    },
+    {
+      "slug": "uk-london-house",
+      "name": "London House",
+      "city": "London, UK",
+      "era_start": 1988,
+      "era_end": 2003,
+      "axis": "geography",
+      "hero_label_name": "Junior Boy's Own",
+      "blurb": "The London end of UK dance. Junior Boy's Own breaking Underworld and the Chemical Brothers; XL turning hardcore into a major-label in disguise; Mute holding the experimental flank.",
+      "labels": [
+        { "name": "Junior Boy's Own", "role": "core", "rank": 1 },
+        { "name": "XL Recordings", "role": "core", "rank": 2 },
+        { "name": "Mute Records", "role": "core", "rank": 3 },
+        { "name": "NovaMute", "role": "adjacent", "rank": 4 }
+      ]
+    },
+    {
+      "slug": "uk-jungle-dnb",
+      "name": "UK Jungle / D&B",
+      "city": "London, UK",
+      "era_start": 1990,
+      "era_end": 2003,
+      "axis": "sound",
+      "hero_label_name": "Reinforced Records",
+      "blurb": "How UK hardcore learned to swing. 4hero's Reinforced as the cradle, Moving Shadow as the scene's poster wall.",
+      "labels": [
+        { "name": "Reinforced Records", "role": "core", "rank": 1 },
+        { "name": "Moving Shadow", "role": "core", "rank": 2 }
+      ]
+    },
+    {
+      "slug": "uk-trip-hop",
+      "name": "UK Trip-Hop & Leftfield",
+      "city": "London, UK",
+      "era_start": 1990,
+      "era_end": 2003,
+      "axis": "sound",
+      "hero_label_name": "Mo Wax",
+      "blurb": "James Lavelle's Mo Wax and Coldcut's Ninja Tune defining the leftfield/breaks/trip-hop axis. Futura sleeves, MPC swing, the Headz compilations as the canonical document.",
+      "labels": [
+        { "name": "Mo Wax", "role": "core", "rank": 1 },
+        { "name": "Ninja Tune", "role": "core", "rank": 2 }
+      ]
+    },
+    {
+      "slug": "nyc-garage-house",
+      "name": "NYC Garage & House",
+      "city": "New York, US",
+      "era_start": 1988,
+      "era_end": 2003,
+      "axis": "geography",
+      "hero_label_name": "Strictly Rhythm",
+      "blurb": "The New York end of US house. Strictly Rhythm's hundred-12-inch onslaught, Nervous as Masters at Work's home, Nu Groove's four-year sprint that produced Beltram, Burrell Brothers and Bobby Konders.",
+      "labels": [
+        { "name": "Strictly Rhythm", "role": "core", "rank": 1 },
+        { "name": "Nervous Records", "role": "core", "rank": 2 },
+        { "name": "Nu Groove Records", "role": "core", "rank": 3 }
+      ]
+    },
+    {
+      "slug": "cologne-minimal",
+      "name": "Cologne Minimal",
+      "city": "Köln, DE",
+      "era_start": 1992,
+      "era_end": 2003,
+      "axis": "geography",
+      "hero_label_name": "Kompakt",
+      "blurb": "Wolfgang Voigt's Cologne. Profan as the seed, Kompakt as the canonical flowering. Total compilations, the Pop Ambient series, microhouse as a complete worldview.",
+      "labels": [
+        { "name": "Kompakt", "role": "core", "rank": 1 },
+        { "name": "Profan", "role": "core", "rank": 2 }
+      ]
+    },
+    {
+      "slug": "frankfurt-idm",
+      "name": "Frankfurt IDM / Glitch",
+      "city": "Frankfurt, DE",
+      "era_start": 1991,
+      "era_end": 2003,
+      "axis": "geography",
+      "hero_label_name": "Mille Plateaux",
+      "blurb": "Achim Szepanski's Frankfurt. Force Inc. as the techno parent, Mille Plateaux as the philosophy department. Oval, Pole, Alec Empire's quieter work; the Clicks & Cuts compilations as the reference.",
+      "labels": [
+        { "name": "Mille Plateaux", "role": "core", "rank": 1 },
+        { "name": "Force Inc. Music Works", "role": "core", "rank": 2 }
+      ]
+    },
+    {
+      "slug": "belgium-r-and-s",
+      "name": "Belgium / R&S",
+      "city": "Ghent, BE",
+      "era_start": 1984,
+      "era_end": 2003,
+      "axis": "cluster",
+      "hero_label_name": "R & S Records",
+      "blurb": "Renaat Vandepapeliere's R&S as the door between Detroit and Sheffield. Apollo as the ambient subsidiary that holds Selected Ambient Works II. Music Man as the harder Belgian counterweight.",
+      "labels": [
+        { "name": "R & S Records", "role": "core", "rank": 1 },
+        { "name": "Apollo Records (2)", "role": "core", "rank": 2 },
+        { "name": "Music Man Records", "role": "core", "rank": 3 }
+      ]
+    },
+    {
+      "slug": "europe-acid",
+      "name": "European Acid",
+      "city": "Eindhoven, NL",
+      "era_start": 1989,
+      "era_end": 2003,
+      "axis": "sound",
+      "hero_label_name": "DJAX-Up-Beats",
+      "blurb": "Saskia Slegers' DJAX as the European acid imprint that took the 303 from Chicago and made it Dutch, German, and global.",
+      "labels": [
+        { "name": "DJAX-Up-Beats", "role": "core", "rank": 1 }
+      ]
+    },
+    {
+      "slug": "scandinavia-helsinki",
+      "name": "Helsinki Minimal",
+      "city": "Helsinki, FI",
+      "era_start": 1993,
+      "era_end": 2003,
+      "axis": "geography",
+      "hero_label_name": "Sähkö Recordings",
+      "blurb": "Mika Vainio and Pan Sonic's Helsinki. Sine waves, white sleeves, the Nordic minimal tradition.",
+      "labels": [
+        { "name": "Sähkö Recordings", "role": "core", "rank": 1 }
+      ]
+    },
+    {
+      "slug": "us-philly-glasgow",
+      "name": "Glasgow & Philadelphia",
+      "city": "Glasgow, UK / Philadelphia, US",
+      "era_start": 1991,
+      "era_end": 2003,
+      "axis": "cluster",
+      "hero_label_name": "Soma Quality Recordings",
+      "blurb": "Two outlier scenes with disproportionate impact. Slam's Soma releasing Daft Punk's first records out of Glasgow; Josh Wink's Ovum carrying US house's tougher European-influenced second wave.",
+      "labels": [
+        { "name": "Soma Quality Recordings", "role": "core", "rank": 1 },
+        { "name": "Ovum Recordings", "role": "core", "rank": 2 }
+      ]
+    }
+  ],
+  "bridges": [
+    {
+      "from_slug": "detroit-core",
+      "to_slug": "berlin-techno",
+      "via_kind": "artist",
+      "via_name": "Jeff Mills",
+      "blurb": "Mills moved between Detroit's UR/Axis and Berlin's Tresor — the literal carrier between the two scenes."
+    },
+    {
+      "from_slug": "detroit-core",
+      "to_slug": "berlin-techno",
+      "via_kind": "artist",
+      "via_name": "Joey Beltram",
+      "blurb": "Beltram on R&S, on NovaMute, on Tresor — Brooklyn techno that lived inside both cities."
+    },
+    {
+      "from_slug": "chicago-house",
+      "to_slug": "uk-london-house",
+      "via_kind": "sound",
+      "via_name": "Acid House",
+      "blurb": "The 303 left Chicago in 1987 and arrived in London in 1988. The labels on both sides were never quite the same."
+    },
+    {
+      "from_slug": "berlin-techno",
+      "to_slug": "dub-techno",
+      "via_kind": "label",
+      "via_name": "Basic Channel",
+      "blurb": "Dub Techno is a sub-scene of Berlin Techno; Basic Channel is the hinge."
+    },
+    {
+      "from_slug": "uk-warp-bleep",
+      "to_slug": "uk-london-house",
+      "via_kind": "sound",
+      "via_name": "UK Bleep",
+      "blurb": "Warp's first 12-inches were UK bleep — the half-beat, sparse aesthetic that bridged London hardcore and Sheffield techno."
+    },
+    {
+      "from_slug": "belgium-r-and-s",
+      "to_slug": "detroit-core",
+      "via_kind": "artist",
+      "via_name": "Derrick May",
+      "blurb": "May licensed to R&S; R&S's earliest catalogue carried Detroit's earliest exports."
+    },
+    {
+      "from_slug": "frankfurt-idm",
+      "to_slug": "uk-warp-bleep",
+      "via_kind": "sound",
+      "via_name": "IDM",
+      "blurb": "Mille Plateaux and Warp ran the IDM/glitch axis in parallel — Frankfurt and Sheffield as the two coastal cities of the form."
+    }
+  ]
+}

@@ -27,6 +27,7 @@ import { registerUsageRoutes } from "./routes/v1/usage.js";
 import { initUsagePersistence, recordApiRequest, shutdownUsagePersistence } from "./metrics/usage.js";
 import { registerAskRoutes } from "./routes/v1/ask.js";
 import { registerMarketRoutes } from "./routes/v1/market.js";
+import { registerScenesRoutes } from "./routes/v1/scenes.js";
 
 export interface AppDeps {
   databaseUrl: string;
@@ -227,6 +228,7 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerUsageRoutes(app, db);
   registerAskRoutes(app, db);
   registerMarketRoutes(app, redis);
+  registerScenesRoutes(app, db);
 
   app.addHook("onClose", async () => {
     await shutdownUsagePersistence();
