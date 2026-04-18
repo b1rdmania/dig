@@ -21,6 +21,7 @@ import { musicGroupJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "@/components/JsonLd";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { Provenance } from "@/components/Provenance";
+import { TrailRecorder } from "@/components/TrailRecorder";
 import { CollapsibleList } from "@/components/CollapsibleList";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
@@ -357,6 +358,12 @@ async function ArtistContent({ id, releaseType }: { id: string; releaseType: str
 
     return (
       <>
+        <TrailRecorder
+          kind="artist"
+          id={artist.discogs_id}
+          name={artist.name}
+          subtitle={artist.real_name ?? undefined}
+        />
         <section className={styles.hero}>
           <div className={styles.eyebrow}>ARTIST · #{artist.discogs_id}</div>
           <h1 className={styles.title}>{artist.name}</h1>

@@ -22,6 +22,7 @@ import { ErrorMessage } from "@/components/ErrorMessage";
 import { MediaSection } from "@/components/MediaSection";
 import { Provenance } from "@/components/Provenance";
 import { PageViewTracker } from "@/components/PageViewTracker";
+import { TrailRecorder } from "@/components/TrailRecorder";
 import { OutboundLink } from "@/components/OutboundLink";
 import { ShareBar } from "@/components/ShareBar";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
@@ -355,6 +356,12 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
       accentInk={palette?.accent_ink}
     >
       <PageViewTracker type="release" entityId={master.discogs_id} title={master.title} />
+      <TrailRecorder
+        kind="master"
+        id={master.discogs_id}
+        name={master.title}
+        subtitle={primaryArtistName ?? undefined}
+      />
 
       <section className={styles.hero}>
         {palette && <div className={styles.accentRule} aria-hidden />}

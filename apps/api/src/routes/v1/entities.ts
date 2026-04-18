@@ -2,7 +2,15 @@ import type { FastifyInstance } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import { sql } from "@dig/db";
-import { getArtist, getLabel, getMaster, getReleaseShadow, getBatchForTable } from "@dig/domain";
+import {
+  getArtist,
+  getLabel,
+  getMaster,
+  getReleaseShadow,
+  getBatchForTable,
+  getLabelCoreRun,
+  getLabelRelated,
+} from "@dig/domain";
 
 const PG_INT4_MAX = 2_147_483_647;
 
@@ -71,16 +79,24 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
     }
     try {
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.labels");
-      const label = await db.transaction().execute(async (trx) => {
+      const result = await db.transaction().execute(async (trx) => {
         await sql`SET LOCAL statement_timeout = '8000'`.execute(trx);
-        return getLabel(trx, discogsId, batchId, dumpDate);
+        const labelDetail = await getLabel(trx, discogsId, batchId, dumpDate);
+        if (!labelDetail) return null;
+        // Phase C: core_run + related label essentials. Parallel within the
+        // same transaction so the 8s statement_timeout still applies.
+        const [coreRun, related] = await Promise.all([
+          getLabelCoreRun(trx, discogsId, 10),
+          getLabelRelated(trx, discogsId),
+        ]);
+        return { label: labelDetail, core_run: coreRun, related };
       });
-      if (!label) {
+      if (!result) {
         return reply.status(404).send({
           error: { code: "NOT_FOUND", message: `Label ${discogsId} not found`, details: null },
         });
       }
-      return reply.send({ label });
+      return reply.send(result);
     } catch (err) {
       if (isPgTimeout(err)) {
         return reply.status(504).send({

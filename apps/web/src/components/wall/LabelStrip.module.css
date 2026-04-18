@@ -1,0 +1,241 @@
+.strip {
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  text-decoration: none;
+  color: var(--ink);
+  position: relative;
+  overflow: hidden;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  /* Subtle paper-tinted background derived from the palette accent. */
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--strip-accent) 4%, var(--paper)) 0%,
+    var(--paper) 12%
+  );
+}
+
+.strip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 2;
+}
+
+/* density variants */
+.compact {
+  width: 180px;
+  min-height: 240px;
+}
+
+.medium {
+  width: 240px;
+  min-height: 320px;
+}
+
+.full {
+  width: 320px;
+  min-height: 480px;
+}
+
+/* --- header --- */
+.header {
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.nameRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  line-height: 1.2;
+  /* allow long label names to wrap onto two lines but not three */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.full .name {
+  font-size: var(--fs-base);
+}
+
+.roleBadge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--strip-accent) 15%, var(--paper));
+  padding: 1px 4px;
+  border-radius: 1px;
+  flex: 0 0 auto;
+}
+
+.accentRule {
+  height: 2px;
+  background: var(--strip-accent);
+  width: 100%;
+  margin-top: var(--sp-1);
+}
+
+.metaLine {
+  display: flex;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: var(--sp-1);
+}
+
+.metaSep {
+  color: var(--ink-faint);
+}
+
+.metaCity {
+  flex: 0 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metaEra {
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+/* --- releases --- */
+.releases {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3) var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  flex: 1;
+}
+
+.release {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: var(--sp-2);
+  align-items: baseline;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.full .release {
+  font-size: var(--fs-sm);
+  grid-template-columns: 40px 1fr;
+}
+
+.releaseYear {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.full .releaseYear {
+  font-size: 11px;
+}
+
+.releaseBody {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.releaseTitle {
+  font-family: var(--font-mono);
+  color: var(--ink);
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.full .releaseTitle {
+  font-size: var(--fs-sm);
+}
+
+.releaseArtist {
+  font-family: var(--font-sans);
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.full .releaseArtist {
+  font-size: 11px;
+}
+
+.empty {
+  padding: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* --- footer --- */
+.footer {
+  border-top: 1px dashed var(--rule);
+  padding: var(--sp-2) var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  justify-content: space-between;
+  background: color-mix(in srgb, var(--strip-accent) 6%, transparent);
+}
+
+.footerCount {
+  font-variant-numeric: tabular-nums;
+}
+
+.footerMore {
+  color: var(--ink-faint);
+}
+
+@media (max-width: 720px) {
+  .compact {
+    width: 160px;
+    min-height: 220px;
+  }
+  .medium {
+    width: 200px;
+    min-height: 280px;
+  }
+  .full {
+    width: 100%;
+    min-height: 0;
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "$schema": "label_related_v1.schema.json",
+  "version": 1,
+  "notes": "Hand-seeded directional edges between labels. Drives the 'if you like this, go here' block on label pages. Direction vocabulary is fixed to 8 values (see migration 029). Only references labels that resolve from scenes_v1.json so seed-label-essentials.ts can name-resolve them via catalog.labels.",
+  "edges": [
+    { "from": "Underground Resistance", "to": "Tresor Records", "direction": "later",   "blurb": "Detroit shipped to Berlin. Mills, Hood, Acquaviva all turn up on Tresor's catalogue." },
+    { "from": "Underground Resistance", "to": "Axis",            "direction": "harder",  "blurb": "Mills' solo imprint — the same militancy, distilled to peak-time tools." },
+    { "from": "Underground Resistance", "to": "Metroplex",       "direction": "earlier", "blurb": "Atkins' founding label — UR's predecessor in the Detroit chain." },
+    { "from": "Transmat",               "to": "Metroplex",       "direction": "earlier", "blurb": "Belleville Three lineage — Atkins before May." },
+    { "from": "Transmat",               "to": "Underground Resistance", "direction": "harder", "blurb": "May's house-leaning futurism gives way to UR's harder activist techno." },
+    { "from": "Metroplex",              "to": "Transmat",        "direction": "later",   "blurb": "Atkins to May — the next link in the Belleville chain." },
+    { "from": "Metroplex",              "to": "KMS",             "direction": "cleaner", "blurb": "Saunderson's KMS pulls Metroplex's electro-funk into cleaner Detroit-house territory." },
+    { "from": "KMS",                    "to": "Strictly Rhythm", "direction": "poppier", "blurb": "Saunderson's house DNA finds its commercial peak on the New York vocal-house circuit." },
+    { "from": "Planet E",               "to": "Transmat",        "direction": "weirder", "blurb": "Craig's Planet E takes May's futurism into broken-beat and electronic jazz." },
+    { "from": "Plus 8 Records",         "to": "Underground Resistance", "direction": "cleaner", "blurb": "Hawtin's Windsor-side techno — same sonic neighbourhood, more minimal architecture." },
+    { "from": "M-Plant",                "to": "Plus 8 Records",  "direction": "rawer",   "blurb": "Hood's M-Plant strips the Plus 8 minimal aesthetic to its absolute bones." },
+
+    { "from": "Tresor Records",         "to": "Underground Resistance", "direction": "earlier", "blurb": "The source. Tresor's first three years are basically a Detroit licensing operation." },
+    { "from": "Tresor Records",         "to": "Basic Channel",   "direction": "deeper",  "blurb": "Same city, opposite end of the spectrum — bunker peak-time vs. dub-tech for headphones." },
+    { "from": "Tresor Records",         "to": "Chain Reaction",  "direction": "deeper",  "blurb": "Tresor's harder face has a quiet, harmonic shadow on Chain Reaction." },
+    { "from": "Basic Channel",          "to": "Chain Reaction",  "direction": "later",   "blurb": "Same axis, second generation — von Oswald and Ernestus's curated successor imprint." },
+    { "from": "Basic Channel",          "to": "Rhythm & Sound",  "direction": "weirder", "blurb": "The same hands turn to vocal dub and reggae — Basic Channel's parallel project." },
+    { "from": "Chain Reaction",         "to": "Basic Channel",   "direction": "earlier", "blurb": "The mothership. Chain Reaction is unimaginable without BCD." },
+    { "from": "Chain Reaction",         "to": "Mille Plateaux",  "direction": "weirder", "blurb": "From Berlin's harmonic dub to Frankfurt's philosophical glitch." },
+    { "from": "Maurizio",               "to": "Basic Channel",   "direction": "earlier", "blurb": "Maurizio is Basic Channel's other name — the numbered series that became the canonical document." },
+    { "from": "Rhythm & Sound",         "to": "Basic Channel",   "direction": "earlier", "blurb": "Same producers, before they fully turned to dub." },
+    { "from": "Perlon",                 "to": "Kompakt",         "direction": "rawer",   "blurb": "Kompakt's microhouse, but jacking and Berlin-shaped instead of Cologne-clean." },
+
+    { "from": "Trax Records",           "to": "Dance Mania",     "direction": "rawer",   "blurb": "Same city, the next room. DM strips Trax's house DNA to the studs and adds the ghetto-house punch." },
+    { "from": "Dance Mania",            "to": "Trax Records",    "direction": "earlier", "blurb": "House music's parent label — Trax built the form Dance Mania mutated." },
+
+    { "from": "Warp Records",           "to": "Mille Plateaux",  "direction": "weirder", "blurb": "Warp's IDM finds its more theoretical European twin in Frankfurt's glitch axis." },
+    { "from": "Warp Records",           "to": "Ninja Tune",      "direction": "poppier", "blurb": "Different lineage, similar UK leftfield instinct — beats with personality, not just function." },
+    { "from": "Warp Records",           "to": "Rephlex",         "direction": "weirder", "blurb": "Aphex Twin's own imprint — Warp's catalogue mutated into pure outsider electronics." },
+    { "from": "Mille Plateaux",         "to": "Warp Records",    "direction": "poppier", "blurb": "Frankfurt's philosophy department; Sheffield is the gallery shop — same artists, more reach." },
+    { "from": "Mille Plateaux",         "to": "Chain Reaction",  "direction": "cleaner", "blurb": "Same nineties harmonic-electronics moment, from Frankfurt theory to Berlin dub." },
+    { "from": "Force Inc. Music Works", "to": "Mille Plateaux",  "direction": "weirder", "blurb": "Szepanski's same family — Force Inc. as the techno parent, Mille Plateaux as the deeper sibling." },
+
+    { "from": "Mute Records",           "to": "Warp Records",    "direction": "weirder", "blurb": "Mute's polished synth-pop has a stranger, harder-to-classify cousin in Sheffield." },
+    { "from": "Mute Records",           "to": "NovaMute",        "direction": "harder",  "blurb": "Mute's techno arm — built to put Beltram and the Belgians on a UK label." },
+    { "from": "XL Recordings",          "to": "Mute Records",    "direction": "earlier", "blurb": "London independent lineage — Mute predates XL by a decade and shaped its instinct." },
+    { "from": "XL Recordings",          "to": "Junior Boy's Own", "direction": "rawer",  "blurb": "JBO carries the rawer underground-house end of the same London moment." },
+    { "from": "Junior Boy's Own",       "to": "XL Recordings",   "direction": "poppier", "blurb": "JBO breaks acts; XL puts them on Top of the Pops." },
+
+    { "from": "Mo Wax",                 "to": "Ninja Tune",      "direction": "cleaner", "blurb": "Coldcut's Ninja Tune — same UK leftfield-breaks era, more sample-funk craft." },
+    { "from": "Ninja Tune",             "to": "Mo Wax",          "direction": "earlier", "blurb": "Lavelle's Mo Wax got there first — Futura sleeves, MPC swing, the trip-hop blueprint." },
+
+    { "from": "Strictly Rhythm",        "to": "Nervous Records", "direction": "later",   "blurb": "The Masters at Work axis — Strictly Rhythm's house DNA channelled into Nervous's tougher New York sound." },
+    { "from": "Nervous Records",        "to": "Nu Groove Records", "direction": "earlier", "blurb": "Nu Groove's four-year sprint laid the New York underground foundation that Nervous built on." },
+    { "from": "Nu Groove Records",      "to": "Strictly Rhythm", "direction": "cleaner", "blurb": "Strictly's longer arc — Nu Groove's raw New York house, scaled and polished." },
+
+    { "from": "R & S Records",          "to": "Apollo Records (2)", "direction": "deeper", "blurb": "Vandepapeliere's ambient subsidiary — R&S's harder catalogue at half-speed, in headphones." },
+    { "from": "R & S Records",          "to": "Music Man Records", "direction": "harder", "blurb": "Belgium's harder counterweight — same era, less licensed Detroit, more Belgian peak-time." },
+    { "from": "Apollo Records (2)",     "to": "R & S Records",   "direction": "harder",  "blurb": "Drop the ambient cloak and you're back on the parent label's dancefloor." },
+    { "from": "Music Man Records",      "to": "R & S Records",   "direction": "earlier", "blurb": "R&S is the older Belgian label — the one Music Man defines itself against." },
+
+    { "from": "Kompakt",                "to": "Profan",          "direction": "rawer",   "blurb": "Voigt's earlier imprint — same hand, less polished, more experimental." },
+    { "from": "Profan",                 "to": "Kompakt",         "direction": "cleaner", "blurb": "Profan's experiments crystallise into Kompakt's clean Cologne minimal aesthetic." },
+    { "from": "Kompakt",                "to": "Perlon",          "direction": "weirder", "blurb": "Cologne's polished microhouse meets Berlin's stranger, jacking microhouse." },
+
+    { "from": "Sähkö Recordings",       "to": "Mille Plateaux",  "direction": "later",   "blurb": "Helsinki minimalism's continental theory cousin — same sine-wave instincts, different decade." },
+
+    { "from": "Soma Quality Recordings", "to": "Underground Resistance", "direction": "earlier", "blurb": "Slam's Glasgow techno carries UR's militant minimal DNA — without the Detroit lineage Soma wouldn't exist." },
+    { "from": "Ovum Recordings",        "to": "Strictly Rhythm", "direction": "harder",  "blurb": "Wink's Philly imprint — US house with European-influenced peak-time edges." },
+
+    { "from": "Axis",                   "to": "Underground Resistance", "direction": "earlier", "blurb": "Mills' Axis is UR's after-hours room — same militancy, distilled to peak-time tools." },
+    { "from": "Axis",                   "to": "Tresor Records",  "direction": "later",   "blurb": "Mills' bridge label — most Axis 12-inches end up on a Tresor compilation eventually." },
+    { "from": "Axis",                   "to": "M-Plant",         "direction": "cleaner", "blurb": "Hood's M-Plant strips Mills' peak-time tools to a quieter, more architectural minimalism." },
+    { "from": "Underground Resistance", "to": "Transmat",        "direction": "poppier", "blurb": "May's earlier imprint sounds almost lush next to UR's militant, stripped-down catalogue." },
+    { "from": "Underground Resistance", "to": "Submerge Recordings", "direction": "later", "blurb": "Mike Banks' distribution arm — UR's wider Detroit family, the imprints carrying the next wave." },
+    { "from": "430 West",               "to": "Underground Resistance", "direction": "earlier", "blurb": "Burden brothers ran adjacent to UR's collective — same Detroit, harder edges came first." },
+    { "from": "430 West",               "to": "Planet E",        "direction": "weirder", "blurb": "Octave One's tougher techno meets Carl Craig's broken-beat futurism on the same Detroit map." },
+    { "from": "M-Plant",                "to": "Axis",            "direction": "harder",  "blurb": "Hood's minimalism finds its peak-time twin in Mills' Axis tools." },
+    { "from": "Plus 8 Records",         "to": "M-Plant",         "direction": "deeper",  "blurb": "Hawtin's Windsor lineage; Hood's M-Plant is the more spiritual, stripped end of the same minimal techno axis." },
+
+    { "from": "Tresor Records",         "to": "Axis",            "direction": "harder",  "blurb": "Mills' Axis is the door from Tresor's bunker techno into pure peak-time tools." },
+    { "from": "Mille Plateaux",         "to": "Sähkö Recordings", "direction": "earlier", "blurb": "Helsinki's sine-wave minimalism predates Frankfurt's glitch theory — a quieter Northern source." },
+    { "from": "Perlon",                 "to": "Kompakt",         "direction": "cleaner", "blurb": "Berlin's stranger jacking microhouse, polished through Cologne's clean Pop Ambient sensibility." },
+
+    { "from": "Junior Boy's Own",       "to": "Mute Records",    "direction": "weirder", "blurb": "Mute's experimental synth lineage runs alongside JBO's underground house — different room, same London." },
+    { "from": "Strictly Rhythm",        "to": "Trax Records",    "direction": "earlier", "blurb": "House music's source — Trax built the Chicago foundation Strictly Rhythm's New York scene rests on." },
+    { "from": "Trax Records",           "to": "Strictly Rhythm", "direction": "later",   "blurb": "What Chicago invented; New York industrialised. Strictly's hundred-12-inch onslaught is house at scale." },
+
+    { "from": "Mo Wax",                 "to": "Warp Records",    "direction": "weirder", "blurb": "Lavelle's trip-hop catalogue meets Sheffield's IDM — same UK leftfield, different room." },
+    { "from": "Ninja Tune",             "to": "Warp Records",    "direction": "weirder", "blurb": "Coldcut's Ninja Tune meets Sheffield's IDM — same UK leftfield, harder to classify." },
+    { "from": "NovaMute",               "to": "Tresor Records",  "direction": "earlier", "blurb": "Mute's techno arm licensed Tresor's bunker output to UK — the source predates the licensee." }
+  ]
+}

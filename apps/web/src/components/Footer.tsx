@@ -13,7 +13,6 @@ export function Footer() {
           </div>
           <nav className={styles.links} aria-label="Footer">
             <Link href="/about" prefetch={false} className={styles.link}>About</Link>
-            <Link href="/mcp" prefetch={false} className={styles.link}>MCP setup</Link>
             <Link href="/llm-beta" prefetch={false} className={styles.link}>LLM beta</Link>
             <Link href="/progress" prefetch={false} className={styles.link}>How we built</Link>
             <Link href="/usage" prefetch={false} className={styles.link}>Usage</Link>

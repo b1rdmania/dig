@@ -453,6 +453,37 @@ export interface EnrichSceneBridgesTable {
   added_at: Generated<Date>;
 }
 
+// Phase C label essentials (029)
+
+export interface EnrichLabelCoreRunTable {
+  discogs_label_id: number;
+  master_discogs_id: number;
+  rank: number;
+  source: "auto" | "curated";
+  note: string | null;
+  added_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export type LabelRelatedDirection =
+  | "deeper"
+  | "harder"
+  | "rawer"
+  | "cleaner"
+  | "weirder"
+  | "poppier"
+  | "earlier"
+  | "later";
+
+export interface EnrichLabelRelatedTable {
+  from_label_id: number;
+  to_label_id: number;
+  direction: LabelRelatedDirection;
+  rank: Generated<number>;
+  blurb: string | null;
+  added_at: Generated<Date>;
+}
+
 export interface CatalogReleaseShadowTable {
   release_discogs_id: number;
   master_discogs_id: number | null;
@@ -527,4 +558,7 @@ export interface Database {
   "enrich.scenes": EnrichScenesTable;
   "enrich.scene_labels": EnrichSceneLabelsTable;
   "enrich.scene_bridges": EnrichSceneBridgesTable;
+  // Phase C label essentials (029)
+  "enrich.label_core_run": EnrichLabelCoreRunTable;
+  "enrich.label_related": EnrichLabelRelatedTable;
 }

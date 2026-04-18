@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { digFetch, fetchMcpUsage } from "@/lib/api";
+import { digFetch } from "@/lib/api";
 import type { ApiUsageSnapshot, UsageWindow } from "@/lib/types";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "Usage — dig",
-  description: "Live public usage stats for Dig web, API, and MCP beta.",
+  description: "Live public usage stats for Dig web and API.",
 };
 export const dynamic = "force-dynamic";
 
@@ -49,11 +49,9 @@ function WindowRow({ label, window }: WindowRowProps) {
 }
 
 export default async function UsagePage() {
-  const [apiUsageResult, mcpUsageResult] = await Promise.allSettled([
-    // Cache briefly to avoid burst/crawler amplification on API usage route.
+  const apiUsageResult = await Promise.allSettled([
     digFetch<ApiUsageSnapshot>("/v1/usage", { revalidate: 30 }),
-    fetchMcpUsage(),
-  ]);
+  ]).then((r) => r[0]);
 
   if (apiUsageResult.status !== "fulfilled") {
     return (
@@ -70,11 +68,9 @@ export default async function UsagePage() {
   }
 
   const apiUsage = apiUsageResult.value;
-  const mcpUsage = mcpUsageResult.status === "fulfilled" ? mcpUsageResult.value : null;
 
   const categoryRows = mapRows(apiUsage.requests_by_category);
   const eventRows = mapRows(apiUsage.telemetry_by_event);
-  const mcpRows = mcpUsage ? mapRows(mcpUsage.calls_by_tool) : [];
   const lifetimeCategoryRows = apiUsage.lifetime ? mapRows(apiUsage.lifetime.requests_by_category) : [];
   const lifetimeEventRows = apiUsage.lifetime ? mapRows(apiUsage.lifetime.telemetry_by_event) : [];
 
@@ -120,11 +116,6 @@ export default async function UsagePage() {
           <p className={styles.label}>API Requests (Lifetime)</p>
           <p className={styles.value}>{formatNumber(apiUsage.lifetime?.requests_total ?? apiUsage.requests_total)}</p>
           <p className={styles.sub}>{apiUsage.lifetime ? "cumulative since launch" : "fallback: since process start"}</p>
-        </article>
-        <article className={styles.card}>
-          <p className={styles.label}>MCP Calls</p>
-          <p className={styles.value}>{formatNumber(mcpUsage?.calls_total ?? 0)}</p>
-          <p className={styles.sub}>{mcpUsage ? "since process start" : "unavailable"}</p>
         </article>
         <article className={styles.card}>
           <p className={styles.label}>Unique Sessions</p>
@@ -259,24 +250,9 @@ export default async function UsagePage() {
         </dl>
       </section>
 
-      <section className={styles.section}>
-        <h2>MCP tool calls</h2>
-        {mcpUsage ? (
-          <dl className={styles.list}>
-            {mcpRows.map(([k, v]) => (
-              <div className={styles.row} key={k}>
-                <dt>{k}</dt>
-                <dd>{formatNumber(v)}</dd>
-              </div>
-            ))}
-          </dl>
-        ) : (
-          <p className={styles.warn}>MCP usage endpoint is currently unavailable.</p>
-        )}
-      </section>
-
       <p className={styles.note}>
-        Data source: Dig API persistent counters + process diagnostics, and MCP process counters.
+        Data source: Dig API persistent counters + process diagnostics. MCP server is{" "}
+        <a href="/mcp">archived</a>.
       </p>
     </div>
   );

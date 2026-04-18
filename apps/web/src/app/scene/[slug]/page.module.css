@@ -1,0 +1,216 @@
+.page {
+  --scene-accent: var(--ink);
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding-bottom: var(--sp-9);
+}
+
+.pageHeader {
+  margin-bottom: var(--sp-6);
+  padding-bottom: var(--sp-5);
+  border-bottom: 1px solid var(--rule);
+  position: relative;
+}
+
+.pageHeader::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 96px;
+  height: 3px;
+  background: var(--scene-accent);
+}
+
+.crumbs {
+  margin-bottom: var(--sp-4);
+}
+
+.crumbLink {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: var(--sp-3);
+}
+
+.axisBadge {
+  background: var(--scene-accent);
+  color: var(--paper);
+  padding: 2px 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.metaSep {
+  color: var(--ink-faint);
+}
+
+.eyebrowEra {
+  font-variant-numeric: tabular-nums;
+}
+
+.heading {
+  font-family: var(--font-sans);
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--sp-3);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.lede {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--fs-md);
+  color: var(--ink-soft);
+  max-width: 64ch;
+  margin: 0 0 var(--sp-4);
+  line-height: 1.5;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chip {
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  text-decoration: none;
+  background: var(--paper);
+}
+
+.chip:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.chipActive {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.toolbarSep {
+  color: var(--ink-faint);
+  margin: 0 var(--sp-1);
+}
+
+.toolbarStat {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.bridges {
+  margin-top: var(--sp-8);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--rule);
+}
+
+.bridgesHeading {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+  margin: 0 0 var(--sp-4);
+}
+
+.bridgesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--sp-4);
+}
+
+.bridgeCard {
+  display: block;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  text-decoration: none;
+  color: var(--ink);
+  transition: border-color 120ms, transform 120ms;
+}
+
+.bridgeCard:hover {
+  border-color: var(--ink);
+  transform: translateY(-1px);
+}
+
+.bridgeCardIn {
+  background: color-mix(in oklab, var(--paper) 96%, var(--ink) 4%);
+}
+
+.bridgeHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: var(--sp-2);
+}
+
+.bridgeArrow {
+  font-size: 14px;
+  color: var(--scene-accent);
+  font-weight: 700;
+}
+
+.bridgeKind {
+  background: var(--rule);
+  padding: 1px 6px;
+  color: var(--ink);
+}
+
+.bridgeName {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.bridgeTo {
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: var(--sp-2);
+  letter-spacing: -0.01em;
+}
+
+.bridgeBlurb {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  margin: 0;
+  line-height: 1.45;
+}

@@ -39,14 +39,14 @@ export default function ProgressPage() {
           <div className={styles.metaItem}>
             <div className={styles.metaKey}>Tests</div>
             <div className={styles.metaVal}>
-              65 unit + 47 MCP smoke (18 contract, 47 remote)
+              65 unit + 18 contract (MCP smoke retired with the server)
             </div>
           </div>
           <div className={styles.metaItem}>
             <div className={styles.metaKey}>Live surfaces</div>
             <div className={styles.metaVal}>
               <a href="https://app.dig.baby">app.dig.baby</a> (search UI) +
-              dig-api.fly.dev (REST) + dig-mcp.fly.dev (MCP SSE)
+              dig-api.fly.dev (REST). MCP server <a href="/mcp">archived</a>.
             </div>
           </div>
         </div>
@@ -381,8 +381,8 @@ export default function ProgressPage() {
           <br />
           <strong>Live:</strong>{" "}
           <a href="https://app.dig.baby">app.dig.baby</a> (search UI) +
-          dig-api.fly.dev (REST) + dig-mcp.fly.dev (MCP SSE). Cover art via CAA
-          (1.77M releases). Enrichment API live.
+          dig-api.fly.dev (REST). MCP server <a href="/mcp">archived</a> (source
+          remains in repo). Cover art via CAA (1.77M releases). Enrichment API live.
         </div>
       </section>
 

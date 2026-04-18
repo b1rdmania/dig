@@ -222,7 +222,7 @@ export function LlmBetaClient() {
         <Link href="/feedback" className={styles.supportLink}>Report a bug</Link>
         <a href="https://x.com/b1rdmania" target="_blank" rel="noreferrer" className={styles.supportLink}>@b1rdmania</a>
         <a href="https://github.com/b1rdmania/dig" target="_blank" rel="noreferrer" className={styles.supportLink}>GitHub</a>
-        <Link href="/mcp" className={styles.supportLink}>MCP setup</Link>
+        <Link href="/about" className={styles.supportLink}>About</Link>
       </section>
 
       {!hasKey && (

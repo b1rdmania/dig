@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { IBM_Plex_Sans, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { TrailBar } from "@/components/TrailBar";
 import "./globals.css";
 
 const sans = IBM_Plex_Sans({
@@ -38,12 +39,21 @@ export const metadata: Metadata = {
       "A curated catalog of house and techno from 1988 to 2003 — the labels, the records, the scenes that built the form.",
     siteName: "dig",
     locale: "en_US",
+    images: [
+      {
+        url: "/api/og?kind=home",
+        width: 1200,
+        height: 630,
+        alt: "dig — house and techno, 1988–2003",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "dig — house and techno, 1988–2003",
     description:
       "A curated catalog of house and techno from 1988 to 2003 — the labels, the records, the scenes that built the form.",
+    images: ["/api/og?kind=home"],
   },
 };
 
@@ -79,6 +89,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <Nav />
         </Suspense>
+        <TrailBar />
         <main>
           {children}
         </main>

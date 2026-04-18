@@ -2,8 +2,8 @@
  * Read-only production/local regression smoke.
  *
  * Usage:
- *   API_URL=https://dig-api.fly.dev WEB_URL=https://app.dig.baby MCP_URL=https://dig-mcp.fly.dev npx tsx scripts/regression-smoke.ts
- *   API_URL=http://localhost:3000 WEB_URL=http://localhost:3002 MCP_URL=http://localhost:3001 npx tsx scripts/regression-smoke.ts
+ *   API_URL=https://dig-api.fly.dev WEB_URL=https://app.dig.baby npx tsx scripts/regression-smoke.ts
+ *   API_URL=http://localhost:3000 WEB_URL=http://localhost:3002 npx tsx scripts/regression-smoke.ts
  */
 
 type FailureCategory = "QUERY_TIMEOUT" | "EMPTY_SUCCESS_ANOMALY" | "NETWORK_ERROR" | "ASSERTION" | null;
@@ -25,7 +25,6 @@ function classifyFailure(detail: string): FailureCategory {
 
 const API_URL = (process.env.API_URL ?? "https://dig-api.fly.dev").replace(/\/$/, "");
 const WEB_URL = (process.env.WEB_URL ?? "https://app.dig.baby").replace(/\/$/, "");
-const MCP_URL = (process.env.MCP_URL ?? "https://dig-mcp.fly.dev").replace(/\/$/, "");
 
 const FETCH_TIMEOUT_MS = 20_000;
 const MAX_RETRIES = 2;
@@ -179,19 +178,6 @@ async function run(): Promise<void> {
     }
   }
 
-  // MCP service usage endpoint availability (lightweight sanity)
-  try {
-    const usage = await getJson(`${MCP_URL}/usage`);
-    checks.push({
-      name: "mcp-usage-endpoint",
-      ok: usage?.service === "dig-mcp" && typeof usage?.calls_total === "number",
-      detail: JSON.stringify({ service: usage?.service, calls_total: usage?.calls_total }),
-      blocking: true,
-    });
-  } catch (err: any) {
-    checks.push({ name: "mcp-usage-endpoint", ok: false, detail: String(err?.message ?? err), blocking: true });
-  }
-
   // Web route status checks
   const webCases = [
     { name: "web-home", path: "/" },
@@ -199,7 +185,7 @@ async function run(): Promise<void> {
     { name: "web-release-21004", path: "/release/21004" },
     { name: "web-version-9", path: "/version/9" },
     { name: "web-label-1", path: "/label/1" },
-    { name: "web-mcp-page", path: "/mcp" },
+    { name: "web-mcp-page", path: "/mcp" }, // archived notice page; should still 200
   ];
   for (const test of webCases) {
     try {

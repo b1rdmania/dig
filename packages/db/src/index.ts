@@ -5,7 +5,7 @@ import type { Database } from "./schema.js";
 
 export { sql } from "kysely";
 export type { Kysely } from "kysely";
-export type { Database } from "./schema.js";
+export type { Database, LabelRelatedDirection } from "./schema.js";
 
 // Pool size: 20 per machine. 2 API machines × 20 = 40 total connections.
 // Fly Postgres flex (shared-cpu-2x) defaults to ~100 max_connections, so 40

@@ -295,8 +295,44 @@ export interface Label {
   provenance: Provenance;
 }
 
+export type RelatedDirection =
+  | "deeper"
+  | "harder"
+  | "rawer"
+  | "cleaner"
+  | "weirder"
+  | "poppier"
+  | "earlier"
+  | "later";
+
+export interface CoreRunMaster {
+  master_discogs_id: number;
+  rank: number;
+  source: "auto" | "curated";
+  note: string | null;
+  title: string;
+  year: number | null;
+  primary_artist_name: string | null;
+  primary_artist_discogs_id: number | null;
+  scene_weight: number | null;
+}
+
+export interface RelatedLabel {
+  to_label_id: number;
+  to_label_name: string;
+  direction: RelatedDirection;
+  rank: number;
+  blurb: string | null;
+  to_label_master_count: number;
+  palette: { accent: string; accent_ink: string } | null;
+}
+
 export interface LabelResponse {
   label: Label;
+  /** Phase C, optional for back-compat with API < 2026-04-17. */
+  core_run?: CoreRunMaster[];
+  /** Phase C, optional for back-compat with API < 2026-04-17. */
+  related?: RelatedLabel[];
 }
 
 // Label roster (top artists by master count on the label)
@@ -695,12 +731,91 @@ export interface ApiUsageSnapshotInternal extends ApiUsageSnapshot {
   }>;
 }
 
-export interface McpUsageSnapshot {
-  service: "dig-mcp";
-  window: string;
-  started_at: string;
-  uptime_seconds: number;
-  calls_total: number;
-  errors_total: number;
-  calls_by_tool: Record<string, number>;
+// --- Scenes (catalog wall) ---
+
+export type SceneAxis = "geography" | "sound" | "era" | "cluster" | "bridge" | "micro";
+export type SceneRole = "core" | "adjacent" | "bridge";
+export type BridgeKind = "artist" | "label" | "sound";
+
+export interface ScenePalette {
+  accent: string;
+  accent_ink: string;
+}
+
+export interface SceneSummary {
+  slug: string;
+  name: string;
+  city: string | null;
+  era_start: number | null;
+  era_end: number | null;
+  axis: SceneAxis;
+  parent_slug: string | null;
+  depth: number;
+  hero_label_id: number | null;
+  blurb: string | null;
+  palette: ScenePalette | null;
+  label_count: number;
+}
+
+export interface SceneLabelMember {
+  discogs_id: number;
+  name: string;
+  role: SceneRole;
+  rank: number;
+  palette: ScenePalette | null;
+  founded_year: number | null;
+  closed_year: number | null;
+  is_active: boolean;
+  location: string | null;
+  master_count: number;
+}
+
+export interface SceneBridgeLink {
+  from_slug: string;
+  to_slug: string;
+  via_kind: BridgeKind;
+  via_id: number | null;
+  via_name: string | null;
+  blurb: string | null;
+}
+
+export interface SceneDetail extends SceneSummary {
+  labels: SceneLabelMember[];
+  bridges_out: SceneBridgeLink[];
+  bridges_in: SceneBridgeLink[];
+}
+
+export interface WallStripRelease {
+  master_discogs_id: number;
+  title: string;
+  primary_artist_name: string | null;
+  year: number | null;
+  scene_weight: number;
+}
+
+export interface WallStripLabel extends SceneLabelMember {
+  era: { start: number | null; end: number | null };
+  total_masters: number;
+  releases: WallStripRelease[];
+}
+
+export interface SceneWall extends SceneSummary {
+  labels: WallStripLabel[];
+  density: "compact" | "medium" | "full";
+  per_label_cap: number;
+}
+
+export interface ListScenesResponse {
+  scenes: SceneSummary[];
+  meta: { count: number; provenance: { source: string; dump_date: string } };
+}
+
+export interface SceneDetailResponse {
+  scene: SceneDetail;
+  meta: { provenance: { source: string; dump_date: string } };
+}
+
+export interface SceneWallResponse {
+  wall: SceneWall;
+  meta: { provenance: { source: string; dump_date: string } };
 }

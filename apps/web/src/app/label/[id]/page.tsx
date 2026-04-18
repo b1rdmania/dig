@@ -21,6 +21,7 @@ import { entityMetadata, BASE_URL } from "@/lib/seo";
 import { labelJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "@/components/JsonLd";
 import { Provenance } from "@/components/Provenance";
+import { TrailRecorder } from "@/components/TrailRecorder";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ShareBar } from "@/components/ShareBar";
@@ -35,6 +36,8 @@ import {
   SublabelTree,
   LabelWordmark,
   hasCuratedWordmark,
+  CoreRun,
+  RelatedLabels,
   type SpineRow,
   type RosterRow,
 } from "@/components/design";
@@ -97,6 +100,8 @@ async function LabelContent({ id }: { id: string }) {
   const ed = label.editorial;
   const tier = ed?.tier ?? label.tier;
   const palette = ed?.palette ?? null;
+  const coreRun = labelData.core_run ?? [];
+  const relatedLabels = labelData.related ?? [];
 
   const defaultTraversal: TraversalResponse = {
     links: [],
@@ -190,6 +195,12 @@ async function LabelContent({ id }: { id: string }) {
       accent={palette?.accent}
       accentInk={palette?.accent_ink}
     >
+      <TrailRecorder
+        kind="label"
+        id={label.discogs_id}
+        name={label.name}
+        subtitle={ed?.location ?? undefined}
+      />
       <div className={styles.identity}>
         {palette && <div className={styles.accentRule} aria-hidden />}
         <div className={styles.eyebrow}>
@@ -273,6 +284,17 @@ async function LabelContent({ id }: { id: string }) {
 
       <div className={styles.body}>
         <div className={styles.spineCol}>
+          {coreRun.length > 0 && (
+            <section className={styles.coreRunBlock}>
+              <header className={styles.sectionHead}>
+                <h2 className={styles.sectionTitle}>Core Run</h2>
+                <span className={styles.sectionMeta}>
+                  essential listening · {coreRun.length} {coreRun.length === 1 ? "master" : "masters"}
+                </span>
+              </header>
+              <CoreRun rows={coreRun} />
+            </section>
+          )}
           <header className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>Catalog Spine</h2>
             <span className={styles.sectionMeta}>
@@ -288,6 +310,18 @@ async function LabelContent({ id }: { id: string }) {
         </div>
 
         <div className={styles.sideCol}>
+          {relatedLabels.length > 0 && (
+            <section className={styles.sideBlock}>
+              <header className={styles.sectionHead}>
+                <h2 className={styles.sectionTitle}>If you like this</h2>
+                <span className={styles.sectionMeta}>
+                  {relatedLabels.length} related {relatedLabels.length === 1 ? "label" : "labels"}
+                </span>
+              </header>
+              <RelatedLabels rows={relatedLabels} />
+            </section>
+          )}
+
           {rosterRows.length > 0 && (
             <RosterColumn rows={rosterRows} title="Roster" maxVisible={12} />
           )}

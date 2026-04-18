@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useIncrementalSearch } from "@/hooks/useIncrementalSearch";
 import type { SearchResult } from "@/lib/types";
@@ -19,7 +19,12 @@ interface Props {
 export function IncrementalSearchWrapper({ children }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const initialQuery = searchParams.get("q") || "";
+  // Keep the user on the same surface they searched from. /search and / both
+  // render search results; pages like /scene/[slug] should still bounce search
+  // back to the canonical /search route.
+  const submitPath = pathname === "/" || pathname === "/search" ? pathname : "/search";
 
   const {
     inputValue,
@@ -49,9 +54,9 @@ export function IncrementalSearchWrapper({ children }: Props) {
         }
       }
       const qs = params.toString();
-      router.push(qs ? `/?${qs}` : "/");
+      router.push(qs ? `${submitPath}?${qs}` : submitPath);
     },
-    [inputValue, searchParams, router],
+    [inputValue, searchParams, router, submitPath],
   );
 
   // Should we show incremental results instead of server-rendered children?

@@ -125,6 +125,12 @@
   min-width: 0;
 }
 
+.coreRunBlock {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--sp-6);
+}
+
 .sideCol {
   display: flex;
   flex-direction: column;

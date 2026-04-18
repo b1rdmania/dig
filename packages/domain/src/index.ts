@@ -92,6 +92,13 @@ export {
   type SceneWall,
 } from "./scenes.js";
 export {
+  getLabelCoreRun,
+  getLabelRelated,
+  type CoreRunMaster,
+  type RelatedLabel,
+  type RelatedDirection,
+} from "./label-essentials.js";
+export {
   getArtistRelationships,
   getArtistContext,
   getArtistTimeline,

@@ -72,15 +72,21 @@
 
 .item {
   display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
   border-bottom: 1px dashed var(--line);
-  padding-bottom: 6px;
-  font-size: 0.85rem;
+  padding: 8px 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .item strong {
   color: var(--fg);
+  font-weight: 600;
+}
+
+.item span {
+  color: var(--fg-muted);
 }
 
 .note {

@@ -6,6 +6,19 @@ export const metadata: Metadata = {
   title: "About — dig",
   description:
     "Dig v2 — a curated catalog of house and techno from 1988 to 2003. The labels, the records, the scenes that built the form.",
+  openGraph: {
+    title: "About — dig",
+    description:
+      "Dig v2 — a curated catalog of house and techno from 1988 to 2003. The labels, the records, the scenes that built the form.",
+    images: [{ url: "/api/og?kind=home", width: 1200, height: 630, alt: "About dig" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About — dig",
+    description:
+      "A curated catalog of house and techno from 1988 to 2003 — the labels, the records, the scenes.",
+    images: ["/api/og?kind=home"],
+  },
 };
 
 export default function AboutPage() {
@@ -22,6 +35,55 @@ export default function AboutPage() {
           records, and the scenes that built the form. Opinionated by humans, structured for
           machines, open to both.
         </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.heading}>Where to start</h2>
+        <p className={styles.copy}>
+          Three doors in. Pick whichever matches the question in your head.
+        </p>
+        <div className={styles.points}>
+          <div className={styles.point}>
+            <span className={styles.num}>01</span>
+            <div>
+              <h3 className={styles.pointTitle}>
+                <Link href="/">The catalog wall</Link>
+              </h3>
+              <p className={styles.pointCopy}>
+                The whole catalog rendered as a single readable surface. Every scene, every label,
+                every release in scope &mdash; arranged by axis, scannable top-down. The dominant entry
+                point for browsing without a destination in mind.
+              </p>
+            </div>
+          </div>
+          <div className={styles.point}>
+            <span className={styles.num}>02</span>
+            <div>
+              <h3 className={styles.pointTitle}>
+                <Link href="/scene">Scenes</Link>
+              </h3>
+              <p className={styles.pointCopy}>
+                Curated groupings of labels: Detroit Core, Berlin Techno, Chicago House, Dub Techno,
+                Cologne Minimal and more. Each scene has a city, an era window, and a written
+                blurb. Bridges link related scenes through the artists and sounds that carried
+                between them.
+              </p>
+            </div>
+          </div>
+          <div className={styles.point}>
+            <span className={styles.num}>03</span>
+            <div>
+              <h3 className={styles.pointTitle}>
+                <Link href="/search">Search</Link>
+              </h3>
+              <p className={styles.pointCopy}>
+                Type any artist, label, or release. Mixed-type results with a top match,
+                fuzzy-spelling rescue, and per-type counts. Pinned at the top of every page so
+                you&rsquo;re never more than one keystroke from the catalog.
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className={styles.section}>
@@ -75,9 +137,10 @@ export default function AboutPage() {
             <div>
               <h3 className={styles.pointTitle}>An editorial layer on top</h3>
               <p className={styles.pointCopy}>
-                Hand-curated labels with palettes, blurbs, and stickers. 41 tier-1 labels are
-                fully styled today; another 71 are tier-marked and queued for editorial. Scenes,
-                bridges, and a visual map of the whole graph are next.
+                Hand-curated labels with palettes, blurbs, and stickers. Curated scenes group
+                labels by geography, sound, and era. Each label page carries a Core Run (essential
+                listening) and directional related-label cards (deeper, harder, rawer, weirder,
+                earlier, later). Editorial as data, all versioned in git.
               </p>
             </div>
           </div>
@@ -104,8 +167,10 @@ export default function AboutPage() {
             <div>
               <h3 className={styles.pointTitle}>Open by default</h3>
               <p className={styles.pointCopy}>
-                Full REST API and an MCP server, both public. No keys for the basic tier, no
-                signup. Any agent, any LLM workflow &mdash; just point at it.
+                Full REST API, public, no keys for the basic tier, no signup. Any agent, any
+                LLM workflow &mdash; just point at it. The MCP server has been{" "}
+                <Link href="/mcp">archived</Link>; the source remains in the repo for
+                self-hosters.
               </p>
             </div>
           </div>
@@ -163,25 +228,30 @@ export default function AboutPage() {
       <section className={styles.section}>
         <h2 className={styles.heading}>Stack</h2>
         <p className={styles.copy}>
-          TypeScript, Postgres 17, Kysely, Fastify, Next.js 15. Hosted on Fly.io across API,
-          MCP, and frontend. Postgres FTS + pg_trgm for search, Redis for caching. No external
-          AI services in the data path.
+          TypeScript, Postgres 17, Kysely, Fastify, Next.js 15. Hosted on Fly.io across API
+          and frontend. Postgres FTS + pg_trgm for search, Redis for caching. No external AI
+          services in the data path.
         </p>
       </section>
 
       <section className={styles.section}>
         <h2 className={styles.heading}>Status</h2>
         <p className={styles.copy}>
-          Active alpha, building in public. The API, MCP server, and web frontend are all live.
-          Next milestone: a visual scene map as the homepage primitive, with hand-curated scene
-          pages, essential picks per label, and a shareable trail through the graph.
-          See <Link href="/progress">how we built it</Link> for the full log.
+          Active alpha, building in public. The catalog wall is the homepage. Curated scenes,
+          per-label core runs, directional related-label edges, and a session-level trail
+          through the graph are all live. The API and web frontend ship continuously. See{" "}
+          <Link href="/progress">how we built it</Link> for the full log.
         </p>
       </section>
 
       <section className={styles.section}>
         <h2 className={styles.heading}>Links</h2>
         <div className={styles.linkList}>
+          <Link href="/" className={styles.extLink}>The wall</Link>
+          <Link href="/scene" className={styles.extLink}>Scenes</Link>
+          <Link href="/wall" className={styles.extLink}>Full wall</Link>
+          <Link href="/search" className={styles.extLink}>Search</Link>
+          <Link href="/llm-beta" className={styles.extLink}>LLM beta</Link>
           <a href="https://github.com/b1rdmania/dig" target="_blank" rel="noreferrer" className={styles.extLink}>
             GitHub
           </a>
@@ -191,9 +261,6 @@ export default function AboutPage() {
           <a href="https://dig-api.fly.dev/v1/health" target="_blank" rel="noreferrer" className={styles.extLink}>
             API health
           </a>
-          <Link href="/mcp" className={styles.extLink}>
-            MCP setup
-          </Link>
         </div>
       </section>
 

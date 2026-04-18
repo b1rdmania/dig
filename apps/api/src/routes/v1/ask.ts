@@ -9,6 +9,10 @@ import {
   getArtistMasters,
   getLabelReleases,
   getBatchForTable,
+  listScenes,
+  getScene,
+  getLabelCoreRun,
+  getLabelRelated,
 } from "@dig/domain";
 
 // ---------------------------------------------------------------------------
@@ -30,24 +34,50 @@ const PRIVATE_KEYS = new Set(
 );
 
 // ---------------------------------------------------------------------------
-// Personality — scene-scoped catalog (90s house & techno masters)
+// Personality — Dig v2: scene-scoped catalog (1988–2003 house & techno)
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You work in a record shop specialising in 90s house and techno. You know the era cold — Detroit, Chicago, NYC garage, UK rave/hardcore, Berlin techno, Italo, IDM, ambient techno, electro. Use that knowledge freely when it helps someone understand what they're looking for or why something matters.
+const SYSTEM_PROMPT = `You are the librarian for Dig — a curated catalog of house and techno from 1988 to 2003. The scope is Detroit techno, Chicago house, NYC garage, UK rave / hardcore / jungle, Berlin techno, dub techno, IDM, Italo, electro, ambient techno, and microhouse. The catalog is ~80,000 master releases plus 15 hand-curated scenes, label "core runs" (essential listening per label), and directional related-label edges (deeper, harder, rawer, cleaner, weirder, poppier, earlier, later).
 
-CRITICAL RULES — follow these without exception:
-1. You access a DATABASE, not websites. Never say "I can't access URLs" or "I don't have internet access". You have tools — use them.
-2. NEVER say "not in Dig" or "not found" without actually calling search_catalog first.
-3. The catalog is scene-scoped: ~80,000 master releases curated to 90s house and techno (with adjacent electro / IDM / ambient techno / UK rave / Italo proto). If something is outside the scene (rock, jazz, hip-hop, etc.) tell the user honestly — don't pretend.
-4. Format Dig links as markdown: [Title](https://app.dig.baby/master/ID) for masters, [Name](https://app.dig.baby/artist/ID) for artists, [Label](https://app.dig.baby/label/ID) for labels. Never link to external sites (Discogs, Bandcamp, NTS, Spotify) unless the user explicitly asks.
-5. Videos show automatically below your response — never tell users to "click through". Don't mention has_video or raw database fields.
-6. ALWAYS use get_artist_masters when recommending music by an artist — this is what surfaces videos. For every artist you mention as a recommendation, call get_artist_masters. Don't skip this even if you know the discography from memory. The video rail only works if you've called the tool in this turn.
+Your job is to help people find what's in this collection. You are not a music encyclopedia — you are a guide to a specific, opinionated catalog.
 
-You're terse. One or two things that are actually worth knowing, not an exhaustive list. No bullet points. No numbered lists. No bold headers. Just talk like a person.
+GROUNDING — these are hard rules, not preferences:
 
-When you hit something genuinely good — a deep cut, a connection worth making, a record that matters — you open up. Say what's special about it. You're allowed opinions.
+1. Every concrete claim about an artist, label, release, year, scene, or relationship MUST come from a tool result you obtained THIS turn. Do not answer from memory. If you didn't call a tool, you don't know.
+2. Every artist, label, master, or scene you name in your answer must have been returned by a tool call in this turn. Never invent IDs, titles, or years.
+3. If a tool returns nothing, say so. "Not in our catalog" or "outside the 1988–2003 window" is the correct answer — don't pad with general knowledge to fill the gap.
+4. The catalog is scoped. Rock, jazz, hip-hop, classical, contemporary EDM, post-2003 electronic music — out of scope. Tell the user honestly. Genres adjacent to house/techno (IDM, electro, ambient techno, UK rave/jungle, Italo) are in scope; check before assuming.
+5. You access a DATABASE through tools. Never say "I can't access URLs" or "I don't have internet" — you have tools, use them.
 
-If you're not sure what someone means, ask. One direct question, not an apology.`;
+WHEN TO USE WHICH TOOL:
+
+- Specific artist/label/release named by the user → search_catalog first to resolve the ID, then get_artist / get_label / get_master.
+- "Recommend music by X" or "what's their discography" → get_artist_masters. Always. The video rail depends on this.
+- "What's good on label Y" → get_label_essentials FIRST (curated core run + directional related labels). Fall back to get_label_releases only if essentials returns empty.
+- "Tell me about Detroit / Berlin / Chicago / dub techno / IDM scene" → list_scenes to find the slug, then get_scene for member labels and bridges.
+- "Walk me from X to Y" or "what's similar to label Z" → get_label_essentials on Z and use the directional related edges (deeper, harder, etc.) to chart a path.
+
+LINKS — THIS IS HOW VIDEOS BIND:
+
+Every entity you mention in your answer MUST be a markdown link to its Dig page:
+- Master: [Title](https://app.dig.baby/master/ID)
+- Artist: [Name](https://app.dig.baby/artist/ID)
+- Label: [Label](https://app.dig.baby/label/ID)
+- Scene: [Scene name](https://app.dig.baby/scene/SLUG)
+
+Videos auto-render below your answer ONLY for masters whose URL appears in your text. If you mention 4 masters but only link 2, only those 2 videos appear. So link every master you actually want surfaced — and don't link masters you're only naming in passing. No video should ever appear that isn't tied to a record you specifically wrote about.
+
+Never link to Discogs, Bandcamp, YouTube, NTS, Spotify, or anything outside dig.baby unless the user explicitly asks.
+
+VOICE:
+
+Terse. Two or three things worth saying — not a checklist. No bullet points, no numbered lists, no bold headers. Talk like a person who knows the records.
+
+When you find something genuinely good — a deep cut, a connection worth making, a record that matters — open up. Say what's special about it. Opinions are allowed and welcome.
+
+If the question is ambiguous, ask one direct question. Not three. Not an apology.
+
+If a tool errored or the catalog has nothing useful, say it plainly. Don't paper over it.`;
 
 // ---------------------------------------------------------------------------
 // Tool definitions
@@ -130,7 +160,7 @@ const TOOLS = [
   {
     name: "get_label_releases",
     description:
-      "Get masters released on a specific label — useful for 'what's on Warp Records' or 'show me the Tresor catalog'. Returns titles, primary artists, years.",
+      "Get masters released on a specific label — useful for 'what's on Warp Records' or 'show me the Tresor catalog'. Returns titles, primary artists, years. Prefer get_label_essentials first; fall back here if essentials are empty or you need the wider catalog.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -138,6 +168,39 @@ const TOOLS = [
         limit: { type: "number", description: "Number of masters (1–20, default 15)" },
       },
       required: ["discogs_id"],
+    },
+  },
+  {
+    name: "get_label_essentials",
+    description:
+      "The most opinionated 'what's good here and what's nearby' tool. Returns a label's curated Core Run (essential masters everyone should hear, ranked) plus its directional related labels (deeper / harder / rawer / cleaner / weirder / poppier / earlier / later). Use this BEFORE get_label_releases for any 'what should I listen to from label X' question.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        discogs_id: { type: "number", description: "Discogs label ID (from search_catalog)" },
+      },
+      required: ["discogs_id"],
+    },
+  },
+  {
+    name: "list_scenes",
+    description:
+      "List all 15 curated scenes (Detroit Core, Berlin Techno, Chicago House, Dub Techno, Cologne Minimal, etc.). Returns slug, name, axis (geography/sound/era/cluster/bridge/micro), city, era window, and blurb. Use this to find a scene slug before calling get_scene.",
+    input_schema: { type: "object" as const, properties: {}, required: [] },
+  },
+  {
+    name: "get_scene",
+    description:
+      "Get full detail for one curated scene by slug: member labels (with role: core/adjacent/bridge), bridges to other scenes, palette, blurb. Use after list_scenes to drill into a specific scene.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        slug: {
+          type: "string",
+          description: "Scene slug (e.g. 'detroit-core', 'berlin-techno', 'dub-techno', 'chicago-house')",
+        },
+      },
+      required: ["slug"],
     },
   },
 ];
@@ -357,6 +420,144 @@ async function executeTool(
         masters: labelMasters,
         total: result.pagination?.total_estimate ?? (result.links?.length ?? 0),
         has_more: result.pagination?.has_more ?? false,
+      };
+    }
+
+    if (name === "get_label_essentials") {
+      const id = Number(input.discogs_id);
+      const [coreRun, related] = await Promise.all([
+        getLabelCoreRun(db, id, 10),
+        getLabelRelated(db, id),
+      ]);
+
+      // Establish all core_run masters as cite-able and pre-fetch videos so
+      // they're available if the model decides to mention them.
+      for (const m of coreRun) {
+        allowedMasterIds.add(m.master_discogs_id);
+        evidenceCollector.push({
+          type: "master",
+          discogs_id: m.master_discogs_id,
+          title: m.title,
+          dig_url: `https://app.dig.baby/master/${m.master_discogs_id}`,
+        });
+      }
+      const top = coreRun.slice(0, 5);
+      await Promise.all(top.map(async (m) => {
+        try {
+          const { batchId: mb, dumpDate: md } = await getBatchForTable(db, "catalog.masters");
+          const detail = await getMaster(db, m.master_discogs_id, mb, md) as any;
+          if (!detail) return;
+          const artistName = detail.primary_artist?.name ?? m.primary_artist_name ?? m.title;
+          for (const v of (detail.videos ?? []).slice(0, 2)) {
+            if (v?.url && extractYouTubeId(v.url)) {
+              mediaCollector.push({
+                discogs_id: m.master_discogs_id,
+                title: v.title ?? m.title,
+                artist: artistName,
+                youtube_url: v.url,
+              });
+            }
+          }
+        } catch { /* fail open */ }
+      }));
+
+      return {
+        label_id: id,
+        core_run: coreRun.map((m) => ({
+          master_discogs_id: m.master_discogs_id,
+          title: m.title,
+          year: m.year,
+          primary_artist: m.primary_artist_name,
+          source: m.source,
+          note: m.note,
+          dig_url: `https://app.dig.baby/master/${m.master_discogs_id}`,
+        })),
+        related: related.map((r) => ({
+          to_label_id: r.to_label_id,
+          to_label_name: r.to_label_name,
+          direction: r.direction,
+          blurb: r.blurb,
+          master_count: r.to_label_master_count,
+          dig_url: `https://app.dig.baby/label/${r.to_label_id}`,
+        })),
+        note: coreRun.length === 0
+          ? "No curated core run for this label yet — fall back to get_label_releases."
+          : undefined,
+      };
+    }
+
+    if (name === "list_scenes") {
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const scenes = await listScenes(db, batchId);
+      return {
+        scenes: scenes.map((s) => ({
+          slug: s.slug,
+          name: s.name,
+          axis: s.axis,
+          city: s.city,
+          era:
+            s.era_start && s.era_end
+              ? `${s.era_start}-${s.era_end}`
+              : s.era_start
+              ? `${s.era_start}-`
+              : null,
+          blurb: s.blurb,
+          label_count: s.label_count,
+          dig_url: `https://app.dig.baby/scene/${s.slug}`,
+        })),
+        total: scenes.length,
+      };
+    }
+
+    if (name === "get_scene") {
+      const slug = String(input.slug ?? "").trim().slice(0, 80);
+      if (!slug) { errorRef.count++; return { error: "Scene slug required" }; }
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const scene = await getScene(db, slug, batchId);
+      if (!scene) { errorRef.count++; return { error: `Scene not found: ${slug}` }; }
+
+      // Register member labels as cite-able evidence so the model's links validate.
+      for (const l of scene.labels.slice(0, 12)) {
+        evidenceCollector.push({
+          type: "label",
+          discogs_id: l.discogs_id,
+          title: l.name,
+          dig_url: `https://app.dig.baby/label/${l.discogs_id}`,
+        });
+      }
+
+      return {
+        slug: scene.slug,
+        name: scene.name,
+        axis: scene.axis,
+        city: scene.city,
+        era:
+          scene.era_start && scene.era_end
+            ? `${scene.era_start}-${scene.era_end}`
+            : scene.era_start
+            ? `${scene.era_start}-`
+            : null,
+        blurb: scene.blurb,
+        labels: scene.labels.map((l) => ({
+          discogs_id: l.discogs_id,
+          name: l.name,
+          role: l.role,
+          master_count: l.master_count,
+          dig_url: `https://app.dig.baby/label/${l.discogs_id}`,
+        })),
+        bridges_out: scene.bridges_out.map((b) => ({
+          to_slug: b.to_slug,
+          via_kind: b.via_kind,
+          via: b.via_name,
+          blurb: b.blurb,
+        })),
+        bridges_in: scene.bridges_in.map((b) => ({
+          from_slug: b.from_slug,
+          via_kind: b.via_kind,
+          via: b.via_name,
+          blurb: b.blurb,
+        })),
+        dig_url: `https://app.dig.baby/scene/${scene.slug}`,
       };
     }
 
@@ -661,11 +862,26 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         return true;
       });
 
-      // Media binding validator: only keep media whose source master is in evidence
-      const evidenceMasterIds = new Set(
-        dedupedEvidence.filter((e) => e.type === "master").map((e) => e.discogs_id)
-      );
-      const boundMedia = dedupedMedia.filter((m) => evidenceMasterIds.has(m.discogs_id));
+      // Citation-bound media: only return videos for masters whose dig.baby URL
+      // appears in the assistant's answer text. The system prompt tells the
+      // model to link every entity it mentions; this binding ensures the rail
+      // only ever surfaces videos for records the model actually wrote about.
+      // Strict empty is the right behaviour when the model didn't cite anything
+      // — better than dumping generic videos for masters it merely fetched.
+      const citedMasterIds = new Set<number>();
+      const masterUrlRe = /app\.dig\.baby\/master\/(\d+)/g;
+      let match: RegExpExecArray | null;
+      while ((match = masterUrlRe.exec(answer)) !== null) {
+        const id = Number(match[1]);
+        if (Number.isFinite(id)) citedMasterIds.add(id);
+      }
+      const boundMedia = dedupedMedia.filter((m) => citedMasterIds.has(m.discogs_id));
+
+      log("ask:media_bind", {
+        media_total: dedupedMedia.length,
+        media_cited: boundMedia.length,
+        masters_cited: citedMasterIds.size,
+      });
 
       return reply.send({
         answer,
