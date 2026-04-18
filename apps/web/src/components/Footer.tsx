@@ -9,7 +9,7 @@ export function Footer() {
         <div className={styles.top}>
           <div className={styles.brand}>
             <Wordmark size="sm" />
-            <span className={styles.tagline}>A music data layer.</span>
+            <span className={styles.tagline}>House and techno, 1988–2003.</span>
           </div>
           <nav className={styles.links} aria-label="Footer">
             <Link href="/about" prefetch={false} className={styles.link}>About</Link>

@@ -131,7 +131,7 @@ function HomeHero() {
           marginBottom: "var(--sp-3)",
         }}
       >
-        [ index ] · 24M+ records · CC0
+        [ v2 ] · house &amp; techno · 1988–2003
       </div>
       <h1
         style={{
@@ -153,10 +153,10 @@ function HomeHero() {
           fontSize: "var(--fs-lg)",
           color: "var(--ink-soft)",
           marginTop: "var(--sp-3)",
-          maxWidth: "48ch",
+          maxWidth: "52ch",
         }}
       >
-        A music data layer. For the long-tail of recorded music — labels, artists, every pressing.
+        House and techno, 1988 to 2003. The labels, the records, the scenes — mapped.
       </p>
     </section>
   );

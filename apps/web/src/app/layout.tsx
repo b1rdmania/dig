@@ -28,16 +28,22 @@ const serif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: "dig — alpha",
-  description: "A music data layer. For the long-tail of recorded music.",
+  title: "dig — house and techno, 1988–2003",
+  description:
+    "A curated catalog of house and techno from 1988 to 2003 — the labels, the records, the scenes that built the form.",
   metadataBase: new URL("https://app.dig.baby"),
   openGraph: {
-    title: "dig — alpha",
+    title: "dig — house and techno, 1988–2003",
+    description:
+      "A curated catalog of house and techno from 1988 to 2003 — the labels, the records, the scenes that built the form.",
     siteName: "dig",
     locale: "en_US",
   },
   twitter: {
     card: "summary",
+    title: "dig — house and techno, 1988–2003",
+    description:
+      "A curated catalog of house and techno from 1988 to 2003 — the labels, the records, the scenes that built the form.",
   },
 };
 
