@@ -42,7 +42,7 @@ import pg from "pg";
 import type { Database } from "../packages/db/src/schema.js";
 
 interface Args {
-  phase: "crosswalks" | "images" | "all";
+  phase: "crosswalks" | "images" | "mbid" | "all";
   entity: "label" | "artist" | "both";
   batch: number;
   max: number | null;
@@ -420,6 +420,208 @@ async function harvestEntity(
   return { harvested: processed, withImage };
 }
 
+// --- PHASE 3 (mbid → qid backfill) -----------------------------------------
+//
+// Many in-scope entities have an MBID but no Wikidata QID in the imported
+// crosswalk (49k labels with MBID vs only 6k with QID; 84k artists vs 30k).
+// Wikidata exposes `wdt:P966` for MusicBrainz label IDs and `wdt:P434` for
+// MusicBrainz artist IDs, so a reverse SPARQL lookup fills both the QID
+// gap AND grabs P18/P154 in a single round trip — no extra MB API calls.
+//
+// Side effects:
+//   1. UPDATE enrich.{label,artist}_crosswalks SET wikidata_qid for each
+//      newly-resolved entity (so subsequent --phase=images runs treat them
+//      as native QID-bearing entities).
+//   2. INSERT INTO enrich.entity_images for any P18/P154 returned in the
+//      same response.
+
+interface SparqlMbidRow {
+  mbid: string;
+  qid: string;
+  image: string | null;
+  logo: string | null;
+}
+
+async function sparqlMbidBatch(mbids: string[], property: "P966" | "P434"): Promise<SparqlMbidRow[]> {
+  const values = mbids.map((m) => `"${m}"`).join(" ");
+  const query = `
+    SELECT ?mbid ?qid ?image ?logo WHERE {
+      VALUES ?mbid { ${values} }
+      ?qid wdt:${property} ?mbid.
+      OPTIONAL { ?qid wdt:P18 ?image. }
+      OPTIONAL { ?qid wdt:P154 ?logo. }
+    }
+  `;
+  const url = `${SPARQL_ENDPOINT}?format=json&query=${encodeURIComponent(query)}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { Accept: "application/sparql-results+json", "User-Agent": USER_AGENT },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`SPARQL ${res.status} ${res.statusText}: ${body.slice(0, 200)}`);
+  }
+  const json = (await res.json()) as {
+    results: {
+      bindings: Array<{
+        mbid: { value: string };
+        qid: { value: string };
+        image?: { value: string };
+        logo?: { value: string };
+      }>;
+    };
+  };
+  return json.results.bindings.map((b) => ({
+    mbid: b.mbid.value,
+    qid: b.qid.value.replace(/.*\//, ""),
+    image: b.image?.value ?? null,
+    logo: b.logo?.value ?? null,
+  }));
+}
+
+async function harvestEntityViaMbid(
+  db: Kysely<Database>,
+  entityType: "label" | "artist",
+  args: Args,
+) {
+  const tableRef = entityType === "label" ? sql`enrich.label_crosswalks` : sql`enrich.artist_crosswalks`;
+  const idColRef = entityType === "label" ? sql.ref("discogs_label_id") : sql.ref("discogs_artist_id");
+  const property = entityType === "label" ? "P966" : "P434";
+  const limitClause = args.max ? sql`LIMIT ${sql.lit(args.max)}` : sql``;
+
+  // Pull MBID-only rows (have MBID but no QID). These are the candidates
+  // for reverse lookup. Lock to in-scope by virtue of the crosswalks table
+  // already being filtered to scope at copy time.
+  const { rows } = await sql<{ discogs_id: number; mbid: string }>`
+    SELECT c.${idColRef} AS discogs_id, c.mbid
+    FROM ${tableRef} c
+    WHERE c.mbid IS NOT NULL
+      AND c.wikidata_qid IS NULL
+    ORDER BY c.${idColRef}
+    ${limitClause}
+  `.execute(db);
+
+  console.log(`[mbid:${entityType}] ${rows.length.toLocaleString()} MBIDs to reverse-lookup via wdt:${property}`);
+  if (rows.length === 0) return { processed: 0, resolved: 0, withImage: 0 };
+
+  const mbidToDiscogs = new Map<string, number>();
+  for (const r of rows) mbidToDiscogs.set(r.mbid, r.discogs_id);
+
+  let processed = 0;
+  let resolved = 0;
+  let withImage = 0;
+  const batches: string[][] = [];
+  for (let i = 0; i < rows.length; i += args.batch) {
+    batches.push(rows.slice(i, i + args.batch).map((r) => r.mbid));
+  }
+  for (let bi = 0; bi < batches.length; bi++) {
+    const batch = batches[bi];
+    let attempt = 0;
+    let resBatch: SparqlMbidRow[] = [];
+    while (true) {
+      try {
+        resBatch = await sparqlMbidBatch(batch, property);
+        break;
+      } catch (err) {
+        attempt++;
+        const wait = Math.min(60_000, 1500 * attempt * attempt);
+        console.warn(`  SPARQL error (attempt ${attempt}): ${(err as Error).message} — sleeping ${wait}ms`);
+        if (attempt >= 5) throw err;
+        await sleep(wait);
+      }
+    }
+    // Group by mbid → first qid wins (Wikidata duplicates are rare but possible).
+    const byMbid = new Map<string, SparqlMbidRow>();
+    for (const r of resBatch) {
+      if (!byMbid.has(r.mbid)) byMbid.set(r.mbid, r);
+    }
+
+    // 1. Backfill the crosswalk with newly-discovered QIDs.
+    const updateTuples = [...byMbid.values()]
+      .map((r) => {
+        const discogsId = mbidToDiscogs.get(r.mbid);
+        if (!discogsId) return null;
+        return { discogsId, qid: r.qid };
+      })
+      .filter((x): x is { discogsId: number; qid: string } => x !== null);
+
+    for (const u of updateTuples) {
+      // Per-row UPDATE so unique constraint conflicts on wikidata_qid don't
+      // poison the whole batch (rare: same QID claimed by two MBIDs).
+      try {
+        if (entityType === "label") {
+          await sql`
+            UPDATE enrich.label_crosswalks
+            SET wikidata_qid = ${u.qid}, updated_at = now()
+            WHERE discogs_label_id = ${u.discogsId}
+              AND wikidata_qid IS NULL
+          `.execute(db);
+        } else {
+          await sql`
+            UPDATE enrich.artist_crosswalks
+            SET wikidata_qid = ${u.qid}, updated_at = now()
+            WHERE discogs_artist_id = ${u.discogsId}
+              AND wikidata_qid IS NULL
+          `.execute(db);
+        }
+        resolved++;
+      } catch (err) {
+        // Unique conflict on wikidata_qid — skip silently (we already have
+        // this QID attached to a different discogs entity, e.g. a relabel).
+        if (!String(err).includes("unique")) {
+          console.warn(`  update error for ${entityType} ${u.discogsId}: ${(err as Error).message}`);
+        }
+      }
+    }
+
+    // 2. Upsert any images returned.
+    const inserts: ImageInsert[] = [];
+    for (const r of byMbid.values()) {
+      const discogsId = mbidToDiscogs.get(r.mbid);
+      if (!discogsId) continue;
+      const photoUrl = r.image ? normaliseCommonsUrl(r.image) : null;
+      const logoUrl = r.logo ? normaliseCommonsUrl(r.logo) : null;
+      const attribution = `Image from Wikimedia Commons via Wikidata (${r.qid})`;
+      if (entityType === "label") {
+        if (logoUrl) {
+          inserts.push({ entity_type: "label", discogs_id: discogsId, image_kind: "logo", source: "wikidata", source_id: r.qid, source_url: logoUrl, attribution, license: "see-commons" });
+          withImage++;
+        }
+        if (photoUrl) {
+          inserts.push({ entity_type: "label", discogs_id: discogsId, image_kind: "hero", source: "wikidata", source_id: r.qid, source_url: photoUrl, attribution, license: "see-commons" });
+          if (!logoUrl) withImage++;
+        }
+      } else {
+        if (photoUrl) {
+          inserts.push({ entity_type: "artist", discogs_id: discogsId, image_kind: "photo", source: "wikidata", source_id: r.qid, source_url: photoUrl, attribution, license: "see-commons" });
+          withImage++;
+        }
+        if (logoUrl) {
+          inserts.push({ entity_type: "artist", discogs_id: discogsId, image_kind: "logo", source: "wikidata", source_id: r.qid, source_url: logoUrl, attribution, license: "see-commons" });
+        }
+      }
+    }
+    if (inserts.length > 0) {
+      await upsertImages(db, inserts);
+    }
+    processed += batch.length;
+    if (bi % 10 === 0 || bi === batches.length - 1) {
+      console.log(
+        `  batch ${bi + 1}/${batches.length} — processed ${processed.toLocaleString()}, resolved ${resolved.toLocaleString()}, with image ${withImage.toLocaleString()}`,
+      );
+    }
+    if (bi < batches.length - 1) await sleep(args.rateMs);
+  }
+  return { processed, resolved, withImage };
+}
+
 // --- main -------------------------------------------------------------------
 
 async function main() {
@@ -454,6 +656,16 @@ async function main() {
       if (args.entity === "artist" || args.entity === "both") {
         const r = await harvestEntity(target, "artist", args);
         console.log(`  artists: harvested=${r.harvested}, with_image=${r.withImage}`);
+      }
+    }
+    if (args.phase === "mbid" || args.phase === "all") {
+      if (args.entity === "label" || args.entity === "both") {
+        const r = await harvestEntityViaMbid(target, "label", args);
+        console.log(`  labels via MBID: processed=${r.processed}, resolved_qid=${r.resolved}, with_image=${r.withImage}`);
+      }
+      if (args.entity === "artist" || args.entity === "both") {
+        const r = await harvestEntityViaMbid(target, "artist", args);
+        console.log(`  artists via MBID: processed=${r.processed}, resolved_qid=${r.resolved}, with_image=${r.withImage}`);
       }
     }
   } finally {
