@@ -783,7 +783,23 @@ async function printHistogram(c: Kysely<Database>, batchId: string) {
 // artists/labels that only existed via discarded masters)
 // ---------------------------------------------------------------------------
 async function buildArtistLabelClosure(c: Kysely<Database>, batchId: string, args: Args) {
-  // Always rebuild closures — they depend on post-prune scope_m / scope_r.
+  // In --credits-only mode (no prune happened, scope unchanged), reuse the
+  // existing closures rather than rebuild — saves several minutes of
+  // catalog.* re-scanning over a flycast pgbouncer connection that tends
+  // to drop on long idle DDL.
+  if (
+    args.creditsOnly &&
+    args.sceneWeightMin <= 0 &&
+    (await tableExists(c, WS, "scope_a")) &&
+    (await tableExists(c, WS, "scope_l"))
+  ) {
+    const a = await tableRowCount(c, WS, "scope_a");
+    const l = await tableRowCount(c, WS, "scope_l");
+    console.log(`  [scope] reusing scope_a (${a.toLocaleString()}) + scope_l (${l.toLocaleString()}) for credits-only mode`);
+    return;
+  }
+
+  // Otherwise rebuild — closures depend on post-prune scope_m / scope_r.
   await sql`DROP TABLE IF EXISTS scope_a`.execute(c);
   await sql`DROP TABLE IF EXISTS scope_l`.execute(c);
 

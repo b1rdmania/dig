@@ -1,0 +1,44 @@
+.wrap {
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  width: var(--photo-size, 160px);
+}
+
+.img {
+  display: block;
+  width: var(--photo-size, 160px);
+  height: var(--photo-size, 160px);
+  object-fit: cover;
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.18));
+  background: var(--surface-2, transparent);
+  /* Square (zine-style) — matches Sticker / CatalogSpine geometry */
+  border-radius: 0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.attrib {
+  font-family: var(--mono, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted, rgba(0, 0, 0, 0.55));
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.attrib a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .wrap,
+  .img {
+    --photo-size: 120px;
+  }
+}

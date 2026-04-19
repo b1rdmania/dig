@@ -28,6 +28,8 @@ import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ShareBar } from "@/components/ShareBar";
 import { hrefForTraversalLink } from "@/lib/routes";
 import { Labelmates } from "@/components/design";
+import { CreditsTab } from "@/components/CreditsTab";
+import { ArtistPhoto } from "@/components/ArtistPhoto";
 import styles from "./page.module.css";
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
@@ -271,17 +273,28 @@ export default async function ArtistPage({ params, searchParams }: Props) {
     && ["album", "single_ep", "compilation", "other"].includes(sp.release_type)
     ? sp.release_type
     : "all";
+  const creditsRole = typeof sp.credits_role === "string" && sp.credits_role.trim() !== ""
+    ? sp.credits_role.trim()
+    : null;
 
   return (
     <div className={styles.page} data-dig-entity="artist" data-dig-id={id}>
       <Suspense fallback={<SectionSkeleton lines={4} />}>
-        <ArtistContent id={id} releaseType={releaseType} />
+        <ArtistContent id={id} releaseType={releaseType} creditsRole={creditsRole} />
       </Suspense>
     </div>
   );
 }
 
-async function ArtistContent({ id, releaseType }: { id: string; releaseType: string }) {
+async function ArtistContent({
+  id,
+  releaseType,
+  creditsRole,
+}: {
+  id: string;
+  releaseType: string;
+  creditsRole: string | null;
+}) {
   const defaultTraversal: TraversalResponse = {
     links: [],
     pagination: { cursor: null, has_more: false, total_estimate: null },
@@ -365,31 +378,45 @@ async function ArtistContent({ id, releaseType }: { id: string; releaseType: str
           subtitle={artist.real_name ?? undefined}
         />
         <section className={styles.hero}>
-          <div className={styles.eyebrow}>ARTIST · #{artist.discogs_id}</div>
-          <h1 className={styles.title}>{artist.name}</h1>
-          {artist.real_name && <div className={styles.subtitle}>Real name: {artist.real_name}</div>}
-          <div className={styles.links}>
-            <a href={discogsUrl("artist", artist.discogs_id)} target="_blank" rel="noreferrer" className={styles.link}>
-              Open on Discogs
-            </a>
-            {artist.urls.slice(0, 4).map((url) => (
-              <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.link}>
-                {urlLabel(url)}
-              </a>
-            ))}
-          </div>
-          <div style={{ marginTop: "var(--sp-3)" }}>
-            <ShareBar
-              url={`${BASE_URL}/artist/${artist.discogs_id}`}
-              title={artist.name}
-              entityType="artist"
-              entityId={artist.discogs_id}
-            />
+          <div className={styles.heroLayout}>
+            <div className={styles.heroPhoto}>
+              <Suspense fallback={null}>
+                <ArtistPhoto discogsId={artist.discogs_id} artistName={artist.name} size={160} />
+              </Suspense>
+            </div>
+            <div className={styles.heroBody}>
+              <div className={styles.eyebrow}>ARTIST · #{artist.discogs_id}</div>
+              <h1 className={styles.title}>{artist.name}</h1>
+              {artist.real_name && <div className={styles.subtitle}>Real name: {artist.real_name}</div>}
+              <div className={styles.links}>
+                <a href={discogsUrl("artist", artist.discogs_id)} target="_blank" rel="noreferrer" className={styles.link}>
+                  Open on Discogs
+                </a>
+                {artist.urls.slice(0, 4).map((url) => (
+                  <a key={url} href={url} target="_blank" rel="noreferrer" className={styles.link}>
+                    {urlLabel(url)}
+                  </a>
+                ))}
+              </div>
+              <div style={{ marginTop: "var(--sp-3)" }}>
+                <ShareBar
+                  url={`${BASE_URL}/artist/${artist.discogs_id}`}
+                  title={artist.name}
+                  entityType="artist"
+                  entityId={artist.discogs_id}
+                />
+              </div>
+            </div>
           </div>
         </section>
 
         <AboutSection profile={artist.profile} ctxData={ctxData} resolvedNames={resolvedNames} />
         <MastersSection id={id} releaseType={releaseType} data={mastersData} />
+        <div id="credits">
+          <Suspense fallback={null}>
+            <CreditsTab artistDiscogsId={artist.discogs_id} role={creditsRole} />
+          </Suspense>
+        </div>
         <Suspense fallback={null}>
           <Labelmates artistDiscogsId={artist.discogs_id} limit={6} />
         </Suspense>

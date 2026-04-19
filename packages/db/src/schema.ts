@@ -566,6 +566,55 @@ export interface EnrichCreditBuildAuditTable {
   built_at: Generated<Date>;
 }
 
+// --- Entity images (migration 032) -------------------------------------------
+
+export interface EnrichEntityImagesTable {
+  id: Generated<string>;
+  entity_type: "label" | "artist";
+  discogs_id: number;
+  image_kind: "logo" | "photo" | "hero";
+  source: string;
+  source_id: string | null;
+  source_url: string;
+  file_url: string | null;
+  width: number | null;
+  height: number | null;
+  attribution: string | null;
+  license: string | null;
+  fetched_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+// --- Crosswalks (already exist on dig-db; mirrored on dig-db-scene by
+// the harvester) ---
+
+export interface EnrichLabelCrosswalksTable {
+  id: Generated<string>;
+  discogs_label_id: number;
+  mbid: string | null;
+  wikidata_qid: string | null;
+  confidence: number;
+  match_method: string;
+  is_verified: Generated<boolean>;
+  source_batch_id: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface EnrichArtistCrosswalksTable {
+  id: Generated<string>;
+  discogs_artist_id: number;
+  mbid: string | null;
+  wikidata_qid: string | null;
+  setlistfm_artist_id: string | null;
+  confidence: number;
+  match_method: string;
+  is_verified: Generated<boolean>;
+  source_batch_id: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 // --- Database interface ---
 
 export interface Database {
@@ -636,4 +685,9 @@ export interface Database {
   "enrich.label_related": EnrichLabelRelatedTable;
   // Credit-build audit (031)
   "enrich.credit_build_audit": EnrichCreditBuildAuditTable;
+  // Entity images (032)
+  "enrich.entity_images": EnrichEntityImagesTable;
+  // Crosswalks (mirrored from dig-db by harvester for in-scope entities)
+  "enrich.label_crosswalks": EnrichLabelCrosswalksTable;
+  "enrich.artist_crosswalks": EnrichArtistCrosswalksTable;
 }

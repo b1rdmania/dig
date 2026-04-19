@@ -99,6 +99,32 @@ export {
   type RelatedDirection,
 } from "./label-essentials.js";
 export {
+  getArtistRuleACredits,
+  getArtistCrossScopeCredits,
+  getMasterCredits,
+  getArtistGroupsAndMembers,
+  getLabelTopCredits,
+  type ArtistMasterCredit,
+  type ArtistMasterCreditsResponse,
+  type CrossScopeCreditCard,
+  type CrossScopeCreditsResponse,
+  type MasterTrackCreditLine,
+  type MasterReleaseCreditLine,
+  type MasterCreditsResponse,
+  type ArtistGroupEdge,
+  type ArtistGroupsAndMembersResponse,
+  type LabelTopCreditEntry,
+} from "./credits.js";
+export {
+  getEntityImages,
+  getEntityImagesBulk,
+  shapeCommonsUrl,
+  type EntityImage,
+  type EntityImagesResponse,
+  type ImageKind,
+  type ImageEntityType,
+} from "./images.js";
+export {
   getArtistRelationships,
   getArtistContext,
   getArtistTimeline,

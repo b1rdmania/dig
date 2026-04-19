@@ -41,6 +41,8 @@ import {
   type SpineRow,
   type RosterRow,
 } from "@/components/design";
+import { TopCreditsBlock } from "@/components/TopCreditsBlock";
+import { LabelHeroImage } from "@/components/LabelHeroImage";
 import styles from "./page.module.css";
 
 interface Props {
@@ -207,6 +209,9 @@ async function LabelContent({ id }: { id: string }) {
       />
       <div className={styles.identity}>
         {palette && <div className={styles.accentRule} aria-hidden />}
+        <Suspense fallback={null}>
+          <LabelHeroImage discogsId={label.discogs_id} labelName={label.name} mode="mark" />
+        </Suspense>
         <div className={styles.eyebrow}>
           <span>LABEL</span>
           <span className={styles.eyebrowSep}>·</span>
@@ -329,6 +334,10 @@ async function LabelContent({ id }: { id: string }) {
           {rosterRows.length > 0 && (
             <RosterColumn rows={rosterRows} title="Roster" maxVisible={12} />
           )}
+
+          <Suspense fallback={null}>
+            <TopCreditsBlock labelDiscogsId={label.discogs_id} limit={10} />
+          </Suspense>
 
           {(label.parent_label?.discogs_id || (label.sublabels && label.sublabels.length > 0)) && (
             <section className={styles.sideBlock}>

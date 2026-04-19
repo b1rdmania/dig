@@ -1,0 +1,208 @@
+.section {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.heading {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.filters {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.chip,
+.chipActive {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  text-decoration: none;
+  background: transparent;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.chipActive {
+  background: var(--ink, var(--fg));
+  color: var(--paper, var(--bg));
+  border-color: transparent;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.6rem 1rem;
+  padding: 0.55rem 0;
+  border-top: 1px dashed var(--line);
+}
+
+.row:first-child {
+  border-top: 0;
+}
+
+.rowMain {
+  min-width: 0;
+}
+
+.title {
+  display: inline-block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.title:hover {
+  text-decoration: underline;
+}
+
+.byline {
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+  margin-top: 0.1rem;
+}
+
+.bylineLink {
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+
+.bylineLink:hover {
+  color: var(--fg);
+  text-decoration: underline;
+}
+
+.sep {
+  margin: 0 0.35rem;
+  opacity: 0.6;
+}
+
+.tracks {
+  margin-top: 0.4rem;
+}
+
+.tracksToggle {
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+  list-style: none;
+}
+
+.tracksToggle::marker,
+.tracksToggle::-webkit-details-marker {
+  display: none;
+}
+
+.tracksToggle::before {
+  content: "▸ ";
+  display: inline-block;
+  width: 1em;
+  transition: transform 0.15s ease;
+}
+
+.tracks[open] .tracksToggle::before {
+  content: "▾ ";
+}
+
+.trackList {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  font-size: 0.78rem;
+}
+
+.trackLine {
+  display: grid;
+  grid-template-columns: 2.5em 1fr auto;
+  gap: 0.4rem;
+  padding: 0.12rem 0;
+  color: var(--fg);
+}
+
+.trackPos {
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.trackTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trackRole {
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.7rem;
+}
+
+.trackOverflow {
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+  padding: 0.1rem 0;
+}
+
+.rowAside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  font-size: 0.7rem;
+}
+
+.role {
+  display: inline-block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.4rem;
+  border: 1px solid var(--line);
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.roleSubtle {
+  font-size: 0.65rem;
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+.foot {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+@media (max-width: 540px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+  .rowAside {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+}

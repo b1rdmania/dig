@@ -1,0 +1,114 @@
+.section {
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
+.heading {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.subhead {
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+.trackBlock {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.trackGroup {
+  border-top: 1px dashed var(--line);
+  padding: 0.5rem 0 0.1rem;
+}
+
+.trackGroup:first-child {
+  border-top: 0;
+}
+
+.trackHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  margin-bottom: 0.25rem;
+}
+
+.position {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  min-width: 2.2em;
+}
+
+.trackTitle {
+  font-size: 0.85rem;
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.artistList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.artistRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.18rem 0;
+  flex-wrap: wrap;
+}
+
+.artistName {
+  font-size: 0.82rem;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.artistName:hover {
+  text-decoration: underline;
+}
+
+.roles {
+  display: inline-flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.roleChip {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.08rem 0.4rem;
+  border: 1px solid var(--line);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.releaseBlock {
+  margin-top: 0.9rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--line);
+}
+
+.releaseHeading {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
+  margin-bottom: 0.3rem;
+}

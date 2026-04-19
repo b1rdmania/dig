@@ -1,0 +1,91 @@
+/* Big logo mark — sits above the wordmark / title in the label identity block */
+.mark {
+  margin: 0 0 0.85rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.markImg {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(100%, 380px);
+  max-height: 180px;
+  object-fit: contain;
+  background: var(--surface-2, transparent);
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.12));
+  /* Slight tint so transparent SVG marks read on either page background */
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.markAttrib {
+  font-family: var(--mono, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted, rgba(0, 0, 0, 0.55));
+  text-transform: uppercase;
+}
+
+.markAttrib a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+/* Full-bleed hero band variant (background photo) */
+.hero {
+  position: relative;
+  width: 100%;
+  min-height: 220px;
+  background-position: center;
+  background-size: cover;
+  background-color: var(--surface-2, #1a1a1a);
+  overflow: hidden;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--line, rgba(0, 0, 0, 0.18));
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.05) 0%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+  pointer-events: none;
+}
+
+.heroAttrib {
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+  font-family: var(--mono, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.78);
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.heroAttrib a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .markImg {
+    max-width: min(100%, 280px);
+    max-height: 140px;
+  }
+  .hero {
+    min-height: 160px;
+  }
+}

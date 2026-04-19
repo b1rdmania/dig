@@ -13,6 +13,28 @@
   margin-bottom: var(--sp-5);
 }
 
+.heroLayout {
+  display: flex;
+  gap: var(--sp-5);
+  align-items: flex-start;
+}
+
+.heroBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.heroPhoto {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+  .heroLayout {
+    flex-direction: column;
+    gap: var(--sp-4);
+  }
+}
+
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;

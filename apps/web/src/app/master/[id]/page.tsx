@@ -28,6 +28,7 @@ import { ShareBar } from "@/components/ShareBar";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ReleaseNavRenderer } from "@/components/ReleaseNav";
 import { Page, Sticker, Stamp, LinerNotes } from "@/components/design";
+import { MasterCreditsSection } from "@/components/MasterCreditsSection";
 import styles from "./page.module.css";
 
 interface Props {
@@ -478,6 +479,10 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
       />
 
       <MasterTracklistRenderer tracks={master.tracks} />
+
+      <Suspense fallback={null}>
+        <MasterCreditsSection masterDiscogsId={master.discogs_id} />
+      </Suspense>
 
       <NotableVersionsRenderer data={versionsData} videosByRelease={videosByRelease} />
 

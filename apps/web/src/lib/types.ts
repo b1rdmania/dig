@@ -489,6 +489,173 @@ export function isArtistCreditsResponse(data: unknown): data is ArtistCreditsRes
   );
 }
 
+// ─── Credits + remixes (migration 030) ──────────────────────────────────────
+
+export interface ArtistMasterCredit {
+  master_discogs_id: number;
+  master_title: string | null;
+  master_year: number | null;
+  primary_artist_discogs_id: number | null;
+  primary_artist_name: string | null;
+  primary_label_discogs_id: number | null;
+  primary_label_name: string | null;
+  roles: string[];
+  track_lines: Array<{
+    track_position: string | null;
+    track_title: string | null;
+    role: string;
+  }>;
+  has_release_level: boolean;
+}
+
+export interface ArtistMasterCreditsResponse {
+  links: ArtistMasterCredit[];
+  pagination: Pagination;
+  meta: {
+    source_type: "artist";
+    source_discogs_id: number;
+    link_type: "rule_a_credits";
+    role_filter: string | null;
+    elapsed_ms: number;
+  };
+}
+
+export function isArtistMasterCreditsResponse(data: unknown): data is ArtistMasterCreditsResponse {
+  return (
+    typeof data === "object" && data !== null &&
+    "links" in data && Array.isArray((data as any).links) &&
+    (data as any).meta?.link_type === "rule_a_credits"
+  );
+}
+
+export interface CrossScopeCreditCard {
+  host_release_id: number;
+  host_release_title: string;
+  host_release_year: number | null;
+  host_primary_artist_name: string | null;
+  host_label_name: string | null;
+  track_position: string | null;
+  track_title: string | null;
+  role: string;
+  role_raw: string | null;
+  discogs_release_url: string;
+}
+
+export interface CrossScopeCreditsResponse {
+  links: CrossScopeCreditCard[];
+  pagination: Pagination;
+  meta: {
+    source_type: "artist";
+    source_discogs_id: number;
+    link_type: "cross_scope_credits";
+    role_filter: string | null;
+    elapsed_ms: number;
+  };
+}
+
+export function isCrossScopeCreditsResponse(data: unknown): data is CrossScopeCreditsResponse {
+  return (
+    typeof data === "object" && data !== null &&
+    "links" in data && Array.isArray((data as any).links) &&
+    (data as any).meta?.link_type === "cross_scope_credits"
+  );
+}
+
+export interface MasterTrackCreditLine {
+  track_position: string | null;
+  track_title: string | null;
+  artist_discogs_id: number;
+  artist_name: string;
+  anv: string | null;
+  role: string;
+  role_raw: string | null;
+}
+
+export interface MasterReleaseCreditLine {
+  artist_discogs_id: number;
+  artist_name: string;
+  anv: string | null;
+  role: string;
+  role_raw: string | null;
+}
+
+export interface MasterCreditsResponse {
+  master_discogs_id: number;
+  track_credits: MasterTrackCreditLine[];
+  release_credits: MasterReleaseCreditLine[];
+  meta: { elapsed_ms: number };
+}
+
+export function isMasterCreditsResponse(data: unknown): data is MasterCreditsResponse {
+  return (
+    typeof data === "object" && data !== null &&
+    "master_discogs_id" in data &&
+    Array.isArray((data as any).track_credits) &&
+    Array.isArray((data as any).release_credits)
+  );
+}
+
+export interface ArtistGroupEdge {
+  discogs_id: number;
+  name: string | null;
+}
+
+export interface ArtistGroupsAndMembersResponse {
+  artist_discogs_id: number;
+  groups: ArtistGroupEdge[];
+  members: ArtistGroupEdge[];
+  meta: { elapsed_ms: number };
+}
+
+export interface LabelTopCreditEntry {
+  artist_discogs_id: number;
+  artist_name: string;
+  master_count: number;
+  credit_count: number;
+  roles: string[];
+}
+
+export interface LabelTopCreditsResponse {
+  label_discogs_id: number;
+  entries: LabelTopCreditEntry[];
+}
+
+export function isLabelTopCreditsResponse(data: unknown): data is LabelTopCreditsResponse {
+  return (
+    typeof data === "object" && data !== null &&
+    "label_discogs_id" in data &&
+    Array.isArray((data as any).entries)
+  );
+}
+
+// Entity images (labels + artists)
+export type EntityImageKind = "logo" | "photo" | "hero";
+
+export interface EntityImage {
+  kind: EntityImageKind;
+  source: string;
+  source_id: string | null;
+  source_url: string;
+  url: string;
+  attribution: string | null;
+  license: string | null;
+}
+
+export interface EntityImagesResponse {
+  entity_type: "label" | "artist";
+  discogs_id: number;
+  images: EntityImage[];
+}
+
+export function isEntityImagesResponse(data: unknown): data is EntityImagesResponse {
+  return (
+    typeof data === "object" && data !== null &&
+    "entity_type" in data &&
+    "discogs_id" in data &&
+    Array.isArray((data as any).images)
+  );
+}
+
 // Enrichment
 export interface EnrichmentProvenance {
   source: string;
