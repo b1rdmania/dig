@@ -23,10 +23,16 @@ interface FetchOptions {
 
 /**
  * Server-side fetch wrapper. Adds API key, timeout, ISR cache, and one
- * automatic retry on transient network errors (undici "fetch failed",
- * ECONNRESET, socket hang up). 4xx/5xx responses do NOT retry — those
- * are real API errors, not network blips.
+ * automatic retry on transient errors:
+ *   - NETWORK_ERROR (undici "fetch failed", ECONNRESET, socket hang up)
+ *   - HTTP 502 / 503 / 504 (cold-machine wake, gateway hiccups)
+ *   - TIMEOUT (single request hit the 12s ceiling — give it one more try)
+ *
+ * Real 4xx (NOT_FOUND, INVALID_REQUEST, etc) and non-transient 5xx (500)
+ * surface immediately so we don't mask actual bugs.
  */
+const RETRYABLE_STATUSES = new Set([502, 503, 504]);
+
 export async function digFetch<T>(
   path: string,
   options: FetchOptions = {},
@@ -34,7 +40,12 @@ export async function digFetch<T>(
   try {
     return await digFetchOnce<T>(path, options);
   } catch (err) {
-    if (err instanceof ApiRequestError && err.code === "NETWORK_ERROR") {
+    const retryable =
+      err instanceof ApiRequestError &&
+      (err.code === "NETWORK_ERROR" ||
+        err.code === "TIMEOUT" ||
+        RETRYABLE_STATUSES.has(err.status));
+    if (retryable) {
       await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
       return await digFetchOnce<T>(path, options);
     }
