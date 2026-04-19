@@ -499,6 +499,73 @@ export interface CatalogReleaseShadowTable {
   built_at: Generated<Date>;
 }
 
+// --- Credit + remix layer (migration 030) -------------------------------------
+
+export interface CatalogMasterTrackCreditsTable {
+  id: Generated<string>;
+  master_discogs_id: number;
+  track_position: string | null;
+  track_title: string | null;
+  artist_discogs_id: number;
+  artist_name: string;
+  anv: string | null;
+  role: string;
+  role_raw: string | null;
+  source_release_id: number;
+  built_at: Generated<Date>;
+}
+
+export interface CatalogMasterReleaseCreditsTable {
+  id: Generated<string>;
+  master_discogs_id: number;
+  source_release_id: number;
+  artist_discogs_id: number;
+  artist_name: string;
+  anv: string | null;
+  role: string;
+  role_raw: string | null;
+  built_at: Generated<Date>;
+}
+
+export interface CatalogCrossScopeCreditsTable {
+  id: Generated<string>;
+  artist_discogs_id: number;
+  artist_name: string;
+  anv: string | null;
+  role: string;
+  role_raw: string | null;
+  host_release_id: number;
+  host_release_title: string;
+  host_release_year: number | null;
+  host_primary_artist_name: string | null;
+  host_label_name: string | null;
+  track_position: string | null;
+  track_title: string | null;
+  built_at: Generated<Date>;
+}
+
+export interface CatalogArtistGroupMembersTable {
+  group_artist_id: number;
+  member_artist_id: number;
+  built_at: Generated<Date>;
+}
+
+// --- Credit-build audit (migration 031) ---------------------------------------
+
+export interface EnrichCreditBuildAuditTable {
+  id: Generated<string>;
+  manifest_id: string;
+  manifest_version: string | null;
+  source_batch_id: string | null;
+  track_credits_count: Generated<number>;
+  release_credits_count: Generated<number>;
+  cross_scope_count: Generated<number>;
+  group_member_count: Generated<number>;
+  role_vocab: ColumnType<unknown, unknown | undefined, unknown | undefined>;
+  notes: string | null;
+  built_at: Generated<Date>;
+}
+
 // --- Database interface ---
 
 export interface Database {
@@ -548,6 +615,12 @@ export interface Database {
   "catalog.master_tracks": CatalogMasterTracksTable;
   "catalog.master_videos_unified": CatalogMasterVideosUnifiedTable;
 
+  // Catalog: credit + remix layer (030)
+  "catalog.master_track_credits": CatalogMasterTrackCreditsTable;
+  "catalog.master_release_credits": CatalogMasterReleaseCreditsTable;
+  "catalog.cross_scope_credits": CatalogCrossScopeCreditsTable;
+  "catalog.artist_group_members": CatalogArtistGroupMembersTable;
+
   // Enrich
   "enrich.entity_quality": EnrichEntityQualityTable;
   "enrich.label_linkouts": EnrichLabelLinkoutsTable;
@@ -561,4 +634,6 @@ export interface Database {
   // Phase C label essentials (029)
   "enrich.label_core_run": EnrichLabelCoreRunTable;
   "enrich.label_related": EnrichLabelRelatedTable;
+  // Credit-build audit (031)
+  "enrich.credit_build_audit": EnrichCreditBuildAuditTable;
 }

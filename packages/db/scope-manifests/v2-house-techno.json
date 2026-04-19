@@ -1,0 +1,64 @@
+{
+  "id": "v2-house-techno",
+  "version": "1.0.0",
+  "description": "House + techno + adjacent edge styles, 1985-2003. Mirrors the original v2 build defaults.",
+
+  "scope": {
+    "year_min": 1985,
+    "year_max": 2003,
+    "use_default_styles": false,
+    "styles": [
+      "Acid House", "Acid Techno", "Chicago House", "Deep House", "Detroit Techno",
+      "Dub Techno", "Garage House", "Hard House", "House", "Minimal",
+      "Minimal Techno", "Progressive House", "Tech House", "Techno", "Tribal House",
+      "Electro",
+      "IDM", "Experimental", "Abstract",
+      "Ambient", "Drone", "Dub",
+      "Breakbeat", "Hardcore",
+      "Italo-Disco",
+      "Trance", "Goa Trance",
+      "Electroclash", "Leftfield", "Balearic"
+    ],
+    "quality_active_only": true,
+    "breakbeat_year_gate": 1994,
+    "scene_weight_min": 0
+  },
+
+  "credits": {
+    "enabled": true,
+
+    "rule_a": {
+      "enabled": true,
+      "track_credits": true,
+      "release_credits": true,
+      "role_allowlist": [
+        "Remix",
+        "Producer",
+        "Mixed By",
+        "Edit",
+        "Dub",
+        "Additional Production",
+        "Engineer",
+        "Mastered By",
+        "Written By",
+        "Vocals"
+      ]
+    },
+
+    "rule_b": {
+      "enabled": true,
+      "role_allowlist": [
+        "Remix",
+        "Producer",
+        "Mixed By",
+        "Edit",
+        "Dub",
+        "Additional Production"
+      ]
+    },
+
+    "group_members": {
+      "enabled": true
+    }
+  }
+}

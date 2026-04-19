@@ -62,7 +62,7 @@
 
 import { createDb, sql, type Kysely, type Database } from "@dig/db";
 import { spawnSync } from "node:child_process";
-import { createWriteStream, mkdirSync } from "node:fs";
+import { createWriteStream, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { WriteStream } from "node:fs";
 
@@ -80,6 +80,67 @@ interface Args {
   sceneWeightMin: number;
   reset: boolean;
   fromPhase: number;
+  // --- Manifest + credit layer (added 2026-04) ---
+  manifestPath: string | null;
+  manifest: ScopeManifest | null;
+  creditsOnly: boolean;
+  skipCredits: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Scope Manifest (JSON) — see packages/db/scope-manifests/*.json
+// CLI flags still take precedence; the manifest only fills in defaults.
+// ---------------------------------------------------------------------------
+interface ScopeManifest {
+  id: string;
+  version: string;
+  description?: string;
+  scope?: {
+    year_min?: number;
+    year_max?: number;
+    styles?: string[];
+    use_default_styles?: boolean;
+    quality_active_only?: boolean;
+    breakbeat_year_gate?: number;
+    scene_weight_min?: number;
+  };
+  credits?: {
+    enabled?: boolean;
+    rule_a?: {
+      enabled?: boolean;
+      track_credits?: boolean;
+      release_credits?: boolean;
+      role_allowlist?: string[]; // post-normalisation buckets
+    };
+    rule_b?: {
+      enabled?: boolean;
+      role_allowlist?: string[];
+    };
+    group_members?: { enabled?: boolean };
+  };
+}
+
+const DEFAULT_RULE_A_ROLES = [
+  "Remix", "Producer", "Mixed By", "Edit", "Dub",
+  "Additional Production", "Engineer", "Mastered By",
+  "Written By", "Vocals",
+];
+
+const DEFAULT_RULE_B_ROLES = [
+  "Remix", "Producer", "Mixed By", "Edit", "Dub", "Additional Production",
+];
+
+function loadManifest(path: string): ScopeManifest {
+  const raw = readFileSync(path, "utf8");
+  let m: ScopeManifest;
+  try {
+    m = JSON.parse(raw) as ScopeManifest;
+  } catch (err) {
+    throw new Error(`Failed to parse manifest ${path}: ${(err as Error).message}`);
+  }
+  if (!m.id) throw new Error(`Manifest ${path} missing required "id"`);
+  if (!m.version) throw new Error(`Manifest ${path} missing required "version"`);
+  return m;
 }
 
 // All persistent scope tables live here. Resilient to connection drops.
@@ -142,6 +203,19 @@ Options:
   --from-phase <n>          Start from phase N (1=scope, 2=weight, 3=closures, 4=denorm,
                             5=dump). Each phase reuses any existing scope_workspace.*
                             tables. Default: 1.
+  --manifest <path>         Load defaults from a Scope Manifest JSON file
+                            (packages/db/scope-manifests/*.json). CLI flags still
+                            override individual values.
+  --credits-only            Only run the credit-extraction phases + dump credit
+                            tables. Reuses existing scope_workspace.* tables on
+                            SOURCE (build phases 1-3 are still required to derive
+                            the scope; phase 4 denorm is skipped). Useful for
+                            adding credits to an already-built scoped DB without
+                            re-shipping 2GB of unchanged catalog data.
+  --skip-credits            Run a normal build but DO NOT extract credits even
+                            if the manifest enables them. Useful for the first
+                            cut of a new scope where you want the catalogue
+                            shape before paying the credit-extraction cost.
   --help                    Show this help.
 `);
   process.exit(0);
@@ -163,30 +237,64 @@ function parseArgs(argv: string[]): Args {
   let sceneWeightMin = 0;
   let reset = false;
   let fromPhase = 1;
+  let manifestPath: string | null = null;
+  let creditsOnly = false;
+  let skipCredits = false;
+  // Track which CLI flags the user explicitly set so the manifest only fills
+  // in the gaps. (We still want CLI overrides to win, but we should not have
+  // CLI defaults stomp on manifest values.)
+  const cliSet = new Set<string>();
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--help") help();
-    if (a === "--year-min" && args[i + 1]) { yearMin = parseInt(args[++i], 10); continue; }
-    if (a === "--year-max" && args[i + 1]) { yearMax = parseInt(args[++i], 10); continue; }
-    if (a === "--style" && args[i + 1])    { styles.push(args[++i]); continue; }
-    if (a === "--no-default-styles")       { useDefaultStyles = false; continue; }
-    if (a === "--quality-active-only")     { qualityActiveOnly = true; continue; }
-    if (a === "--breakbeat-year-gate" && args[i + 1]) { breakbeatYearGate = parseInt(args[++i], 10); continue; }
+    if (a === "--year-min" && args[i + 1]) { yearMin = parseInt(args[++i], 10); cliSet.add("year_min"); continue; }
+    if (a === "--year-max" && args[i + 1]) { yearMax = parseInt(args[++i], 10); cliSet.add("year_max"); continue; }
+    if (a === "--style" && args[i + 1])    { styles.push(args[++i]); cliSet.add("styles"); continue; }
+    if (a === "--no-default-styles")       { useDefaultStyles = false; cliSet.add("use_default_styles"); continue; }
+    if (a === "--quality-active-only")     { qualityActiveOnly = true; cliSet.add("quality_active_only"); continue; }
+    if (a === "--breakbeat-year-gate" && args[i + 1]) { breakbeatYearGate = parseInt(args[++i], 10); cliSet.add("breakbeat_year_gate"); continue; }
     if (a === "--batch-id" && args[i + 1]) { batchIdOverride = args[++i]; continue; }
     if (a === "--output" && args[i + 1])   { output = args[++i]; continue; }
     if (a === "--target")                  { target = true; continue; }
     if (a === "--histogram")               { histogram = true; continue; }
-    if (a === "--scene-weight-min" && args[i + 1]) { sceneWeightMin = parseInt(args[++i], 10); continue; }
+    if (a === "--scene-weight-min" && args[i + 1]) { sceneWeightMin = parseInt(args[++i], 10); cliSet.add("scene_weight_min"); continue; }
     if (a === "--dry-run")                 { dryRun = true; continue; }
     if (a === "--reset")                   { reset = true; continue; }
     if (a === "--from-phase" && args[i + 1]) { fromPhase = parseInt(args[++i], 10); continue; }
+    if (a === "--manifest" && args[i + 1]) { manifestPath = args[++i]; continue; }
+    if (a === "--credits-only")            { creditsOnly = true; continue; }
+    if (a === "--skip-credits")            { skipCredits = true; continue; }
     console.error(`Unknown arg: ${a}`);
     help();
   }
 
+  // Manifest fills in unset CLI defaults
+  let manifest: ScopeManifest | null = null;
+  if (manifestPath) {
+    manifest = loadManifest(manifestPath);
+    const s = manifest.scope ?? {};
+    if (s.year_min !== undefined && !cliSet.has("year_min")) yearMin = s.year_min;
+    if (s.year_max !== undefined && !cliSet.has("year_max")) yearMax = s.year_max;
+    if (s.styles !== undefined && !cliSet.has("styles")) {
+      styles.push(...s.styles);
+    }
+    if (s.use_default_styles !== undefined && !cliSet.has("use_default_styles")) {
+      useDefaultStyles = s.use_default_styles;
+    }
+    if (s.quality_active_only !== undefined && !cliSet.has("quality_active_only")) {
+      qualityActiveOnly = s.quality_active_only;
+    }
+    if (s.breakbeat_year_gate !== undefined && !cliSet.has("breakbeat_year_gate")) {
+      breakbeatYearGate = s.breakbeat_year_gate;
+    }
+    if (s.scene_weight_min !== undefined && !cliSet.has("scene_weight_min")) {
+      sceneWeightMin = s.scene_weight_min;
+    }
+  }
+
   const finalStyles = styles.length > 0
-    ? (useDefaultStyles ? [...new Set([...DEFAULT_STYLES, ...styles])] : styles)
+    ? (useDefaultStyles ? [...new Set([...DEFAULT_STYLES, ...styles])] : [...new Set(styles)])
     : DEFAULT_STYLES;
 
   if (yearMin > yearMax) {
@@ -198,6 +306,7 @@ function parseArgs(argv: string[]): Args {
     yearMin, yearMax, styles: finalStyles, qualityActiveOnly,
     breakbeatYearGate, output, target, batchIdOverride, dryRun,
     histogram, sceneWeightMin, reset, fromPhase,
+    manifestPath, manifest, creditsOnly, skipCredits,
   };
 }
 
@@ -856,6 +965,411 @@ async function buildMasterDenorms(c: Kysely<Database>, batchId: string) {
   console.log(`[build-scope] master denorms in ${Date.now() - t0}ms`);
 }
 
+// ===========================================================================
+// PHASE 5 — credit + remix extraction (added 2026-04)
+// ===========================================================================
+// Two scoping rules (see docs/credit-and-remix-extraction-plan.md):
+//   - Rule A (master_track_credits + master_release_credits): credits on
+//     tracks/releases that belong to a master in scope_m.
+//   - Rule B (cross_scope_credits): credits where the credited artist is in
+//     scope_a but the host release is NOT in scope_r — terminal cards that
+//     link out to Discogs.
+//   - Optional: artist_group_members for the small slice of edges where
+//     both ends are scope artists.
+//
+// Role normalisation runs in SQL via a CASE expression; role_raw preserves
+// the original Discogs string so we can re-bucket later without re-extracting.
+// All four phases write into scope_workspace.scope_* persistent tables so
+// they're crash-resumable in the same way the catalogue phases are.
+// ---------------------------------------------------------------------------
+
+const ROLE_NORMALISE_SQL = `
+  CASE
+    WHEN role IS NULL OR btrim(role) = '' THEN 'Other'
+    WHEN role ~* '(^|[^a-z])edit($|[^a-z])'              THEN 'Edit'
+    WHEN role ~* '(^|[^a-z])dub($|[^a-z])|dub mix'       THEN 'Dub'
+    WHEN role ~* '^remix|remixer|re-?mix'                THEN 'Remix'
+    WHEN role ~* 'co-?produced|additional production|associate producer' THEN 'Additional Production'
+    WHEN role ~* '^produced by|^producer|^production'    THEN 'Producer'
+    WHEN role ~* 'mastered by|^master( |$)|mastering'    THEN 'Mastered By'
+    WHEN role ~* '^mix|^mixed by|^mixing|mix engineer'   THEN 'Mixed By'
+    WHEN role ~* 'engineer|recorded by|recording|programmed by' THEN 'Engineer'
+    WHEN role ~* 'written by|writer|composer|composed by|words by|lyrics by' THEN 'Written By'
+    WHEN role ~* 'vocals?|featuring|^feat|^ft\\.|sung by|backing vocals' THEN 'Vocals'
+    ELSE 'Other'
+  END
+`;
+
+interface CreditOpts {
+  ruleAEnabled: boolean;
+  ruleATrackCredits: boolean;
+  ruleAReleaseCredits: boolean;
+  ruleARoleAllowlist: string[];
+  ruleBEnabled: boolean;
+  ruleBRoleAllowlist: string[];
+  groupMembersEnabled: boolean;
+}
+
+function resolveCreditOpts(args: Args): CreditOpts {
+  const c = args.manifest?.credits;
+  return {
+    ruleAEnabled: c?.rule_a?.enabled !== false,
+    ruleATrackCredits: c?.rule_a?.track_credits !== false,
+    ruleAReleaseCredits: c?.rule_a?.release_credits !== false,
+    ruleARoleAllowlist: c?.rule_a?.role_allowlist ?? DEFAULT_RULE_A_ROLES,
+    ruleBEnabled: c?.rule_b?.enabled !== false,
+    ruleBRoleAllowlist: c?.rule_b?.role_allowlist ?? DEFAULT_RULE_B_ROLES,
+    groupMembersEnabled: c?.group_members?.enabled !== false,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5a: Rule A track-level credits
+// ---------------------------------------------------------------------------
+async function buildMasterTrackCredits(
+  c: Kysely<Database>,
+  batchId: string,
+  opts: CreditOpts,
+) {
+  if (await tableExists(c, WS, "scope_master_track_credits")) {
+    const n = await tableRowCount(c, WS, "scope_master_track_credits");
+    console.log(`[build-credits] reusing ${WS}.scope_master_track_credits (${n.toLocaleString()} rows)`);
+    return;
+  }
+  console.log("[build-credits] phase 5a: master_track_credits (Rule A, track-level)...");
+  const t0 = Date.now();
+
+  // Walk: scope_m -> canonical release -> tracks -> track_credits.
+  // We use the canonical release as the source so per-track credits line up
+  // 1:1 with catalog.master_tracks rows that the slim model already ships.
+  await sql`
+    CREATE TABLE scope_master_track_credits AS
+    SELECT
+      cr.master_discogs_id                          AS master_discogs_id,
+      COALESCE(t.track_number, t.position::text)    AS track_position,
+      t.title                                       AS track_title,
+      tc.artist_discogs_id                          AS artist_discogs_id,
+      tc.artist_name                                AS artist_name,
+      tc.anv                                        AS anv,
+      ${sql.raw(ROLE_NORMALISE_SQL.replace(/\brole\b/g, "tc.role"))} AS role,
+      tc.role                                       AS role_raw,
+      cr.release_discogs_id                         AS source_release_id
+    FROM scope_m_canonical_release cr
+    JOIN catalog.tracks t
+      ON t.release_discogs_id = cr.release_discogs_id
+      AND t.batch_id = ${batchId}::uuid
+    JOIN catalog.track_credits tc
+      ON tc.track_id = t.id
+      AND tc.batch_id = ${batchId}::uuid
+    WHERE tc.role IS NOT NULL AND btrim(tc.role) <> ''
+      AND tc.artist_discogs_id IS NOT NULL
+  `.execute(c);
+
+  // Filter to allowlisted (post-normalisation) roles
+  await sql`
+    DELETE FROM scope_master_track_credits
+    WHERE role NOT IN (${sql.join(opts.ruleARoleAllowlist.map((r) => sql.lit(r)))})
+  `.execute(c);
+
+  // De-dup (same artist on same track in same role only once)
+  await sql`
+    DELETE FROM scope_master_track_credits a
+    USING scope_master_track_credits b
+    WHERE a.ctid > b.ctid
+      AND a.master_discogs_id = b.master_discogs_id
+      AND COALESCE(a.track_position, '') = COALESCE(b.track_position, '')
+      AND a.artist_discogs_id = b.artist_discogs_id
+      AND a.role = b.role
+  `.execute(c);
+
+  await sql`CREATE INDEX ON scope_master_track_credits (master_discogs_id)`.execute(c);
+  await sql`CREATE INDEX ON scope_master_track_credits (artist_discogs_id, role)`.execute(c);
+  await sql`ANALYZE scope_master_track_credits`.execute(c);
+
+  const n = await tableRowCount(c, WS, "scope_master_track_credits");
+  console.log(`[build-credits] master_track_credits: ${n.toLocaleString()} rows in ${Date.now() - t0}ms`);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5b: Rule A release-level credits (Mastered By, Cover Art, A&R, etc.)
+// ---------------------------------------------------------------------------
+async function buildMasterReleaseCredits(
+  c: Kysely<Database>,
+  batchId: string,
+  opts: CreditOpts,
+) {
+  if (await tableExists(c, WS, "scope_master_release_credits")) {
+    const n = await tableRowCount(c, WS, "scope_master_release_credits");
+    console.log(`[build-credits] reusing ${WS}.scope_master_release_credits (${n.toLocaleString()} rows)`);
+    return;
+  }
+  console.log("[build-credits] phase 5b: master_release_credits (Rule A, release-level)...");
+  const t0 = Date.now();
+
+  // Source: catalog.release_credits attached to the canonical release of each
+  // in-scope master. We pin to the canonical release rather than every in-scope
+  // pressing because release-level credits (mastered by, designed by, A&R,
+  // etc.) repeat across reissues and we don't want N-fold duplication.
+  await sql`
+    CREATE TABLE scope_master_release_credits AS
+    SELECT
+      cr.master_discogs_id                          AS master_discogs_id,
+      cr.release_discogs_id                         AS source_release_id,
+      rc.artist_discogs_id                          AS artist_discogs_id,
+      rc.artist_name                                AS artist_name,
+      rc.anv                                        AS anv,
+      ${sql.raw(ROLE_NORMALISE_SQL.replace(/\brole\b/g, "rc.role"))} AS role,
+      rc.role                                       AS role_raw
+    FROM scope_m_canonical_release cr
+    JOIN catalog.release_credits rc
+      ON rc.release_discogs_id = cr.release_discogs_id
+      AND rc.batch_id = ${batchId}::uuid
+    WHERE rc.role IS NOT NULL AND btrim(rc.role) <> ''
+      AND rc.artist_discogs_id IS NOT NULL
+  `.execute(c);
+
+  await sql`
+    DELETE FROM scope_master_release_credits
+    WHERE role NOT IN (${sql.join(opts.ruleARoleAllowlist.map((r) => sql.lit(r)))})
+  `.execute(c);
+
+  await sql`
+    DELETE FROM scope_master_release_credits a
+    USING scope_master_release_credits b
+    WHERE a.ctid > b.ctid
+      AND a.master_discogs_id = b.master_discogs_id
+      AND a.source_release_id = b.source_release_id
+      AND a.artist_discogs_id = b.artist_discogs_id
+      AND a.role = b.role
+  `.execute(c);
+
+  await sql`CREATE INDEX ON scope_master_release_credits (master_discogs_id)`.execute(c);
+  await sql`CREATE INDEX ON scope_master_release_credits (artist_discogs_id, role)`.execute(c);
+  await sql`ANALYZE scope_master_release_credits`.execute(c);
+
+  const n = await tableRowCount(c, WS, "scope_master_release_credits");
+  console.log(`[build-credits] master_release_credits: ${n.toLocaleString()} rows in ${Date.now() - t0}ms`);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5c: Rule B — cross-scope credits
+// ---------------------------------------------------------------------------
+// "MAW remixed Madonna." Madonna's release isn't in scope_r, but MAW is in
+// scope_a. We want a TERMINAL card on MAW's artist page that links out.
+// We pull both track-level and release-level credits via UNION, then enrich
+// with the host release's title/year/label/primary artist for nice display.
+async function buildCrossScopeCredits(
+  c: Kysely<Database>,
+  batchId: string,
+  opts: CreditOpts,
+) {
+  if (await tableExists(c, WS, "scope_cross_scope_credits")) {
+    const n = await tableRowCount(c, WS, "scope_cross_scope_credits");
+    console.log(`[build-credits] reusing ${WS}.scope_cross_scope_credits (${n.toLocaleString()} rows)`);
+    return;
+  }
+  console.log("[build-credits] phase 5c: cross_scope_credits (Rule B)...");
+  const t0 = Date.now();
+
+  // Step 1: collect raw cross-scope rows. Track-level + release-level UNIONed.
+  // We restrict to host releases NOT in scope_r (the cross-scope predicate).
+  await sql`
+    CREATE TEMP TABLE _csc_raw ON COMMIT DROP AS
+    -- track-level: MAW credited as Remix on track X of Madonna release Y
+    SELECT
+      tc.artist_discogs_id    AS artist_discogs_id,
+      tc.artist_name          AS artist_name,
+      tc.anv                  AS anv,
+      ${sql.raw(ROLE_NORMALISE_SQL.replace(/\brole\b/g, "tc.role"))} AS role,
+      tc.role                 AS role_raw,
+      r.discogs_id            AS host_release_id,
+      COALESCE(t.track_number, t.position::text) AS track_position,
+      t.title                 AS track_title
+    FROM catalog.track_credits tc
+    JOIN catalog.tracks t
+      ON t.id = tc.track_id
+      AND t.batch_id = tc.batch_id
+    JOIN catalog.releases r
+      ON r.discogs_id = t.release_discogs_id
+      AND r.batch_id = t.batch_id
+    WHERE tc.batch_id = ${batchId}::uuid
+      AND tc.artist_discogs_id IS NOT NULL
+      AND tc.artist_discogs_id IN (SELECT discogs_id FROM scope_a)
+      AND r.discogs_id NOT IN (SELECT discogs_id FROM scope_r)
+      AND tc.role IS NOT NULL AND btrim(tc.role) <> ''
+    UNION ALL
+    -- release-level: MAW credited as Mixed By on a non-scope release
+    SELECT
+      rc.artist_discogs_id    AS artist_discogs_id,
+      rc.artist_name          AS artist_name,
+      rc.anv                  AS anv,
+      ${sql.raw(ROLE_NORMALISE_SQL.replace(/\brole\b/g, "rc.role"))} AS role,
+      rc.role                 AS role_raw,
+      rc.release_discogs_id   AS host_release_id,
+      NULL::text              AS track_position,
+      NULL::text              AS track_title
+    FROM catalog.release_credits rc
+    WHERE rc.batch_id = ${batchId}::uuid
+      AND rc.artist_discogs_id IS NOT NULL
+      AND rc.artist_discogs_id IN (SELECT discogs_id FROM scope_a)
+      AND rc.release_discogs_id NOT IN (SELECT discogs_id FROM scope_r)
+      AND rc.role IS NOT NULL AND btrim(rc.role) <> ''
+  `.execute(c);
+
+  // Filter to allowlisted roles (much smaller B allowlist than A)
+  await sql`
+    DELETE FROM _csc_raw
+    WHERE role NOT IN (${sql.join(opts.ruleBRoleAllowlist.map((r) => sql.lit(r)))})
+  `.execute(c);
+
+  // Step 2: enrich with host release metadata (title/year/label/primary artist)
+  await sql`
+    CREATE TABLE scope_cross_scope_credits AS
+    SELECT
+      raw.artist_discogs_id,
+      raw.artist_name,
+      raw.anv,
+      raw.role,
+      raw.role_raw,
+      raw.host_release_id,
+      r.title                     AS host_release_title,
+      r.release_year              AS host_release_year,
+      (SELECT ra.artist_name
+         FROM catalog.release_artists ra
+         WHERE ra.batch_id = ${batchId}::uuid
+           AND ra.release_discogs_id = raw.host_release_id
+         ORDER BY ra.position ASC
+         LIMIT 1)                 AS host_primary_artist_name,
+      (SELECT rl.label_name
+         FROM catalog.release_labels rl
+         WHERE rl.batch_id = ${batchId}::uuid
+           AND rl.release_discogs_id = raw.host_release_id
+         ORDER BY rl.id ASC
+         LIMIT 1)                 AS host_label_name,
+      raw.track_position,
+      raw.track_title
+    FROM _csc_raw raw
+    JOIN catalog.releases r
+      ON r.discogs_id = raw.host_release_id
+      AND r.batch_id = ${batchId}::uuid
+  `.execute(c);
+
+  // Drop unverified releases (out-of-scope by quality gate, e.g. spam)
+  // Optional but keeps cross-scope honest about Discogs editorial state.
+  await sql`
+    DELETE FROM scope_cross_scope_credits
+    USING enrich.entity_quality eq
+    WHERE eq.entity_type = 'release'
+      AND eq.discogs_id = scope_cross_scope_credits.host_release_id
+      AND eq.quality_status <> 'active'
+  `.execute(c);
+
+  // De-dup
+  await sql`
+    DELETE FROM scope_cross_scope_credits a
+    USING scope_cross_scope_credits b
+    WHERE a.ctid > b.ctid
+      AND a.artist_discogs_id = b.artist_discogs_id
+      AND a.host_release_id = b.host_release_id
+      AND COALESCE(a.track_position, '') = COALESCE(b.track_position, '')
+      AND a.role = b.role
+  `.execute(c);
+
+  await sql`CREATE INDEX ON scope_cross_scope_credits (artist_discogs_id, role)`.execute(c);
+  await sql`ANALYZE scope_cross_scope_credits`.execute(c);
+
+  const n = await tableRowCount(c, WS, "scope_cross_scope_credits");
+  console.log(`[build-credits] cross_scope_credits: ${n.toLocaleString()} rows in ${Date.now() - t0}ms`);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5d: artist group members (only edges where both ends are scope artists)
+// ---------------------------------------------------------------------------
+async function buildArtistGroupMembers(c: Kysely<Database>, batchId: string) {
+  if (await tableExists(c, WS, "scope_artist_group_members")) {
+    const n = await tableRowCount(c, WS, "scope_artist_group_members");
+    console.log(`[build-credits] reusing ${WS}.scope_artist_group_members (${n.toLocaleString()} rows)`);
+    return;
+  }
+  console.log("[build-credits] phase 5d: artist_group_members...");
+  const t0 = Date.now();
+
+  // catalog.artist_members:
+  //   artist_discogs_id  -> the GROUP (e.g. UR)
+  //   member_discogs_id  -> the MEMBER (e.g. Mike Banks)
+  //
+  // We only carry edges where BOTH ends are scope artists. Single-direction
+  // (group -> member) is enough — UI can render "members" or "groups" from
+  // the same edges.
+  await sql`
+    CREATE TABLE scope_artist_group_members AS
+    SELECT DISTINCT
+      am.artist_discogs_id  AS group_artist_id,
+      am.member_discogs_id  AS member_artist_id
+    FROM catalog.artist_members am
+    WHERE am.batch_id = ${batchId}::uuid
+      AND am.member_discogs_id IS NOT NULL
+      AND am.artist_discogs_id <> am.member_discogs_id
+      AND am.artist_discogs_id IN (SELECT discogs_id FROM scope_a)
+      AND am.member_discogs_id IN (SELECT discogs_id FROM scope_a)
+  `.execute(c);
+
+  await sql`CREATE UNIQUE INDEX ON scope_artist_group_members (group_artist_id, member_artist_id)`.execute(c);
+  await sql`CREATE INDEX ON scope_artist_group_members (member_artist_id)`.execute(c);
+  await sql`ANALYZE scope_artist_group_members`.execute(c);
+
+  const n = await tableRowCount(c, WS, "scope_artist_group_members");
+  console.log(`[build-credits] artist_group_members: ${n.toLocaleString()} rows in ${Date.now() - t0}ms`);
+}
+
+// Drives the four phases above (with reset support).
+async function runCreditPhases(
+  c: Kysely<Database>,
+  batchId: string,
+  args: Args,
+): Promise<{ opts: CreditOpts; counts: Record<string, number> }> {
+  const opts = resolveCreditOpts(args);
+  console.log(
+    `[build-credits] credit opts: ruleA=${opts.ruleAEnabled} ` +
+    `(track=${opts.ruleATrackCredits} release=${opts.ruleAReleaseCredits}) ` +
+    `ruleB=${opts.ruleBEnabled} groupMembers=${opts.groupMembersEnabled}`,
+  );
+
+  if (args.reset) {
+    for (const t of CREDIT_TABLES) {
+      await sql.raw(`DROP TABLE IF EXISTS ${WS}.${t}`).execute(c);
+    }
+  }
+
+  if (opts.ruleAEnabled && opts.ruleATrackCredits) {
+    await buildMasterTrackCredits(c, batchId, opts);
+  }
+  if (opts.ruleAEnabled && opts.ruleAReleaseCredits) {
+    await buildMasterReleaseCredits(c, batchId, opts);
+  }
+  if (opts.ruleBEnabled) {
+    await buildCrossScopeCredits(c, batchId, opts);
+  }
+  if (opts.groupMembersEnabled) {
+    await buildArtistGroupMembers(c, batchId);
+  }
+
+  const counts: Record<string, number> = {};
+  for (const t of CREDIT_TABLES) {
+    if (await tableExists(c, WS, t)) {
+      counts[t] = await tableRowCount(c, WS, t);
+    }
+  }
+  return { opts, counts };
+}
+
+const CREDIT_TABLES = [
+  "scope_master_track_credits",
+  "scope_master_release_credits",
+  "scope_cross_scope_credits",
+  "scope_artist_group_members",
+] as const;
+
 // ---------------------------------------------------------------------------
 // Counts (used in dry-run + audit row)
 // ---------------------------------------------------------------------------
@@ -919,6 +1433,13 @@ async function dumpAll(
   await dumpMasterTracks(c, batchId, writeLine);
   await dumpMasterVideosUnified(c, batchId, writeLine);
   await dumpReleaseShadow(c, batchId, writeLine);
+
+  // Credit layer (only present when phases 5a-5d ran). Idempotent: dump
+  // functions no-op if the workspace tables don't exist.
+  await dumpMasterTrackCredits(c, writeLine);
+  await dumpMasterReleaseCredits(c, writeLine);
+  await dumpCrossScopeCredits(c, writeLine);
+  await dumpArtistGroupMembers(c, writeLine);
 
   await writeLine("COMMIT;");
   await writeLine("SET session_replication_role = 'origin';");
@@ -1144,6 +1665,154 @@ async function dumpReleaseShadow(
   await emitChunkedInserts("catalog.release_shadow", cols, result.rows, writeLine);
 }
 
+// ---------------------------------------------------------------------------
+// Credit-layer dump functions (added 2026-04). Each dumps from the
+// scope_workspace.scope_* table built in runCreditPhases().
+// ---------------------------------------------------------------------------
+async function dumpMasterTrackCredits(
+  c: Kysely<Database>,
+  writeLine: (s: string) => Promise<void>,
+) {
+  if (!(await tableExists(c, WS, "scope_master_track_credits"))) return;
+  await writeLine("-- catalog.master_track_credits (Rule A, track-level)");
+  const cols = [
+    "master_discogs_id", "track_position", "track_title",
+    "artist_discogs_id", "artist_name", "anv",
+    "role", "role_raw", "source_release_id",
+  ];
+  console.log(`  [dump] catalog.master_track_credits`);
+  const result = await sql<Record<string, unknown>>`
+    SELECT ${sql.raw(cols.join(", "))}
+    FROM scope_master_track_credits
+  `.execute(c);
+  await emitChunkedInserts("catalog.master_track_credits", cols, result.rows, writeLine);
+}
+
+async function dumpMasterReleaseCredits(
+  c: Kysely<Database>,
+  writeLine: (s: string) => Promise<void>,
+) {
+  if (!(await tableExists(c, WS, "scope_master_release_credits"))) return;
+  await writeLine("-- catalog.master_release_credits (Rule A, release-level)");
+  const cols = [
+    "master_discogs_id", "source_release_id",
+    "artist_discogs_id", "artist_name", "anv",
+    "role", "role_raw",
+  ];
+  console.log(`  [dump] catalog.master_release_credits`);
+  const result = await sql<Record<string, unknown>>`
+    SELECT ${sql.raw(cols.join(", "))}
+    FROM scope_master_release_credits
+  `.execute(c);
+  await emitChunkedInserts("catalog.master_release_credits", cols, result.rows, writeLine);
+}
+
+async function dumpCrossScopeCredits(
+  c: Kysely<Database>,
+  writeLine: (s: string) => Promise<void>,
+) {
+  if (!(await tableExists(c, WS, "scope_cross_scope_credits"))) return;
+  await writeLine("-- catalog.cross_scope_credits (Rule B)");
+  const cols = [
+    "artist_discogs_id", "artist_name", "anv",
+    "role", "role_raw",
+    "host_release_id", "host_release_title", "host_release_year",
+    "host_primary_artist_name", "host_label_name",
+    "track_position", "track_title",
+  ];
+  console.log(`  [dump] catalog.cross_scope_credits`);
+  const result = await sql<Record<string, unknown>>`
+    SELECT ${sql.raw(cols.join(", "))}
+    FROM scope_cross_scope_credits
+  `.execute(c);
+  await emitChunkedInserts("catalog.cross_scope_credits", cols, result.rows, writeLine);
+}
+
+async function dumpArtistGroupMembers(
+  c: Kysely<Database>,
+  writeLine: (s: string) => Promise<void>,
+) {
+  if (!(await tableExists(c, WS, "scope_artist_group_members"))) return;
+  await writeLine("-- catalog.artist_group_members");
+  const cols = ["group_artist_id", "member_artist_id"];
+  console.log(`  [dump] catalog.artist_group_members`);
+  const result = await sql<Record<string, unknown>>`
+    SELECT ${sql.raw(cols.join(", "))}
+    FROM scope_artist_group_members
+  `.execute(c);
+  await emitChunkedInserts("catalog.artist_group_members", cols, result.rows, writeLine);
+}
+
+// ---------------------------------------------------------------------------
+// Credit-only dump path: writes a slim SQL file containing ONLY the new
+// credit tables (truncate-then-insert). Used to ship credits to a scoped DB
+// that already has the rest of the catalogue.
+// ---------------------------------------------------------------------------
+async function dumpCreditsOnly(
+  c: Kysely<Database>,
+  args: Args,
+  manifest: ScopeManifest | null,
+  batchId: string,
+): Promise<{ output: string; counts: Record<string, number> }> {
+  mkdirSync(dirname(args.output), { recursive: true });
+  const out: WriteStream = createWriteStream(args.output, { encoding: "utf8" });
+  const writeLine = (line: string) => new Promise<void>((res) => out.write(line + "\n", () => res()));
+
+  await writeLine("-- credit-layer-only build (delta into existing scoped DB)");
+  await writeLine(`-- manifest: ${manifest?.id ?? "(none)"} v${manifest?.version ?? "?"}`);
+  await writeLine("SET session_replication_role = 'replica';");
+  await writeLine("BEGIN;");
+
+  // Truncate first — credits are FULLY REPLACED on each delta build. The
+  // tables are derived; we don't merge or upsert.
+  await writeLine("TRUNCATE catalog.master_track_credits RESTART IDENTITY;");
+  await writeLine("TRUNCATE catalog.master_release_credits RESTART IDENTITY;");
+  await writeLine("TRUNCATE catalog.cross_scope_credits RESTART IDENTITY;");
+  await writeLine("TRUNCATE catalog.artist_group_members;");
+
+  await dumpMasterTrackCredits(c, writeLine);
+  await dumpMasterReleaseCredits(c, writeLine);
+  await dumpCrossScopeCredits(c, writeLine);
+  await dumpArtistGroupMembers(c, writeLine);
+
+  // Audit row
+  const counts: Record<string, number> = {};
+  for (const t of CREDIT_TABLES) {
+    if (await tableExists(c, WS, t)) {
+      counts[t] = await tableRowCount(c, WS, t);
+    }
+  }
+  const auditCounts = {
+    track_credits: counts["scope_master_track_credits"] ?? 0,
+    release_credits: counts["scope_master_release_credits"] ?? 0,
+    cross_scope: counts["scope_cross_scope_credits"] ?? 0,
+    group_members: counts["scope_artist_group_members"] ?? 0,
+  };
+  const opts = resolveCreditOpts(args);
+  const roleVocab = {
+    rule_a: opts.ruleARoleAllowlist,
+    rule_b: opts.ruleBRoleAllowlist,
+  };
+  await writeLine(
+    `INSERT INTO enrich.credit_build_audit ` +
+    `(manifest_id, manifest_version, source_batch_id, ` +
+    `track_credits_count, release_credits_count, cross_scope_count, group_member_count, ` +
+    `role_vocab, notes) VALUES (` +
+    `${pgVal(manifest?.id ?? "ad-hoc")}, ${pgVal(manifest?.version ?? null)}, ` +
+    `${pgVal(batchId)}::uuid, ` +
+    `${auditCounts.track_credits}, ${auditCounts.release_credits}, ` +
+    `${auditCounts.cross_scope}, ${auditCounts.group_members}, ` +
+    `${pgVal(roleVocab)}, ` +
+    `'credits-only delta build via scripts/build-scoped-db.ts');`,
+  );
+
+  await writeLine("COMMIT;");
+  await writeLine("SET session_replication_role = 'origin';");
+  await new Promise<void>((res) => out.end(res));
+
+  return { output: args.output, counts };
+}
+
 async function dumpTable(
   c: Kysely<Database>,
   table: string,
@@ -1248,6 +1917,21 @@ async function writeAuditRow(batchId: string, args: Args, output: string, counts
   await fs.appendFile(output, audit);
 }
 
+async function analyzeCreditTables(targetUrl: string) {
+  console.log("  [target] ANALYZE on credit tables");
+  const analyzeSql = `
+    SET statement_timeout = '15min';
+    VACUUM ANALYZE catalog.master_track_credits;
+    VACUUM ANALYZE catalog.master_release_credits;
+    VACUUM ANALYZE catalog.cross_scope_credits;
+    VACUUM ANALYZE catalog.artist_group_members;
+  `;
+  const result = spawnSync("psql", [targetUrl, "-v", "ON_ERROR_STOP=1", "-c", analyzeSql], { stdio: "inherit" });
+  if (result.status !== 0) {
+    throw new Error(`analyzeCreditTables failed (exit ${result.status})`);
+  }
+}
+
 async function pipeIntoTarget(targetUrl: string, sqlPath: string) {
   console.log(`  [target] piping ${sqlPath} into target via psql`);
   const result = spawnSync("psql", [targetUrl, "-v", "ON_ERROR_STOP=1", "-f", sqlPath], { stdio: "inherit" });
@@ -1320,10 +2004,17 @@ async function main() {
   const source = createDb(sourceUrl);
   try {
     const batchId = await resolveBatchId(source, args.batchIdOverride);
+    if (args.manifest) {
+      console.log(
+        `[build-scope] manifest=${args.manifest.id} v${args.manifest.version}` +
+        (args.manifest.description ? ` (${args.manifest.description})` : ""),
+      );
+    }
     console.log(
       `[build-scope] source batch_id=${batchId} year=${args.yearMin}-${args.yearMax} ` +
       `quality=${args.qualityActiveOnly} breakbeat-gate=${args.breakbeatYearGate} ` +
-      `weight-min=${args.sceneWeightMin} histogram=${args.histogram}`,
+      `weight-min=${args.sceneWeightMin} histogram=${args.histogram} ` +
+      `credits-only=${args.creditsOnly} skip-credits=${args.skipCredits}`,
     );
     console.log(`[build-scope] styles (${args.styles.length}): ${args.styles.join(", ")}`);
 
@@ -1370,6 +2061,34 @@ async function main() {
         console.log(`[build-scope] phase 3: SKIPPED (--from-phase ${args.fromPhase})`);
       }
 
+      // Credits-only path: skip phase 4 (denorms — already in scoped DB),
+      // skip the standard dump, run the new credit phases, and emit a slim
+      // credits-only SQL file.
+      if (args.creditsOnly) {
+        console.log("[build-scope] CREDITS-ONLY mode: skipping phases 4 + standard dump");
+        console.log("[build-credits] phase 5*: running credit-extraction phases...");
+        const { counts: creditCounts } = await runCreditPhases(c, batchId, args);
+        console.log("[build-credits] credit counts:", creditCounts);
+
+        if (args.dryRun) {
+          console.log("[build-scope] dry-run: not writing credit dump");
+          return;
+        }
+
+        console.log(`[build-scope] writing credit-only dump to ${args.output}`);
+        await dumpCreditsOnly(c, args, args.manifest, batchId);
+
+        if (targetUrl) {
+          console.log("[target] piping credit dump into target");
+          await pipeIntoTarget(targetUrl, args.output);
+          // No backfill needed: credit tables have no search_vector / no derived
+          // columns. We do ANALYZE so the planner uses the new rows.
+          await analyzeCreditTables(targetUrl);
+        }
+        console.log("[build-scope] credits-only done");
+        return;
+      }
+
       if (args.fromPhase <= 4) {
         console.log("[build-scope] phase 4: master denorms...");
         await buildMasterDenorms(c, batchId);
@@ -1379,6 +2098,17 @@ async function main() {
 
       const counts = await collectScopeCounts(c);
       console.log("[build-scope] scope counts:", counts);
+
+      // Run credit phases unless explicitly disabled. Manifest gates them
+      // via credits.enabled (default true).
+      const creditsConfigured = args.manifest?.credits?.enabled !== false;
+      if (!args.skipCredits && creditsConfigured) {
+        console.log("[build-credits] phase 5*: running credit-extraction phases...");
+        const { counts: creditCounts } = await runCreditPhases(c, batchId, args);
+        console.log("[build-credits] credit counts:", creditCounts);
+      } else {
+        console.log("[build-credits] SKIPPED (--skip-credits or manifest.credits.enabled=false)");
+      }
 
       if (args.dryRun) {
         console.log("[build-scope] dry-run: not writing dump");
