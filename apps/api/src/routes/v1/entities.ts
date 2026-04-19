@@ -197,7 +197,10 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
     const q = req.query as { role?: string; limit?: string };
     const limit = q.limit ? Math.max(1, Math.min(parseInt(q.limit, 10) || 50, 200)) : 50;
     try {
-      const { batchId } = await getBatchForTable(db, "catalog.master_track_credits");
+      // Credit tables (master_track_credits / master_release_credits) are
+      // populated by a one-shot ETL and have no batch_id; we resolve the batch
+      // from catalog.masters which is what the hydration query joins against.
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
       const result = await db.transaction().execute(async (trx) => {
         await sql`SET LOCAL statement_timeout = '8000'`.execute(trx);
         return getArtistRuleACredits(trx, discogsId, batchId, {
