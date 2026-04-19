@@ -1,0 +1,72 @@
+{
+  "id": "hip-hop-1979-1999",
+  "version": "0.1.0",
+  "description": "Hip-hop catalog from Sugar Hill (1979) through the end of the golden era / start of the bling era (1999). Mirrors v2-house-techno scope shape and credit-extraction rules.",
+
+  "scope": {
+    "year_min": 1979,
+    "year_max": 1999,
+    "use_default_styles": false,
+    "styles": [
+      "Hip Hop",
+      "Boom Bap",
+      "Conscious",
+      "East Coast Hip Hop",
+      "West Coast Hip Hop",
+      "Hardcore Hip-Hop",
+      "Gangsta",
+      "G-Funk",
+      "Jazzy Hip-Hop",
+      "Pop Rap",
+      "Cut-up/DJ",
+      "Bay Area",
+      "Southern Hip Hop",
+      "Memphis Rap",
+      "Crunk",
+      "Trap",
+      "Old School Hip Hop",
+      "Electro"
+    ],
+    "quality_active_only": true,
+    "breakbeat_year_gate": 9999,
+    "scene_weight_min": 0
+  },
+
+  "credits": {
+    "enabled": true,
+
+    "rule_a": {
+      "enabled": true,
+      "track_credits": true,
+      "release_credits": true,
+      "role_allowlist": [
+        "Producer",
+        "Co-Producer",
+        "Remix",
+        "Mixed By",
+        "Edit",
+        "Additional Production",
+        "Engineer",
+        "Mastered By",
+        "Written By",
+        "Vocals"
+      ]
+    },
+
+    "rule_b": {
+      "enabled": true,
+      "role_allowlist": [
+        "Producer",
+        "Co-Producer",
+        "Remix",
+        "Mixed By",
+        "Edit",
+        "Additional Production"
+      ]
+    },
+
+    "group_members": {
+      "enabled": true
+    }
+  }
+}
