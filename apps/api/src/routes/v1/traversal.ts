@@ -273,13 +273,6 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
     ),
   );
 
-  app.get("/v1/artists/:discogs_id/credits", async (_req, reply) =>
-    gone(
-      reply,
-      "Per-release artist credits are no longer served in the scene-scoped catalog.",
-    ),
-  );
-
   app.get("/v1/releases/:discogs_id/credits", async (_req, reply) =>
     gone(
       reply,
