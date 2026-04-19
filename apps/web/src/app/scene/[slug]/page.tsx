@@ -107,26 +107,28 @@ export default async function ScenePage({ params, searchParams }: Props) {
   const sp = await searchParams;
   const density = sp.density === "compact" || sp.density === "full" ? sp.density : "medium";
 
-  let wallData: SceneWallResponse;
-  let detailData: SceneDetailResponse | null = null;
-  try {
-    const [w, d] = await Promise.all([
-      digFetch<SceneWallResponse>(`/v1/scenes/${slug}/wall?density=${density}`, {
-        revalidate: 600,
-      }),
-      digFetch<SceneDetailResponse>(`/v1/scenes/${slug}`, { revalidate: 600 }).catch(
-        () => null,
-      ),
-    ]);
-    wallData = w;
-    detailData = d;
-  } catch (err) {
+  const [wallResult, detailResult] = await Promise.all([
+    digFetch<SceneWallResponse>(`/v1/scenes/${slug}/wall?density=${density}`, {
+      revalidate: 600,
+    })
+      .then((d) => ({ ok: true as const, data: d }))
+      .catch((err: unknown) => ({ ok: false as const, err })),
+    digFetch<SceneDetailResponse>(`/v1/scenes/${slug}`, { revalidate: 600 })
+      .then((d) => ({ ok: true as const, data: d }))
+      .catch(() => ({ ok: false as const, err: null })),
+  ]);
+
+  if (!wallResult.ok) {
+    const err = wallResult.err;
     if (err instanceof ApiRequestError) {
       if (err.status === 404) notFound();
       return <ErrorMessage code={err.code} message={err.message} />;
     }
-    return <ErrorMessage message="Failed to load scene" />;
+    return <ErrorMessage message="Failed to load scene. Try again in a moment." />;
   }
+
+  const wallData: SceneWallResponse = wallResult.data;
+  const detailData: SceneDetailResponse | null = detailResult.ok ? detailResult.data : null;
 
   const wall = wallData.wall;
   const era = formatEra(wall.era_start, wall.era_end);

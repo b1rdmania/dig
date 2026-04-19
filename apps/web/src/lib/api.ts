@@ -2,7 +2,8 @@ import { isApiError } from "./types";
 
 const API_URL = process.env.DIG_API_URL || "https://dig-api.fly.dev";
 const API_KEY = process.env.DIG_API_KEY || "";
-const TIMEOUT_MS = 10000;
+const TIMEOUT_MS = 12000;
+const RETRY_DELAY_MS = 250;
 
 export class ApiRequestError extends Error {
   constructor(
@@ -21,10 +22,27 @@ interface FetchOptions {
 }
 
 /**
- * Server-side fetch wrapper. Adds API key, timeout, and ISR cache control.
- * Base URL does not include /v1 — pass full path like "/v1/search".
+ * Server-side fetch wrapper. Adds API key, timeout, ISR cache, and one
+ * automatic retry on transient network errors (undici "fetch failed",
+ * ECONNRESET, socket hang up). 4xx/5xx responses do NOT retry — those
+ * are real API errors, not network blips.
  */
 export async function digFetch<T>(
+  path: string,
+  options: FetchOptions = {},
+): Promise<T> {
+  try {
+    return await digFetchOnce<T>(path, options);
+  } catch (err) {
+    if (err instanceof ApiRequestError && err.code === "NETWORK_ERROR") {
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      return await digFetchOnce<T>(path, options);
+    }
+    throw err;
+  }
+}
+
+async function digFetchOnce<T>(
   path: string,
   options: FetchOptions = {},
 ): Promise<T> {
