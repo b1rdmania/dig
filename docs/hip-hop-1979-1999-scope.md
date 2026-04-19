@@ -14,34 +14,67 @@ Companion to [`credit-and-remix-extraction-plan.md`](./credit-and-remix-extracti
 
 ## 2. Style allowlist & rationale
 
-The manifest filters on Discogs `styles` (not `genres`). Final list mirrors the user-requested set with two practical notes:
+The manifest filters on Discogs `styles` (not `genres`). The allowlist below
+is **manifest v0.2** — the v0.1 list was tuned against histogram results from
+`dig-db`. See [§2a](#2a-histogram-results-v01--v02) for what changed and why.
 
-| Style                | Notes                                                                                       |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `Hip Hop`            | Coarse style + genre — many old-school + indie 12"s only have this one tag. Must include.   |
-| `Boom Bap`           | Core — '92–'99 NY underground. Disambiguates from "Hip Hop" for Premo / Pete Rock-era cuts. |
-| `Conscious`          | Native Tongues + Roots + Common + Mos Def axis.                                             |
-| `East Coast Hip Hop` | Discogs canonical name (note "Hip Hop", no hyphen). Wu-Tang, Nas, Jay-Z, Rawkus.            |
-| `West Coast Hip Hop` | Death Row, Aftermath, Dogg Pound, Ruthless.                                                 |
-| `Hardcore Hip-Hop`   | Discogs spelling has hyphen. M.O.P., Onyx, Mobb Deep, Cypress Hill.                         |
-| `Gangsta`            | NWA, Ice-T, late-Cube, Compton's Most Wanted.                                               |
-| `G-Funk`             | Dre, Snoop, Warren G, Above the Law.                                                        |
-| `Jazzy Hip-Hop`      | Tribe, Gang Starr, Pete Rock & CL, Digable Planets, Mo' Wax artists.                        |
-| `Pop Rap`            | Salt-N-Pepa, MC Hammer, Kris Kross, Will Smith, Naughty by Nature crossovers.               |
-| `Cut-up/DJ`          | DJ Shadow, Cut Chemist, Beat Junkies, X-Ecutioners, Bomb Hip-Hop.                           |
-| `Bay Area`           | Hieroglyphics, Souls of Mischief, E-40, Too $hort, Quannum.                                 |
-| `Southern Hip Hop`   | Outkast, Goodie Mob, UGK, Geto Boys, 8Ball & MJG.                                           |
-| `Memphis Rap`        | Three 6 Mafia, Tommy Wright III, Project Pat, DJ Squeeky.                                   |
-| `Crunk`              | Late-90s emergence (Lil Jon BME, early Three 6) — bounded by year_max=1999.                 |
-| `Trap`               | Almost no Discogs releases tagged Trap before 2000 — included for completeness, expect ~0.  |
-| `Old School Hip Hop` | Pre-87 catalogue retag — Sugar Hill, Tommy Boy electro-rap, Cold Crush.                     |
-| `Electro`            | Heavy overlap with early hip-hop (Bambaataa "Planet Rock", Mantronix, Soulsonic Force).     |
+| Style            | Notes                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| `Hip Hop`        | Coarse style + genre — many old-school + indie 12"s only have this one tag. Catches the proto/Sugar Hill/Cold Crush corpus that doesn't get tagged with a sub-style. |
+| `Boom Bap`       | Core — '92–'99 NY underground. Disambiguates from "Hip Hop" for Premo / Pete Rock-era cuts. |
+| `Conscious`      | Native Tongues + Roots + Common + Mos Def axis.                                             |
+| `Hardcore Hip-Hop` | Discogs spelling has hyphen. M.O.P., Onyx, Mobb Deep, Cypress Hill.                       |
+| `Gangsta`        | NWA, Ice-T, late-Cube, Compton's Most Wanted.                                               |
+| `G-Funk`         | Dre, Snoop, Warren G, Above the Law.                                                        |
+| `Jazzy Hip-Hop`  | Tribe, Gang Starr, Pete Rock & CL, Digable Planets, Mo' Wax artists.                        |
+| `Pop Rap`        | Salt-N-Pepa, MC Hammer, Kris Kross, Will Smith, Naughty by Nature crossovers.               |
+| `Cut-up/DJ`      | DJ Shadow, Cut Chemist, Beat Junkies, X-Ecutioners, Bomb Hip-Hop.                           |
+| `Memphis Rap`    | Three 6 Mafia, Tommy Wright III, Project Pat, DJ Squeeky.                                   |
+| `Crunk`          | Late-90s emergence (Lil Jon BME, early Three 6) — bounded by year_max=1999.                 |
+| `Thug Rap`       | Bone Thugs adjacency, late-90s street rap subgenre.                                         |
+| `Ragga HipHop`   | Mad Lion, Capleton-rap, Buju-rap, the early-mid 90s NY/Caribbean axis.                      |
+| `Horrorcore`     | Gravediggaz, Flatlinerz, Geto Boys' darker side.                                            |
+| `Hip-House`      | Tyree Cooper, Fast Eddie, Stetsasonic-on-house — bridges hip-hop and Chicago house.         |
+| `New Jack Swing` | Teddy Riley, Guy, Bobby Brown, Wreckx-N-Effect — R&B-rap fusion.                            |
+| `Screw`          | DJ Screw + Screwed Up Click, Houston chopped & screwed canon.                               |
+| `DJ Battle Tool` | DMC routine breaks, scratch records, Skratchcon canon — the X-Ecutioners/Beat Junkies axis. |
 
-**Excluded** (not in allowlist; will be denylisted on the next pass after histogram review):
+**Removed in v0.2** (after histogram):
 
-- `Drum n Bass`, `Jungle`, `2-step`, `UK Garage`, `Trip Hop` (last one has dense overlap with hip-hop — needs a year-gate or explicit denylist; will tune after histogram).
+- `East Coast Hip Hop`, `West Coast Hip Hop`, `Bay Area`, `Southern Hip Hop`, `Old School Hip Hop` — verified against `catalog.master_styles` on `dig-db`: these are NOT canonical Discogs style strings (they're regional descriptors people use in conversation but Discogs doesn't ship them as styles). Each returned 0 masters in the v0.1 histogram. The catalogue we'd want from each comes in via plain `Hip Hop` or via the producer/label dimensions.
+- `Electro` — pulled 318,670 masters in v0.1, ~95% of which are Kraftwerk-axis electronic music, not hip-hop's "electro funk" subgenre. Better caught via specific labels (Tommy Boy, Streetwave) than a global style filter.
+- `Trap` — pulled 33,521 masters but Discogs tagged the Trap *style* mostly post-2010 (EDM trap). Anything pre-1999 that we want from this corner is already caught by `Hip Hop` + `Hardcore Hip-Hop`.
 
-**Year gates** — `breakbeat_year_gate` is set to `9999` (disabled) because the v2 Breakbeat/Hardcore drop rule doesn't apply here. We may add a `style_gate` for `Trap` (drop if year > 1999, redundant with year_max but defensive) once the histogram lands.
+**Excluded** (not in allowlist; not actively denylisted):
+
+- `Drum n Bass`, `Jungle`, `2-step`, `UK Garage`, `Trip Hop`, `RnB/Swing`, `Contemporary R&B`. Trip Hop has the densest overlap with hip-hop (DJ Shadow Mo'Wax catalogue) but pulls a 90s electronic corpus (Portishead, Massive Attack, Tricky) that belongs in a future `trip-hop-1991-2001` scope rather than here. RnB/Swing and Contemporary R&B are tagged on top hip-hop releases as a secondary style (Mary J., Faith Evans) but pulling them as primary scope expanders would balloon the cut with vocal R&B.
+
+**Year gates** — `breakbeat_year_gate` is set to `9999` (disabled) because the v2 Breakbeat/Hardcore drop rule doesn't apply here.
+
+### 2a. Histogram results (v0.1 → v0.2)
+
+Both runs executed against `dig-db` (full Discogs catalogue, batch `e0050fc3`), `--reset` between runs, year window 1979-1999, quality_active_only.
+
+| Manifest | Total masters in scope | Notes |
+| -------- | ---------------------: | ----- |
+| v0.1 (18 styles incl. Electro, Trap, regional descriptors) | 35,377 | Bottom buckets noisy — random samples included compilations like *Hotel California*, *Tout De Toi*, *Plus De Tubes Dance Vol. 2* and other obviously non-hip-hop releases. Driven by Electro (318k seed) + Trap (33k seed). |
+| v0.2 (18 styles, regional descriptors removed, Electro/Trap dropped, +6 new sub-styles) | **26,550** | Bottom-bucket samples are mostly hip-hop-correct: *Hot Rap*, *Hip-Hop Greats*, *Pawns in a Chess Game*, *Plus Fort Que Moi* (French rap), *Bone Thugs-N-Harmony Best Of*. Some compilation noise remains at weight=9 but that's expected — `scene_weight_min=10` would shave another 65 masters. |
+
+Cumulative by `scene_weight` cut (v0.2):
+
+| weight cut | masters kept |
+| ---------: | -----------: |
+| `>= 0`     | 26,550 |
+| `>= 10`    | 26,485 |
+| `>= 15`    | 22,827 |
+| `>= 20`    |  9,765 |
+
+Tier-1 boost (+10 from `enrich.label_editorial`) was **skipped** in this histogram run — `dig-db` doesn't have `label_editorial` populated (it lives on `dig-db-scene` only). For the actual build we'll either:
+
+1. Mirror `enrich.label_editorial` rows for hip-hop tier-1 labels onto `dig-db` before running the build, or
+2. Apply the tier-1 boost as a post-processing pass on `dig-db-scene` (preferred — keeps `dig-db` untouched ahead of retirement).
+
+**Recommended scene_weight_min for full build**: `10` (keeps 26,485 masters, drops the noisiest comp-rap bottom). After tier-1 boost is applied via path (2), all 82 tier-1 labels' catalogues land at weight ≥ 10 unconditionally regardless of style/year metadata quality.
 
 ## 3. Tier-1 label rationale
 

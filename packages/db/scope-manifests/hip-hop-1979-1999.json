@@ -1,7 +1,7 @@
 {
   "id": "hip-hop-1979-1999",
-  "version": "0.1.0",
-  "description": "Hip-hop catalog from Sugar Hill (1979) through the end of the golden era / start of the bling era (1999). Mirrors v2-house-techno scope shape and credit-extraction rules.",
+  "version": "0.2.0",
+  "description": "Hip-hop catalog from Sugar Hill (1979) through the end of the golden era / start of the bling era (1999). Style allowlist tuned to canonical Discogs style strings only — regional descriptors like 'East/West Coast Hip Hop', 'Bay Area', 'Southern Hip Hop' and 'Old School Hip Hop' are NOT Discogs styles (verified against catalog.master_styles), so they're omitted; Old-school catalog comes in via plain 'Hip Hop'. 'Electro' and 'Trap' are intentionally excluded — both are dominantly non-hip-hop in Discogs (Electro pulls 318k mostly-electronic masters; Trap is mostly post-1999 EDM-trap).",
 
   "scope": {
     "year_min": 1979,
@@ -11,21 +11,21 @@
       "Hip Hop",
       "Boom Bap",
       "Conscious",
-      "East Coast Hip Hop",
-      "West Coast Hip Hop",
       "Hardcore Hip-Hop",
       "Gangsta",
       "G-Funk",
       "Jazzy Hip-Hop",
       "Pop Rap",
       "Cut-up/DJ",
-      "Bay Area",
-      "Southern Hip Hop",
       "Memphis Rap",
       "Crunk",
-      "Trap",
-      "Old School Hip Hop",
-      "Electro"
+      "Thug Rap",
+      "Ragga HipHop",
+      "Horrorcore",
+      "Hip-House",
+      "New Jack Swing",
+      "Screw",
+      "DJ Battle Tool"
     ],
     "quality_active_only": true,
     "breakbeat_year_gate": 9999,
