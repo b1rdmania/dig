@@ -50,12 +50,14 @@ export async function LabelHeroImage({ discogsId, labelName, mode = "mark" }: Pr
   if (mode === "hero") {
     const bg = hero ?? photo ?? logo;
     if (!bg) return null;
+    // Force https on the raw source_url to avoid mixed-content warnings.
+    const bgHttps = bg.source_url.replace(/^http:\/\//, "https://");
     return (
       <div
         className={styles.hero}
         role="img"
         aria-label={labelName}
-        style={{ backgroundImage: `url("${bg.source_url}?width=1600")` }}
+        style={{ backgroundImage: `url("${bgHttps}?width=1600")` }}
       >
         <div className={styles.heroOverlay} aria-hidden />
         <ImageAttribution image={bg} className={styles.heroAttrib} />

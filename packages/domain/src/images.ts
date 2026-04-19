@@ -44,10 +44,13 @@ export interface EntityImagesResponse {
  */
 export function shapeCommonsUrl(rawUrl: string, width: number | null): string {
   if (!rawUrl) return rawUrl;
-  if (!width || width <= 0) return rawUrl;
-  if (!rawUrl.includes("commons.wikimedia.org/wiki/Special:FilePath/")) return rawUrl;
-  const sep = rawUrl.includes("?") ? "&" : "?";
-  return `${rawUrl}${sep}width=${Math.round(width)}`;
+  // Wikidata returns http:// URLs; force https:// to avoid mixed-content
+  // warnings when our app is served over https://. Commons supports both.
+  let url = rawUrl.startsWith("http://") ? `https://${rawUrl.slice(7)}` : rawUrl;
+  if (!width || width <= 0) return url;
+  if (!url.includes("commons.wikimedia.org/wiki/Special:FilePath/")) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}width=${Math.round(width)}`;
 }
 
 /**
