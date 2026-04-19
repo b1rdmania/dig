@@ -29,7 +29,7 @@
     ],
     "quality_active_only": true,
     "breakbeat_year_gate": 9999,
-    "scene_weight_min": 0
+    "scene_weight_min": 10
   },
 
   "credits": {
