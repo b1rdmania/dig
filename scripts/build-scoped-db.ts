@@ -412,12 +412,25 @@ async function dropAllScopeTables(c: Kysely<Database>) {
 }
 
 async function tableExists(c: Kysely<Database>, schema: string, name: string): Promise<boolean> {
-  const r = await sql<{ exists_: boolean }>`
-    SELECT EXISTS (
-      SELECT 1 FROM pg_tables WHERE schemaname = ${schema} AND tablename = ${name}
-    ) AS exists_
-  `.execute(c);
-  return r.rows[0]?.exists_ ?? false;
+  // Prefer Kysely connection but fall back to streamPool if it's gone stale.
+  // Long-running COPY phases can idle out the pinned Kysely connection;
+  // tableExists is called between phases so it sometimes hits a dead conn.
+  try {
+    const r = await sql<{ exists_: boolean }>`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_tables WHERE schemaname = ${schema} AND tablename = ${name}
+      ) AS exists_
+    `.execute(c);
+    return r.rows[0]?.exists_ ?? false;
+  } catch (err) {
+    if (!streamPool) throw err;
+    console.warn(`[tableExists] Kysely conn failed, falling back to streamPool: ${(err as Error)?.message ?? err}`);
+    const r = await streamExec<{ exists_: boolean }>(
+      `SELECT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = '${schema.replace(/'/g, "''")}' AND tablename = '${name.replace(/'/g, "''")}') AS exists_`,
+      { quiet: true },
+    );
+    return r.rows[0]?.exists_ ?? false;
+  }
 }
 
 async function tableRowCount(c: Kysely<Database>, schema: string, name: string): Promise<number> {
@@ -1477,8 +1490,17 @@ const CREDIT_TABLES = [
 async function collectScopeCounts(c: Kysely<Database>): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   for (const t of ["scope_a", "scope_l", "scope_m", "scope_r"]) {
-    const r = await sql<{ count: number }>`SELECT COUNT(*)::int AS count FROM ${sql.raw(t)}`.execute(c);
-    out[t] = r.rows[0]?.count ?? 0;
+    try {
+      const r = await sql<{ count: number }>`SELECT COUNT(*)::int AS count FROM ${sql.raw(t)}`.execute(c);
+      out[t] = r.rows[0]?.count ?? 0;
+    } catch (err) {
+      if (!streamPool) throw err;
+      const r = await streamExec<{ count: number }>(
+        `SELECT COUNT(*)::int AS count FROM scope_workspace.${t}`,
+        { quiet: true },
+      );
+      out[t] = r.rows[0]?.count ?? 0;
+    }
   }
   return out;
 }
