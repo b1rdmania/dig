@@ -1919,10 +1919,29 @@ async function dumpTable(
   table: string,
   writeLine: (s: string) => Promise<void>,
 ) {
-  const where = whereClauseFor(table);
   const cols = await getColumns(c, table);
   console.log(`  [dump] ${table}`);
   await writeLine(`-- ${table}`);
+
+  // Fast path for enrich.entity_quality: if a pre-materialized slim table
+  // exists in scope_workspace, read from it directly. The slim table is
+  // created by /tmp/prematerialize-eq.sql as a UNION ALL of 4 joins against
+  // scope_a / scope_l / scope_m / scope_r, which is orders of magnitude
+  // faster than the naive 4x OR'd IN-subselect path (which stalled at a few
+  // rows/sec on 4.6M row source). Slim table has the same column shape, so
+  // we stream straight from it.
+  if (
+    table === "enrich.entity_quality" &&
+    (await tableExists(c, WS, "scope_entity_quality_slim"))
+  ) {
+    console.log(`  [dump] ${table}: using scope_workspace.scope_entity_quality_slim fast path`);
+    const q = `SELECT ${cols.join(", ")} FROM scope_workspace.scope_entity_quality_slim`;
+    const n = await streamQueryToInserts(c, q, table, cols, writeLine);
+    console.log(`  [dump] ${table}: ${n.toLocaleString()} rows`);
+    return;
+  }
+
+  const where = whereClauseFor(table);
   const q = `SELECT ${cols.join(", ")} FROM ${table} WHERE ${where}`;
   const n = await streamQueryToInserts(c, q, table, cols, writeLine);
   console.log(`  [dump] ${table}: ${n.toLocaleString()} rows`);
