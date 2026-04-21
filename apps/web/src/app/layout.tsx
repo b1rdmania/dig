@@ -29,14 +29,14 @@ const serif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: "dig — house and techno, 1988–2003",
+  title: "dig — house and techno, 1988–2008",
   description:
-    "A curated catalog of house and techno from 1988 to 2003 — the labels, the records, the scenes that built the form.",
+    "A curated catalog of house and techno from 1988 to 2008 — the labels, the records, the scenes that built the form.",
   metadataBase: new URL("https://app.dig.baby"),
   openGraph: {
-    title: "dig — house and techno, 1988–2003",
+    title: "dig — house and techno, 1988–2008",
     description:
-      "A curated catalog of house and techno from 1988 to 2003 — the labels, the records, the scenes that built the form.",
+      "A curated catalog of house and techno from 1988 to 2008 — the labels, the records, the scenes that built the form.",
     siteName: "dig",
     locale: "en_US",
     images: [
@@ -44,15 +44,15 @@ export const metadata: Metadata = {
         url: "/api/og?kind=home",
         width: 1200,
         height: 630,
-        alt: "dig — house and techno, 1988–2003",
+        alt: "dig — house and techno, 1988–2008",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "dig — house and techno, 1988–2003",
+    title: "dig — house and techno, 1988–2008",
     description:
-      "A curated catalog of house and techno from 1988 to 2003 — the labels, the records, the scenes that built the form.",
+      "A curated catalog of house and techno from 1988 to 2008 — the labels, the records, the scenes that built the form.",
     images: ["/api/og?kind=home"],
   },
 };

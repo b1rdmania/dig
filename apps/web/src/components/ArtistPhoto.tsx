@@ -32,10 +32,18 @@ export async function ArtistPhoto({ discogsId, artistName, size = 160 }: Props) 
   const photo = data.images.find((i) => i.kind === "photo") ?? data.images[0];
   if (!photo) return null;
 
+  // Resolve a click-through attribution link. Wikidata-sourced rows point at
+  // the Wikidata entity; hand-curated Commons rows (source='manual') point
+  // back to the Commons File page so the license claim stays auditable.
+  const commonsFile = photo.source_id?.startsWith("Commons:File:")
+    ? photo.source_id.slice("Commons:".length)
+    : null;
   const sourceHref =
     photo.source === "wikidata" && photo.source_id
       ? `https://www.wikidata.org/wiki/${photo.source_id}`
-      : null;
+      : commonsFile
+        ? `https://commons.wikimedia.org/wiki/${encodeURI(commonsFile)}`
+        : null;
 
   // eslint-disable-next-line @next/next/no-img-element — see LabelHeroImage
   return (

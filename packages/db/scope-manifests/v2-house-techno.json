@@ -1,11 +1,11 @@
 {
   "id": "v2-house-techno",
-  "version": "1.0.0",
-  "description": "House + techno + adjacent edge styles, 1985-2003. Mirrors the original v2 build defaults.",
+  "version": "1.1.0",
+  "description": "House + techno + adjacent edge styles, 1985-2008. Extends v1.0.0 forward by five years to cover the Perlon / Innervisions / late Basic Channel / microhouse peak.",
 
   "scope": {
     "year_min": 1985,
-    "year_max": 2003,
+    "year_max": 2008,
     "use_default_styles": false,
     "styles": [
       "Acid House", "Acid Techno", "Chicago House", "Deep House", "Detroit Techno",

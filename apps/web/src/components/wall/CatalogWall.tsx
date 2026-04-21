@@ -89,7 +89,7 @@ export function CatalogWall({
 
   const tb = {
     title: titleBlock?.title ?? "DIG · CATALOG WALL",
-    subtitle: titleBlock?.subtitle ?? "House and techno · 1988–2003",
+    subtitle: titleBlock?.subtitle ?? "House and techno · 1988–2008",
     edition: titleBlock?.edition ?? `Edition v0.1 · ${new Date().getFullYear()}`,
     note: titleBlock?.note ?? `${scenes.length} scenes · ${totalLabels} labels · ${totalReleases.toLocaleString()} masters`,
   };

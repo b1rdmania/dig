@@ -326,7 +326,7 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
           .catch(() => null)
       : Promise.resolve<{ tier: "tier1" | "denylist" | null; editorial: LabelEditorial | null } | null>(null),
     primaryArtistId
-      ? digFetch<TraversalResponse>(`/v1/artists/${primaryArtistId}/masters?sort=newest&limit=500`, {
+      ? digFetch<TraversalResponse>(`/v1/artists/${primaryArtistId}/masters?sort=oldest&limit=500`, {
           revalidate: 300,
         })
           .then((d) => (isTraversalResponse(d) ? d.links : []))

@@ -304,7 +304,7 @@ No new colors. Discipline = the look.
   ```
   ┌──────────────────────────────────┐
   │ DIG · CATALOG WALL               │
-  │ House and techno · 1988–2003     │
+  │ House and techno · 1988–2008     │
   │ Edition v0.1 · 2026.04.16        │
   │ 168k labels · 81k masters · CC0  │
   └──────────────────────────────────┘

@@ -27,7 +27,7 @@ import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile"
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ShareBar } from "@/components/ShareBar";
 import { hrefForTraversalLink } from "@/lib/routes";
-import { Labelmates } from "@/components/design";
+import { Labelmates, SeeAlso } from "@/components/design";
 import { CreditsTab } from "@/components/CreditsTab";
 import { ArtistPhoto } from "@/components/ArtistPhoto";
 import styles from "./page.module.css";
@@ -55,21 +55,52 @@ function formatEdgeLabel(edgeType: string, direction: "outbound" | "inbound"): s
 
 /* ── Sync render helpers (receive pre-fetched data) ──────────────────── */
 
+// Tab vocabulary mirrors how the scene thinks about its catalogue:
+//   All     — everything the artist is credited as a primary / secondary artist on
+//   12"     — single-disc vinyl singles + EPs (12" is the DJ working unit)
+//   LP      — albums + compilations (long-form releases on any medium)
+//   Remixes — external work (handled by CreditsTab with role=remix &
+//             exclude_self_primary, wired in ArtistContent below)
+//   Other   — cassette-only / DVD / File-only oddities
 const RELEASE_FILTERS = [
-  { value: "all", label: "All" },
-  { value: "album", label: "Albums / LPs" },
-  { value: "single_ep", label: "Singles / EPs" },
-  { value: "compilation", label: "Compilations" },
-  { value: "other", label: "Other" },
+  { value: "all", label: "All", kind: "masters" },
+  { value: "single_ep", label: '12"', kind: "masters" },
+  { value: "album", label: "LP", kind: "masters" },
+  { value: "remixes", label: "Remixes", kind: "credits" },
+  { value: "other", label: "Other", kind: "masters" },
 ] as const;
+
+function FilterChips({ id, active }: { id: string; active: string }) {
+  return (
+    <div className={styles.filterChips}>
+      {RELEASE_FILTERS.map((f) => {
+        const href =
+          f.value === "all"
+            ? `/artist/${id}`
+            : f.value === "remixes"
+              ? `/artist/${id}?tab=remixes`
+              : `/artist/${id}?release_type=${f.value}`;
+        return (
+          <Link
+            key={f.value}
+            href={href}
+            className={active === f.value ? styles.chipActive : styles.chip}
+          >
+            {f.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
 function MastersSection({
   id,
-  releaseType,
+  activeFilter,
   data,
 }: {
   id: string;
-  releaseType: string;
+  activeFilter: string;
   data: TraversalResponse;
 }) {
   return (
@@ -81,17 +112,7 @@ function MastersSection({
           ? ` (${data.links.length})`
           : ""}
       </h2>
-      <div className={styles.filterChips}>
-        {RELEASE_FILTERS.map((f) => (
-          <Link
-            key={f.value}
-            href={f.value === "all" ? `/artist/${id}` : `/artist/${id}?release_type=${f.value}`}
-            className={releaseType === f.value ? styles.chipActive : styles.chip}
-          >
-            {f.label}
-          </Link>
-        ))}
-      </div>
+      <FilterChips id={id} active={activeFilter} />
       {data.links.length === 0 && (
         <div className={styles.small}>No releases found.</div>
       )}
@@ -269,10 +290,15 @@ export async function generateMetadata({ params }: Props) {
 export default async function ArtistPage({ params, searchParams }: Props) {
   const { id } = await params;
   const sp = await searchParams;
+  const tab = typeof sp.tab === "string" ? sp.tab : null;
   const releaseType = typeof sp.release_type === "string"
     && ["album", "single_ep", "compilation", "other"].includes(sp.release_type)
     ? sp.release_type
     : "all";
+  // The Remixes chip on the releases strip is a tab state, not a
+  // release_type filter. When active we swap the masters list for a
+  // credits-driven "remixes he did for others" view.
+  const activeFilter = tab === "remixes" ? "remixes" : releaseType;
   const creditsRole = typeof sp.credits_role === "string" && sp.credits_role.trim() !== ""
     ? sp.credits_role.trim()
     : null;
@@ -280,7 +306,12 @@ export default async function ArtistPage({ params, searchParams }: Props) {
   return (
     <div className={styles.page} data-dig-entity="artist" data-dig-id={id}>
       <Suspense fallback={<SectionSkeleton lines={4} />}>
-        <ArtistContent id={id} releaseType={releaseType} creditsRole={creditsRole} />
+        <ArtistContent
+          id={id}
+          releaseType={releaseType}
+          activeFilter={activeFilter}
+          creditsRole={creditsRole}
+        />
       </Suspense>
     </div>
   );
@@ -289,10 +320,12 @@ export default async function ArtistPage({ params, searchParams }: Props) {
 async function ArtistContent({
   id,
   releaseType,
+  activeFilter,
   creditsRole,
 }: {
   id: string;
   releaseType: string;
+  activeFilter: string;
   creditsRole: string | null;
 }) {
   const defaultTraversal: TraversalResponse = {
@@ -315,7 +348,10 @@ async function ArtistContent({
   };
 
   try {
-    const mastersUrl = `/v1/artists/${id}/masters?limit=30&sort=newest${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
+    // Default order is chronological (oldest → newest) — the API defaults
+    // to sort=oldest so we omit the param. A producer's catalogue reads
+    // forward in time on every tab.
+    const mastersUrl = `/v1/artists/${id}/masters?limit=30${releaseType !== "all" ? `&release_type=${releaseType}` : ""}`;
 
     const [artistData, mastersData, ctxData, relData, tlData] = await Promise.all([
       digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 }),
@@ -411,12 +447,30 @@ async function ArtistContent({
         </section>
 
         <AboutSection profile={artist.profile} ctxData={ctxData} resolvedNames={resolvedNames} />
-        <MastersSection id={id} releaseType={releaseType} data={mastersData} />
+        {activeFilter === "remixes" ? (
+          <section className={styles.section}>
+            <h2 className={styles.heading}>Releases</h2>
+            <FilterChips id={id} active="remixes" />
+            <Suspense fallback={null}>
+              <CreditsTab
+                artistDiscogsId={artist.discogs_id}
+                role="remix"
+                hideHeader
+                emptyMessage="No remixes found for this artist in the current scope."
+              />
+            </Suspense>
+          </section>
+        ) : (
+          <MastersSection id={id} activeFilter={activeFilter} data={mastersData} />
+        )}
         <div id="credits">
           <Suspense fallback={null}>
             <CreditsTab artistDiscogsId={artist.discogs_id} role={creditsRole} />
           </Suspense>
         </div>
+        <Suspense fallback={null}>
+          <SeeAlso artistDiscogsId={artist.discogs_id} />
+        </Suspense>
         <Suspense fallback={null}>
           <Labelmates artistDiscogsId={artist.discogs_id} limit={6} />
         </Suspense>

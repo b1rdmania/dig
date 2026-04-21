@@ -51,6 +51,7 @@ export {
   getReleaseCredits,
   classifyReleaseType,
   classifyRoleFamily,
+  expandArtistAliasIds,
   getArtistCredits,
   type TraversalResponse,
   type TraversalLink,
@@ -103,6 +104,8 @@ export {
   getArtistCrossScopeCredits,
   getMasterCredits,
   getArtistGroupsAndMembers,
+  getArtistCollaborators,
+  getArtistLabelmates,
   getLabelTopCredits,
   type ArtistMasterCredit,
   type ArtistMasterCreditsResponse,
@@ -113,6 +116,10 @@ export {
   type MasterCreditsResponse,
   type ArtistGroupEdge,
   type ArtistGroupsAndMembersResponse,
+  type ArtistCollaborator,
+  type ArtistCollaboratorsResponse,
+  type ArtistLabelmate,
+  type ArtistLabelmatesResponse,
   type LabelTopCreditEntry,
 } from "./credits.js";
 export {

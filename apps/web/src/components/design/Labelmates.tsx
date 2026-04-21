@@ -1,85 +1,92 @@
 import Link from "next/link";
 import { digFetch } from "@/lib/api";
-import {
-  isArtistPrimaryLabelsResponse,
-  isLabelRosterResponse,
-  type ArtistPrimaryLabelsResponse,
-  type LabelRosterResponse,
-} from "@/lib/types";
 import styles from "./Labelmates.module.css";
 
 interface Props {
   artistDiscogsId: number;
-  /** Number of labelmates to show (default 6). */
+  /** Number of labelmates to show (default 10). */
   limit?: number;
 }
 
+interface Labelmate {
+  discogs_id: number;
+  name: string | null;
+  shared_records: number;
+  shared_labels: number;
+  labels: string[];
+}
+
+interface LabelmatesResponse {
+  artist_discogs_id: number;
+  labelmates: Labelmate[];
+}
+
+function isLabelmatesResponse(x: unknown): x is LabelmatesResponse {
+  if (!x || typeof x !== "object") return false;
+  return Array.isArray((x as LabelmatesResponse).labelmates);
+}
+
 /**
- * Server component that derives an artist's primary label and renders the
- * top other artists on that label. Used in the sidebar of the artist page.
+ * "Labelmates" on the artist page. Aggregated across every indie-scene
+ * label where the subject released ≥2 masters as primary artist, ranked by
+ * IDF-weighted overlap so sprawling major-label contracts don't swamp the
+ * tight indies. Each entry shows the names of the shared labels as chips
+ * so the user can tell *why* someone is a labelmate at a glance — this
+ * was the old component's flaw (it picked a single label and showed its
+ * roster without explaining the choice).
  *
- * Logic:
- *   1. Fetch the artist's top primary labels (`/v1/artists/:id/labels`).
- *   2. Take the first (highest master count). If none, render nothing.
- *   3. Fetch that label's roster (`/v1/labels/:id/roster?limit=12`).
- *   4. Filter out the source artist; show up to `limit` others.
+ * Self-network (aliases, groups the artist is in, members when the subject
+ * is a group) is excluded at the API layer — those show up in "See also"
+ * instead.
  *
- * If any fetch fails the section silently renders nothing — labelmates
- * is decorative context, not core info.
+ * Renders nothing if the artist has no qualifying shared-label peers; that
+ * is correct for micro-discographies (one-off releases across scattered
+ * labels don't produce meaningful labelmate signal).
  */
-export async function Labelmates({ artistDiscogsId, limit = 6 }: Props) {
-  let labelsData: ArtistPrimaryLabelsResponse;
+export async function Labelmates({ artistDiscogsId, limit = 10 }: Props) {
+  let data: LabelmatesResponse;
   try {
-    labelsData = await digFetch<ArtistPrimaryLabelsResponse>(
-      `/v1/artists/${artistDiscogsId}/labels?limit=3`,
+    data = await digFetch<LabelmatesResponse>(
+      `/v1/artists/${artistDiscogsId}/labelmates?limit=${limit}`,
       { revalidate: 600 },
     );
   } catch {
     return null;
   }
-  if (!isArtistPrimaryLabelsResponse(labelsData)) return null;
-
-  const primary = labelsData.labels[0];
-  if (!primary) return null;
-
-  let rosterData: LabelRosterResponse;
-  try {
-    rosterData = await digFetch<LabelRosterResponse>(
-      `/v1/labels/${primary.discogs_label_id}/roster?limit=${limit + 4}`,
-      { revalidate: 600 },
-    );
-  } catch {
-    return null;
-  }
-  if (!isLabelRosterResponse(rosterData)) return null;
-
-  const mates = rosterData.roster
-    .filter((r) => r.artist_discogs_id !== artistDiscogsId)
-    .slice(0, limit);
-
-  if (mates.length === 0) return null;
+  if (!isLabelmatesResponse(data) || data.labelmates.length === 0) return null;
 
   return (
     <section className={styles.block} aria-label="Labelmates">
       <p className={styles.eyebrow}>LABELMATES</p>
-      <h3 className={styles.title}>
-        On{" "}
-        <Link href={`/label/${primary.discogs_label_id}`}>{primary.name}</Link>
-      </h3>
       <ul className={styles.list}>
-        {mates.map((mate) => (
-          <li className={styles.item} key={mate.artist_discogs_id}>
-            <Link href={`/artist/${mate.artist_discogs_id}`} className={styles.name}>
-              {mate.name}
+        {data.labelmates.map((mate) => (
+          <li className={styles.item} key={mate.discogs_id}>
+            <Link href={`/artist/${mate.discogs_id}`} className={styles.name}>
+              {mate.name ?? `Artist ${mate.discogs_id}`}
             </Link>
+            {mate.labels.length > 0 ? (
+              <span className={styles.labels}>
+                {mate.labels.slice(0, 2).map((label) => (
+                  <span key={label} className={styles.label}>
+                    {label}
+                  </span>
+                ))}
+                {mate.labels.length > 2 ? (
+                  <span className={styles.labelMore}>+{mate.labels.length - 2}</span>
+                ) : null}
+              </span>
+            ) : null}
             <span className={styles.count}>
-              {mate.master_count} master{mate.master_count === 1 ? "" : "s"}
+              {mate.shared_records}{" "}
+              <span className={styles.countUnit}>
+                record{mate.shared_records === 1 ? "" : "s"}
+              </span>
             </span>
           </li>
         ))}
       </ul>
       <p className={styles.foot}>
-        Top in-scope artists on this label · {primary.master_count} share{primary.master_count === 1 ? "" : "d"} master{primary.master_count === 1 ? "" : "s"} with you
+        Other artists on the labels you put records out on.
       </p>
     </section>
   );

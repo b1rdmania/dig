@@ -14,7 +14,7 @@ DATABASE_URL=postgres://... pnpm exec tsx scripts/seed-label-editorial.ts
 
 ## `label_editorial_tier1.csv`
 
-Curated list of canonical scene-pillar labels for 1985–2003 electronic dance.
+Curated list of canonical scene-pillar labels for 1985–2008 electronic dance.
 
 - `name` — label name as it appears in `catalog.labels.name`
 - `tier` — `tier1` (canonical, badge in UI) or `denylist` (junk, suppressed everywhere)

@@ -28,6 +28,16 @@
   text-transform: lowercase;
   color: var(--ink-muted);
   align-self: baseline;
+  white-space: nowrap;
+}
+
+/* On narrow viewports the Nav's brand sits next to the search form, and
+ * the scope stamp would crowd it. Drop the stamp below ~480px; the [ dig ]
+ * mark alone is still unambiguous. */
+@media (max-width: 480px) {
+  .stamp {
+    display: none;
+  }
 }
 
 .size-sm {

@@ -24,5 +24,6 @@ export { TypeTabs } from "./TypeTabs";
 export { GenreBar } from "./GenreBar";
 export { SublabelTree } from "./SublabelTree";
 export { Labelmates } from "./Labelmates";
+export { SeeAlso } from "./SeeAlso";
 export { CoreRun } from "./CoreRun";
 export { RelatedLabels } from "./RelatedLabels";

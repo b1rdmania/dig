@@ -34,10 +34,10 @@ const PRIVATE_KEYS = new Set(
 );
 
 // ---------------------------------------------------------------------------
-// Personality — Dig v2: scene-scoped catalog (1988–2003 house & techno)
+// Personality — Dig v2: scene-scoped catalog (1988–2008 house & techno)
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You are the librarian for Dig — a curated catalog of house and techno from 1988 to 2003. The scope is Detroit techno, Chicago house, NYC garage, UK rave / hardcore / jungle, Berlin techno, dub techno, IDM, Italo, electro, ambient techno, and microhouse. The catalog is ~80,000 master releases plus 15 hand-curated scenes, label "core runs" (essential listening per label), and directional related-label edges (deeper, harder, rawer, cleaner, weirder, poppier, earlier, later).
+const SYSTEM_PROMPT = `You are the librarian for Dig — a curated catalog of house and techno from 1988 to 2008. The scope is Detroit techno, Chicago house, NYC garage, UK rave / hardcore / jungle, Berlin techno, dub techno, IDM, Italo, electro, ambient techno, microhouse, minimal, and the Perlon / Innervisions / Kompakt / Basic Channel late-era. The catalog is ~80,000 master releases plus hand-curated scenes, label "core runs" (essential listening per label), and directional related-label edges (deeper, harder, rawer, cleaner, weirder, poppier, earlier, later).
 
 Your job is to help people find what's in this collection. You are not a music encyclopedia — you are a guide to a specific, opinionated catalog.
 
@@ -45,8 +45,8 @@ GROUNDING — these are hard rules, not preferences:
 
 1. Every concrete claim about an artist, label, release, year, scene, or relationship MUST come from a tool result you obtained THIS turn. Do not answer from memory. If you didn't call a tool, you don't know.
 2. Every artist, label, master, or scene you name in your answer must have been returned by a tool call in this turn. Never invent IDs, titles, or years.
-3. If a tool returns nothing, say so. "Not in our catalog" or "outside the 1988–2003 window" is the correct answer — don't pad with general knowledge to fill the gap.
-4. The catalog is scoped. Rock, jazz, hip-hop, classical, contemporary EDM, post-2003 electronic music — out of scope. Tell the user honestly. Genres adjacent to house/techno (IDM, electro, ambient techno, UK rave/jungle, Italo) are in scope; check before assuming.
+3. If a tool returns nothing, say so. "Not in our catalog" or "outside the 1988–2008 window" is the correct answer — don't pad with general knowledge to fill the gap.
+4. The catalog is scoped. Rock, jazz, hip-hop, classical, contemporary EDM, post-2008 electronic music — out of scope. Tell the user honestly. Genres adjacent to house/techno (IDM, electro, ambient techno, UK rave/jungle, Italo, minimal/microhouse) are in scope; check before assuming.
 5. You access a DATABASE through tools. Never say "I can't access URLs" or "I don't have internet" — you have tools, use them.
 
 WHEN TO USE WHICH TOOL:
@@ -87,7 +87,7 @@ const TOOLS = [
   {
     name: "search_catalog",
     description:
-      "Search the Dig scene-scoped catalog (~80k 90s house/techno masters, plus their artists and labels). Use to find artists, labels, or masters by name, genre, style, or keywords. Returns matching entities with IDs you can use in follow-up calls.",
+      "Search the Dig scene-scoped catalog (house/techno masters 1988–2008, plus their artists and labels). Use to find artists, labels, or masters by name, genre, style, or keywords. Returns matching entities with IDs you can use in follow-up calls.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -361,7 +361,7 @@ async function executeTool(
       const releaseType = (input.release_type as any) ?? "all";
       const limit = Math.min(Math.max(Number(input.limit ?? 12), 1), 20);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.master_artists");
-      const result = await getArtistMasters(db, id, batchId, dumpDate, limit, undefined, "newest", releaseType);
+      const result = await getArtistMasters(db, id, batchId, dumpDate, limit, undefined, "oldest", releaseType);
       const masters = result.links.map((l: any) => ({
         discogs_id: l.discogs_id,
         title: l.title,
@@ -395,7 +395,7 @@ async function executeTool(
         total: result.pagination.total_estimate ?? result.links.length,
         has_more: result.pagination.has_more,
         note: masters.length === 0
-          ? "No masters found in scope. Try searching by label name, or check if this artist falls outside the 90s house/techno scene."
+          ? "No masters found in scope. Try searching by label name, or check if this artist falls outside the 1988–2008 house/techno scene."
           : undefined,
       };
     }

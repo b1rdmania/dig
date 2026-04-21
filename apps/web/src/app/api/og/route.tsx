@@ -271,7 +271,7 @@ function renderWall(): ImageResponse {
             lineHeight: 1.32,
           }}
         >
-          Every scene, every label, every release in scope. House and techno, 1988–2003.
+          Every scene, every label, every release in scope. House and techno, 1988–2008.
         </div>
         <div
           style={{
@@ -321,7 +321,7 @@ function renderHome(): ImageResponse {
             marginBottom: "32px",
           }}
         >
-          [ v2 ] · house &amp; techno · 1988–2003
+          [ v2 ] · house &amp; techno · 1988–2008
         </div>
         <div
           style={{

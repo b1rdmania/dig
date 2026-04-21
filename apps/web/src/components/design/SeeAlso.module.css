@@ -1,9 +1,10 @@
-/* Labelmates — sidecar block on the artist page. Aggregated across every
- * label the artist released on, so a row reads:
- *   Artist name          [label] [label]    N records
- * with the chips explaining why that person is a labelmate. Mirrors the
- * SeeAlso typographic language (mono chips, tabular counts, dashed rules)
- * so the two sidecar blocks sit together without fighting.
+/* SeeAlso — "related artists" sidecar for the artist page. Two buckets:
+ *   Close collaborators (credit constellation) — scene-native partnerships
+ *   Also in            (formal groups)         — only where they exist
+ *
+ * Visual language mirrors Labelmates (mono eyebrow, dashed rules between
+ * rows, master-count in tabular numbers) so the two blocks sit together on
+ * the artist page without fighting each other for attention.
  */
 
 .block {
@@ -20,6 +21,27 @@
   color: var(--ink-muted);
   font-weight: 600;
   margin: 0;
+}
+
+.bucket {
+  display: flex;
+  flex-direction: column;
+}
+
+.bucket + .bucket {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--rule);
+}
+
+.bucketHead {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--fs-md);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--sp-2);
+  color: var(--ink);
 }
 
 .list {
@@ -63,7 +85,7 @@
   text-underline-offset: 3px;
 }
 
-.labels {
+.roles {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -72,7 +94,7 @@
   letter-spacing: 0.04em;
 }
 
-.label {
+.role {
   display: inline-block;
   padding: 1px 6px;
   border: 1px solid var(--rule);
@@ -81,36 +103,19 @@
   background: transparent;
   text-transform: lowercase;
   white-space: nowrap;
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.labelMore {
-  color: var(--ink-muted);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  align-self: center;
 }
 
 .count {
   color: var(--ink-muted);
   font-feature-settings: "tnum";
   flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.countUnit {
-  text-transform: lowercase;
-  font-size: 10px;
-  letter-spacing: 0.04em;
 }
 
 .foot {
   font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: lowercase;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--ink-muted);
   margin: var(--sp-2) 0 0;
 }

@@ -81,12 +81,17 @@ export async function getEntityImages(
     WHERE entity_type = ${entityType}
       AND discogs_id  = ${discogsId}
       ${kind ? sql`AND image_kind = ${kind}` : sql``}
-    ORDER BY CASE image_kind
-               WHEN 'logo'  THEN 1
-               WHEN 'photo' THEN 2
-               WHEN 'hero'  THEN 3
-               ELSE 4
-             END
+    ORDER BY
+      -- Hand-curated overrides win over machine-harvested rows. We seed
+      -- source='manual' rows for entities whose Wikidata entry has no P18
+      -- (the scene genuinely lacks those assets) and pick them here.
+      CASE source WHEN 'manual' THEN 0 ELSE 1 END,
+      CASE image_kind
+        WHEN 'logo'  THEN 1
+        WHEN 'photo' THEN 2
+        WHEN 'hero'  THEN 3
+        ELSE 4
+      END
   `.execute(db);
 
   return {

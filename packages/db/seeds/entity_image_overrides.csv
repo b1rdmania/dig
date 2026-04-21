@@ -1,0 +1,12 @@
+entity_type,discogs_id,image_kind,source_id,source_url,attribution,license,notes
+# Hand-curated entity images. Loaded into enrich.entity_images with source='manual'
+# so they sort ahead of machine-harvested rows in getEntityImages.
+#
+# Use this when Wikidata/MusicBrainz/Commons SPARQL harvests come back empty
+# (true for most pre-2005 house & techno artists). Source images must be on
+# Wikimedia Commons (for URL stability + license clarity) or a comparably
+# licensed host; include the full attribution + license so we stay compliant.
+#
+# Reload: scripts/seed-entity-image-overrides.ts --csv=packages/db/seeds/entity_image_overrides.csv
+artist,148,photo,Commons:File:Larry heard on the boat.jpg,https://commons.wikimedia.org/wiki/Special:FilePath/Larry_heard_on_the_boat.jpg,Achi Raz (via Wikimedia Commons),CC BY 2.0,Larry Heard — Wikidata Q1375814 has no P18; Commons photo from 2010 set
+artist,2446,photo,Commons:File:Larry heard on the boat.jpg,https://commons.wikimedia.org/wiki/Special:FilePath/Larry_heard_on_the_boat.jpg,Achi Raz (via Wikimedia Commons),CC BY 2.0,Mr. Fingers — same person as 148; reuse the Larry Heard photo

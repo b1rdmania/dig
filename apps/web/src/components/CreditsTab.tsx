@@ -17,6 +17,12 @@ interface Props {
   /** "remix" | "produce" | "mix" | "master" | etc. Falsy = all */
   role?: string | null;
   limit?: number;
+  /** When true, hides the default heading + filter strip. Used when the
+   *  section is embedded inside another tabbed surface (e.g. the Remixes
+   *  tab on the artist page). */
+  hideHeader?: boolean;
+  /** Text to display when there are zero credits. Null hides the section. */
+  emptyMessage?: string | null;
 }
 
 const ROLE_FILTERS: Array<{ value: string | null; label: string }> = [
@@ -29,7 +35,13 @@ const ROLE_FILTERS: Array<{ value: string | null; label: string }> = [
   { value: "write",    label: "Written by" },
 ];
 
-export async function CreditsTab({ artistDiscogsId, role, limit = 60 }: Props) {
+export async function CreditsTab({
+  artistDiscogsId,
+  role,
+  limit = 60,
+  hideHeader = false,
+  emptyMessage = null,
+}: Props) {
   let data: ArtistMasterCreditsResponse | null = null;
   try {
     const params = new URLSearchParams();
@@ -43,7 +55,12 @@ export async function CreditsTab({ artistDiscogsId, role, limit = 60 }: Props) {
   } catch {
     return null;
   }
-  if (!data || data.links.length === 0) return null;
+  if (!data || data.links.length === 0) {
+    if (emptyMessage) {
+      return <p className={styles.empty}>{emptyMessage}</p>;
+    }
+    return null;
+  }
 
   const totalLabel =
     data.pagination.total_estimate != null
@@ -51,28 +68,30 @@ export async function CreditsTab({ artistDiscogsId, role, limit = 60 }: Props) {
       : `${data.links.length}`;
 
   return (
-    <section className={styles.section}>
-      <header className={styles.head}>
-        <h2 className={styles.heading}>Remixes &amp; productions ({totalLabel})</h2>
-        <div className={styles.filters}>
-          {ROLE_FILTERS.map((f) => {
-            const isActive = (role ?? null) === f.value;
-            const params = new URLSearchParams();
-            if (f.value) params.set("credits_role", f.value);
-            const href = `/artist/${artistDiscogsId}${params.size ? `?${params.toString()}` : ""}#credits`;
-            return (
-              <Link
-                key={f.label}
-                href={href}
-                className={isActive ? styles.chipActive : styles.chip}
-                scroll={false}
-              >
-                {f.label}
-              </Link>
-            );
-          })}
-        </div>
-      </header>
+    <section className={hideHeader ? undefined : styles.section}>
+      {!hideHeader && (
+        <header className={styles.head}>
+          <h2 className={styles.heading}>Remixes &amp; productions ({totalLabel})</h2>
+          <div className={styles.filters}>
+            {ROLE_FILTERS.map((f) => {
+              const isActive = (role ?? null) === f.value;
+              const params = new URLSearchParams();
+              if (f.value) params.set("credits_role", f.value);
+              const href = `/artist/${artistDiscogsId}${params.size ? `?${params.toString()}` : ""}#credits`;
+              return (
+                <Link
+                  key={f.label}
+                  href={href}
+                  className={isActive ? styles.chipActive : styles.chip}
+                  scroll={false}
+                >
+                  {f.label}
+                </Link>
+              );
+            })}
+          </div>
+        </header>
+      )}
 
       <ul className={styles.list}>
         {data.links.map((c) => (

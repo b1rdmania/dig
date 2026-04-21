@@ -59,13 +59,23 @@ const VALID_SORTS = ["newest", "oldest"] as const;
 const VALID_RELEASE_TYPES = ["album", "single_ep", "compilation", "other", "all"] as const;
 
 function parseTraversalQuery(query: Record<string, string | undefined>) {
+  const rawAliases = query.include_aliases;
+  // Default ON — alias consolidation makes the artist page actually show the
+  // artist's catalogue. Pass include_aliases=false to disable (debug / split
+  // views).
+  const includeAliases = rawAliases === undefined
+    ? true
+    : !(rawAliases === "false" || rawAliases === "0" || rawAliases === "no");
   return {
     limit: query.limit ? Math.min(Math.max(parseInt(query.limit, 10), 1), 100) : 20,
     cursor: query.cursor,
-    sort: VALID_SORTS.includes(query.sort as any) ? (query.sort as "newest" | "oldest") : "newest",
+    // Default to oldest-first so the catalogue reads as a timeline
+    // (pass sort=newest to reverse).
+    sort: VALID_SORTS.includes(query.sort as any) ? (query.sort as "newest" | "oldest") : "oldest",
     releaseType: VALID_RELEASE_TYPES.includes(query.release_type as any)
       ? (query.release_type as "album" | "single_ep" | "compilation" | "other" | "all")
       : "all",
+    includeAliases,
   };
 }
 
@@ -113,9 +123,13 @@ export function registerTraversalRoutes(app: FastifyInstance, db: Kysely<Databas
     }
     try {
       const { batchId, dumpDate } = await getTraversalBatchInfo(db, "artist_masters");
-      const { limit, cursor, sort, releaseType } = parseTraversalQuery(req.query as any);
+      const { limit, cursor, sort, releaseType, includeAliases } = parseTraversalQuery(
+        req.query as any,
+      );
       return reply.send(await withTimeout(db, SCOPE_TIMEOUT_MS.artist_masters, (trx) =>
-        getArtistMasters(trx, discogsId, batchId, dumpDate, limit, cursor, sort, releaseType),
+        getArtistMasters(trx, discogsId, batchId, dumpDate, limit, cursor, sort, releaseType, {
+          includeAliases,
+        }),
       ));
     } catch (err) {
       if (isPgTimeout(err)) return timeoutReply(reply);

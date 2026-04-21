@@ -11,18 +11,18 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Catalog Wall — dig",
   description:
-    "The Dig catalog rendered as a wall: every curated scene, every label, every record. House and techno, 1988–2003.",
+    "The Dig catalog rendered as a wall: every curated scene, every label, every record. House and techno, 1988–2008.",
   openGraph: {
     title: "The catalog, as a wall — dig",
     description:
-      "Every scene, every label, every release in scope. House and techno, 1988–2003.",
+      "Every scene, every label, every release in scope. House and techno, 1988–2008.",
     images: [{ url: "/api/og?kind=wall", width: 1200, height: 630, alt: "Dig — catalog wall" }],
   },
   twitter: {
     card: "summary_large_image" as const,
     title: "The catalog, as a wall — dig",
     description:
-      "Every scene, every label, every release in scope. House and techno, 1988–2003.",
+      "Every scene, every label, every release in scope. House and techno, 1988–2008.",
     images: ["/api/og?kind=wall"],
   },
 };

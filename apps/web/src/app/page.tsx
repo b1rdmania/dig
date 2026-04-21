@@ -22,10 +22,10 @@ interface Props {
 function HomeHero() {
   return (
     <section className={styles.hero}>
-      <div className={styles.eyebrow}>[ v2 ] · house &amp; techno · 1988–2003</div>
+      <div className={styles.eyebrow}>[ v2 ] · house &amp; techno · 1988–2008</div>
       <h1 className={styles.heading}>Dig.</h1>
       <p className={styles.lede}>
-        House and techno, 1988 to 2003. Every label, every record, every scene — read the
+        House and techno, 1988 to 2008. Every label, every record, every scene — read the
         wall, or search by name.
       </p>
     </section>

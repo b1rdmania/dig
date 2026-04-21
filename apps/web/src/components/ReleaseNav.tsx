@@ -56,7 +56,9 @@ export async function ReleaseNav({ artistId, currentMasterId }: Props) {
   };
 
   const data = await digFetch<TraversalResponse>(
-    `/v1/artists/${artistId}/masters?sort=newest&limit=500`,
+    // Chronological so the prev/next arrows read left=earlier, right=later
+    // — matches the timeline mental model on the artist page itself.
+    `/v1/artists/${artistId}/masters?sort=oldest&limit=500`,
     { revalidate: 300 },
   )
     .then((d) => (isTraversalResponse(d) ? d : fallback))

@@ -5,18 +5,18 @@ import styles from "./page.module.css";
 export const metadata: Metadata = {
   title: "About — dig",
   description:
-    "Dig v2 — a curated catalog of house and techno from 1988 to 2003. The labels, the records, the scenes that built the form.",
+    "Dig v2 — a curated catalog of house and techno from 1988 to 2008. The labels, the records, the scenes that built the form.",
   openGraph: {
     title: "About — dig",
     description:
-      "Dig v2 — a curated catalog of house and techno from 1988 to 2003. The labels, the records, the scenes that built the form.",
+      "Dig v2 — a curated catalog of house and techno from 1988 to 2008. The labels, the records, the scenes that built the form.",
     images: [{ url: "/api/og?kind=home", width: 1200, height: 630, alt: "About dig" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "About — dig",
     description:
-      "A curated catalog of house and techno from 1988 to 2003 — the labels, the records, the scenes.",
+      "A curated catalog of house and techno from 1988 to 2008 — the labels, the records, the scenes.",
     images: ["/api/og?kind=home"],
   },
 };
@@ -31,7 +31,7 @@ export default function AboutPage() {
           <em>mapped.</em>
         </h1>
         <p className={styles.lede}>
-          Dig is a curated catalog of house and techno from 1988 to 2003 &mdash; the labels, the
+          Dig is a curated catalog of house and techno from 1988 to 2008 &mdash; the labels, the
           records, and the scenes that built the form. Opinionated by humans, structured for
           machines, open to both.
         </p>
@@ -89,7 +89,7 @@ export default function AboutPage() {
       <section className={styles.section}>
         <h2 className={styles.heading}>The scope</h2>
         <p className={styles.copy}>
-          Fifteen years, two genres at the centre, and everything they fed. House and techno
+          Twenty years, two genres at the centre, and everything they fed. House and techno
           are the gravity well: Chicago and Detroit at the start, Berlin and the UK underground
           in the middle, the global circuit by the end. Around them sit the forms that grew
           out of them &mdash; trance, IDM, electro, jungle, dub techno, ambient, downtempo. They&rsquo;re
@@ -105,8 +105,8 @@ export default function AboutPage() {
             <div>
               <h3 className={styles.pointTitle}>~81,000 masters</h3>
               <p className={styles.pointCopy}>
-                Canonical works, not pressings. 89.5% sit inside the 1988&ndash;2003 window. Each one
-                links out to its individual releases (~2.3M), tracks (~580K), credits, and labels.
+                Canonical works, not pressings. Every one sits inside the 1988&ndash;2008 window. Each one
+                links out to its individual releases (~2.7M), tracks (~580K), credits, and labels.
               </p>
             </div>
           </div>
@@ -152,10 +152,11 @@ export default function AboutPage() {
         <p className={styles.copy}>
           1988 is when acid house broke in the UK, when the Belleville Three&rsquo;s Detroit techno
           first travelled, and when Trax and DJ International were exporting Chicago house at full
-          volume. 2003 is roughly where the analog era closed: laptop minimal had taken Berlin,
-          electroclash had peaked, and the UK underground was rebuilding itself around what would
-          become dubstep and grime. The window isn&rsquo;t arbitrary &mdash; it&rsquo;s the first complete arc
-          of dance music as a self-aware form.
+          volume. 2008 is where the second arc closes: minimal had peaked and softened, Innervisions
+          and Kompakt had matured into the dominant European sound, and the blog-house /
+          EDM-bloat era was about to muddy the water. The window isn&rsquo;t arbitrary &mdash; it&rsquo;s
+          the full arc of dance music as a self-aware form, from Chicago warehouse to Berlin
+          laptop-minimal.
         </p>
       </section>
 
@@ -204,7 +205,7 @@ export default function AboutPage() {
         <p className={styles.copy}>
           Dig isn&rsquo;t the Discogs catalog &mdash; that&rsquo;s our source, not our product. It isn&rsquo;t a
           streaming service or a marketplace. It isn&rsquo;t infinite-genre or all-time; rock, pop,
-          hip hop, classical, jazz, and most of the post-2003 electronic continuum live elsewhere.
+          hip hop, classical, jazz, and most of the post-2008 electronic continuum live elsewhere.
           And it isn&rsquo;t crowd-sourced &mdash; there are no user accounts, comments, or ratings.
           Other catalogs cover everything; dig covers something.
         </p>

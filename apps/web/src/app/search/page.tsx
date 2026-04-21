@@ -11,7 +11,7 @@ interface Props {
 export const metadata = {
   title: "Search — dig",
   description:
-    "Search labels, artists, and releases across the dig catalog (house & techno, 1988–2003).",
+    "Search labels, artists, and releases across the dig catalog (house & techno, 1988–2008).",
 };
 
 export default async function SearchPage({ searchParams }: Props) {

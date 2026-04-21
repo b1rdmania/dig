@@ -24,7 +24,7 @@ import { type Kysely, sql } from "kysely";
 import type { Database } from "@dig/db";
 
 export type ReleaseType = "album" | "single_ep" | "compilation" | "other";
-export type ReleaseTypeLabel = "LP" | "EP" | "Single" | "Comp" | "Other";
+export type ReleaseTypeLabel = "LP" | "EP" | "Single" | "Comp" | "Other" | '12"' | '7"';
 
 export interface TraversalLink {
   type: "artist" | "label" | "master" | "release";
@@ -91,16 +91,73 @@ const MAX_LIMIT = 100;
 const MASTERS_FETCH_CAP = 500;
 
 /**
- * Deterministic release-type classifier from a primary format string.
- * The slim shape stores `primary_format` as a single text value rather
- * than a list of descriptions — we still match against the same vocabulary.
+ * Deterministic release-type classifier tuned to our slim-shape vocabulary.
+ *
+ * `primary_format` on `catalog.masters` looks like `"Vinyl 1"`, `"Vinyl 2"`,
+ * `"CD 1"`, `"Cassette 1"` etc. — a medium plus disc-count, not a format
+ * description like `"12\", 33 ⅓ RPM, LP"`. The older classifier was written
+ * against descriptions and therefore dumped every master into `"Other"`.
+ *
+ * Signal priorities (most specific first):
+ *   1. Compilation cues — title keywords or "Various" as primary artist.
+ *   2. LP / album — anything with 7+ tracks, OR multi-disc vinyl, OR CD, OR
+ *      Cassette. For the scene we scope (house/techno 1985-2008) this
+ *      captures every long-form release the artist considers an album.
+ *   3. 12" / Single — single-disc vinyl with ≤ 6 tracks. In this scene
+ *      essentially all `Vinyl 1` records are 12" singles; we don't bother
+ *      splitting 7" out because they're rare and our data can't distinguish
+ *      them without release-level format descriptions.
+ *   4. Legacy format hints — the old `"Album" / "12\""` strings, in case a
+ *      caller ever passes a richer `formatHints` array.
+ *   5. Everything else — "Other" (File-only releases, VHS, Acetate, etc.).
  */
 export function classifyReleaseType(
   formatHints: string[],
   title?: string | null,
+  opts?: { trackCount?: number | null; primaryArtistName?: string | null },
 ): { release_type: ReleaseType; release_type_label: ReleaseTypeLabel } {
   const lower = formatHints.map((d) => d.toLowerCase());
   const titleLower = (title || "").toLowerCase();
+  const tracks = opts?.trackCount ?? null;
+  const primary = (opts?.primaryArtistName || "").toLowerCase();
+
+  const isCompTitle =
+    titleLower.includes("greatest hits") ||
+    titleLower.includes("best of") ||
+    titleLower.includes("anthology") ||
+    titleLower.includes("compilation") ||
+    / the best /.test(` ${titleLower} `);
+  if (
+    primary === "various" ||
+    primary === "various artists" ||
+    isCompTitle ||
+    lower.some((d) => d === "compilation" || d.includes("comp"))
+  ) {
+    return { release_type: "compilation", release_type_label: "Comp" };
+  }
+
+  const primaryFmt = lower[0] ?? "";
+
+  const isMultiDiscVinyl = /^vinyl\s*[2-9]\b/.test(primaryFmt);
+  const isCd = primaryFmt.startsWith("cd");
+  const isCassette = primaryFmt.startsWith("cassette");
+  const isSingleVinyl = /^vinyl\s*1\b/.test(primaryFmt);
+
+  if (isMultiDiscVinyl) {
+    return { release_type: "album", release_type_label: "LP" };
+  }
+  if ((isCd || isCassette) && (tracks == null || tracks >= 7)) {
+    return { release_type: "album", release_type_label: "LP" };
+  }
+  if (isSingleVinyl) {
+    if (tracks != null && tracks >= 9) {
+      return { release_type: "album", release_type_label: "LP" };
+    }
+    return { release_type: "single_ep", release_type_label: '12"' };
+  }
+  if ((isCd || isCassette) && tracks != null && tracks <= 4) {
+    return { release_type: "single_ep", release_type_label: "Single" };
+  }
 
   if (lower.some((d) => d === "album" || d === "lp" || d.includes("album"))) {
     return { release_type: "album", release_type_label: "LP" };
@@ -109,17 +166,54 @@ export function classifyReleaseType(
     return { release_type: "single_ep", release_type_label: "Single" };
   }
   if (lower.some((d) => d === "ep" || d === '12"' || d.includes("ep") || d.includes('12"'))) {
-    return { release_type: "single_ep", release_type_label: "EP" };
+    return { release_type: "single_ep", release_type_label: '12"' };
   }
-  if (
-    lower.some((d) => d === "compilation" || d.includes("comp")) ||
-    titleLower.includes("greatest hits") ||
-    titleLower.includes("best of") ||
-    titleLower.includes("anthology")
-  ) {
-    return { release_type: "compilation", release_type_label: "Comp" };
-  }
+
   return { release_type: "other", release_type_label: "Other" };
+}
+
+/**
+ * Resolve an artist's discogs_id into the set of ids that represent the same
+ * creative person — i.e. `[self, ...alias_artist_ids]`. The slim shape stores
+ * alias *names* on the primary artist row (`aliases_text`), so we look those
+ * names up against `catalog.artists` to get their discogs_ids.
+ *
+ * This is intentionally name-matched (not bidirectional graph traversal).
+ * Discogs populates `aliases` on every side of an alias relationship, so a
+ * name match on either side reaches the same set. We cap to 20 ids as a
+ * safety net against pathological aliases_text entries.
+ */
+export async function expandArtistAliasIds(
+  db: Kysely<Database>,
+  artistDiscogsId: number,
+  batchId: string,
+): Promise<number[]> {
+  const row = await db
+    .selectFrom("catalog.artists")
+    .select(["discogs_id", "aliases_text"])
+    .where("discogs_id", "=", artistDiscogsId)
+    .where("batch_id", "=", batchId)
+    .executeTakeFirst();
+
+  if (!row) return [artistDiscogsId];
+
+  const aliasNames = Array.isArray(row.aliases_text)
+    ? row.aliases_text.filter((s) => typeof s === "string" && s.trim().length > 0)
+    : [];
+
+  if (aliasNames.length === 0) return [artistDiscogsId];
+
+  const resolved = await db
+    .selectFrom("catalog.artists")
+    .select(["discogs_id"])
+    .where("batch_id", "=", batchId)
+    .where("name", "in", aliasNames)
+    .limit(20)
+    .execute();
+
+  const ids = new Set<number>([artistDiscogsId]);
+  for (const r of resolved) ids.add(r.discogs_id);
+  return Array.from(ids);
 }
 
 function encodeCursor(discogsId: number): string {
@@ -169,15 +263,29 @@ export async function getArtistMasters(
   dumpDate: string,
   limit = DEFAULT_LIMIT,
   cursor?: string,
-  sort: "newest" | "oldest" = "newest",
+  // Default chronological (oldest → newest). A producer's catalog tells a
+  // story in time — watching it unfold matches how DJs/collectors narrate
+  // it. Callers can still pass `sort=newest` to get the reverse.
+  sort: "newest" | "oldest" = "oldest",
   releaseType: ReleaseType | "all" = "all",
+  opts?: { includeAliases?: boolean },
 ): Promise<TraversalResponse> {
   const start = Date.now();
   const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
   const afterId = cursor ? decodeCursor(cursor) : null;
+  const includeAliases = opts?.includeAliases !== false;
 
-  // Read denormed primary_format directly from masters — no join to dropped
-  // release_formats. Most artists have <200 masters → fetch all then sort.
+  // Expand to [self, ...alias ids] so a visit to /artists/148 (Larry Heard)
+  // also surfaces masters credited to Mr. Fingers / Fingers Inc. / etc.
+  // Without this the artist page fragments catalogs along Discogs' credit
+  // convention (every recording name is a separate artist row) and hides
+  // ~70% of a prolific producer's scene output.
+  const artistIds = includeAliases
+    ? await expandArtistAliasIds(db, artistDiscogsId, batchId)
+    : [artistDiscogsId];
+
+  // Read denormed primary_format + track count so the 12"/LP classifier has
+  // the signals it needs (see classifyReleaseType).
   const rows = await db
     .selectFrom("catalog.master_artists")
     .innerJoin("catalog.masters", (join) =>
@@ -190,25 +298,42 @@ export async function getArtistMasters(
       "catalog.masters.title",
       "catalog.masters.year",
       "catalog.masters.primary_format",
+      "catalog.masters.primary_artist_name",
       "catalog.masters.scene_weight",
+      sql<number>`(
+        SELECT COUNT(*)::int FROM catalog.master_tracks mt
+        WHERE mt.master_discogs_id = catalog.masters.discogs_id
+      )`.as("track_count"),
     ])
-    .where("catalog.master_artists.artist_discogs_id", "=", artistDiscogsId)
+    .where("catalog.master_artists.artist_discogs_id", "in", artistIds)
     .where("catalog.master_artists.batch_id", "=", batchId)
     .limit(MASTERS_FETCH_CAP)
     .execute();
 
-  const classified = rows.map((r) => {
-    const fmt = r.primary_format ? [r.primary_format] : [];
-    const { release_type, release_type_label } = classifyReleaseType(fmt, r.title);
-    return {
-      discogs_id: r.discogs_id,
-      title: r.title,
-      year: r.year,
-      scene_weight: r.scene_weight,
-      release_type,
-      release_type_label,
-    };
-  });
+  // A master can have the same person credited under multiple aliases (e.g.
+  // Larry Heard + Mr. Fingers both on one release) — dedupe on master id.
+  const seen = new Set<number>();
+  const classified = rows
+    .filter((r) => {
+      if (seen.has(r.discogs_id)) return false;
+      seen.add(r.discogs_id);
+      return true;
+    })
+    .map((r) => {
+      const fmt = r.primary_format ? [r.primary_format] : [];
+      const { release_type, release_type_label } = classifyReleaseType(fmt, r.title, {
+        trackCount: r.track_count,
+        primaryArtistName: r.primary_artist_name,
+      });
+      return {
+        discogs_id: r.discogs_id,
+        title: r.title,
+        year: r.year,
+        scene_weight: r.scene_weight,
+        release_type,
+        release_type_label,
+      };
+    });
 
   const filtered = releaseType === "all"
     ? classified
@@ -271,10 +396,21 @@ export async function getArtistCatalogReleases(
   dumpDate: string,
   limit = DEFAULT_LIMIT,
   cursor?: string,
-  sort: "newest" | "oldest" = "newest",
+  sort: "newest" | "oldest" = "oldest",
   releaseType: ReleaseType | "all" = "all",
+  opts?: { includeAliases?: boolean },
 ): Promise<TraversalResponse> {
-  const r = await getArtistMasters(db, artistDiscogsId, batchId, dumpDate, limit, cursor, sort, releaseType);
+  const r = await getArtistMasters(
+    db,
+    artistDiscogsId,
+    batchId,
+    dumpDate,
+    limit,
+    cursor,
+    sort,
+    releaseType,
+    opts,
+  );
   return { ...r, meta: { ...r.meta, link_type: "catalog_releases" } };
 }
 

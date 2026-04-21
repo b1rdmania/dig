@@ -7,18 +7,18 @@ import styles from "./page.module.css";
 export const metadata = {
   title: "Scenes — dig",
   description:
-    "Curated scenes that map house and techno from 1988 to 2003 — Detroit Core, Berlin Techno, Chicago House, Dub Techno and more.",
+    "Curated scenes that map house and techno from 1988 to 2008 — Detroit Core, Berlin Techno, Chicago House, Dub Techno and more.",
   openGraph: {
     title: "Scenes — dig",
     description:
-      "Curated scenes that map house and techno from 1988 to 2003 — Detroit Core, Berlin Techno, Chicago House, Dub Techno and more.",
+      "Curated scenes that map house and techno from 1988 to 2008 — Detroit Core, Berlin Techno, Chicago House, Dub Techno and more.",
     images: [{ url: "/api/og?kind=wall", width: 1200, height: 630, alt: "Dig — scenes" }],
   },
   twitter: {
     card: "summary_large_image" as const,
     title: "Scenes — dig",
     description:
-      "Curated scenes that map house and techno from 1988 to 2003.",
+      "Curated scenes that map house and techno from 1988 to 2008.",
     images: ["/api/og?kind=wall"],
   },
 };

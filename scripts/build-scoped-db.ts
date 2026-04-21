@@ -45,7 +45,7 @@
  *   5. Real build (run on a Fly machine to avoid laptop sleep):
  *        SOURCE_DATABASE_URL=postgres://... TARGET_DATABASE_URL=postgres://... \
  *          pnpm exec tsx scripts/build-scoped-db.ts \
- *            --year-min 1985 --year-max 2003 --quality-active-only \
+ *            --year-min 1985 --year-max 2008 --quality-active-only \
  *            --scene-weight-min N \
  *            --output /tmp/dig-scene.sql --target
  *   6. Run scripts/seed-label-editorial.ts on dig-db-scene.
@@ -65,6 +65,86 @@ import { spawnSync } from "node:child_process";
 import { createWriteStream, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { WriteStream } from "node:fs";
+import pg from "pg";
+import { spawn } from "node:child_process";
+
+// Dedicated pool for streamQueryToInserts. Each call acquires a fresh
+// connection from the pool and releases it when done, so a dropped/idle
+// connection only kills one batch (which we retry). Long-running dumps on
+// the pinned Kysely connection previously dropped after ~1 hour with
+// "Connection terminated unexpectedly". Using a pool + per-query fresh
+// connections + retry on transient errors + persistent staging tables
+// (in scope_workspace) lets us recover without restarting the dump.
+let streamPool: pg.Pool | null = null;
+// Shared WriteStream for the current dump (set by dumpAll/dumpCreditsOnly).
+// streamQueryToInserts writes COPY data directly to this stream so we avoid
+// the per-line writeLine wrapper (which appends \n and is async per call).
+let currentOut: WriteStream | null = null;
+
+function isTransientConnError(err: unknown): boolean {
+  const msg = (err as Error)?.message ?? "";
+  const code = (err as { code?: string })?.code ?? "";
+  return (
+    /Connection terminated|server closed|read ECONNRESET|ETIMEDOUT|connection timeout|Client has encountered a connection error|socket hang up|terminated by administrator|timeout exceeded when trying to connect/i.test(
+      msg,
+    ) ||
+    code === "ECONNRESET" ||
+    code === "ETIMEDOUT" ||
+    code === "57P01" || // admin_shutdown
+    code === "57P02" || // crash_shutdown
+    code === "57P03"    // cannot_connect_now
+  );
+}
+
+async function streamExec<T extends pg.QueryResultRow = Record<string, unknown>>(
+  q: string,
+  opts: { maxRetries?: number; quiet?: boolean; queryTimeoutMs?: number } = {},
+): Promise<pg.QueryResult<T>> {
+  if (!streamPool) throw new Error("streamPool not initialized");
+  const maxRetries = opts.maxRetries ?? 10;
+  const queryTimeoutMs = opts.queryTimeoutMs ?? 30 * 60 * 1000; // 30 min wall clock
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const client = await streamPool.connect();
+    let timer: NodeJS.Timeout | null = null;
+    try {
+      await client.query("SET statement_timeout = '60min'");
+      await client.query("SET idle_in_transaction_session_timeout = '5min'");
+      await client.query("SET work_mem = '256MB'");
+      await client.query("SET search_path TO scope_workspace, public");
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`streamExec wall-clock timeout after ${queryTimeoutMs}ms`)),
+          queryTimeoutMs,
+        );
+      });
+      const res = (await Promise.race([client.query<T>(q), timeoutPromise])) as pg.QueryResult<T>;
+      if (timer) clearTimeout(timer);
+      client.release();
+      return res;
+    } catch (err) {
+      if (timer) clearTimeout(timer);
+      try {
+        client.release(true);
+      } catch {
+        // ignore
+      }
+      lastErr = err;
+      const transient = isTransientConnError(err) ||
+        /wall-clock timeout/.test((err as Error).message ?? "");
+      if (!transient) throw err;
+      const backoff = Math.min(30_000, 2_000 * Math.pow(2, attempt));
+      if (!opts.quiet) {
+        console.log(
+          `  [stream] transient error on attempt ${attempt + 1}/${maxRetries}: ` +
+          `${(err as Error).message} — retrying in ${backoff}ms`,
+        );
+      }
+      await new Promise((r) => setTimeout(r, backoff));
+    }
+  }
+  throw lastErr;
+}
 
 interface Args {
   yearMin: number;
@@ -186,7 +266,7 @@ Required env:
 
 Options:
   --year-min <n>            Default: 1985
-  --year-max <n>            Default: 2003
+  --year-max <n>            Default: 2008
   --style <name>            Repeatable. Defaults to scene canon (see source).
   --no-default-styles       Don't include default style allowlist; only --style values.
   --quality-active-only     Filter to enrich.entity_quality.quality_status='active'.
@@ -224,7 +304,7 @@ Options:
 function parseArgs(argv: string[]): Args {
   const args = argv.slice(2);
   let yearMin = 1985;
-  let yearMax = 2003;
+  let yearMax = 2008;
   let useDefaultStyles = true;
   const styles: string[] = [];
   let qualityActiveOnly = false;
@@ -1189,8 +1269,12 @@ async function buildCrossScopeCredits(
 
   // Step 1: collect raw cross-scope rows. Track-level + release-level UNIONed.
   // We restrict to host releases NOT in scope_r (the cross-scope predicate).
+  // NOTE: ON COMMIT DROP cannot be used here because each Kysely statement
+  // runs in its own implicit transaction on the pinned connection; the temp
+  // would vanish before the DELETE / INSERT steps run. We drop manually at the end.
+  await sql`DROP TABLE IF EXISTS _csc_raw`.execute(c);
   await sql`
-    CREATE TEMP TABLE _csc_raw ON COMMIT DROP AS
+    CREATE TEMP TABLE _csc_raw AS
     -- track-level: MAW credited as Remix on track X of Madonna release Y
     SELECT
       tc.artist_discogs_id    AS artist_discogs_id,
@@ -1293,6 +1377,7 @@ async function buildCrossScopeCredits(
 
   await sql`CREATE INDEX ON scope_cross_scope_credits (artist_discogs_id, role)`.execute(c);
   await sql`ANALYZE scope_cross_scope_credits`.execute(c);
+  await sql`DROP TABLE IF EXISTS _csc_raw`.execute(c);
 
   const n = await tableRowCount(c, WS, "scope_cross_scope_credits");
   console.log(`[build-credits] cross_scope_credits: ${n.toLocaleString()} rows in ${Date.now() - t0}ms`);
@@ -1408,6 +1493,7 @@ async function dumpAll(
 ): Promise<{ counts: Record<string, number>; output: string }> {
   mkdirSync(dirname(args.output), { recursive: true });
   const out: WriteStream = createWriteStream(args.output, { encoding: "utf8" });
+  currentOut = out;
   const writeLine = (line: string) => new Promise<void>((res) => out.write(line + "\n", () => res()));
 
   await writeLine("-- scoped slim master-first build");
@@ -1480,7 +1566,7 @@ async function dumpMasters(
     "created_at", "updated_at",
   ];
   console.log(`  [dump] catalog.masters`);
-  const result = await sql<Record<string, unknown>>`
+  const q = `
     SELECT
       m.id, m.discogs_id, m.title, m.main_release_discogs_id, m.year, m.data_quality, m.batch_id,
       d.primary_artist_discogs_id, d.primary_artist_name, d.artists_credit_text,
@@ -1490,10 +1576,11 @@ async function dumpMasters(
       m.created_at, m.updated_at
     FROM catalog.masters m
     JOIN scope_m_denorm d ON d.discogs_id = m.discogs_id
-    WHERE m.batch_id = ${batchId}::uuid
+    WHERE m.batch_id = '${batchId}'::uuid
       AND m.discogs_id IN (SELECT discogs_id FROM scope_m)
-  `.execute(c);
-  await emitChunkedInserts("catalog.masters", cols, result.rows, writeLine);
+  `;
+  const n = await streamQueryToInserts(c, q, "catalog.masters", cols, writeLine);
+  console.log(`  [dump] catalog.masters: ${n.toLocaleString()} rows`);
 }
 
 async function dumpArtists(
@@ -1507,22 +1594,23 @@ async function dumpArtists(
     "aliases_text", "created_at", "updated_at",
   ];
   console.log(`  [dump] catalog.artists`);
-  const result = await sql<Record<string, unknown>>`
+  const q = `
     SELECT
       a.id, a.discogs_id, a.name, a.real_name, a.profile, a.data_quality, a.batch_id,
       COALESCE(
         (SELECT array_agg(DISTINCT al.alias_name ORDER BY al.alias_name)
          FROM catalog.artist_aliases al
-         WHERE al.batch_id = ${batchId}::uuid
+         WHERE al.batch_id = '${batchId}'::uuid
            AND al.artist_discogs_id = a.discogs_id),
         '{}'::text[]
       ) AS aliases_text,
       a.created_at, a.updated_at
     FROM catalog.artists a
-    WHERE a.batch_id = ${batchId}::uuid
+    WHERE a.batch_id = '${batchId}'::uuid
       AND a.discogs_id IN (SELECT discogs_id FROM scope_a)
-  `.execute(c);
-  await emitChunkedInserts("catalog.artists", cols, result.rows, writeLine);
+  `;
+  const n = await streamQueryToInserts(c, q, "catalog.artists", cols, writeLine);
+  console.log(`  [dump] catalog.artists: ${n.toLocaleString()} rows`);
 }
 
 async function dumpLabels(
@@ -1536,26 +1624,27 @@ async function dumpLabels(
     "parent_label_discogs_id", "batch_id", "aliases_text", "created_at", "updated_at",
   ];
   console.log(`  [dump] catalog.labels`);
-  const result = await sql<Record<string, unknown>>`
+  const q = `
     SELECT
       l.id, l.discogs_id, l.name, l.profile, l.contact_info, l.data_quality,
       l.parent_label_discogs_id, l.batch_id,
       '{}'::text[] AS aliases_text,
       l.created_at, l.updated_at
     FROM catalog.labels l
-    WHERE l.batch_id = ${batchId}::uuid
+    WHERE l.batch_id = '${batchId}'::uuid
       AND (
         l.discogs_id IN (SELECT discogs_id FROM scope_l)
         OR l.discogs_id IN (
           SELECT parent_label_discogs_id
           FROM catalog.labels
-          WHERE batch_id = ${batchId}::uuid
+          WHERE batch_id = '${batchId}'::uuid
             AND parent_label_discogs_id IS NOT NULL
             AND discogs_id IN (SELECT discogs_id FROM scope_l)
         )
       )
-  `.execute(c);
-  await emitChunkedInserts("catalog.labels", cols, result.rows, writeLine);
+  `;
+  const n = await streamQueryToInserts(c, q, "catalog.labels", cols, writeLine);
+  console.log(`  [dump] catalog.labels: ${n.toLocaleString()} rows`);
 }
 
 async function dumpMasterTracks(
@@ -1569,7 +1658,7 @@ async function dumpMasterTracks(
     "artists_text", "source_release_discogs_id",
   ];
   console.log(`  [dump] catalog.master_tracks`);
-  const result = await sql<Record<string, unknown>>`
+  const q = `
     SELECT
       cr.master_discogs_id,
       COALESCE(t.track_number, t.position::text) AS position,
@@ -1577,18 +1666,19 @@ async function dumpMasterTracks(
       t.duration_seconds,
       (SELECT string_agg(DISTINCT tc.artist_name, ', ' ORDER BY tc.artist_name)
        FROM catalog.track_credits tc
-       WHERE tc.batch_id = ${batchId}::uuid
+       WHERE tc.batch_id = '${batchId}'::uuid
          AND tc.track_id = t.id) AS artists_text,
       cr.release_discogs_id AS source_release_discogs_id
     FROM scope_m_canonical_release cr
     JOIN catalog.tracks t
       ON t.release_discogs_id = cr.release_discogs_id
-      AND t.batch_id = ${batchId}::uuid
+      AND t.batch_id = '${batchId}'::uuid
     WHERE cr.release_discogs_id IS NOT NULL
       AND t.title IS NOT NULL
     ORDER BY cr.master_discogs_id, t.position
-  `.execute(c);
-  await emitChunkedInserts("catalog.master_tracks", cols, result.rows, writeLine);
+  `;
+  const n = await streamQueryToInserts(c, q, "catalog.master_tracks", cols, writeLine);
+  console.log(`  [dump] catalog.master_tracks: ${n.toLocaleString()} rows`);
 }
 
 async function dumpMasterVideosUnified(
@@ -1602,7 +1692,7 @@ async function dumpMasterVideosUnified(
     "url", "title", "duration_seconds", "discogs_release_url",
   ];
   console.log(`  [dump] catalog.master_videos_unified`);
-  const result = await sql<Record<string, unknown>>`
+  const q = `
     SELECT
       mv.master_discogs_id,
       'master'::text AS source_type,
@@ -1612,7 +1702,7 @@ async function dumpMasterVideosUnified(
       mv.duration_seconds,
       NULL::text AS discogs_release_url
     FROM catalog.master_videos mv
-    WHERE mv.batch_id = ${batchId}::uuid
+    WHERE mv.batch_id = '${batchId}'::uuid
       AND mv.master_discogs_id > 0
       AND mv.master_discogs_id IN (SELECT discogs_id FROM scope_m)
     UNION ALL
@@ -1628,13 +1718,14 @@ async function dumpMasterVideosUnified(
     JOIN catalog.releases r
       ON r.discogs_id = rv.release_discogs_id
       AND r.batch_id = rv.batch_id
-    WHERE rv.batch_id = ${batchId}::uuid
+    WHERE rv.batch_id = '${batchId}'::uuid
       AND r.discogs_id IN (SELECT discogs_id FROM scope_r)
       AND r.master_discogs_id IS NOT NULL
       AND r.master_discogs_id > 0
       AND r.master_discogs_id IN (SELECT discogs_id FROM scope_m)
-  `.execute(c);
-  await emitChunkedInserts("catalog.master_videos_unified", cols, result.rows, writeLine);
+  `;
+  const n = await streamQueryToInserts(c, q, "catalog.master_videos_unified", cols, writeLine);
+  console.log(`  [dump] catalog.master_videos_unified: ${n.toLocaleString()} rows`);
 }
 
 async function dumpReleaseShadow(
@@ -1649,7 +1740,7 @@ async function dumpReleaseShadow(
     "has_tracklist_delta", "has_remix_signal", "discogs_url",
   ];
   console.log(`  [dump] catalog.release_shadow`);
-  const result = await sql<Record<string, unknown>>`
+  const q = `
     SELECT
       r.discogs_id AS release_discogs_id,
       r.master_discogs_id,
@@ -1657,28 +1748,29 @@ async function dumpReleaseShadow(
       r.release_year,
       r.country,
       (SELECT label_name FROM catalog.release_labels rl
-       WHERE rl.batch_id = ${batchId}::uuid
+       WHERE rl.batch_id = '${batchId}'::uuid
          AND rl.release_discogs_id = r.discogs_id
        ORDER BY rl.id ASC LIMIT 1) AS label,
       (SELECT name FROM catalog.release_formats rf
-       WHERE rf.batch_id = ${batchId}::uuid
+       WHERE rf.batch_id = '${batchId}'::uuid
          AND rf.release_discogs_id = r.discogs_id
        ORDER BY rf.position ASC LIMIT 1) AS format,
       COALESCE(r.is_main_release, false) AS is_main_release,
       false AS has_tracklist_delta,
       EXISTS (
         SELECT 1 FROM catalog.release_styles rs
-        WHERE rs.batch_id = ${batchId}::uuid
+        WHERE rs.batch_id = '${batchId}'::uuid
           AND rs.release_discogs_id = r.discogs_id
           AND rs.style ILIKE '%remix%'
       ) AS has_remix_signal,
       ('https://www.discogs.com/release/' || r.discogs_id::text) AS discogs_url
     FROM catalog.releases r
-    WHERE r.batch_id = ${batchId}::uuid
+    WHERE r.batch_id = '${batchId}'::uuid
       AND r.discogs_id IN (SELECT discogs_id FROM scope_r)
       AND r.master_discogs_id IN (SELECT discogs_id FROM scope_m)
-  `.execute(c);
-  await emitChunkedInserts("catalog.release_shadow", cols, result.rows, writeLine);
+  `;
+  const n = await streamQueryToInserts(c, q, "catalog.release_shadow", cols, writeLine);
+  console.log(`  [dump] catalog.release_shadow: ${n.toLocaleString()} rows`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1697,11 +1789,9 @@ async function dumpMasterTrackCredits(
     "role", "role_raw", "source_release_id",
   ];
   console.log(`  [dump] catalog.master_track_credits`);
-  const result = await sql<Record<string, unknown>>`
-    SELECT ${sql.raw(cols.join(", "))}
-    FROM scope_master_track_credits
-  `.execute(c);
-  await emitChunkedInserts("catalog.master_track_credits", cols, result.rows, writeLine);
+  const q = `SELECT ${cols.join(", ")} FROM scope_master_track_credits`;
+  const n = await streamQueryToInserts(c, q, "catalog.master_track_credits", cols, writeLine);
+  console.log(`  [dump] catalog.master_track_credits: ${n.toLocaleString()} rows`);
 }
 
 async function dumpMasterReleaseCredits(
@@ -1716,11 +1806,9 @@ async function dumpMasterReleaseCredits(
     "role", "role_raw",
   ];
   console.log(`  [dump] catalog.master_release_credits`);
-  const result = await sql<Record<string, unknown>>`
-    SELECT ${sql.raw(cols.join(", "))}
-    FROM scope_master_release_credits
-  `.execute(c);
-  await emitChunkedInserts("catalog.master_release_credits", cols, result.rows, writeLine);
+  const q = `SELECT ${cols.join(", ")} FROM scope_master_release_credits`;
+  const n = await streamQueryToInserts(c, q, "catalog.master_release_credits", cols, writeLine);
+  console.log(`  [dump] catalog.master_release_credits: ${n.toLocaleString()} rows`);
 }
 
 async function dumpCrossScopeCredits(
@@ -1737,11 +1825,9 @@ async function dumpCrossScopeCredits(
     "track_position", "track_title",
   ];
   console.log(`  [dump] catalog.cross_scope_credits`);
-  const result = await sql<Record<string, unknown>>`
-    SELECT ${sql.raw(cols.join(", "))}
-    FROM scope_cross_scope_credits
-  `.execute(c);
-  await emitChunkedInserts("catalog.cross_scope_credits", cols, result.rows, writeLine);
+  const q = `SELECT ${cols.join(", ")} FROM scope_cross_scope_credits`;
+  const n = await streamQueryToInserts(c, q, "catalog.cross_scope_credits", cols, writeLine);
+  console.log(`  [dump] catalog.cross_scope_credits: ${n.toLocaleString()} rows`);
 }
 
 async function dumpArtistGroupMembers(
@@ -1752,11 +1838,9 @@ async function dumpArtistGroupMembers(
   await writeLine("-- catalog.artist_group_members");
   const cols = ["group_artist_id", "member_artist_id"];
   console.log(`  [dump] catalog.artist_group_members`);
-  const result = await sql<Record<string, unknown>>`
-    SELECT ${sql.raw(cols.join(", "))}
-    FROM scope_artist_group_members
-  `.execute(c);
-  await emitChunkedInserts("catalog.artist_group_members", cols, result.rows, writeLine);
+  const q = `SELECT ${cols.join(", ")} FROM scope_artist_group_members`;
+  const n = await streamQueryToInserts(c, q, "catalog.artist_group_members", cols, writeLine);
+  console.log(`  [dump] catalog.artist_group_members: ${n.toLocaleString()} rows`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1772,6 +1856,7 @@ async function dumpCreditsOnly(
 ): Promise<{ output: string; counts: Record<string, number> }> {
   mkdirSync(dirname(args.output), { recursive: true });
   const out: WriteStream = createWriteStream(args.output, { encoding: "utf8" });
+  currentOut = out;
   const writeLine = (line: string) => new Promise<void>((res) => out.write(line + "\n", () => res()));
 
   await writeLine("-- credit-layer-only build (delta into existing scoped DB)");
@@ -1836,15 +1921,11 @@ async function dumpTable(
 ) {
   const where = whereClauseFor(table);
   const cols = await getColumns(c, table);
-  const colList = cols.join(", ");
   console.log(`  [dump] ${table}`);
-  const result = await sql<Record<string, unknown>>`
-    SELECT ${sql.raw(colList)}
-    FROM ${sql.raw(table)}
-    WHERE ${sql.raw(where)}
-  `.execute(c);
   await writeLine(`-- ${table}`);
-  await emitChunkedInserts(table, cols, result.rows, writeLine);
+  const q = `SELECT ${cols.join(", ")} FROM ${table} WHERE ${where}`;
+  const n = await streamQueryToInserts(c, q, table, cols, writeLine);
+  console.log(`  [dump] ${table}: ${n.toLocaleString()} rows`);
 }
 
 async function emitChunkedInserts(
@@ -1866,6 +1947,126 @@ async function emitChunkedInserts(
   if (buf.length > 0) {
     await writeLine(`INSERT INTO ${table} (${colList}) VALUES ${buf.join(", ")} ON CONFLICT DO NOTHING;`);
   }
+}
+
+// Stream a SELECT to INSERT statements using materialized keyset pagination.
+// Approach: wrap the user's query in a CTE, materialize it into a TEMP table
+// with a synthetic rownum, then page through it with WHERE rownum BETWEEN.
+// This avoids server-side cursors (which had hang issues against Kysely/pg)
+// and avoids buffering the full result set in JS.
+// Stream a SELECT result into the output dump as a COPY FROM stdin block.
+// Uses a psql subprocess to execute COPY ... TO STDOUT and pipes its output
+// directly into our WriteStream. This bypasses pg-node driver row buffering
+// (which was hanging indefinitely on larger batches) and avoids the per-batch
+// pagination entirely — psql streams the whole table in one go.
+async function streamQueryToInserts(
+  _c: Kysely<Database>,
+  rawSelect: string,
+  destTable: string,
+  cols: string[],
+  writeLine: (s: string) => Promise<void>,
+  _batchSize = 2000,
+): Promise<number> {
+  const sourceUrl = process.env.SOURCE_DATABASE_URL;
+  if (!sourceUrl) throw new Error("SOURCE_DATABASE_URL not set");
+  const colList = cols.join(", ");
+
+  const t0 = Date.now();
+  console.log(`    [copy] ${destTable}: launching psql COPY TO STDOUT`);
+  await writeLine(`-- COPY data for ${destTable}`);
+  await writeLine(`COPY ${destTable} (${colList}) FROM stdin;`);
+
+  // COPY (subquery) TO STDOUT: stream text-format output. Tabs separate
+  // columns, \N is NULL. psql on import reads the same format natively.
+  const copySql = `COPY (${rawSelect}) TO STDOUT WITH (FORMAT text)`;
+
+  return await new Promise<number>((resolve, reject) => {
+    let rows = 0;
+    let lastLog = Date.now();
+    let totalBytes = 0;
+
+    const child = spawn(
+      "psql",
+      [
+        sourceUrl,
+        "-v", "ON_ERROR_STOP=1",
+        "-X",
+        "-q",
+        "-c", "SET statement_timeout = 0",
+        "-c", "SET idle_in_transaction_session_timeout = 0",
+        "-c", "SET search_path TO scope_workspace, public",
+        "-c", copySql,
+      ],
+      { stdio: ["ignore", "pipe", "pipe"] },
+    );
+
+    let stderr = "";
+    if (!currentOut) {
+      reject(new Error("currentOut not set"));
+      return;
+    }
+    const writer = currentOut;
+
+    // Backpressure: if writer can't keep up, pause the child's stdout.
+    child.stdout.on("data", (chunk: Buffer) => {
+      totalBytes += chunk.length;
+      for (let i = 0; i < chunk.length; i++) {
+        if (chunk[i] === 10) rows++;
+      }
+      const ok = writer.write(chunk);
+      if (!ok) {
+        child.stdout.pause();
+        writer.once("drain", () => child.stdout.resume());
+      }
+      if (Date.now() - lastLog > 15_000) {
+        console.log(
+          `    [copy] ${destTable}: ${rows.toLocaleString()} rows, ` +
+          `${Math.round(totalBytes / 1024 / 1024)}MB copied`,
+        );
+        lastLog = Date.now();
+      }
+    });
+
+    child.stderr.on("data", (b: Buffer) => {
+      stderr += b.toString("utf8");
+    });
+
+    let stdoutEnded = false;
+    let exitCode: number | null = null;
+    let settled = false;
+
+    const finalize = async () => {
+      if (settled || !stdoutEnded || exitCode === null) return;
+      settled = true;
+      try {
+        if (exitCode !== 0) {
+          reject(new Error(`psql COPY exited ${exitCode}: ${stderr.slice(0, 1000)}`));
+          return;
+        }
+        await writeLine(`\\.`);
+        await writeLine(``);
+        const elapsed = Math.round((Date.now() - t0) / 1000);
+        console.log(
+          `    [copy] ${destTable}: done ${rows.toLocaleString()} rows ` +
+          `${Math.round(totalBytes / 1024 / 1024)}MB in ${elapsed}s`,
+        );
+        resolve(rows);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    child.stdout.on("end", () => {
+      stdoutEnded = true;
+      finalize().catch(reject);
+    });
+
+    child.on("error", (err) => reject(err));
+    child.on("exit", (code) => {
+      exitCode = code ?? 1;
+      finalize().catch(reject);
+    });
+  });
 }
 
 function whereClauseFor(table: string): string {
@@ -2018,6 +2219,18 @@ async function main() {
   }
 
   const source = createDb(sourceUrl);
+  streamPool = new pg.Pool({
+    connectionString: sourceUrl,
+    max: 4,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 30_000,
+    statement_timeout: 240 * 60 * 1000,
+  });
+  streamPool.on("error", (err) => {
+    console.log(`  [stream-pool] idle client error: ${err.message}`);
+  });
   try {
     const batchId = await resolveBatchId(source, args.batchIdOverride);
     if (args.manifest) {
@@ -2143,6 +2356,14 @@ async function main() {
     });
   } finally {
     await source.destroy();
+    if (streamPool) {
+      try {
+        await streamPool.end();
+      } catch {
+        // ignore
+      }
+      streamPool = null;
+    }
   }
 }
 

@@ -14,6 +14,8 @@ import {
   getArtistCrossScopeCredits,
   getMasterCredits,
   getArtistGroupsAndMembers,
+  getArtistCollaborators,
+  getArtistLabelmates,
   getLabelTopCredits,
   getEntityImages,
 } from "@dig/domain";
@@ -194,18 +196,32 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
         error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
       });
     }
-    const q = req.query as { role?: string; limit?: string };
+    const q = req.query as {
+      role?: string;
+      limit?: string;
+      exclude_self_primary?: string;
+      include_aliases?: string;
+    };
     const limit = q.limit ? Math.max(1, Math.min(parseInt(q.limit, 10) || 50, 200)) : 50;
+    // Default: drop self-primary masters when filtering to remix-family roles.
+    // The artist page's Remixes tab wants "remixes he did for others", which
+    // means excluding masters where he's already the headline credit.
+    const isRemixRole = q.role ? q.role.toLowerCase() === "remix" : false;
+    const excludeSelfPrimary = q.exclude_self_primary !== undefined
+      ? (q.exclude_self_primary === "true" || q.exclude_self_primary === "1")
+      : isRemixRole;
+    const includeAliases = q.include_aliases !== undefined
+      ? !(q.include_aliases === "false" || q.include_aliases === "0")
+      : true;
     try {
-      // Credit tables (master_track_credits / master_release_credits) are
-      // populated by a one-shot ETL and have no batch_id; we resolve the batch
-      // from catalog.masters which is what the hydration query joins against.
       const { batchId } = await getBatchForTable(db, "catalog.masters");
       const result = await db.transaction().execute(async (trx) => {
         await sql`SET LOCAL statement_timeout = '8000'`.execute(trx);
         return getArtistRuleACredits(trx, discogsId, batchId, {
           limit,
           roleFilter: q.role ?? null,
+          includeAliases,
+          excludeSelfPrimary,
         });
       });
       return reply.send(result);
@@ -247,7 +263,11 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
     }
   });
 
-  app.get("/v1/artists/:discogs_id/group-members", async (req, reply) => {
+  // `/related` is the canonical name (returns groups + members + bandmates
+  // for the "See also" surface). `/group-members` is kept as a legacy alias
+  // so anything already depending on it — MCP tools, older clients — keeps
+  // working; both handlers resolve to the same domain function.
+  const relatedHandler = async (req: any, reply: any) => {
     const discogsId = parseDiscogsId((req.params as any).discogs_id);
     if (!discogsId) {
       return reply.status(400).send({
@@ -264,7 +284,68 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
     } catch (err) {
       if (isPgTimeout(err)) {
         return reply.status(504).send({
-          error: { code: "QUERY_TIMEOUT", message: "Group members lookup timeout", details: null },
+          error: { code: "QUERY_TIMEOUT", message: "Related artists lookup timeout", details: null },
+        });
+      }
+      throw err;
+    }
+  };
+  app.get("/v1/artists/:discogs_id/related", relatedHandler);
+  app.get("/v1/artists/:discogs_id/group-members", relatedHandler);
+
+  app.get("/v1/artists/:discogs_id/labelmates", async (req, reply) => {
+    const discogsId = parseDiscogsId((req.params as any).discogs_id);
+    if (!discogsId) {
+      return reply.status(400).send({
+        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
+      });
+    }
+    const q = req.query as { limit?: string };
+    const limit = q.limit ? Math.max(1, Math.min(parseInt(q.limit, 10) || 10, 30)) : 10;
+    try {
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const result = await db.transaction().execute(async (trx) => {
+        // Two-stage query (self-network lookup, then aggregation) plus a
+        // LATERAL per-label roster expansion. Bounded by the artist's label
+        // count × avg-artists-per-label. 8s budget; prod measurements on
+        // Knuckles / Kenny Dope run <200ms.
+        await sql`SET LOCAL statement_timeout = '8000'`.execute(trx);
+        return getArtistLabelmates(trx, discogsId, batchId, { limit });
+      });
+      return reply.send(result);
+    } catch (err) {
+      if (isPgTimeout(err)) {
+        return reply.status(504).send({
+          error: { code: "QUERY_TIMEOUT", message: "Labelmates lookup timeout", details: null },
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.get("/v1/artists/:discogs_id/collaborators", async (req, reply) => {
+    const discogsId = parseDiscogsId((req.params as any).discogs_id);
+    if (!discogsId) {
+      return reply.status(400).send({
+        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
+      });
+    }
+    const q = req.query as { limit?: string };
+    const limit = q.limit ? Math.max(1, Math.min(parseInt(q.limit, 10) || 10, 30)) : 10;
+    try {
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const result = await db.transaction().execute(async (trx) => {
+        // The CTE chain + LATERAL aggregation is O(masters × avg credits per
+        // master), bounded by the artist's in-scope catalogue. 6s budget is
+        // generous — prod measurements on Knuckles / Larry Heard run <200ms.
+        await sql`SET LOCAL statement_timeout = '6000'`.execute(trx);
+        return getArtistCollaborators(trx, discogsId, batchId, { limit });
+      });
+      return reply.send(result);
+    } catch (err) {
+      if (isPgTimeout(err)) {
+        return reply.status(504).send({
+          error: { code: "QUERY_TIMEOUT", message: "Collaborators lookup timeout", details: null },
         });
       }
       throw err;
