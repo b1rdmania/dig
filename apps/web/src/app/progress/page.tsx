@@ -46,7 +46,7 @@ export default function ProgressPage() {
             <div className={styles.metaKey}>Live surfaces</div>
             <div className={styles.metaVal}>
               <a href="https://app.dig.baby">app.dig.baby</a> (search UI) +
-              dig-api.fly.dev (REST). MCP server <a href="/mcp">archived</a>.
+              dig-api.fly.dev (REST). MCP server archived.
             </div>
           </div>
         </div>
@@ -381,7 +381,7 @@ export default function ProgressPage() {
           <br />
           <strong>Live:</strong>{" "}
           <a href="https://app.dig.baby">app.dig.baby</a> (search UI) +
-          dig-api.fly.dev (REST). MCP server <a href="/mcp">archived</a> (source
+          dig-api.fly.dev (REST). MCP server archived (source
           remains in repo). Cover art via CAA (1.77M releases). Enrichment API live.
         </div>
       </section>

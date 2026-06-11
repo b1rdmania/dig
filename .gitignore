@@ -33,3 +33,4 @@ coverage/
 
 # MCP local config
 .mcp.json
+*.tsbuildinfo

@@ -8,7 +8,6 @@ import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 const KEY_STORAGE = "dig.llm_beta.anthropic_key";
-const DIG_BETA_KEY = "dig-alpha-001";
 
 const ENTITY_PATHS: Record<string, string> = {
   artist: "artist",
@@ -159,7 +158,6 @@ export function LlmBetaClient() {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-api-key": DIG_BETA_KEY,
           "x-anthropic-api-key": anthropicKey.trim(),
         },
         body: JSON.stringify({ question: q, history }),

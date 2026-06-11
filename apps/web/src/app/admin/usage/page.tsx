@@ -23,7 +23,8 @@ export default async function InternalUsagePage({
   const params = await searchParams;
   const provided = typeof params.token === "string" ? params.token : "";
 
-  if (token && provided !== token) notFound();
+  // Fail closed: no configured token means no access at all.
+  if (!token || provided !== token) notFound();
 
   const apiUsage = await digFetch<ApiUsageSnapshotInternal>("/v1/usage/internal", {
     cache: "no-store",

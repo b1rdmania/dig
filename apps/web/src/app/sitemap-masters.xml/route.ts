@@ -1,10 +1,9 @@
-export const dynamic = "force-dynamic";
 import { buildUrlsetXml, xmlResponse } from "@/lib/sitemap-xml";
+import { MAINTENANCE_MODE } from "@/lib/maintenance";
+import { API_URL, apiKeyHeaders } from "@/lib/server-env";
 
 export const revalidate = 86400;
 
-const API_URL = process.env.DIG_API_URL || "https://dig-api.fly.dev";
-const API_KEY = process.env.DIG_API_KEY || "";
 const BASE = "https://app.dig.baby";
 const SHARD_LIMIT = 50000;
 const SHARD_OFFSET = 0;
@@ -19,11 +18,13 @@ const SHARD_OFFSET = 0;
  * for forward growth.
  */
 export async function GET() {
+  if (MAINTENANCE_MODE) return xmlResponse(buildUrlsetXml([]));
+
   try {
     const res = await fetch(
       `${API_URL}/v1/seo/cohort?type=releases&limit=${SHARD_LIMIT}&offset=${SHARD_OFFSET}`,
       {
-        headers: API_KEY ? { "X-API-Key": API_KEY } : {},
+        headers: apiKeyHeaders(),
         signal: AbortSignal.timeout(120_000),
       },
     );

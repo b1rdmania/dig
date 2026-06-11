@@ -1,18 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
-const PUBLIC_FILE = /\.[^/]+$/;
-const ALLOWED_ROUTES = new Set(["/", "/search", "/progress"]);
+import { isAllowedPath, MAINTENANCE_MODE } from "@/lib/maintenance";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (
-    ALLOWED_ROUTES.has(pathname) ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    PUBLIC_FILE.test(pathname)
-  ) {
+  if (!MAINTENANCE_MODE || isAllowedPath(pathname)) {
     return NextResponse.next();
   }
 

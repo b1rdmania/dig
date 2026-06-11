@@ -1,7 +1,6 @@
 import { isApiError } from "./types";
+import { API_URL, apiKeyHeaders } from "./server-env";
 
-const API_URL = process.env.DIG_API_URL || "https://dig-api.fly.dev";
-const API_KEY = process.env.DIG_API_KEY || "";
 const TIMEOUT_MS = 12000;
 const RETRY_DELAY_MS = 250;
 
@@ -63,9 +62,7 @@ async function digFetchOnce<T>(
 
   try {
     const fetchOptions: RequestInit & { next?: { revalidate?: number | false } } = {
-      headers: {
-        ...(API_KEY ? { "X-API-Key": API_KEY } : {}),
-      },
+      headers: apiKeyHeaders(),
       signal: controller.signal,
     };
 
