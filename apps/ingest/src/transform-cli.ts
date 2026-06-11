@@ -13,6 +13,13 @@
  *   pnpm transform --batch-id <uuid> [--type artists|labels|masters|releases] [--page-size 1000]
  *
  * If --type is omitted, transforms all types in order: artists, labels, masters, releases.
+ *
+ * KNOWN CONSTRAINT — child-table refresh semantics:
+ * Child tables (release_credits, formats, genres, styles, identifiers, etc.)
+ * insert with `onConflict doNothing` and are never deleted. Re-transforming
+ * the SAME batch_id therefore does NOT refresh changed child rows — it only
+ * adds new ones. Re-ingests that need updated child data must use a fresh
+ * batch_id.
  */
 
 import { createDb, sql } from "@dig/db";
@@ -244,6 +251,19 @@ async function main() {
       .execute();
 
     console.log(`\n[transform] Batch ${args.batchId} status → qa`);
+  } catch (err) {
+    // Mark the batch failed so a crashed run doesn't leave it stuck in 'importing'
+    try {
+      await db
+        .updateTable("ingest.dump_batches")
+        .set({ status: "failed" })
+        .where("id", "=", args.batchId)
+        .execute();
+      console.error(`[transform] Batch ${args.batchId} status → failed`);
+    } catch {
+      console.error(`[transform] Could not mark batch ${args.batchId} as failed`);
+    }
+    throw err;
   } finally {
     await db.destroy();
   }

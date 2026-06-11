@@ -125,6 +125,9 @@ async function main() {
   const dumpDate = args.dumpDate ?? parseDumpDate(args.file);
   const db = createDb(databaseUrl);
 
+  // Tracked outside try so a fatal error can mark the batch as failed
+  let currentBatchId: string | undefined;
+
   try {
     // Create or resume batch
     let batchId: string;
@@ -144,6 +147,7 @@ async function main() {
       batchId = result.id;
       console.log(`[ingest] Created batch ${batchId} (dump_date: ${dumpDate})`);
     }
+    currentBatchId = batchId;
 
     // Update batch status to importing
     await db
@@ -238,6 +242,21 @@ async function main() {
       .execute();
 
     console.log(`[ingest] Batch ${batchId} — ${args.type} phase done`);
+  } catch (err) {
+    // Mark the batch failed so a crashed run doesn't leave it stuck in 'importing'
+    if (currentBatchId) {
+      try {
+        await db
+          .updateTable("ingest.dump_batches")
+          .set({ status: "failed" })
+          .where("id", "=", currentBatchId)
+          .execute();
+        console.error(`[ingest] Batch ${currentBatchId} status → failed`);
+      } catch {
+        console.error(`[ingest] Could not mark batch ${currentBatchId} as failed`);
+      }
+    }
+    throw err;
   } finally {
     await db.destroy();
   }

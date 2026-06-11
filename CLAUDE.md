@@ -50,7 +50,7 @@ Execution authority:
 
 ## Database
 - Schemas: `auth`, `ingest`, `catalog`, `enrich`
-- Migrations: `packages/db/migrations/` (001–008)
+- Migrations: `packages/db/migrations/` (001–032)
 - Schema types: `packages/db/src/schema.ts`
 - Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG 16, port 5433)
 - Fly staging: `dig-db` (shared-cpu-2x, 4GB RAM, 300GB disk)
@@ -64,7 +64,8 @@ Execution authority:
 - Error codes: INVALID_REQUEST, NOT_FOUND, QUERY_TIMEOUT, RATE_LIMITED, INTERNAL_ERROR
 - No LLM inference in the retrieval path — structured data only
 - Workspace packages export from `src/` directly (not `dist/`) during development
-- Two-tier rate limits: anonymous 60/min (IP), keyed 300/min (X-API-Key)
+- Two-tier rate limits: anonymous 180/min (IP), keyed 1000/min (X-API-Key) — `apps/api/src/app.ts` `RATE_LIMITS` is the source of truth
+- Ingest child tables (release_credits, formats, genres, etc.) insert with `onConflict doNothing` and are never deleted — re-transforming the SAME batch_id does not refresh changed child rows; re-ingests must use a fresh batch_id
 
 ## File Layout
 ```
@@ -122,7 +123,7 @@ Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
 - **Item 1 — Data Quality Layer v1**: GO WITH CAVEATS. Artist v2 reclassify complete. Releases v1 backfill running on dig-db (PID 8467, `/tmp/q_v2_all.py`, ~17:00–18:00 UTC complete). Gate not fully closed until ANALYZE + guardrail snapshot committed. `enrich.entity_quality` fully populated: 9.9M artists, 2.3M labels, 2.5M masters, 18.9M releases.
 - **Item 2 — No-Dead-Ends v2**: 0 structural dead-ends. Canary rebuilt with 100 verified IDs (`0d605ae`). 79 TIMEOUT = SSR perf issue (P1, separate). CI gate live (`.github/workflows/regression-smoke.yml`). Gate closeout doc pending.
 - **Item 3 — Artist Completeness Upgrade**: Not started.
-- **P1 open**: SSR timeout hardening (79 entities timing out at 10s ceiling), migration 014 not in kysely_migration table.
+- **P1 open**: SSR timeout hardening (79 entities timing out at 10s ceiling). ~~Migration 014 not in kysely_migration table~~ — resolved, row confirmed present (see `docs/gate-closeout-2026-03-08.md`).
 
 ## MCP Tools (frozen at archive — `apps/mcp/src/server.ts`)
 | Tool | Description |
