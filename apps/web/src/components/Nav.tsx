@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Wordmark } from "@/components/design";
+import { MAINTENANCE_MODE } from "@/lib/maintenance";
 import styles from "./Nav.module.css";
 
 export function Nav() {
@@ -25,6 +26,9 @@ export function Nav() {
   };
 
   const isSubpage = pathname !== "/";
+  // Home and /search render the canonical SearchBar in-page; the nav's
+  // compact search form would duplicate it.
+  const showNavSearch = isSubpage && pathname !== "/search";
 
   return (
     <nav className={styles.nav}>
@@ -44,13 +48,13 @@ export function Nav() {
             <Wordmark size="md" />
           </Link>
         </div>
-        {isSubpage ? (
+        {showNavSearch ? (
           <form className={styles.searchForm} onSubmit={onSearchSubmit}>
             <span className={styles.searchPrompt} aria-hidden>/</span>
             <input
               className={styles.searchInput}
               type="search"
-              placeholder="preview search..."
+              placeholder={MAINTENANCE_MODE ? "preview search..." : "search..."}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               autoCorrect="off"

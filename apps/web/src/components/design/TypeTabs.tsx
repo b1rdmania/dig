@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import type { SearchTypeCounts } from "@/lib/types";
 import styles from "./TypeTabs.module.css";
@@ -32,6 +32,9 @@ const TABS: Array<{ id: "all" | "artist" | "label" | "master"; label: string }> 
  */
 export function TypeTabs({ active, counts }: Props) {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  // Tabs stay on whichever search surface rendered them (/ or /search).
+  const basePath = pathname === "/search" ? "/search" : "/";
 
   // Build hrefs per tab — preserve q + filters, swap (or remove) `type`.
   const hrefForTab = useMemo(() => {
@@ -43,9 +46,9 @@ export function TypeTabs({ active, counts }: Props) {
       }
       if (tabId !== "all") params.set("type", tabId);
       const qs = params.toString();
-      return qs ? `/?${qs}` : "/";
+      return qs ? `${basePath}?${qs}` : basePath;
     };
-  }, [searchParams]);
+  }, [searchParams, basePath]);
 
   return (
     <nav className={styles.tabs} aria-label="Filter results by type">

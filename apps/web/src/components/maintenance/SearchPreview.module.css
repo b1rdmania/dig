@@ -1,0 +1,244 @@
+.page {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding-bottom: var(--sp-9);
+}
+
+.hero {
+  padding: var(--sp-5) 0 var(--sp-4);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-weight: 600;
+  margin-bottom: var(--sp-3);
+}
+
+.heading {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  line-height: 0.96;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--sp-3);
+  color: var(--ink);
+  max-width: 10ch;
+}
+
+.lede {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  color: var(--ink-soft);
+  max-width: 52ch;
+  margin: 0;
+}
+
+.previewShell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: var(--sp-4);
+  align-items: stretch;
+}
+
+.searchForm,
+.previewCard,
+.infoCard {
+  border: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--paper) 90%, white 10%);
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.05);
+}
+
+.searchForm {
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.searchLabel {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: var(--sp-3);
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 1px solid var(--ink);
+  background: rgba(255, 255, 255, 0.72);
+  min-height: 56px;
+  padding: 0 var(--sp-3);
+}
+
+.searchPrompt {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  outline: 0;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  padding: 0;
+}
+
+.searchInput::placeholder {
+  color: var(--ink-faint);
+}
+
+.searchButton {
+  border: 0;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+}
+
+.searchButton:hover {
+  background: color-mix(in srgb, var(--ink) 88%, white 12%);
+}
+
+.previewCard {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.previewLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.previewQuery {
+  margin-top: var(--sp-4);
+  font-family: var(--font-sans);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.previewText {
+  margin: var(--sp-4) 0 0;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid var(--rule);
+  padding: 0.65rem 0.8rem;
+  background: color-mix(in srgb, var(--paper) 92%, white 8%);
+}
+
+.tag:hover {
+  border-color: var(--ink);
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+  margin-top: var(--sp-5);
+}
+
+.infoCard {
+  padding: clamp(1.1rem, 2.5vw, 1.5rem);
+}
+
+.infoLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: var(--sp-3);
+}
+
+.infoTitle {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: clamp(1.25rem, 2.3vw, 1.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.infoText {
+  margin: var(--sp-3) 0 0;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+
+.inlineLink {
+  display: inline-block;
+  margin-top: var(--sp-4);
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 0.2rem;
+}
+
+.inlineLink:hover {
+  color: var(--ink-soft);
+  border-color: var(--ink-soft);
+}
+
+@media (max-width: 900px) {
+  .previewShell,
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .searchBar {
+    flex-wrap: wrap;
+    align-items: stretch;
+    padding: var(--sp-2);
+  }
+
+  .searchInput {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .searchButton {
+    width: 100%;
+  }
+}

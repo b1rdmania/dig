@@ -1,0 +1,21 @@
+.list {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+}
+
+.topMatchWrap {
+  margin: var(--sp-2) 0 var(--sp-3);
+}
+
+.degraded {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  border: 1px dashed var(--rule);
+  margin-bottom: var(--sp-3);
+  display: inline-block;
+  letter-spacing: 0.04em;
+}
