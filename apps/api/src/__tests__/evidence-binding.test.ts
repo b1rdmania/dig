@@ -1,4 +1,13 @@
 import { describe, it, expect } from "vitest";
+import {
+  bindMediaToCitations,
+  extractCitedMasterIds,
+  dedupeMedia,
+  dedupeEvidence,
+  isAllowedMasterId,
+  type MediaItem,
+  type EvidenceItem,
+} from "../routes/v1/ask/binding.js";
 
 /**
  * Media binding invariant tests for /v1/ask.
@@ -19,36 +28,9 @@ import { describe, it, expect } from "vitest";
  *        [Title](https://app.dig.baby/master/ID)
  *      No citation, no video. Strict empty is the right default.
  *
- * These tests validate both the new bind logic and the legacy
- * `allowedMasterIds` server-side guard (still active to prevent Claude calling
- * get_master with a release ID).
+ * These tests exercise the real production functions exported from
+ * routes/v1/ask/binding.ts — no inline re-implementation, no drift risk.
  */
-
-// Mirrors the types from ask.ts
-interface MediaItem {
-  discogs_id: number;
-  title: string;
-  artist: string;
-  youtube_url: string;
-}
-
-/**
- * The exact post-loop citation binder from ask.ts (must stay in sync).
- *
- * Scans the answer text for `app.dig.baby/master/{id}` URLs and keeps only
- * media whose master ID is in that set. No fallback — if the model didn't
- * link a master, no video renders for it.
- */
-function bindMediaToCitations(media: MediaItem[], answer: string): MediaItem[] {
-  const cited = new Set<number>();
-  const re = /app\.dig\.baby\/master\/(\d+)/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(answer)) !== null) {
-    const id = Number(m[1]);
-    if (Number.isFinite(id)) cited.add(id);
-  }
-  return media.filter((item) => cited.has(item.discogs_id));
-}
 
 // ---------------------------------------------------------------------------
 // Generic-videos regression — model fetched masters but never cited them
@@ -144,6 +126,55 @@ describe("citation binding — correct master citation", () => {
 });
 
 // ---------------------------------------------------------------------------
+// extractCitedMasterIds — the URL scanner the binder is built on
+// ---------------------------------------------------------------------------
+
+describe("extractCitedMasterIds", () => {
+  it("extracts every master ID linked in the answer", () => {
+    const answer = "[A](https://app.dig.baby/master/100) and [B](https://app.dig.baby/master/200)";
+    expect([...extractCitedMasterIds(answer)].sort()).toEqual([100, 200]);
+  });
+
+  it("ignores artist, label, and scene URLs", () => {
+    const answer =
+      "[X](https://app.dig.baby/artist/1) [Y](https://app.dig.baby/label/2) [Z](https://app.dig.baby/scene/detroit-core)";
+    expect(extractCitedMasterIds(answer).size).toBe(0);
+  });
+
+  it("returns an empty set for an empty answer", () => {
+    expect(extractCitedMasterIds("").size).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dedup — media by youtube_url, evidence by dig_url (first occurrence wins)
+// ---------------------------------------------------------------------------
+
+describe("dedupe helpers", () => {
+  it("dedupeMedia drops repeated youtube URLs, keeping the first", () => {
+    const media: MediaItem[] = [
+      { discogs_id: 1, title: "First", artist: "A", youtube_url: "https://www.youtube.com/watch?v=same1234567" },
+      { discogs_id: 2, title: "Dup", artist: "B", youtube_url: "https://www.youtube.com/watch?v=same1234567" },
+      { discogs_id: 3, title: "Other", artist: "C", youtube_url: "https://www.youtube.com/watch?v=other123456" },
+    ];
+    const result = dedupeMedia(media);
+    expect(result).toHaveLength(2);
+    expect(result[0].title).toBe("First");
+  });
+
+  it("dedupeEvidence drops repeated dig URLs, keeping the first", () => {
+    const evidence: EvidenceItem[] = [
+      { type: "master", discogs_id: 100, title: "First", dig_url: "https://app.dig.baby/master/100" },
+      { type: "master", discogs_id: 100, title: "Dup", dig_url: "https://app.dig.baby/master/100" },
+      { type: "label", discogs_id: 5, title: "Label", dig_url: "https://app.dig.baby/label/5" },
+    ];
+    const result = dedupeEvidence(evidence);
+    expect(result).toHaveLength(2);
+    expect(result[0].title).toBe("First");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // allowedMasterIds guard invariant (server-side, defends against Claude calling
 // get_master with a release ID — separate concern from citation binding)
 // ---------------------------------------------------------------------------
@@ -157,7 +188,7 @@ describe("allowedMasterIds guard — label release ID must not grant master acce
     const masterDiscogId: number | null = null;
     if (masterDiscogId != null) allowedMasterIds.add(masterDiscogId);
 
-    expect(allowedMasterIds.has(labelReleaseId)).toBe(false);
+    expect(isAllowedMasterId(allowedMasterIds, labelReleaseId)).toBe(false);
   });
 
   it("master_discogs_id from label release is added to allowed set", () => {
@@ -166,7 +197,7 @@ describe("allowedMasterIds guard — label release ID must not grant master acce
 
     if (masterDiscogId != null) allowedMasterIds.add(masterDiscogId);
 
-    expect(allowedMasterIds.has(98765)).toBe(true);
+    expect(isAllowedMasterId(allowedMasterIds, 98765)).toBe(true);
   });
 
   it("search_catalog master result adds its ID to allowed set", () => {
@@ -175,7 +206,7 @@ describe("allowedMasterIds guard — label release ID must not grant master acce
 
     if (searchResult.type === "master") allowedMasterIds.add(searchResult.discogs_id);
 
-    expect(allowedMasterIds.has(54321)).toBe(true);
+    expect(isAllowedMasterId(allowedMasterIds, 54321)).toBe(true);
   });
 });
 
