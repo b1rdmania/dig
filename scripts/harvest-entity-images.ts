@@ -6,7 +6,7 @@
  *
  *  PHASE 1  (--phase=crosswalks)
  *    Copy in-scope crosswalk slices (Wikidata QIDs + MBIDs) from the
- *    SOURCE_URL database (dig-db full catalog) into the TARGET_URL
+ *    SOURCE_URL database (local full-catalog staging) into the TARGET_URL
  *    database (dig-db-scene). Keeps the harvester self-contained on the
  *    target DB after this runs.
  *

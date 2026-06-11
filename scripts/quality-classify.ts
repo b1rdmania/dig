@@ -12,7 +12,7 @@
  *   DATABASE_URL=postgresql://dig:dig_local@localhost:5433/dig npx tsx scripts/quality-classify.ts
  *
  * Fly (via proxy):
- *   fly proxy 15432:5432 -a dig-db &
+ *   fly proxy 15432:5432 -a dig-db-scene &
  *   DATABASE_URL=postgresql://postgres:<pass>@localhost:15432/dig npx tsx scripts/quality-classify.ts
  *
  * Rules (quality_version = 2):

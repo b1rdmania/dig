@@ -37,7 +37,7 @@
  *
  *   1. Provision dig-db-scene in lhr (Fly Postgres, small).
  *   2. Apply Kysely migrations 001-026 on dig-db-scene.
- *   3. Histogram pass on dig-db:
+ *   3. Histogram pass on the full-catalog staging DB (local Docker PG):
  *        SOURCE_DATABASE_URL=postgres://... \
  *          pnpm exec tsx scripts/build-scoped-db.ts \
  *            --histogram --quality-active-only
@@ -652,8 +652,8 @@ async function computeSceneWeight(c: Kysely<Database>, batchId: string) {
   const t0 = Date.now();
 
   // Detect whether enrich.label_editorial exists on the source. Migration 024
-  // is applied on dig-db-scene (and optionally on dig-db) but the live full
-  // catalog DB historically only had migrations through 023. If absent, we
+  // is applied on dig-db-scene, but a full-catalog staging DB built from an
+  // older migration set may only have migrations through 023. If absent, we
   // skip the tier-1 boost rather than failing — the histogram still tells us
   // a useful story, just without the +10 nudge for canonical imprints.
   const tierTable = await sql<{ exists_: boolean }>`

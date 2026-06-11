@@ -7,13 +7,12 @@ Operational reference for the Fly.io staging deployment. For API/MCP usage, see 
 | Resource | Name | Region | Spec |
 |----------|------|--------|------|
 | API | dig-api | iad | shared-cpu-1x, 512MB, on-demand (0 min / 1 active / 2 warm burst) |
-| MCP | dig-mcp | iad | shared-cpu-1x, 512MB, on-demand (0 min / 1 active when needed) |
-| **Postgres (active)** | **dig-db-scene** | **lhr** | **shared-cpu-1x, 1GB, 10GB disk — scene-scoped slim DB (~3GB)** |
-| Postgres (legacy, rollback) | dig-db | iad | shared-cpu-2x, 4GB RAM, 300GB disk — kept warm 7d post-cutover |
+| MCP | dig-mcp | iad | ARCHIVED — app shell retained, 0 machines, 0 volumes |
+| **Postgres (active)** | **dig-db-scene** | **lhr** | **shared-cpu-2x, 2GB, 10GB disk — scene-scoped slim DB (~3GB)** |
 | Redis | dig-redis | iad | Upstash pay-per-use |
-| Frontend | dig-web | iad | shared-cpu-1x, 512MB, 1 machine (Fly) |
+| Frontend | dig-web | iad | shared-cpu-1x, 1GB, 1 machine (Fly) |
 
-**Note (2026-04-17):** dig-api now reads from `dig-db-scene` (lhr). dig-db (iad) is the rollback target and holds the full pre-scope dataset. Cross-region latency from iad → lhr adds ~70ms per query; acceptable for slim DB throughput. See "Database cutover and rollback" below.
+**Note (2026-06-11):** `dig-db` (the legacy 300GB full-catalog Postgres, iad) was **destroyed**. `dig-db-scene` is the only production database. There is no live rollback target: recovering the full catalog means re-downloading the public Discogs dumps and re-running the local ingest pipeline (`apps/ingest` against local Docker PG), then `scripts/build-scoped-db.ts`. Historical sections below that reference `dig-db` commands are retained as run logs only — the app no longer exists.
 
 URLs:
 - API: https://dig-api.fly.dev/v1/
@@ -130,12 +129,12 @@ Verification order after bring-up:
 - `dig-mcp` returns to service only after `fly scale count 1 -a dig-mcp`.
 - If you intentionally scale `dig-api` to `0`, the public web app will fail until you scale it back up.
 
-## Database cutover and rollback (dig-db ⇄ dig-db-scene)
+## Database cutover and rollback (historical — dig-db destroyed 2026-06-11)
 
 The scene-scoped slim catalog lives in `dig-db-scene` (lhr). The legacy full
-catalog lives in `dig-db` (iad). Cutover is a one-line secret swap on `dig-api`;
-`dig-mcp` and `dig-web` do not need changes (web only talks to the API; MCP is
-scaled to 0 and has its own staged DATABASE_URL secret to flip when re-enabled).
+catalog lived in `dig-db` (iad) until it was destroyed on 2026-06-11; the
+rollback path below no longer exists and is retained as a run log. Recovering
+the full catalog = re-download public dumps → local ingest → `build-scoped-db.ts`.
 
 ### Cutover sequence (executed 2026-04-17)
 
@@ -175,11 +174,11 @@ scaled to 0 and has its own staged DATABASE_URL secret to flip when re-enabled).
 
 5. Smoke verify (see "Cutover smoke test" below).
 
-### Rollback (return to dig-db)
+### Rollback (return to dig-db) — NO LONGER POSSIBLE (app destroyed)
 
-If the slim DB causes user-visible regressions, roll back to dig-db. The legacy
-`DATABASE_URL` for `dig_api` against `dig-db` is **not stored anywhere** — Fly
-masks secret values once written. To roll back:
+Retained for the record. If the slim DB causes user-visible regressions, the
+fix is forward: rebuild the scoped artifact and re-restore to `dig-db-scene`.
+Original rollback procedure as executed during the grace window:
 
 ```bash
 # 1. Reset the dig_api password on dig-db (legacy) so we own the credential
@@ -199,10 +198,8 @@ fly deploy --image registry.fly.io/dig-api:<previous-id> --config fly.api.toml
 curl -s https://dig-api.fly.dev/v1/health | jq .status
 ```
 
-**Rollback grace window:** Keep `dig-db` running with current spec until
-**2026-04-24** (7d). After that, scale `dig-db` to shared-cpu-1x/512MB to keep
-it warm-but-cheap. Do not destroy the volume until at least **2026-05-08**
-(28d) and only after a recovery archive is exported.
+**Rollback grace window:** expired 2026-04-24 with no regressions surfaced.
+`dig-db` and its 300GB volume were destroyed on 2026-06-11.
 
 ### Cutover smoke test
 
