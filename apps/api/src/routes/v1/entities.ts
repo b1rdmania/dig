@@ -20,17 +20,7 @@ import {
   getEntityImages,
 } from "@dig/domain";
 
-const PG_INT4_MAX = 2_147_483_647;
-
-function parseDiscogsId(raw: string): number | null {
-  const id = parseInt(raw, 10);
-  return isNaN(id) || id < 1 || id > PG_INT4_MAX ? null : id;
-}
-
-function isPgTimeout(err: unknown): boolean {
-  const e = err as any;
-  return e?.code === "57014" || e?.cause?.code === "57014";
-}
+import { parseDiscogsId, isPgTimeout } from "./util.js";
 
 // Scene-scoped DB no longer stores full release rows. Public consumers that hit
 // /v1/releases/:id should fall back to:

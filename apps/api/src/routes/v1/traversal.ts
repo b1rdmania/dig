@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
-import { sql } from "@dig/db";
+import { parseDiscogsId, isPgTimeout, withTimeout, timeoutReply } from "./util.js";
 import {
   getArtistMasters,
   getArtistPrimaryLabels,
@@ -48,13 +48,6 @@ function getTraversalBatchInfo(db: Kysely<Database>, scope: TraversalScope) {
   return getBatchForTable(db, SCOPE_TABLE[scope]);
 }
 
-const PG_INT4_MAX = 2_147_483_647;
-
-function parseDiscogsId(raw: string): number | null {
-  const id = parseInt(raw, 10);
-  return isNaN(id) || id < 1 || id > PG_INT4_MAX ? null : id;
-}
-
 const VALID_SORTS = ["newest", "oldest"] as const;
 const VALID_RELEASE_TYPES = ["album", "single_ep", "compilation", "other", "all"] as const;
 
@@ -77,28 +70,6 @@ function parseTraversalQuery(query: Record<string, string | undefined>) {
       : "all",
     includeAliases,
   };
-}
-
-function isPgTimeout(err: unknown): boolean {
-  const e = err as any;
-  return e?.code === "57014" || e?.cause?.code === "57014";
-}
-
-async function withTimeout<T>(
-  db: Kysely<Database>,
-  timeoutMs: number,
-  fn: (trx: Kysely<Database>) => Promise<T>,
-): Promise<T> {
-  return db.transaction().execute(async (trx) => {
-    await sql`SET LOCAL statement_timeout = ${sql.raw(String(timeoutMs))}`.execute(trx);
-    return fn(trx);
-  });
-}
-
-function timeoutReply(reply: any) {
-  return reply.status(504).send({
-    error: { code: "QUERY_TIMEOUT", message: "Query exceeded timeout", details: null },
-  });
 }
 
 function gone(reply: any, message: string, successor?: string) {

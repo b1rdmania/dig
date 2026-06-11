@@ -1,35 +1,17 @@
 import type { FastifyInstance } from "fastify";
 import type { Database, Kysely } from "@dig/db";
-import { sql } from "@dig/db";
 import {
   getScene,
   getSceneWall,
   listScenes,
   getBatchForTable,
 } from "@dig/domain";
+import { isPgTimeout, withTimeout, timeoutReply as sharedTimeoutReply } from "./util.js";
 
 const SCENES_TIMEOUT_MS = 8_000;
 
-function isPgTimeout(err: unknown): boolean {
-  const e = err as any;
-  return e?.code === "57014" || e?.cause?.code === "57014";
-}
-
 function timeoutReply(reply: any) {
-  return reply.status(504).send({
-    error: { code: "QUERY_TIMEOUT", message: "Scene query exceeded the per-route timeout", details: null },
-  });
-}
-
-async function withTimeout<T>(
-  db: Kysely<Database>,
-  timeoutMs: number,
-  fn: (trx: Kysely<Database>) => Promise<T>,
-): Promise<T> {
-  return await db.transaction().execute(async (trx) => {
-    await sql`SET LOCAL statement_timeout = ${sql.lit(timeoutMs)}`.execute(trx);
-    return await fn(trx);
-  });
+  return sharedTimeoutReply(reply, "Scene query exceeded the per-route timeout");
 }
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,80}$/;

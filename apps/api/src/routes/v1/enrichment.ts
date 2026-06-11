@@ -9,13 +9,7 @@ import {
   parseEnrichmentParams,
   validateEnrichmentParams,
 } from "@dig/domain";
-
-const PG_INT4_MAX = 2_147_483_647;
-
-function parseDiscogsId(raw: string): number | null {
-  const id = parseInt(raw, 10);
-  return isNaN(id) || id < 1 || id > PG_INT4_MAX ? null : id;
-}
+import { parseDiscogsId } from "./util.js";
 
 export function registerEnrichmentRoutes(app: FastifyInstance, db: Kysely<Database>) {
   app.get("/v1/artists/:discogs_id/relationships", async (req, reply) => {

@@ -10,6 +10,7 @@
  * Fail-soft: returns { market: null } on any external error.
  */
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { parseDiscogsId } from "./util.js";
 
 const ENABLED = process.env.MARKET_SNAPSHOT_ENABLED === "true";
 const DISCOGS_API_KEY = process.env.DISCOGS_API_KEY ?? "";
@@ -112,8 +113,8 @@ export function registerMarketRoutes(
   app.get(
     "/v1/releases/:discogs_id/market",
     async (req: FastifyRequest<{ Params: { discogs_id: string } }>, reply) => {
-      const id = Number(req.params.discogs_id);
-      if (!Number.isFinite(id) || id <= 0) {
+      const id = parseDiscogsId(req.params.discogs_id);
+      if (!id) {
         return reply.status(400).send({
           error: { code: "INVALID_REQUEST", message: "Invalid release ID", details: null },
         });
