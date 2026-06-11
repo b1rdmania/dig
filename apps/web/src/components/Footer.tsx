@@ -9,14 +9,12 @@ export function Footer() {
         <div className={styles.top}>
           <div className={styles.brand}>
             <Wordmark size="sm" />
-            <span className={styles.tagline}>House and techno, 1988–2008.</span>
+            <span className={styles.tagline}>Maintenance mode, but still worth landing on.</span>
           </div>
           <nav className={styles.links} aria-label="Footer">
-            <Link href="/about" prefetch={false} className={styles.link}>About</Link>
-            <Link href="/llm-beta" prefetch={false} className={styles.link}>LLM beta</Link>
-            <Link href="/progress" prefetch={false} className={styles.link}>How we built</Link>
-            <Link href="/usage" prefetch={false} className={styles.link}>Usage</Link>
-            <Link href="/feedback" prefetch={false} className={styles.link}>Report a bug</Link>
+            <Link href="/" prefetch={false} className={styles.link}>Home</Link>
+            <Link href="/search" prefetch={false} className={styles.link}>Search preview</Link>
+            <Link href="/progress" prefetch={false} className={styles.link}>How We Built It</Link>
             <a
               href="https://github.com/b1rdmania/dig"
               target="_blank"
@@ -24,6 +22,14 @@ export function Footer() {
               className={styles.link}
             >
               GitHub
+            </a>
+            <a
+              href="https://github.com/b1rdmania/dig/issues"
+              target="_blank"
+              rel="noreferrer"
+              className={styles.link}
+            >
+              Report an issue
             </a>
           </nav>
         </div>

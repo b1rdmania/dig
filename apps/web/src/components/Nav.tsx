@@ -21,7 +21,7 @@ export function Nav() {
     const params = new URLSearchParams();
     const trimmed = q.trim();
     if (trimmed) params.set("q", trimmed);
-    router.push(params.toString() ? `/?${params.toString()}` : "/");
+    router.push(params.toString() ? `/search?${params.toString()}` : "/search");
   };
 
   const isSubpage = pathname !== "/";
@@ -50,7 +50,7 @@ export function Nav() {
             <input
               className={styles.searchInput}
               type="search"
-              placeholder="search artists, labels, releases…"
+              placeholder="preview search..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
               autoCorrect="off"
