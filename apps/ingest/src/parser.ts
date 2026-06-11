@@ -205,35 +205,31 @@ export async function parseXmlDump(
   // Use for-await over the stream for natural backpressure:
   // each chunk is fully parsed, entities are flushed via callback,
   // and only then does the next chunk arrive.
-  try {
-    for await (const chunk of stream) {
-      parser.write(typeof chunk === "string" ? chunk : (chunk as Buffer).toString("utf8"));
+  for await (const chunk of stream) {
+    parser.write(typeof chunk === "string" ? chunk : (chunk as Buffer).toString("utf8"));
 
-      // Flush any entities collected from this chunk
-      if (pendingEntities.length > 0) {
-        const batch = pendingEntities;
-        pendingEntities = [];
-        for (const entity of batch) {
-          await onEntity(entity);
-        }
-      }
-    }
-
-    parser.close();
-    // Flush any remaining entities after stream ends
+    // Flush any entities collected from this chunk
     if (pendingEntities.length > 0) {
-      for (const entity of pendingEntities) {
+      const batch = pendingEntities;
+      pendingEntities = [];
+      for (const entity of batch) {
         await onEntity(entity);
       }
-      pendingEntities = [];
     }
-
-    console.log(
-      `[ingest] done — total ${entityCount.toLocaleString()} ${type}` +
-      (errorCount > 0 ? ` (${errorCount} errors)` : "")
-    );
-    return { entityCount };
-  } catch (err) {
-    throw err;
   }
+
+  parser.close();
+  // Flush any remaining entities after stream ends
+  if (pendingEntities.length > 0) {
+    for (const entity of pendingEntities) {
+      await onEntity(entity);
+    }
+    pendingEntities = [];
+  }
+
+  console.log(
+    `[ingest] done — total ${entityCount.toLocaleString()} ${type}` +
+    (errorCount > 0 ? ` (${errorCount} errors)` : "")
+  );
+  return { entityCount };
 }

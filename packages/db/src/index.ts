@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect, sql } from "kysely";
+import { Kysely, PostgresDialect } from "kysely";
 import pg from "pg";
 
 import type { Database } from "./schema.js";

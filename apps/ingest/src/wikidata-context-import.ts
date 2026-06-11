@@ -44,21 +44,6 @@ const PROPS = {
   officialWebsite: "P856",
 };
 
-// All P-values we need to fetch
-const PROP_IDS = [
-  PROPS.instanceOf,
-  PROPS.countryOfOrigin,
-  PROPS.countryOfCitizenship,
-  PROPS.locationOfFormation,
-  PROPS.placeOfBirth,
-  PROPS.inception,
-  PROPS.dissolved,
-  PROPS.dateOfBirth,
-  PROPS.dateOfDeath,
-  PROPS.genre,
-  PROPS.officialWebsite,
-];
-
 // --- Types ---
 
 interface CrosswalkRow {

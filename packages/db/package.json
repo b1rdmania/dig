@@ -14,7 +14,6 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "lint": "echo ok",
     "test": "echo ok",
     "migrate:up": "tsx src/migrate.ts",
     "migrate:create": "tsx src/create-migration.ts"

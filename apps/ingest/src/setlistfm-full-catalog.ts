@@ -19,8 +19,6 @@
  */
 
 import { createDb, sql } from "@dig/db";
-import * as fs from "fs";
-
 // --- Config ---
 
 const DELAY_MS = 2200;          // ~2.2s between API calls
@@ -285,10 +283,10 @@ async function idempotencyCheck(db: ReturnType<typeof createDb>, apiKey: string,
   }
 
   console.log(`  Re-fetching ${sampleRows.length} previously processed artists...`);
-  let reFetched = 0;
+  let _reFetched = 0;
 
   for (const artist of sampleRows) {
-    let artistEvents: SetlistEvent[] = [];
+    const artistEvents: SetlistEvent[] = [];
     for (let page = 1; page <= pages; page++) {
       const result = await fetchArtistSetlists(apiKey, artist.mbid, page);
       if (result === "QUOTA_EXHAUSTED") { console.log("  Quota exhausted during check."); break; }
@@ -303,7 +301,7 @@ async function idempotencyCheck(db: ReturnType<typeof createDb>, apiKey: string,
     if (artistEvents.length > 0) {
       await writeEventBatch(db, artistEvents, null);
     }
-    reFetched++;
+    _reFetched++;
     await sleep(DELAY_MS);
   }
 
@@ -390,7 +388,7 @@ async function main() {
 
   // --- Load checkpoint ---
   const existingCheckpoint = await loadCheckpoint(db);
-  let checkpoint: CheckpointData = existingCheckpoint ?? {
+  const checkpoint: CheckpointData = existingCheckpoint ?? {
     last_discogs_artist_id: 0,
     artists_processed: 0,
     artists_with_events: 0,
@@ -432,7 +430,7 @@ async function main() {
     }
 
     for (const artist of batch) {
-      let artistEvents: SetlistEvent[] = [];
+      const artistEvents: SetlistEvent[] = [];
 
       for (let page = 1; page <= config.pages; page++) {
         let result: Awaited<ReturnType<typeof fetchArtistSetlists>>;

@@ -45,9 +45,9 @@ export async function ArtistPhoto({ discogsId, artistName, size = 160 }: Props) 
         ? `https://commons.wikimedia.org/wiki/${encodeURI(commonsFile)}`
         : null;
 
-  // eslint-disable-next-line @next/next/no-img-element — see LabelHeroImage
   return (
     <figure className={styles.wrap} style={{ ["--photo-size" as string]: `${size}px` }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- see LabelHeroImage */}
       <img
         src={photo.url}
         alt={artistName}

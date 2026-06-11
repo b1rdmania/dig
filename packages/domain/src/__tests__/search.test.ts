@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateSearchParams, isBroadQuery, type SearchParams, type SearchResponse } from "../search.js";
+import { validateSearchParams, isBroadQuery, type SearchResponse } from "../search.js";
 
 describe("validateSearchParams", () => {
   it("rejects empty params (no query, no filters)", () => {

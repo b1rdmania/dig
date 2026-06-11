@@ -9,7 +9,6 @@
  */
 
 import type { Kysely, Database } from "@dig/db";
-import { sql } from "@dig/db";
 import type { XmlNode } from "../parser.js";
 import {
   children, childText, attr, text,

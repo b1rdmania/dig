@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { TraversalResponse, TraversalLink } from "../traversal.js";
+import type { TraversalResponse } from "../traversal.js";
 
 describe("TraversalResponse shape", () => {
   it("matches response contract for release links", () => {

@@ -21,7 +21,7 @@ interface AnalyticsEvent {
   properties: Record<string, string | number | boolean | null>;
 }
 
-let queue: AnalyticsEvent[] = [];
+const queue: AnalyticsEvent[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 
 function getSessionId(): string {

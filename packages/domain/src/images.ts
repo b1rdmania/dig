@@ -46,7 +46,7 @@ export function shapeCommonsUrl(rawUrl: string, width: number | null): string {
   if (!rawUrl) return rawUrl;
   // Wikidata returns http:// URLs; force https:// to avoid mixed-content
   // warnings when our app is served over https://. Commons supports both.
-  let url = rawUrl.startsWith("http://") ? `https://${rawUrl.slice(7)}` : rawUrl;
+  const url = rawUrl.startsWith("http://") ? `https://${rawUrl.slice(7)}` : rawUrl;
   if (!width || width <= 0) return url;
   if (!url.includes("commons.wikimedia.org/wiki/Special:FilePath/")) return url;
   const sep = url.includes("?") ? "&" : "?";

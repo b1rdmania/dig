@@ -1,22 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-import { healthCheck, type HealthStatus } from "../health.js";
+import { describe, it, expect } from "vitest";
+import { type HealthStatus } from "../health.js";
 
+// Shape-contract tests. Real healthCheck behavior is covered by the API
+// integration suite (apps/api/src/__tests__/app.integration.test.ts).
 describe("healthCheck", () => {
-  it("returns ok when postgres is reachable", async () => {
-    const mockDb = {
-      executeQuery: vi.fn().mockResolvedValue({ rows: [{ "?column?": 1 }] }),
-    } as any;
-
-    // Kysely's sql`SELECT 1`.execute(db) calls db internally
-    // We need to mock at the Kysely level — use a real-ish mock
-    const fakeDb = {
-      // sql.execute calls this chain internally
-      getExecutor: () => ({
-        executeQuery: vi.fn().mockResolvedValue({ rows: [{}] }),
-      }),
-    } as any;
-
-    // For a true unit test, just verify the shape contract
+  it("ok status matches the contract shape", () => {
     const status: HealthStatus = {
       status: "ok",
       postgres: true,
@@ -28,7 +16,7 @@ describe("healthCheck", () => {
     expect(typeof status.timestamp).toBe("string");
   });
 
-  it("returns down when postgres is unreachable", () => {
+  it("down status matches the contract shape", () => {
     const status: HealthStatus = {
       status: "down",
       postgres: false,

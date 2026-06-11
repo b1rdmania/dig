@@ -6,7 +6,7 @@
     "dev": "pnpm --filter @dig/api dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
+    "lint": "eslint .",
     "typecheck": "pnpm -r typecheck",
     "dev:web": "pnpm --filter @dig/web dev",
     "build:web": "pnpm --filter @dig/web build",
@@ -17,7 +17,11 @@
     "scope:90s:report": "pnpm exec tsx scripts/scoped-catalog-report.ts"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.2.9",
     "@types/node": "^25.3.0",
-    "tsx": "^4.21.0"
+    "eslint": "^10.4.1",
+    "tsx": "^4.21.0",
+    "typescript-eslint": "^8.61.0"
   }
 }

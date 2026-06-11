@@ -3,13 +3,6 @@ import { firstYoutubeThumb } from "./media";
 
 export const BASE_URL = "https://app.dig.baby";
 
-const TYPE_LABELS: Record<string, string> = {
-  artist: "Artist page",
-  release: "Release page",
-  version: "Version page",
-  label: "Label page",
-};
-
 interface EntityMeta {
   title: string;
   description: string;

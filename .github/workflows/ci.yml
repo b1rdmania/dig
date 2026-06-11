@@ -44,6 +44,9 @@ jobs:
       - name: Migration parity audit
         run: npm run audit:migrations
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -52,3 +55,7 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      # Non-blocking CVE report — review in the job log
+      - name: Dependency audit (report only)
+        run: pnpm audit --prod || true

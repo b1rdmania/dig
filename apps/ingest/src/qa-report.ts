@@ -16,11 +16,6 @@ interface TableCount {
   count: number;
 }
 
-interface QaSection {
-  title: string;
-  rows: Array<Record<string, string | number | null>>;
-}
-
 async function countTable(db: Kysely<Database>, table: string, batchId: string): Promise<number> {
   const result = await sql<{ count: number }>`
     SELECT count(*)::int as count FROM ${sql.table(table)} WHERE batch_id = ${batchId}

@@ -438,7 +438,7 @@ async function main() {
     const seenArtMbid = new Set<string>();
     // Also build mbArtistId → discogsId for wikidata resolution
     const mbArtistIdToDiscogsId = new Map<number, number>();
-    let skArtLink = 0, skArtUrl = 0, skArtMbid = 0;
+    let skArtUrl = 0, skArtMbid = 0;
 
     for (const [linkId, artistId, urlId] of artUrlTriples) {
       if (!discogsArtistLinkIds.has(linkId)) continue;

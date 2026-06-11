@@ -7,7 +7,6 @@
     "dev": "tsx watch src/cli.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "lint": "echo ok",
     "test": "vitest run --passWithNoTests",
     "ingest": "tsx src/cli.ts",
     "transform": "tsx src/transform-cli.ts",

@@ -9,13 +9,6 @@ import styles from "./page.module.css";
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 const KEY_STORAGE = "dig.llm_beta.anthropic_key";
 
-const ENTITY_PATHS: Record<string, string> = {
-  artist: "artist",
-  label: "label",
-  master: "release",
-  release: "version",
-};
-
 interface MediaItem {
   discogs_id: number;
   title: string;
@@ -184,7 +177,7 @@ export function LlmBetaClient() {
           tool_calls: data.meta?.tool_calls ?? 0,
         }]);
       }
-    } catch (err) {
+    } catch {
       setMessages((prev) => [...prev, {
         role: "assistant",
         content: "Request failed — check your network or API key.",

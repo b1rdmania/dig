@@ -67,12 +67,12 @@ export async function LabelHeroImage({ discogsId, labelName, mode = "mark" }: Pr
 
   const mark = logo ?? hero ?? photo;
   if (!mark) return null;
-  // eslint-disable-next-line @next/next/no-img-element — Commons URLs are not
-  //  in next.config remotePatterns, and we deliberately want the CDN to serve
-  //  + cache the original. next/image would re-encode through Vercel and add
-  //  cost without benefit at our scale.
+  // Commons URLs are not in next.config remotePatterns, and we deliberately
+  // want the CDN to serve + cache the original. next/image would re-encode
+  // through Vercel and add cost without benefit at our scale.
   return (
     <figure className={styles.mark}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- see above */}
       <img
         src={mark.url}
         alt={`${labelName} logo`}

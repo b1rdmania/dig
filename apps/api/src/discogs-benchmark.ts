@@ -142,7 +142,6 @@ async function main() {
       };
       allResults.push(result);
 
-      const winner = dig.ms < discogs.ms ? "Dig" : "Discogs";
       const ratio = dig.ms < discogs.ms
         ? `Dig ${(discogs.ms / dig.ms).toFixed(1)}x`
         : `Discogs ${(dig.ms / discogs.ms).toFixed(1)}x`;

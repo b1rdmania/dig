@@ -85,7 +85,7 @@ async function checkUrl(url: string): Promise<{
       finalDomain,
       error: null,
     };
-  } catch (err) {
+  } catch {
     // Some sites block HEAD — try GET with abort
     try {
       const resp = await fetch(url, {

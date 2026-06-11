@@ -77,8 +77,8 @@ async function extractFixtures(
           const openIdx = buffer.indexOf(openTag, searchFrom);
 
           // Find whichever comes first
-          let nextCloseIdx = closeIdx === -1 ? Infinity : closeIdx;
-          let nextOpenIdx = openIdx === -1 ? Infinity : openIdx;
+          const nextCloseIdx = closeIdx === -1 ? Infinity : closeIdx;
+          const nextOpenIdx = openIdx === -1 ? Infinity : openIdx;
 
           if (nextCloseIdx === Infinity && nextOpenIdx === Infinity) {
             // Neither found — need more data

@@ -106,7 +106,7 @@ const ENTITY_PATH: Record<"a" | "l" | "m" | "r", string> = {
  *   11 = bare  of [url]…[/url]
  */
 const INLINE_PATTERN =
-  /\[b\]([\s\S]*?)\[\/b\]|\[i\]([\s\S]*?)\[\/i\]|\[u\]([\s\S]*?)\[\/u\]|\[s\]([\s\S]*?)\[\/s\]|\[([almr])=([^\]]+)\]|\[([almr])(\d+)\]|\[url=([^\]]+)\]([\s\S]*?)\[\/url\]|\[url\]([^\[\]\s]+)\[\/url\]/g;
+  /\[b\]([\s\S]*?)\[\/b\]|\[i\]([\s\S]*?)\[\/i\]|\[u\]([\s\S]*?)\[\/u\]|\[s\]([\s\S]*?)\[\/s\]|\[([almr])=([^\]]+)\]|\[([almr])(\d+)\]|\[url=([^\]]+)\]([\s\S]*?)\[\/url\]|\[url\]([^[\]\s]+)\[\/url\]/g;
 
 function parseInline(
   text: string,

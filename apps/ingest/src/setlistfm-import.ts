@@ -313,7 +313,7 @@ async function main() {
   let rateLimited = 0;
 
   for (const artist of cohort) {
-    let artistEvents: SetlistEvent[] = [];
+    const artistEvents: SetlistEvent[] = [];
 
     for (let page = 1; page <= config.pages; page++) {
       try {
