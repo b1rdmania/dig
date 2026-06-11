@@ -2210,27 +2210,30 @@ async function postLoadBackfill(targetUrl: string) {
   console.log("  [target] phase 6: search_vector backfill + ANALYZE");
   const sql = `
     SET statement_timeout = '60min';
+    -- 'simple' config (NOT 'english') — the catalog is proper nouns and the
+    -- query side uses to_tsquery('simple', ...). Keep in lockstep with
+    -- migration 033 and packages/domain/src/search.ts.
     UPDATE catalog.masters
     SET search_vector =
-          setweight(to_tsvector('english', coalesce(title, '')), 'A')
-       || setweight(to_tsvector('english', coalesce(primary_artist_name, '')), 'B')
-       || setweight(to_tsvector('english', coalesce(artists_credit_text, '')), 'B')
-       || setweight(to_tsvector('english', coalesce(primary_label_name, '')), 'C')
-       || setweight(to_tsvector('english', array_to_string(coalesce(styles, '{}'), ' ')), 'D')
-       || setweight(to_tsvector('english', array_to_string(coalesce(genres, '{}'), ' ')), 'D')
+          setweight(to_tsvector('simple', coalesce(title, '')), 'A')
+       || setweight(to_tsvector('simple', coalesce(primary_artist_name, '')), 'B')
+       || setweight(to_tsvector('simple', coalesce(artists_credit_text, '')), 'B')
+       || setweight(to_tsvector('simple', coalesce(primary_label_name, '')), 'C')
+       || setweight(to_tsvector('simple', array_to_string(coalesce(styles, '{}'), ' ')), 'D')
+       || setweight(to_tsvector('simple', array_to_string(coalesce(genres, '{}'), ' ')), 'D')
     WHERE search_vector IS NULL;
 
     UPDATE catalog.artists
     SET search_vector =
-          setweight(to_tsvector('english', coalesce(name, '')), 'A')
-       || setweight(to_tsvector('english', coalesce(real_name, '')), 'B')
-       || setweight(to_tsvector('english', array_to_string(coalesce(aliases_text, '{}'), ' ')), 'C')
+          setweight(to_tsvector('simple', coalesce(name, '')), 'A')
+       || setweight(to_tsvector('simple', coalesce(real_name, '')), 'B')
+       || setweight(to_tsvector('simple', array_to_string(coalesce(aliases_text, '{}'), ' ')), 'C')
     WHERE search_vector IS NULL;
 
     UPDATE catalog.labels
     SET search_vector =
-          setweight(to_tsvector('english', coalesce(name, '')), 'A')
-       || setweight(to_tsvector('english', array_to_string(coalesce(aliases_text, '{}'), ' ')), 'C')
+          setweight(to_tsvector('simple', coalesce(name, '')), 'A')
+       || setweight(to_tsvector('simple', array_to_string(coalesce(aliases_text, '{}'), ' ')), 'C')
     WHERE search_vector IS NULL;
 
     VACUUM ANALYZE catalog.masters;

@@ -1,5 +1,38 @@
 import { describe, it, expect } from "vitest";
-import { validateSearchParams, type SearchResponse } from "../search.js";
+import { validateSearchParams, buildTsquery, type SearchResponse } from "../search.js";
+
+describe("buildTsquery", () => {
+  it("AND-joins tokens and prefix-matches the last", () => {
+    expect(buildTsquery("aphex tw")).toBe("aphex & tw:*");
+    expect(buildTsquery("strings of life")).toBe("strings & of & life:*");
+  });
+
+  it("keeps stop-word names searchable", () => {
+    expect(buildTsquery("them")).toBe("them:*");
+    expect(buildTsquery("the the")).toBe("the & the:*");
+  });
+
+  it("lowercases and strips punctuation", () => {
+    expect(buildTsquery("Aphex-Twin!")).toBe("aphex & twin:*");
+    expect(buildTsquery("DJ  Sneak ")).toBe("dj & sneak:*");
+  });
+
+  it("returns null when no indexable tokens remain", () => {
+    expect(buildTsquery("!!!")).toBeNull();
+    expect(buildTsquery("  ")).toBeNull();
+    expect(buildTsquery("&|:*")).toBeNull();
+  });
+
+  it("caps token count for adversarial inputs", () => {
+    const q = Array.from({ length: 40 }, (_, i) => `tok${i}`).join(" ");
+    const built = buildTsquery(q)!;
+    expect(built.split("&")).toHaveLength(12);
+  });
+
+  it("handles unicode names", () => {
+    expect(buildTsquery("Röyksopp")).toBe("röyksopp:*");
+  });
+});
 
 describe("validateSearchParams", () => {
   it("rejects empty params (no query, no filters)", () => {

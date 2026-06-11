@@ -100,6 +100,96 @@ export function recordShareChannel(channel: string): void {
   queueDailyCounter("share_channel", channel);
 }
 
+// --- Search quality rollup (enrich.search_quality_daily) --------------------
+//
+// Per-day, per-normalized-query aggregation of search_submitted /
+// search_result_clicked telemetry. This is what makes zero-result rate and
+// CTR queryable (scripts/search-quality-report.ts) instead of buried in logs.
+
+interface SearchQualityDelta {
+  submits: number;
+  zero_results: number;
+  clicks: number;
+  click_position_sum: number;
+}
+
+const MAX_SEARCH_QUALITY_ENTRIES = 5_000;
+const pendingSearchQuality = new Map<string, SearchQualityDelta>();
+
+function normalizeQuery(query: string): string | null {
+  const q = query.toLowerCase().trim().replace(/\s+/g, " ").slice(0, 100);
+  return q.length >= 2 ? q : null;
+}
+
+function queueSearchQuality(query: string, apply: (d: SearchQualityDelta) => void): void {
+  const q = normalizeQuery(query);
+  if (!q) return;
+  const key = `${todayKey()}|${q}`;
+  let delta = pendingSearchQuality.get(key);
+  if (!delta) {
+    if (pendingSearchQuality.size >= MAX_SEARCH_QUALITY_ENTRIES) return;
+    delta = { submits: 0, zero_results: 0, clicks: 0, click_position_sum: 0 };
+    pendingSearchQuality.set(key, delta);
+  }
+  apply(delta);
+}
+
+export function recordSearchSubmitted(query: string, resultCount: number | null): void {
+  queueSearchQuality(query, (d) => {
+    d.submits += 1;
+    if (resultCount === 0) d.zero_results += 1;
+  });
+}
+
+export function recordSearchResultClicked(query: string, position: number | null): void {
+  queueSearchQuality(query, (d) => {
+    d.clicks += 1;
+    if (typeof position === "number" && position >= 0 && position < 1000) {
+      d.click_position_sum += position;
+    }
+  });
+}
+
+async function flushSearchQuality(): Promise<void> {
+  if (!dbRef || pendingSearchQuality.size === 0) return;
+  const batch = new Map(pendingSearchQuality);
+  pendingSearchQuality.clear();
+  try {
+    await dbRef.transaction().execute(async (trx) => {
+      for (const [key, d] of batch.entries()) {
+        const [day, query] = [key.slice(0, 10), key.slice(11)];
+        await sql`
+          INSERT INTO enrich.search_quality_daily
+            (day, query, submits, zero_results, clicks, click_position_sum)
+          VALUES
+            (${day}::date, ${query}, ${d.submits}, ${d.zero_results}, ${d.clicks}, ${d.click_position_sum})
+          ON CONFLICT (day, query)
+          DO UPDATE SET
+            submits = enrich.search_quality_daily.submits + EXCLUDED.submits,
+            zero_results = enrich.search_quality_daily.zero_results + EXCLUDED.zero_results,
+            clicks = enrich.search_quality_daily.clicks + EXCLUDED.clicks,
+            click_position_sum = enrich.search_quality_daily.click_position_sum + EXCLUDED.click_position_sum,
+            updated_at = now()
+        `.execute(trx);
+      }
+    });
+  } catch {
+    // fail-open: re-queue (drop on overflow rather than grow unbounded)
+    for (const [key, d] of batch.entries()) {
+      if (pendingSearchQuality.size >= MAX_SEARCH_QUALITY_ENTRIES) break;
+      const existing = pendingSearchQuality.get(key);
+      if (existing) {
+        existing.submits += d.submits;
+        existing.zero_results += d.zero_results;
+        existing.clicks += d.clicks;
+        existing.click_position_sum += d.click_position_sum;
+      } else {
+        pendingSearchQuality.set(key, d);
+      }
+    }
+  }
+}
+
 function mapToObject<T extends string>(map: Map<T, number>): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [k, v] of map.entries()) out[k] = v;
@@ -300,6 +390,7 @@ export function initUsagePersistence(db: Kysely<Database> & { _pool?: PgPoolLike
   flushTimer = setInterval(() => {
     void flushPendingCounters();
     void flushPendingDailyCounters();
+    void flushSearchQuality();
     if (poolRef) {
       const stats = getPoolStats(poolRef);
       if (stats.waiting >= POOL_WAITING_WARN_THRESHOLD) {
@@ -324,6 +415,7 @@ export async function shutdownUsagePersistence(): Promise<void> {
   }
   await flushPendingCounters();
   await flushPendingDailyCounters();
+  await flushSearchQuality();
 }
 
 export async function getUsageSnapshot() {

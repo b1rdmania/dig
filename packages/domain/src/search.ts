@@ -7,6 +7,11 @@
  *
  * Strategy:
  *   - One ranked FTS path per entity type (artist/label/master).
+ *   - 'simple'-config tsvectors/tsqueries (migration 033): the catalog is
+ *     proper nouns, so no stemming and no stop-word removal — names like
+ *     "Them" or "Who" are first-class searchable terms.
+ *   - Prefix lane: the last query token matches as a prefix (`tok:*`), so
+ *     "aphex tw" finds "Aphex Twin" — typeahead works without a second path.
  *   - master-genre / master-style filters: array-contains on the denormed
  *     TEXT[] columns (GIN-indexed).
  *   - master-year filter: scalar column on catalog.masters.
@@ -20,7 +25,6 @@
  *     fan-out interleaves three ranked streams, so its cursor is best-effort)
  *   - 3s per-statement timeout (enforced via pinned connection)
  *   - Fuzzy fallback: artist (full), label/master (stricter cap)
- *   - Empty-tsquery short-circuit (stop-word-only queries)
  */
 
 import type { Kysely } from "kysely";
@@ -226,19 +230,27 @@ export function validateSearchParams(params: SearchParams): SearchError | null {
   return null;
 }
 
-const ENGLISH_STOP_WORDS = new Set([
-  "a", "about", "an", "and", "are", "as", "at", "be", "but", "by", "for",
-  "from", "had", "has", "have", "he", "her", "his", "how", "i", "if", "in",
-  "into", "is", "it", "its", "just", "me", "my", "no", "not", "of", "on",
-  "or", "our", "s", "she", "so", "t", "that", "the", "their", "them", "then",
-  "there", "these", "they", "this", "to", "too", "us", "very", "was", "we",
-  "what", "when", "which", "who", "will", "with", "would", "you", "your",
-]);
+/** Bound tsquery complexity for adversarial many-token inputs. */
+const MAX_QUERY_TOKENS = 12;
 
-function isEmptyTsquery(q: string): boolean {
-  const tokens = q.toLowerCase().trim().split(/\s+/).filter((t) => t.length > 0);
-  if (tokens.length === 0) return true;
-  return tokens.every((t) => ENGLISH_STOP_WORDS.has(t));
+/**
+ * Build the tsquery text for the 'simple' config: lowercase alphanumeric
+ * tokens AND-ed together, with the final token prefix-matched so partial
+ * typing still hits ("aphex tw" → "aphex & tw:*").
+ *
+ * Returns null when the input contains no indexable tokens (punctuation-only).
+ * Tokens are stripped to letters/digits, so the result is safe to feed to
+ * to_tsquery without further escaping.
+ */
+export function buildTsquery(q: string): string | null {
+  const tokens = q
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((t) => t.length > 0)
+    .slice(0, MAX_QUERY_TOKENS);
+  if (tokens.length === 0) return null;
+  const last = tokens[tokens.length - 1];
+  return [...tokens.slice(0, -1), `${last}:*`].join(" & ");
 }
 
 /** Slim shape: only artist / label / master have batch-resolvable backing tables. */
@@ -298,9 +310,10 @@ async function searchRanked(
     ] as any[])
     .where("batch_id" as any, "=", batchId);
 
-  if (params.q) {
-    const tsqueryFn = sql`plainto_tsquery('english', ${params.q})`;
-    const qLower = params.q.toLowerCase().trim();
+  const tsquery = params.q ? buildTsquery(params.q) : null;
+  if (tsquery) {
+    const tsqueryFn = sql`to_tsquery('simple', ${tsquery})`;
+    const qLower = params.q!.toLowerCase().trim();
     query = query
       .where(sql`search_vector @@ ${tsqueryFn}` as any)
       .select(sql`(
@@ -349,8 +362,8 @@ async function searchRanked(
     }
   }
 
-  if (cursorData && params.q) {
-    const tsqueryFn = sql`plainto_tsquery('english', ${params.q})`;
+  if (cursorData && tsquery) {
+    const tsqueryFn = sql`to_tsquery('simple', ${tsquery})`;
     query = query.where(
       sql`(ts_rank_cd(search_vector, ${tsqueryFn}), discogs_id) < (${cursorData.rank}, ${cursorData.discogs_id})` as any,
     );
@@ -358,7 +371,7 @@ async function searchRanked(
     query = query.where("discogs_id" as any, "<", cursorData.discogs_id);
   }
 
-  if (params.q) {
+  if (tsquery) {
     query = query.orderBy(sql`rank` as any, "desc").orderBy("discogs_id" as any, "desc");
   } else {
     query = query.orderBy("discogs_id" as any, "desc");
@@ -562,6 +575,8 @@ async function getTypeCounts(
 ): Promise<SearchTypeCounts> {
   const counts: SearchTypeCounts = { artist: 0, label: 0, master: 0 };
   if (!query || query.trim().length < MIN_QUERY_LENGTH) return counts;
+  const tsquery = buildTsquery(query);
+  if (!tsquery) return counts;
 
   for (const type of ["artist", "label", "master"] as const) {
     const batch = batchMap.get(type);
@@ -574,7 +589,7 @@ async function getTypeCounts(
         SELECT COUNT(*)::int AS n FROM (
           SELECT 1 FROM ${sql.table(tableName)}
           WHERE batch_id = ${batch.batchId}
-            AND search_vector @@ plainto_tsquery('english', ${query})
+            AND search_vector @@ to_tsquery('simple', ${tsquery})
           LIMIT ${TYPE_COUNT_LIMIT}
         ) sub
       `.execute(db);
@@ -601,8 +616,10 @@ export async function search(
   const limit = Math.min(Math.max(params.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
   const cursorData = params.cursor ? decodeCursor(params.cursor) : null;
 
-  // Stop-word-only short-circuit
-  if (params.q && isEmptyTsquery(params.q)) {
+  // No indexable tokens (punctuation-only query) — nothing to match.
+  // With 'simple' vectors stop-word names like "Them" ARE searchable, so
+  // this only fires for queries with no letters or digits at all.
+  if (params.q && buildTsquery(params.q) === null) {
     return {
       results: [],
       top_match: null,
@@ -612,7 +629,7 @@ export async function search(
         type: params.type ?? null,
         filters_applied: {},
         elapsed_ms: Date.now() - start,
-        hint: "Query contains only common words. Try more specific search terms.",
+        hint: "Query contains no searchable words. Try letters or numbers.",
         degraded: true,
         degraded_reason: "empty_tsquery",
       },

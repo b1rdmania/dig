@@ -59,7 +59,7 @@ Entity model: `artist | label | master` are the only public entities. `release_s
 
 ## Database
 - Schemas: `auth`, `ingest`, `catalog`, `enrich`
-- Migrations: `packages/db/migrations/` (001–032), CI-gated by `scripts/migration-parity-audit.ts`
+- Migrations: `packages/db/migrations/` (001–033), CI-gated by `scripts/migration-parity-audit.ts`
 - Schema types: `packages/db/src/schema.ts`
 - Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG, port 5433)
 - Production: `dig-db-scene` (Fly LHR, shared-cpu-2x/2GB, 10GB volume)
@@ -105,7 +105,9 @@ docker-compose.yml         — local Postgres + Redis
 - Full-catalog cutover COMPLETE in code: release search type, heavy-lane machinery, and dead response fields removed; release URLs resolve via `release_shadow` → 301/410
 - Security hardening landed: validated API keys, fail-closed rate limiting and ops endpoints, credential scrub
 - Old full-catalog infra (`dig-db`, 300GB) decommissioned; `dig-db-scene` (10GB, LHR) is the only production DB
-- Known follow-ups: search v2 (simple-config name vectors, prefix/typeahead lane), telemetry-driven ranking review, MCP revival decision
+- Search v2 LIVE (migration 033, applied to dig-db-scene): 'simple'-config vectors (stop-word names like "Them" searchable), prefix-matched last token for typeahead, lower(trim(name)) top-match indexes, exact cursor pagination
+- Search telemetry loop: `/v1/events` rolls search_submitted/search_result_clicked into `enrich.search_quality_daily`; run `scripts/search-quality-report.ts` to get zero-result rate + CTR before re-tuning ranking constants
+- Known follow-ups: telemetry-driven ranking review once relaunch traffic accrues, MCP revival decision
 
 ## MCP Tools (frozen at archive — `apps/mcp/src/server.ts`)
 `search_catalog`, `get_artist`, `get_label`, `get_master`, `get_release`, `traverse_links`.
