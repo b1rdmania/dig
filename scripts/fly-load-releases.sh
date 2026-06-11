@@ -6,7 +6,7 @@
 set -euo pipefail
 
 LOCAL="postgresql://dig:dig_local@localhost:5433/dig"
-FLY="postgresql://postgres:4nJry60ZfTjb1NO@localhost:15432/dig"
+FLY="${FLY_DATABASE_URL:?Set FLY_DATABASE_URL (postgresql://user:pass@localhost:15432/dig via fly proxy)}"
 
 TABLES=(
   catalog.releases

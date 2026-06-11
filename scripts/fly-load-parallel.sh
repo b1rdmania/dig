@@ -4,7 +4,7 @@
 # Loads 4 tables at a time for ~4x throughput.
 set -euo pipefail
 
-FLY="postgresql://postgres:4nJry60ZfTjb1NO@localhost:15432/dig"
+FLY="${FLY_DATABASE_URL:?Set FLY_DATABASE_URL (postgresql://user:pass@localhost:15432/dig via fly proxy)}"
 
 load_table() {
   local table=$1
