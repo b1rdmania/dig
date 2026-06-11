@@ -776,7 +776,15 @@ async function runAgenticLoop(params: {
 // ---------------------------------------------------------------------------
 
 function requirePrivateKey(req: FastifyRequest): { ok: true } | { ok: false; status: number; body: unknown } {
-  if (PRIVATE_KEYS.size === 0) return { ok: true };
+  // Fail closed: if no beta keys are configured, the endpoint is unavailable
+  // rather than open to everyone.
+  if (PRIVATE_KEYS.size === 0) {
+    return {
+      ok: false,
+      status: 503,
+      body: { error: { code: "CONFIG_ERROR", message: "Private beta is not configured", details: null } },
+    };
+  }
   const key = String(req.headers["x-api-key"] ?? "").trim();
   if (!key || !PRIVATE_KEYS.has(key)) {
     return {
@@ -903,7 +911,9 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
           message: err?.status === 401
             ? "Invalid Anthropic API key"
             : "Failed to generate response",
-          details: { reason: String(err?.message ?? err) },
+          // Upstream error detail goes to the structured log above, not to
+          // clients — provider messages can leak internals.
+          details: null,
         },
         mode: "upstream_error" as ResponseMode,
       });

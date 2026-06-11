@@ -3,6 +3,7 @@ import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import { sql } from "@dig/db";
 import { getBatchForTable } from "@dig/domain";
+import { validApiKey, unauthorizedBody } from "../../auth.js";
 
 const COHORT_TYPES = ["artists", "releases", "labels"] as const;
 type CohortType = typeof COHORT_TYPES[number];
@@ -32,6 +33,11 @@ export function registerSeoRoutes(app: FastifyInstance, db: Kysely<Database>) {
    *   labels   — has ≥5 linked releases
    */
   app.get("/v1/seo/cohort", async (req, reply) => {
+    // Expensive cohort scans (up to 50k IDs) — only consumed by our own
+    // sitemap builders, which authenticate server-side. Requires a valid key.
+    if (!validApiKey(req)) {
+      return reply.status(401).send(unauthorizedBody);
+    }
     const { type, limit: limitRaw, offset: offsetRaw } = req.query as {
       type?: string;
       limit?: string;

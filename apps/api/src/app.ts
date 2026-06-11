@@ -2,10 +2,15 @@
  * Fastify app factory — used by both server.ts (production) and tests.
  * Separating app creation from listening allows Fastify inject in tests.
  *
- * Phase 3 hardening:
- * - Two-tier rate limiting: anonymous (60/min) + API key (300/min)
+ * Hardening:
+ * - Two-tier rate limiting (RATE_LIMITS below is the single source of truth;
+ *   docs/rate-limit-policy.md mirrors it): anonymous by IP, keyed by validated
+ *   X-API-Key. Unknown keys are silently downgraded to the anonymous tier.
+ * - Rate limiting always registers: Redis store when REDIS_URL is set,
+ *   per-process in-memory store otherwise (fail closed, never disabled).
  * - Structured request logging on every response
- * - CORS for browser clients
+ * - CORS for browser clients (open by default for the public read API;
+ *   set CORS_ORIGINS to restrict)
  * - Health endpoint with timeout stats
  * - Consistent error format on all paths
  */
@@ -16,6 +21,7 @@ import Redis from "ioredis";
 import { randomUUID } from "node:crypto";
 import { createDb } from "@dig/db";
 import { healthCheck, getTimeoutStats } from "@dig/domain";
+import { validApiKey, rawApiKey, hasConfiguredKeys } from "./auth.js";
 import { registerSearchRoutes } from "./routes/v1/search.js";
 import { registerEntityRoutes } from "./routes/v1/entities.js";
 import { registerTraversalRoutes } from "./routes/v1/traversal.js";
@@ -35,22 +41,16 @@ export interface AppDeps {
   enableRateLimit?: boolean;
 }
 
-// --- Rate-limit policy ---
-// Anonymous (by IP): 60 req/min
-// Keyed (X-API-Key header): 300 req/min
-// These are alpha values — will be adjusted based on production traffic patterns.
-const ANON_RATE_LIMIT = 180;
-const KEYED_RATE_LIMIT = 1000;
+// --- Rate-limit policy (single source of truth) ---
+// Anonymous (by IP): 180 req/min. Keyed (validated X-API-Key): 1000 req/min.
+// Alpha values — adjust based on production traffic patterns and keep
+// docs/rate-limit-policy.md in sync.
+export const RATE_LIMITS = {
+  anonymous: 180,
+  keyed: 1000,
+} as const;
 
-// Load-test bypass: requests with this header skip rate limiting entirely.
-// Only active in staging (set via LOAD_TEST_TOKEN env var). Remove after test.
-const LOAD_TEST_TOKEN = process.env.LOAD_TEST_TOKEN || "";
 const RATE_WINDOW = "1 minute";
-
-function getApiKey(req: FastifyRequest): string | undefined {
-  const header = req.headers["x-api-key"];
-  return typeof header === "string" && header.length > 0 ? header : undefined;
-}
 
 export async function buildApp(deps: AppDeps): Promise<{
   app: FastifyInstance;
@@ -61,8 +61,15 @@ export async function buildApp(deps: AppDeps): Promise<{
   initUsagePersistence(db);
 
   // --- CORS ---
+  // Open by default: this is a public, credential-less read API consumed by
+  // browsers and agents on arbitrary origins. Set CORS_ORIGINS (comma-
+  // separated) to restrict to an allowlist.
+  const corsOrigins = (process.env.CORS_ORIGINS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   await app.register(cors, {
-    origin: true,
+    origin: corsOrigins.length > 0 ? corsOrigins : true,
     methods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-API-Key", "X-Anthropic-API-Key", "X-Request-Id"],
     exposedHeaders: [
@@ -77,22 +84,34 @@ export async function buildApp(deps: AppDeps): Promise<{
   const redis = deps.redisUrl ? new Redis(deps.redisUrl) : null;
 
   // --- Rate limiting ---
-  if (deps.enableRateLimit !== false && redis) {
+  // Always registered (unless explicitly disabled for tests). Without Redis we
+  // fall back to the plugin's per-process in-memory store rather than running
+  // unthrottled — weaker across multiple machines, but fail-closed.
+  if (deps.enableRateLimit !== false) {
+    if (!redis) {
+      console.warn(JSON.stringify({
+        ts: new Date().toISOString(),
+        level: "warn",
+        code: "RATE_LIMIT_MEMORY_FALLBACK",
+        message: "REDIS_URL not set — rate limiting uses per-process in-memory store",
+      }));
+    }
+    if (!hasConfiguredKeys()) {
+      console.warn(JSON.stringify({
+        ts: new Date().toISOString(),
+        level: "warn",
+        code: "API_KEYS_NOT_CONFIGURED",
+        message: "API_KEYS not set — all requests are treated as anonymous tier",
+      }));
+    }
     await app.register(rateLimit, {
-      max: (req: FastifyRequest) => {
-        if (LOAD_TEST_TOKEN && req.headers["x-load-test-token"] === LOAD_TEST_TOKEN) {
-          return 1_000_000; // effectively unlimited
-        }
-        return getApiKey(req) ? KEYED_RATE_LIMIT : ANON_RATE_LIMIT;
-      },
+      max: (req: FastifyRequest) =>
+        validApiKey(req) ? RATE_LIMITS.keyed : RATE_LIMITS.anonymous,
       timeWindow: RATE_WINDOW,
-      redis,
-      keyGenerator: (req: FastifyRequest) => {
-        if (LOAD_TEST_TOKEN && req.headers["x-load-test-token"] === LOAD_TEST_TOKEN) {
-          return `loadtest:${LOAD_TEST_TOKEN}`;
-        }
-        return getApiKey(req) ?? req.ip;
-      },
+      ...(redis ? { redis } : {}),
+      // Unknown/absent keys bucket by IP — otherwise an attacker could mint a
+      // fresh bucket per request by rotating bogus key values.
+      keyGenerator: (req: FastifyRequest) => validApiKey(req) ?? req.ip,
       addHeadersOnExceeding: {
         "x-ratelimit-limit": true,
         "x-ratelimit-remaining": true,
@@ -120,7 +139,8 @@ export async function buildApp(deps: AppDeps): Promise<{
     const route = req.routeOptions?.url ?? req.url;
     const status = reply.statusCode;
     const requestId = (req as any).requestId ?? "-";
-    const apiKey = getApiKey(req);
+    const apiKey = rawApiKey(req);
+    const apiKeyValid = apiKey ? validApiKey(req) !== undefined : null;
 
     // Categorize route for monitoring
     let category = "other";
@@ -145,6 +165,7 @@ export async function buildApp(deps: AppDeps): Promise<{
       category,
       ip: req.ip,
       api_key: apiKey ? apiKey.slice(0, 8) + "..." : null,
+      api_key_valid: apiKeyValid,
     }));
 
     recordApiRequest({
