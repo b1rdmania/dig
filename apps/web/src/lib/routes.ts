@@ -68,16 +68,9 @@ export function hrefForArtistCredit(credit: ArtistCreditLink): string {
 
 /**
  * Href for a SearchResult — mirrors ResultCard logic, centralised here.
- * release with master_discogs_id → canonical /master/:master_id
- * release without master_discogs_id → /master/:release_id (resolves on landing)
- * master → /master/:id
- * artist/label → their own routes
+ * master → /master/:id; artist/label → their own routes.
  */
 export function hrefForSearchResult(result: SearchResult): string | null {
-  if (result.type === "release") {
-    if (result.master_discogs_id) return `/master/${result.master_discogs_id}`;
-    return `/master/${result.discogs_id}`;
-  }
   if (result.type === "master") return `/master/${result.discogs_id}`;
   if (result.type === "artist") return `/artist/${result.discogs_id}`;
   if (result.type === "label") return `/label/${result.discogs_id}`;

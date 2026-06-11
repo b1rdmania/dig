@@ -8,10 +8,6 @@ interface Props {
 }
 
 function resultHref(result: SearchResult): string | null {
-  if (result.type === "release") {
-    if (result.master_discogs_id) return `/master/${result.master_discogs_id}`;
-    return `/master/${result.discogs_id}`;
-  }
   if (result.type === "master") return `/master/${result.discogs_id}`;
   if (result.type === "artist") return `/artist/${result.discogs_id}`;
   if (result.type === "label") return `/label/${result.discogs_id}`;
@@ -21,7 +17,7 @@ function resultHref(result: SearchResult): string | null {
 export function ResultCard({ result }: Props) {
   const href = resultHref(result);
   const subtitleParts: string[] = [];
-  if (result.type === "release" || result.type === "master") {
+  if (result.type === "master") {
     if (result.year) subtitleParts.push(String(result.year));
     if (result.country) subtitleParts.push(result.country);
   }

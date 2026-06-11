@@ -78,43 +78,10 @@ describe("hrefForArtistCredit", () => {
 });
 
 describe("hrefForSearchResult", () => {
-  it("release with master_discogs_id → canonical /master/:master_id", () => {
-    const result: SearchResult = {
-      type: "release",
-      discogs_id: 9267745,
-      master_discogs_id: 21004,
-      name: null,
-      title: "Loveless",
-      year: 1991,
-      country: "UK",
-      data_quality: "Correct",
-      relevance: 1,
-      provenance: PROVENANCE,
-    };
-    expect(hrefForSearchResult(result)).toBe("/master/21004");
-  });
-
-  it("release without master_discogs_id → /master/:release_id (server resolves)", () => {
-    const result: SearchResult = {
-      type: "release",
-      discogs_id: 9267745,
-      master_discogs_id: null,
-      name: null,
-      title: "Standalone pressing",
-      year: 1991,
-      country: "UK",
-      data_quality: "Correct",
-      relevance: 1,
-      provenance: PROVENANCE,
-    };
-    expect(hrefForSearchResult(result)).toBe("/master/9267745");
-  });
-
   it("master → /master/:id", () => {
     const result: SearchResult = {
       type: "master",
       discogs_id: 21004,
-      master_discogs_id: null,
       name: null,
       title: "Loveless",
       year: 1991,
@@ -130,7 +97,6 @@ describe("hrefForSearchResult", () => {
     const result: SearchResult = {
       type: "artist",
       discogs_id: 3840,
-      master_discogs_id: null,
       name: "Radiohead",
       title: null,
       year: null,
@@ -146,7 +112,6 @@ describe("hrefForSearchResult", () => {
     const result: SearchResult = {
       type: "label",
       discogs_id: 1234,
-      master_discogs_id: null,
       name: "Some Label",
       title: null,
       year: null,

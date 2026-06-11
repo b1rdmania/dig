@@ -1,10 +1,8 @@
 # dig
 
-**Music search. Finally.**
+**The house & techno catalog, browsable.**
 
-Every AI asked about music guesses — confidently, fluently, wrongly. There's no structured, agent-ready music data layer on the internet. So we're building one.
-
-Dig is a search engine and data layer built on the full [Discogs CC0 dataset](https://data.discogs.com/). 24 million records. 2.5 million masters. 580,000 artists. Every entity cross-linked — artists to releases, releases to credits, credits to labels. Click anything, follow the thread.
+Dig is a scene browser for house and techno, 1985–2008 — built on the [Discogs CC0 dataset](https://data.discogs.com/), scoped hard to the music that matters. Masters, artists, labels, and fifteen curated scenes, every entity cross-linked. Click anything, follow the thread. Pressing-level detail links out to Discogs, where it belongs.
 
 **[app.dig.baby](https://app.dig.baby)**
 
@@ -12,14 +10,17 @@ Dig is a search engine and data layer built on the full [Discogs CC0 dataset](ht
 
 ## What it does
 
-- **Deep catalog search** — full-text search across 24M+ records, fast on mobile, dark mode
-- **Connected entity pages** — every artist, label, release, and master cross-linked with type badges, filter chips, and newest-first sorting
-- **Enrichment layers** — MusicBrainz crosswalks, Wikidata context (bios, locations, genres), setlist.fm performance history, Cover Art Archive artwork
+- **Scene pages** — fifteen curated scenes (Chicago house, Detroit techno, UK garage, …) with eras, key labels, and core runs
+- **Master-first search** — full-text search across the scoped catalog: artists, labels, master releases
+- **Connected entity pages** — labels with their essential runs, artists with close collaborators, masters with notable pressings
+- **Enrichment layers** — MusicBrainz crosswalks, Wikidata context, Cover Art Archive artwork
 - **No AI in the data path** — deterministic retrieval only, structured data, no hallucinations
 
 ---
 
-## Stack
+## How it's built
+
+The production database is a **build artifact**: each Discogs dump cycle, the full catalog is ingested locally, scoped by style/era manifests, and shipped as a small (~10GB) scene database. No always-on big-data infrastructure.
 
 TypeScript · Postgres · Next.js · Fastify · Kysely · Redis · Fly.io
 
@@ -27,9 +28,7 @@ TypeScript · Postgres · Next.js · Fastify · Kysely · Redis · Fly.io
 
 ## Status
 
-Early stage. Active alpha. Building in public.
-
-See the [build log](https://app.dig.baby/progress) and [about page](https://app.dig.baby/about) for more.
+Repositioning for relaunch as the house & techno scene browser. Building in public.
 
 ---
 

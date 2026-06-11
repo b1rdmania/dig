@@ -11,15 +11,12 @@ export { getBatchForTable } from "./batch.js";
 export {
   search,
   validateSearchParams,
-  isBroadQuery,
   getTimeoutStats,
-  classifySearchLane,
   type SearchParams,
   type SearchResponse,
   type SearchResult,
   type SearchEntityType,
   type SearchError,
-  type SearchLane,
   type SearchTopMatch,
   type SearchTypeCounts,
 } from "./search.js";

@@ -8,9 +8,8 @@ export interface Provenance {
 
 // Search
 export interface SearchResult {
-  type: "artist" | "label" | "master" | "release";
+  type: "artist" | "label" | "master";
   discogs_id: number;
-  master_discogs_id: number | null;
   name: string | null;
   title: string | null;
   /** For type="master": denormed primary artist name. Null for other types. */
@@ -21,7 +20,6 @@ export interface SearchResult {
   country: string | null;
   data_quality: string;
   relevance: number;
-  is_main_release?: boolean;
   provenance: Provenance;
 }
 

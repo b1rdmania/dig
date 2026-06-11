@@ -1,7 +1,9 @@
 # Dig — Claude Code Project Guide
 
 ## What is this?
-Dig is a music data layer and search platform built on the Discogs CC0 catalog. Public REST API for agents, mobile-first search UI (and an in-product Claude chat) for humans. A standalone MCP SSE server existed during alpha and is now archived (source preserved in `apps/mcp/`).
+Dig is a **scene browser for house & techno (1985–2008)** built on the Discogs CC0 catalog: a scoped, master-first discovery product. Search and browse artists, labels, masters, and curated scenes; deep pressing detail links out to Discogs. Public REST API + Next.js frontend. No LLM inference in the retrieval path — deterministic, structured data only.
+
+It is deliberately **not** a full Discogs mirror. The full-catalog posture was retired (see `docs/executive-summary-master-first-reset.md`); release/version pages are gone, release URLs 301/410 to masters.
 
 Execution authority:
 - `docs/operating-implementation-guide.md` (day-to-day operating rules)
@@ -10,143 +12,111 @@ Execution authority:
 
 ## Architecture
 - **Monorepo** (pnpm workspaces): `apps/` and `packages/`
-- **Apps**: `apps/api` (Fastify REST), `apps/mcp` (MCP SSE server — ARCHIVED), `apps/ingest` (XML import workers), `apps/web` (Next.js frontend)
+- **Apps**: `apps/api` (Fastify REST), `apps/web` (Next.js frontend), `apps/ingest` (Discogs XML import CLI), `apps/mcp` (MCP SSE server — ARCHIVED, source frozen)
 - **Packages**: `packages/db` (Kysely + migrations), `packages/domain` (shared retrieval services)
 - All apps import from `@dig/domain` for business logic — no framework code in domain
 
+### Data pipeline (the part that matters)
+The production database is a **scoped artifact**, rebuilt offline per Discogs dump cycle:
+
+```
+Discogs XML dump (monthly)
+  → apps/ingest CLIs → full staging catalog (LOCAL Docker PG only — never deployed)
+  → scripts/build-scoped-db.ts + packages/db/scope-manifests/*.json
+  → scoped scene DB (masters/artists/labels + release_shadow + credit layer)
+  → restore to dig-db-scene (Fly, LHR) + search_vector backfill + ANALYZE
+```
+
+Scope manifests (`packages/db/scope-manifests/`) are the product's most important config: style allowlists, era bounds, tier-1 labels. The 15 curated scenes live in `packages/db/seeds/scenes_v1.json`.
+
+Entity model: `artist | label | master` are the only public entities. `release_shadow` is internal plumbing (release→master redirects, cover art, notable versions). There is no release-level search and no release pages.
+
 ## Tech Stack (locked)
 - Runtime: TypeScript + Node.js (ES2022, Bundler module resolution)
-- API: Fastify
-- MCP (archived): TypeScript MCP SDK (@modelcontextprotocol/sdk), remote SSE transport via Express. Source frozen in `apps/mcp/`.
-- DB: Postgres + Kysely (no ORM)
-- Cache/queues: Redis (ioredis) — Upstash in production
-- Search: Postgres FTS + pg_trgm
+- API: Fastify · DB: Postgres + Kysely (no ORM) · Cache: Redis (ioredis), Upstash in prod
+- Search: Postgres FTS + pg_trgm (weighted tsvectors; master-first ranking in `packages/domain/src/search.ts`)
 - XML parsing: saxes (SAX streaming, memory-bounded)
-- Test: Vitest
-- Package manager: pnpm (v10.27+)
-- Hosting: Fly.io (API + Web + workers), Fly Postgres, Upstash Redis. MCP is archived (see below)
-- Frontend: Next.js on Fly.io (always-on, no cold starts)
-- Images: Cover Art Archive first + fallback placeholders
+- Test: Vitest · Lint: ESLint flat config at root (`pnpm lint`) · Package manager: pnpm v10.27+
+- Hosting: Fly.io (`dig-api`, `dig-web`, `dig-db-scene`), Upstash Redis
+- Images: Cover Art Archive + harvested entity images + fallback placeholders
 
 ## Live URLs
-- **API**: https://dig-api.fly.dev/ (staging alpha)
-- **MCP**: ~~https://dig-mcp.fly.dev/sse~~ — **ARCHIVED 2026-04-16**. Fly app parked at zero machines. Source preserved in `apps/mcp/`. See `apps/mcp/README.md` and `/mcp` page for revival notes.
+- **Frontend**: https://app.dig.baby (Fly `dig-web`) — currently in maintenance gate (`apps/web/src/lib/maintenance.ts`)
+- **API**: https://dig-api.fly.dev/ — suspended during maintenance
 - **Health**: https://dig-api.fly.dev/v1/health
-- **Frontend**: https://app.dig.baby (staging alpha, Fly.io — DNS cutover pending from Vercel)
 - **Marketing**: https://dig.baby (Vercel)
 - **GitHub**: https://github.com/b1rdmania/dig
+- **MCP**: ARCHIVED 2026-04-16 — source in `apps/mcp/`, revival notes in `apps/mcp/README.md`
 
 ## Key Commands
-- `pnpm dev` — start API server (from root)
-- `pnpm dev:web` — start Next.js frontend (port 3002)
-- `pnpm test` — run all tests across workspace
-- `pnpm typecheck` — typecheck all packages
-- `docker compose up -d` — start local Postgres + Redis
-- `DATABASE_URL=postgresql://dig:dig_local@localhost:5433/dig pnpm --filter @dig/db migrate:up` — run migrations
-- `pnpm --filter @dig/ingest ingest -- releases --file ./path/to/dump.xml.gz` — run ingest CLI
-- `fly deploy --config fly.api.toml --remote-only` — deploy API to Fly
-- `fly deploy --config fly.web.toml --remote-only` — deploy frontend to Fly
-- (MCP archived — `fly.mcp.toml` retained but not deployed. To revive: see `apps/mcp/README.md`.)
+- `pnpm dev` — start API server · `pnpm dev:web` — Next.js frontend (port 3002)
+- `pnpm test` / `pnpm typecheck` / `pnpm lint` — all gate CI
+- `docker compose up -d` — local Postgres (5433) + Redis
+- `DATABASE_URL=postgresql://dig:dig_local@localhost:5433/dig pnpm --filter @dig/db migrate:up`
+- `DATABASE_URL=... pnpm --filter @dig/api test` — includes integration suite (skips without DATABASE_URL)
+- `pnpm exec tsx scripts/build-scoped-db.ts` — scoped artifact build (see script header for phases/resume)
+- `fly deploy --config fly.api.toml --remote-only` / `fly deploy --config fly.web.toml --remote-only`
 
 ## Database
 - Schemas: `auth`, `ingest`, `catalog`, `enrich`
-- Migrations: `packages/db/migrations/` (001–032)
+- Migrations: `packages/db/migrations/` (001–032), CI-gated by `scripts/migration-parity-audit.ts`
 - Schema types: `packages/db/src/schema.ts`
-- Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG 16, port 5433)
-- Fly staging: `dig-db` (shared-cpu-2x, 4GB RAM, 300GB disk)
-- Fly proxy: `fly proxy 15432:5432 -a dig-db`
+- Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG, port 5433)
+- Production: `dig-db-scene` (Fly LHR, shared-cpu-2x/2GB, 10GB volume)
+- `dig-db` (old 300GB full-catalog instance) is decommissioned — full catalog is rebuilt locally from dumps when needed
+- Fly proxy: `fly proxy 15432:5432 -a dig-db-scene`
+- Batch model: every catalog row carries `batch_id`; `getBatchForTable` resolves the active batch (60s cache). Re-ingests must use a fresh batch_id (child tables are insert-only, `onConflict doNothing`)
 
 ## Conventions
 - API routes under `/v1/` prefix always
+- Search types: `artist | label | master` only — anything else 400s at the route edge
 - Cursor-based pagination, not offset
 - Every response includes provenance (source, dump_date, discogs_id)
 - Error format: `{ error: { code, message, details? } }`
-- Error codes: INVALID_REQUEST, NOT_FOUND, QUERY_TIMEOUT, RATE_LIMITED, INTERNAL_ERROR
+- Error codes: INVALID_REQUEST, NOT_FOUND, GONE, QUERY_TIMEOUT, RATE_LIMITED, UNAUTHORIZED, INTERNAL_ERROR
 - No LLM inference in the retrieval path — structured data only
 - Workspace packages export from `src/` directly (not `dist/`) during development
-- Two-tier rate limits: anonymous 180/min (IP), keyed 1000/min (X-API-Key) — `apps/api/src/app.ts` `RATE_LIMITS` is the source of truth
-- Ingest child tables (release_credits, formats, genres, etc.) insert with `onConflict doNothing` and are never deleted — re-transforming the SAME batch_id does not refresh changed child rows; re-ingests must use a fresh batch_id
+- Rate limits: anonymous 180/min (IP), keyed 1000/min — `apps/api/src/app.ts` `RATE_LIMITS` is the source of truth; keys validated against the `API_KEYS` env (unknown keys silently downgrade to anonymous)
+- Ops endpoints (`/v1/usage/internal`, `/v1/seo/cohort`) require a valid API key; `/v1/ask` requires `LLM_BETA_KEYS` and fails closed
+- Shared route helpers (parseDiscogsId, withTimeout, timeout replies): `apps/api/src/routes/v1/util.ts`
 
 ## File Layout
 ```
-apps/api/              — Fastify REST API server (port 3000)
-apps/api/src/app.ts    — app factory (rate-limit, CORS, logging, routes)
-apps/api/src/server.ts — production entrypoint
-apps/mcp/              — MCP SSE server (ARCHIVED — see apps/mcp/README.md)
-apps/mcp/src/server.ts — 6 tools wired to @dig/domain (frozen at archive time)
-apps/mcp/src/smoke-test.ts — 47-assertion live smoke test (no longer in CI)
-apps/ingest/           — Discogs XML import pipeline (CLI)
-packages/db/           — Kysely DB layer, migrations, schema types
-packages/domain/       — Shared domain services (health, search, retrieval, traversal)
-docs/                  — Implementation plan, specs, strategy docs
-docs/LEGAL.md          — Legal notices (Discogs CC0, MusicBrainz, setlist.fm)
-docs/phase2-response-contracts.md — Locked JSON response shapes
-docs/rate-limit-policy.md — Rate-limit tiers + headers
-Dockerfile             — Shared monorepo Docker build (API; MCP image still buildable but not deployed)
-Dockerfile.web         — Next.js frontend Docker build
-fly.api.toml           — Fly config for dig-api
-fly.mcp.toml           — Fly config for dig-mcp (archived; app parked at zero machines)
-fly.web.toml           — Fly config for dig-web (frontend)
-docker-compose.yml     — Local Postgres 16 + Redis 7
+apps/api/                  — Fastify REST API server (port 3000)
+apps/api/src/app.ts        — app factory (rate-limit, CORS, logging, routes)
+apps/api/src/auth.ts       — API key validation (API_KEYS env)
+apps/api/src/routes/v1/ask/ — in-product Claude chat (auth/tools/binding/loop)
+apps/web/                  — Next.js frontend (maintenance gate in src/lib/maintenance.ts)
+apps/ingest/               — Discogs XML import pipeline (CLI, local staging only)
+apps/mcp/                  — MCP SSE server (ARCHIVED)
+packages/db/               — Kysely DB layer, migrations, schema, scope manifests, seeds
+packages/domain/           — Shared domain services (search, retrieval, traversal, credits, scenes)
+scripts/build-scoped-db.ts — scoped artifact builder (the real production pipeline)
+scripts/                   — CI gates (migration parity, regression smoke, no-dead-ends), harvesters
+docs/                      — strategy, runbooks, gate closeouts (see canonical-docs.md)
+eslint.config.mjs          — workspace lint config
+fly.api.toml / fly.web.toml — Fly configs (fly.mcp.toml retained but archived)
+docker-compose.yml         — local Postgres + Redis
 ```
 
-## Current Phase
-Phase 3 — COMPLETE. Gate D: GO (unconditional) at `ede193b`.
-- API + MCP deployed to Fly.io (iad region)
-- Two-tier rate limiting with Upstash Redis
-- Structured JSON request logging
-- 47/47 MCP smoke tests passing against remote server
-- Rollback drill verified
-- Staging data: full artists/labels/masters + 50k release sample
-- Claude Code + Claude Desktop MCP both verified
-- Production benchmark Run 7: 32 queries, 0 errors, p50 117ms (internet round trip)
-- Docs pass complete: quickstart, ops runbook, alpha invite, Phase 4 prerequisites
-
-## Current: Phase 4 — Data Load + Enrichment Foundation
-1. [x] **Full releases dataset migration** — COMPLETE (~555M rows, 12 tables, verified)
-2. [x] ANALYZE + search_vector verification — all populated
-3. [x] **Run 8 benchmark** — 0 errors, p50 108ms, 7/7 warm SLOs pass
-4. [x] Cleanup dump + scale DB down (shared-cpu-2x, 4GB, 156GB/300GB used)
-5. [x] Enrichment foundation (Phase 4A): `enrich.*` schema applied
-6. [x] **Next.js frontend scaffold** — `apps/web`, search + release pages, build passes (`2910b1c`)
-7. [x] **Fly.io deploy** — `app.dig.baby` (migrated from Vercel to Fly for always-on, no cold starts). DNS cutover pending. Vercel kept as fallback for 24h.
-8. [x] pg_prewarm warmup executed + runbook documented
-9. [x] **Alpha invite** — `docs/alpha-invite.md` updated, 5 keys issued
-10. [x] **Filtered-query concurrency hardening** — migration `007` + capped fallback path. c100 load: 0 timeouts / 0 errors
-11. [x] **Search IA + entity pages** — master-first grouped search, duplicate release collapse, `/master/[id]` + `/artist/[id]` routes
-12. [x] **Cover Art Archive integration** — MusicBrainz crosswalk import (1,768,376 mappings), cover proxy endpoint (`/v1/releases/:id/cover`), Redis cache (7-day TTL), frontend display with vinyl placeholder fallback
-13. [x] **Master page perf fix** — migration `008_release_master_index.ts` for master→releases traversal. Page load: 10.3s → 0.9s
-14. **Gate E status**: GO with caveat for soft alpha (5-10 testers). NOT GO for broader/public (filtered p99 still high under heavy contention)
-15. See `docs/enrichment-implementation-plan.md`
-
-## Better-Than-Discogs Track (2026-03-08)
-- **Item 1 — Data Quality Layer v1**: GO WITH CAVEATS. Artist v2 reclassify complete. Releases v1 backfill running on dig-db (PID 8467, `/tmp/q_v2_all.py`, ~17:00–18:00 UTC complete). Gate not fully closed until ANALYZE + guardrail snapshot committed. `enrich.entity_quality` fully populated: 9.9M artists, 2.3M labels, 2.5M masters, 18.9M releases.
-- **Item 2 — No-Dead-Ends v2**: 0 structural dead-ends. Canary rebuilt with 100 verified IDs (`0d605ae`). 79 TIMEOUT = SSR perf issue (P1, separate). CI gate live (`.github/workflows/regression-smoke.yml`). Gate closeout doc pending.
-- **Item 3 — Artist Completeness Upgrade**: Not started.
-- **P1 open**: SSR timeout hardening (79 entities timing out at 10s ceiling). ~~Migration 014 not in kysely_migration table~~ — resolved, row confirmed present (see `docs/gate-closeout-2026-03-08.md`).
+## Current State (2026-06)
+- Product repositioned as the house & techno scene browser; maintenance gate live until relaunch
+- Scoped catalog: 1985–2008, 15 curated scenes, close-collaborators v2, label essentials, entity images
+- Full-catalog cutover COMPLETE in code: release search type, heavy-lane machinery, and dead response fields removed; release URLs resolve via `release_shadow` → 301/410
+- Security hardening landed: validated API keys, fail-closed rate limiting and ops endpoints, credential scrub
+- Old full-catalog infra (`dig-db`, 300GB) decommissioned; `dig-db-scene` (10GB, LHR) is the only production DB
+- Known follow-ups: search v2 (simple-config name vectors, prefix/typeahead lane), telemetry-driven ranking review, MCP revival decision
 
 ## MCP Tools (frozen at archive — `apps/mcp/src/server.ts`)
-| Tool | Description |
-|------|-------------|
-| `search_catalog` | FTS + fuzzy search across 24M+ records |
-| `get_artist` | Artist detail by Discogs ID |
-| `get_label` | Label detail by Discogs ID |
-| `get_master` | Master release detail by Discogs ID |
-| `get_release` | Release detail with tracks, credits, formats |
-| `traverse_links` | Navigate entity graph (5 link types) |
-
-The in-product chat (`apps/api/src/routes/v1/ask.ts`) wraps the same six tools
-plus three v2 additions (`list_scenes`, `get_scene`, `get_label_essentials`)
-that were never ported to the MCP before it was archived.
+`search_catalog`, `get_artist`, `get_label`, `get_master`, `get_release`, `traverse_links`.
+The in-product chat (`apps/api/src/routes/v1/ask/`) wraps the same tools plus `list_scenes`, `get_scene`, `get_label_essentials` (never ported to MCP before archive).
 
 ## Important References
 - [Operating Guide](docs/operating-implementation-guide.md) — canonical execution workflow
 - [Canonical Docs Map](docs/canonical-docs.md) — doc precedence and usage
-- [Implementation Plan](docs/implementation-plan-agent-first.md) — canonical build plan
+- [Master-First Reset](docs/executive-summary-master-first-reset.md) — why the scoped pivot happened
 - [Quickstart](docs/quickstart.md) — API reference with curl examples
 - [Response Contracts](docs/phase2-response-contracts.md) — locked JSON shapes
 - [Ops Runbook](docs/ops-runbook.md) — incident triage, deployment, rollback
-- [Alpha Invite](docs/alpha-invite.md) — staging limitations, usage policy
-- [Enrichment Plan](docs/enrichment-implementation-plan.md) — MusicBrainz + Wikidata + Setlist rollout
 - [Rate-Limit Policy](docs/rate-limit-policy.md) — tier definitions
 - [Operator Guide](docs/OPERATOR.md) — how Claude Code runs this project

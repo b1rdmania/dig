@@ -1,26 +1,23 @@
 /**
- * Multi-entity search service — slim master-first shape.
+ * Multi-entity search service — scene-scoped, master-first.
  *
- * Entity types in scope: artist | label | master.
+ * Entity types: artist | label | master. Release-level search does not exist
+ * in this product (release pages 301 → master; pressing detail lives on
+ * Discogs). Callers sending other type values get a 400 at the API edge.
  *
- * `release` is retained in the type union for API contract stability during
- * the cutover, but every release-specific code path now returns an empty
- * result with `degraded: true` and `degraded_reason: "release_search_disabled"`.
- * The `dig-db-scene` DB carries no `catalog.releases` table — release-level
- * search makes no sense in the slim product (release pages 301 → master).
- *
- * Strategy (slim):
+ * Strategy:
  *   - One ranked FTS path per entity type (artist/label/master).
- *   - master-genre / master-style filters: `ANY(genres)` / `ANY(styles)` on
- *     the denormed TEXT[] columns (no join to dropped master_genres/styles).
+ *   - master-genre / master-style filters: array-contains on the denormed
+ *     TEXT[] columns (GIN-indexed).
  *   - master-year filter: scalar column on catalog.masters.
  *   - master-country filter: `primary_country` denormed column.
  *   - Quality filter (active by default) suppresses entries via enrich.entity_quality.
  *
- * Envelope (unchanged from full-catalog):
+ * Envelope:
  *   - Min query length: 2, max: 200
  *   - Max page size: 50, default 20
- *   - Cursor-based pagination
+ *   - Cursor-based pagination (exact for single-type queries; the untyped
+ *     fan-out interleaves three ranked streams, so its cursor is best-effort)
  *   - 3s per-statement timeout (enforced via pinned connection)
  *   - Fuzzy fallback: artist (full), label/master (stricter cap)
  *   - Empty-tsquery short-circuit (stop-word-only queries)
@@ -32,10 +29,9 @@ import type { Database } from "@dig/db";
 import { getBatchForTable } from "./batch.js";
 import { getSuppressedEntityKeys } from "./quality.js";
 
-export type SearchEntityType = "artist" | "label" | "master" | "release";
+export type SearchEntityType = "artist" | "label" | "master";
 
-/** Entity types the slim DB can actually search. Used for default fan-out. */
-const SUPPORTED_TYPES: SearchEntityType[] = ["artist", "label", "master"];
+const ALL_TYPES: SearchEntityType[] = ["artist", "label", "master"];
 
 export interface SearchParams {
   q: string;
@@ -57,7 +53,6 @@ export interface SearchParams {
 export interface SearchResult {
   type: SearchEntityType;
   discogs_id: number;
-  master_discogs_id: number | null;
   name: string | null;
   title: string | null;
   /**
@@ -74,7 +69,6 @@ export interface SearchResult {
   country: string | null;
   data_quality: string;
   relevance: number;
-  is_main_release: boolean;
   provenance: { source: "discogs"; dump_date: string; discogs_id: number };
 }
 
@@ -187,16 +181,6 @@ export function getTimeoutStats(): Record<string, { total: number; timeouts: num
   return stats;
 }
 
-// --- Lane classification (kept for API logging / metrics) ------------------
-
-export type SearchLane = "core" | "heavy";
-
-export function classifySearchLane(_params: SearchParams): SearchLane {
-  // In the slim shape there are no release filters → no heavy lane.
-  // Kept as an export to preserve the public API surface; always returns "core".
-  return "core";
-}
-
 // --- Constants -------------------------------------------------------------
 
 const DEFAULT_LIMIT = 20;
@@ -207,31 +191,6 @@ const MIN_RANK_THRESHOLD = 0.0001;
 const SIMILARITY_ARTIST = 0.3;
 const SIMILARITY_LABEL_MASTER = 0.5;
 const FUZZY_CAP_LABEL_MASTER = 5;
-
-const BROAD_TERMS = new Set([
-  "love", "remix", "the", "you", "live", "blue", "rock", "jazz", "house",
-  "soul", "baby", "night", "dance", "dream", "world", "heart", "time",
-  "best", "gold", "fire", "magic", "party", "super", "radio", "black",
-  "white", "sweet", "angel", "crazy", "happy", "dj",
-]);
-
-/**
- * Detect broad single-token queries. Retained for callers that log this
- * signal — in the slim shape we no longer take a different code path on it
- * (no release table, no GIN-on-FTS heavy path), but it remains a useful
- * UX hint indicator.
- */
-export function isBroadQuery(params: SearchParams): boolean {
-  if (!params.q) return false;
-  if (params.genre || params.style || params.year !== undefined
-    || params.yearMin !== undefined || params.yearMax !== undefined
-    || params.country) return false;
-  const trimmed = params.q.trim();
-  const isSingleToken = !trimmed.includes(" ");
-  if (!isSingleToken) return false;
-  if (trimmed.length <= 5) return true;
-  return BROAD_TERMS.has(trimmed.toLowerCase());
-}
 
 interface DecodedCursor { discogs_id: number; rank: number }
 
@@ -317,13 +276,13 @@ async function getBatchMap(
 
 async function searchRanked(
   db: Kysely<Database>,
-  type: "artist" | "label" | "master",
+  type: SearchEntityType,
   params: SearchParams,
   batchId: string,
   dumpDate: string,
   limit: number,
   cursorData: DecodedCursor | null,
-): Promise<{ results: SearchResult[]; hasMore: boolean }> {
+): Promise<{ results: SearchResult[]; hasMore: boolean; rawRanks: Map<number, number> }> {
   const tableName = type === "artist" ? "catalog.artists"
                   : type === "label"  ? "catalog.labels"
                                       : "catalog.masters";
@@ -350,9 +309,14 @@ async function searchRanked(
                WHEN lower(${sql.ref(nameCol)}) LIKE ${qLower + "%"} THEN 2
                ELSE 0 END
       )`.as("rank") as any)
+      // Raw (unboosted) ts_rank_cd — this is the quantity the pagination
+      // cursor predicate compares against, so it must be what we encode.
+      .select(sql`ts_rank_cd(search_vector, ${tsqueryFn})`.as("raw_rank") as any)
       .where(sql`ts_rank_cd(search_vector, ${tsqueryFn}) > ${MIN_RANK_THRESHOLD}` as any);
   } else {
-    query = query.select(sql`0`.as("rank") as any);
+    query = query
+      .select(sql`0`.as("rank") as any)
+      .select(sql`0`.as("raw_rank") as any);
   }
 
   // Master-only structured columns
@@ -406,11 +370,15 @@ async function searchRanked(
   const hasMore = rows.length > limit;
   const resultRows = hasMore ? rows.slice(0, limit) : rows;
 
+  const rawRanks = new Map<number, number>();
+  for (const row of resultRows) {
+    rawRanks.set(row.discogs_id, Number(row.raw_rank ?? 0));
+  }
+
   return {
     results: resultRows.map((row: any) => ({
       type,
       discogs_id: row.discogs_id,
-      master_discogs_id: null,
       name: isNameType ? row.display_name : null,
       title: isNameType ? null : row.display_name,
       primary_artist: type === "master" ? (row.primary_artist_name ?? null) : null,
@@ -419,11 +387,10 @@ async function searchRanked(
       country: row.country ?? null,
       data_quality: row.data_quality,
       relevance: row.rank ? Math.min(1, Math.max(0, Number(row.rank))) : 0,
-      // Slim shape doesn't carry release-level main-release flag; kept false.
-      is_main_release: false,
       provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: row.discogs_id },
     })),
     hasMore,
+    rawRanks,
   };
 }
 
@@ -431,7 +398,7 @@ async function searchRanked(
 
 async function fuzzyFallback(
   db: Kysely<Database>,
-  type: "artist" | "label" | "master",
+  type: SearchEntityType,
   query: string,
   batchId: string,
   dumpDate: string,
@@ -460,7 +427,6 @@ async function fuzzyFallback(
   return rows.rows.map((row: any) => ({
     type,
     discogs_id: row.discogs_id,
-    master_discogs_id: null,
     name: isNameType ? row.display_name : null,
     title: isNameType ? null : row.display_name,
     primary_artist: null,
@@ -469,7 +435,6 @@ async function fuzzyFallback(
     country: null,
     data_quality: row.data_quality,
     relevance: Number(row.sim),
-    is_main_release: false,
     provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: row.discogs_id },
   }));
 }
@@ -489,12 +454,11 @@ function scoreSearchResult(result: SearchResult, rawQuery: string, explicitType?
   }
 
   // Master-first product → bias the multi-type ranking accordingly.
-  // Masters lead, then artists, then labels (the only three searchable in slim).
+  // Masters lead, then artists, then labels.
   const typeWeight: Record<SearchEntityType, number> = {
     master: 200,
     artist: 150,
     label: 60,
-    release: 0,
   };
 
   const display = (result.name || result.title || "").toLowerCase();
@@ -655,24 +619,6 @@ export async function search(
     };
   }
 
-  // type=release in the slim shape: no-op with a clear degraded reason.
-  if (params.type === "release") {
-    return {
-      results: [],
-      top_match: null,
-      pagination: { cursor: null, has_more: false, total_estimate: null },
-      meta: {
-        query: params.q || "",
-        type: "release",
-        filters_applied: {},
-        elapsed_ms: Date.now() - start,
-        hint: "Release-level search is disabled in the slim catalog. Search for masters instead.",
-        degraded: true,
-        degraded_reason: "release_search_disabled",
-      },
-    };
-  }
-
   const filtersApplied: Record<string, string | number> = {};
   if (params.genre) filtersApplied.genre = params.genre;
   if (params.style) filtersApplied.style = params.style;
@@ -681,10 +627,7 @@ export async function search(
   if (params.yearMax !== undefined) filtersApplied.year_max = params.yearMax;
   if (params.country) filtersApplied.country = params.country;
 
-  // Default fan-out is the three searchable types (no release).
-  const types: Array<"artist" | "label" | "master"> = params.type
-    ? [params.type as "artist" | "label" | "master"]
-    : (SUPPORTED_TYPES.filter((t) => t !== "release") as Array<"artist" | "label" | "master">);
+  const types: SearchEntityType[] = params.type ? [params.type] : ALL_TYPES;
 
   const batchMap = await getBatchMap(db, types);
 
@@ -701,7 +644,10 @@ export async function search(
       let degradedReason: string | null = null;
       let fallbackUsed = false;
       let fallbackProfile: string | null = null;
-      const primaryTimedOutTypes = new Set<"artist" | "label" | "master">();
+      const primaryTimedOutTypes = new Set<SearchEntityType>();
+      // Raw ts_rank_cd per result (keyed type:id) — used to encode the
+      // pagination cursor with the same quantity the SQL predicate compares.
+      const rawRankByKey = new Map<string, number>();
 
       for (const entityType of types) {
         const batchInfo = batchMap.get(entityType);
@@ -709,10 +655,11 @@ export async function search(
         const { batchId, dumpDate } = batchInfo;
 
         try {
-          const { results, hasMore: typeHasMore } = await searchRanked(
+          const { results, hasMore: typeHasMore, rawRanks } = await searchRanked(
             conn, entityType, params, batchId, dumpDate, perTypeLimit, cursorData,
           );
           allResults.push(...results);
+          for (const [id, rank] of rawRanks) rawRankByKey.set(`${entityType}:${id}`, rank);
           if (typeHasMore) hasMore = true;
           trackRequest(entityType, false);
         } catch (err: any) {
@@ -800,7 +747,10 @@ export async function search(
 
       const lastResult = allResults[allResults.length - 1];
       const nextCursor = lastResult && hasMore
-        ? encodeCursor(lastResult.discogs_id, lastResult.relevance)
+        ? encodeCursor(
+            lastResult.discogs_id,
+            rawRankByKey.get(`${lastResult.type}:${lastResult.discogs_id}`) ?? 0,
+          )
         : null;
 
       // Pinned top-match + per-type counts. Both are best-effort and run
