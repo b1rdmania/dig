@@ -9,33 +9,47 @@ export const metadata: Metadata = {
 const FAQS: Array<{ q: string; a: React.ReactNode }> = [
   {
     q: "What is this?",
-    a: "A scene browser for house and techno, 1985 to 2008. Around 80,000 master releases with their artists, labels, credits, and fifteen curated scenes — scoped on purpose to the music that matters, not a mirror of everything.",
+    a: "I rebuilt Discogs in March because I was bored and wanted the mobile site to work better — videos wired in, a fast API, and a trial run as an MCP server. The full catalog cost about $2k in database bills, so I parked it.",
   },
   {
-    q: "What is Ask Dig?",
-    a: "An LLM chat over the catalog, in private beta. Every answer is grounded in the actual data — records it names are records that exist, with links to hear and buy them. Access is by key while it's in beta.",
+    q: "What is Dig now?",
+    a: (
+      <>
+        Slimmed down to house and techno, with an LLM layer on top: query the
+        catalog directly, chat about your collection and the artists you like,
+        get recommendations with YouTube links. Works pretty well — it runs on
+        a Kimi backend. The search database needs a bit of tweaking (some
+        tracks and artists are missing), but as a beta demo I&apos;m happy with
+        it. I built it as an experiment in what the fun end of big open data
+        looks like — which is really something Discogs should be doing
+        themselves in 2026. They should probably pay me to build the proper
+        pilot. The long version of the build is at{" "}
+        <a href="/progress">how we built it</a>.
+      </>
+    ),
   },
   {
     q: "Where does the data come from?",
     a: (
       <>
-        Catalog data from the monthly{" "}
+        The monthly{" "}
         <a href="https://www.discogs.com/data/" target="_blank" rel="noreferrer">Discogs data dumps</a>{" "}
-        (CC0). Cover art from the{" "}
-        <a href="https://coverartarchive.org/" target="_blank" rel="noreferrer">Cover Art Archive</a>.
-        Crosswalk data from{" "}
+        (CC0), cover art from the{" "}
+        <a href="https://coverartarchive.org/" target="_blank" rel="noreferrer">Cover Art Archive</a>,
+        crosswalks from{" "}
         <a href="https://musicbrainz.org/" target="_blank" rel="noreferrer">MusicBrainz</a>{" "}
-        (CC0). Editorial classifications — the scenes, core runs, and related-label edges — are dig&apos;s own.
+        (CC0). The editorial layer — the scenes, the core runs, the
+        related-label edges — is mine.
       </>
     ),
   },
   {
     q: "Is this Discogs?",
-    a: "No. dig is an independent project built on Discogs' openly licensed data. Pressing-level detail — specific versions, matrix numbers, marketplace listings — lives on Discogs, and dig links there for it.",
+    a: "No. Independent, built on their openly licensed data. Pressing-level detail — versions, matrix numbers, marketplace listings — lives on Discogs, and every record here links straight to it.",
   },
   {
     q: "Why is a record missing?",
-    a: "Two likely reasons: it's outside the scope (wrong genre or era — the catalog is deliberately narrow), or it arrived since the last monthly data dump. If it's in scope and still missing, that's worth telling us about.",
+    a: "Either it's outside the scope — wrong genre or era, the catalog is deliberately narrow — or it landed since the last monthly dump. If it's in scope and still missing, tell me.",
   },
 ];
 
