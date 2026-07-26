@@ -26,6 +26,18 @@ export const metadata = {
 
 export const revalidate = 600;
 
+// The list leads with the interesting shelves; the scenes everyone already
+// knows sit further down.
+const DEMOTE_TO = 6;
+const OBVIOUS = new Set(["chicago-house"]);
+
+function demoteObvious<T extends { slug: string }>(scenes: T[]): T[] {
+  const kept = scenes.filter((s) => !OBVIOUS.has(s.slug));
+  const demoted = scenes.filter((s) => OBVIOUS.has(s.slug));
+  kept.splice(Math.min(DEMOTE_TO, kept.length), 0, ...demoted);
+  return kept;
+}
+
 function formatEra(start: number | null, end: number | null): string | null {
   if (start == null && end == null) return null;
   if (start != null && end != null) return `${start}–${end}`;
@@ -62,7 +74,7 @@ export default async function ScenesIndexPage() {
       </PageHeading>
 
       <div className={styles.rows}>
-        {order.flatMap((axis) => grouped[axis] ?? []).map((s) => {
+        {demoteObvious(order.flatMap((axis) => grouped[axis] ?? [])).map((s) => {
           const era = formatEra(s.era_start, s.era_end);
           const accent = s.palette?.accent ?? "#1a1a1a";
           return (

@@ -984,3 +984,24 @@ export interface SceneWallResponse {
   wall: SceneWall;
   meta: { provenance: { source: string; dump_date: string } };
 }
+
+export interface ScenePlaylistRecord {
+  master_discogs_id: number;
+  title: string;
+  primary_artist_name: string | null;
+  year: number | null;
+  video_id: string;
+}
+
+export interface ScenePlaylist {
+  slug: string;
+  name: string;
+  video_count: number;
+  playlist_url: string | null;
+  records: ScenePlaylistRecord[];
+}
+
+export interface ScenePlaylistResponse {
+  playlist: ScenePlaylist;
+  meta: { provenance: { source: string; dump_date: string } };
+}

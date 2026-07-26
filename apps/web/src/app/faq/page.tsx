@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeading } from "@/components/design";
+import { KEY_REQUEST_MAILTO } from "@/lib/keyRequest";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -47,6 +48,11 @@ const FAQS: Array<{ q: string; a: React.ReactNode }> = [
         looks like, which is really something Discogs should be doing
         themselves in 2026. They should probably pay me to build the proper
         pilot.
+        <span className={styles.block}>
+          Dig is demo only. Deliberately light. No logins. Runs on my API
+          credits (Kimi 3).{" "}
+          <a href={KEY_REQUEST_MAILTO}>Request access here</a>.
+        </span>
         <span className={styles.block}>
           The long version of the build is at <a href="/progress">how we built it</a>.
         </span>

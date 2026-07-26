@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { digFetch, ApiRequestError } from "@/lib/api";
 import type {
   SceneDetailResponse,
+  ScenePlaylistResponse,
   SceneWallResponse,
   WallStripLabel,
 } from "@/lib/types";
@@ -104,13 +105,16 @@ function formatEra(start: number | null, end: number | null): string | null {
 export default async function ScenePage({ params }: Props) {
   const { slug } = await params;
 
-  const [wallResult, detailResult] = await Promise.all([
+  const [wallResult, detailResult, playlistResult] = await Promise.all([
     digFetch<SceneWallResponse>(`/v1/scenes/${slug}/wall?density=medium`, {
       revalidate: 600,
     })
       .then((d) => ({ ok: true as const, data: d }))
       .catch((err: unknown) => ({ ok: false as const, err })),
     digFetch<SceneDetailResponse>(`/v1/scenes/${slug}`, { revalidate: 600 })
+      .then((d) => ({ ok: true as const, data: d }))
+      .catch(() => ({ ok: false as const, err: null })),
+    digFetch<ScenePlaylistResponse>(`/v1/scenes/${slug}/playlist`, { revalidate: 3600 })
       .then((d) => ({ ok: true as const, data: d }))
       .catch(() => ({ ok: false as const, err: null })),
   ]);
@@ -126,6 +130,7 @@ export default async function ScenePage({ params }: Props) {
 
   const wallData: SceneWallResponse = wallResult.data;
   const detailData: SceneDetailResponse | null = detailResult.ok ? detailResult.data : null;
+  const playlist = playlistResult.ok ? playlistResult.data.playlist : null;
 
   const wall = wallData.wall;
   const era = formatEra(wall.era_start, wall.era_end);
@@ -160,6 +165,20 @@ export default async function ScenePage({ params }: Props) {
         <h1 className={styles.heading}>{wall.name}</h1>
         {wall.blurb && <p className={styles.lede}>{wall.blurb}</p>}
       </header>
+
+      {playlist?.playlist_url && (
+        <a
+          href={playlist.playlist_url}
+          target="_blank"
+          rel="noreferrer"
+          className={styles.playRow}
+        >
+          <span className={styles.playLabel}>Press play</span>
+          <span className={styles.playMeta}>
+            the scene in {playlist.video_count} records
+          </span>
+        </a>
+      )}
 
       <CatalogWall
         scenes={[scene]}

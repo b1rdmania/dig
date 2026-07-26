@@ -173,3 +173,35 @@
   margin: 0;
   line-height: 1.45;
 }
+
+.playRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-3);
+  border-top: 3px solid var(--scene-accent, var(--ink));
+  border-bottom: 1px solid var(--rule);
+  padding: var(--sp-4) 0;
+  margin-bottom: var(--sp-6);
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.playRow:hover .playLabel {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.playLabel {
+  font-weight: 600;
+  font-size: var(--fs-lg);
+  letter-spacing: -0.01em;
+}
+
+.playMeta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6f6d68;
+}

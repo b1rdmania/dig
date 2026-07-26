@@ -422,3 +422,115 @@ export async function getSceneWall(
     labels: wallLabels,
   };
 }
+
+// ---------------------------------------------------------------------------
+// getScenePlaylist — the scene as one pressed-play playlist
+// ---------------------------------------------------------------------------
+
+export interface ScenePlaylistRecord {
+  master_discogs_id: number;
+  title: string;
+  primary_artist_name: string | null;
+  year: number | null;
+  video_id: string;
+}
+
+export interface ScenePlaylist {
+  slug: string;
+  name: string;
+  video_count: number;
+  /** YouTube anonymous playlist over every record's first video. */
+  playlist_url: string | null;
+  records: ScenePlaylistRecord[];
+}
+
+const YOUTUBE_ID_RE =
+  /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/;
+
+/**
+ * Top scene-weighted masters across the scene's member labels, each paired
+ * with its first YouTube video. Per-label capped so one prolific label can't
+ * own the playlist, globally capped at `cap` (YouTube's anonymous
+ * watch_videos playlists silently truncate around 50 entries).
+ */
+export async function getScenePlaylist(
+  db: Kysely<Database>,
+  slug: string,
+  batchId: string,
+  opts: { cap?: number; perLabel?: number } = {},
+): Promise<ScenePlaylist | null> {
+  const scene = await getScene(db, slug, batchId);
+  if (!scene) return null;
+
+  const cap = opts.cap ?? 50;
+  const perLabel = opts.perLabel ?? 8;
+  const labelIds = scene.labels.map((l) => l.discogs_id);
+  if (labelIds.length === 0) {
+    return { slug: scene.slug, name: scene.name, video_count: 0, playlist_url: null, records: [] };
+  }
+
+  const rows = await sql<{
+    discogs_id: number;
+    title: string;
+    primary_artist_name: string | null;
+    year: number | null;
+    url: string;
+  }>`
+    WITH ranked AS (
+      SELECT
+        m.discogs_id,
+        m.title,
+        m.primary_artist_name,
+        m.year,
+        m.scene_weight,
+        ROW_NUMBER() OVER (
+          PARTITION BY m.primary_label_discogs_id
+          ORDER BY m.scene_weight DESC, m.year ASC NULLS LAST, m.discogs_id ASC
+        ) AS rn
+      FROM catalog.masters m
+      WHERE m.primary_label_discogs_id = ANY(${labelIds}::int[])
+        AND m.batch_id = ${batchId}
+    ),
+    vids AS (
+      SELECT DISTINCT ON (v.master_discogs_id)
+        v.master_discogs_id,
+        v.url
+      FROM catalog.master_videos_unified v
+      WHERE v.master_discogs_id IN (SELECT discogs_id FROM ranked WHERE rn <= ${perLabel})
+        AND (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
+      ORDER BY v.master_discogs_id, v.id ASC
+    )
+    SELECT r.discogs_id, r.title, r.primary_artist_name, r.year, v.url
+    FROM ranked r
+    JOIN vids v ON v.master_discogs_id = r.discogs_id
+    WHERE r.rn <= ${perLabel}
+    ORDER BY r.scene_weight DESC, r.year ASC NULLS LAST, r.discogs_id ASC
+    LIMIT ${cap}
+  `.execute(db);
+
+  const records: ScenePlaylistRecord[] = [];
+  for (const r of rows.rows) {
+    const m = YOUTUBE_ID_RE.exec(r.url);
+    if (!m) continue;
+    records.push({
+      master_discogs_id: r.discogs_id,
+      title: r.title,
+      primary_artist_name: r.primary_artist_name,
+      year: r.year,
+      video_id: m[1],
+    });
+  }
+
+  const playlistUrl =
+    records.length > 0
+      ? `https://www.youtube.com/watch_videos?video_ids=${records.map((r) => r.video_id).join(",")}`
+      : null;
+
+  return {
+    slug: scene.slug,
+    name: scene.name,
+    video_count: records.length,
+    playlist_url: playlistUrl,
+    records,
+  };
+}

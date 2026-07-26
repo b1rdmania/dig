@@ -5,23 +5,12 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { extractYouTubeId } from "@/lib/media";
 import { PageHeading } from "@/components/design";
+import { KEY_REQUEST_MAILTO } from "@/lib/keyRequest";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 const KEY_STORAGE = "dig.llm_beta.access_key";
 
-const KEY_REQUEST_MAILTO =
-  "mailto:andy@cherrygalore.com" +
-  `?subject=${encodeURIComponent("Dig: test the Dig LLM")}` +
-  `&body=${encodeURIComponent(
-    [
-      "Hi, I'm requesting access to the Dig beta to test it out.",
-      "",
-      "I'm not going to use this to rebuild my entire record collection, spam the API and burn all your credits. I know this is a demo release, the aim is getting Discogs to commission something properly, and you're paying for my API credits, so I'll use them respectfully.",
-      "",
-      "I'll send over feedback on what I like and dislike.",
-    ].join("\n"),
-  )}`;
 
 // Between real progress events, the single activity line rotates through
 // shop business so it never sits still. In persona, never technical.

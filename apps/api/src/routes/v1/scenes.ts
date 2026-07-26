@@ -3,6 +3,7 @@ import type { Database, Kysely } from "@dig/db";
 import {
   getScene,
   getSceneWall,
+  getScenePlaylist,
   listScenes,
   getBatchForTable,
 } from "@dig/domain";
@@ -107,6 +108,38 @@ export function registerScenesRoutes(app: FastifyInstance, db: Kysely<Database>)
       }
       return reply.send({
         wall,
+        meta: {
+          provenance: { source: "discogs", dump_date: dumpDate },
+        },
+      });
+    } catch (err) {
+      if (isPgTimeout(err)) return timeoutReply(reply);
+      throw err;
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /v1/scenes/:slug/playlist
+  // -------------------------------------------------------------------------
+  app.get("/v1/scenes/:slug/playlist", async (req, reply) => {
+    const slug = String((req.params as any).slug ?? "");
+    if (!SLUG_RE.test(slug)) {
+      return reply.status(400).send({
+        error: { code: "INVALID_REQUEST", message: "Invalid scene slug", details: null },
+      });
+    }
+    try {
+      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.masters");
+      const playlist = await withTimeout(db, SCENES_TIMEOUT_MS, (trx) =>
+        getScenePlaylist(trx, slug, batchId),
+      );
+      if (!playlist) {
+        return reply.status(404).send({
+          error: { code: "NOT_FOUND", message: `Scene '${slug}' not found`, details: null },
+        });
+      }
+      return reply.send({
+        playlist,
         meta: {
           provenance: { source: "discogs", dump_date: dumpDate },
         },
