@@ -42,11 +42,14 @@ export interface AppDeps {
 }
 
 // --- Rate-limit policy (single source of truth) ---
-// Anonymous (by IP): 180 req/min. Keyed (validated X-API-Key): 1000 req/min.
-// Alpha values — adjust based on production traffic patterns and keep
-// docs/rate-limit-policy.md in sync.
+// Anonymous (by IP): 400 req/min — browsing an entity page fires a burst of
+// fetches and the Ask Dig bag backfill adds ~50 more, so 180 pinched real
+// single-user sessions. Keyed (validated X-API-Key): 1000 req/min — the
+// dig-web SSR traffic rides this tier (all visitors share the web machine's
+// egress IP, so it must never fall to the anonymous bucket).
+// Keep docs/rate-limit-policy.md in sync.
 export const RATE_LIMITS = {
-  anonymous: 180,
+  anonymous: 400,
   keyed: 1000,
 } as const;
 

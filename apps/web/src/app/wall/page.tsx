@@ -54,7 +54,6 @@ export default async function WallPage({ searchParams }: Props) {
   return (
     <div className={styles.pageWrap}>
       <header className={styles.pageHeader}>
-        <div className={styles.eyebrow}>[ wall ] · catalog · v0.1</div>
         <h1 className={styles.heading}>The catalog, as a wall.</h1>
         <p className={styles.lede}>
           Every scene, every label, every release in scope. Strips read top-down,

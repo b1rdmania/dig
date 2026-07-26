@@ -3,7 +3,7 @@
   align-items: center;
   gap: var(--sp-2);
   max-width: var(--container-max);
-  margin: 0 auto;
+  margin: 0 auto 0 0;
   padding: var(--sp-2) var(--sp-4);
   border-bottom: 1px dashed var(--rule);
   font-family: var(--font-mono);

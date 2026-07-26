@@ -2,7 +2,7 @@
   text-align: center;
   padding: var(--sp-7) var(--container-pad) var(--sp-6);
   max-width: var(--container-max);
-  margin: 0 auto;
+  margin: 0 auto 0 0;
 }
 
 .tagline {

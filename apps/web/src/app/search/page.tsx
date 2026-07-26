@@ -33,7 +33,6 @@ export default async function SearchPage({ searchParams }: Props) {
     <div className={styles.page}>
       {!q && (
         <header className={styles.pageHeader}>
-          <div className={styles.eyebrow}>[ search ] · catalog · v0.2</div>
           <h1 className={styles.heading}>Search the catalog.</h1>
           <p className={styles.lede}>
             Look up a label, an artist, or a record. Or skip the box and{" "}

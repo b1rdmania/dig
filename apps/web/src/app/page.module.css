@@ -1,6 +1,6 @@
 .hero {
   max-width: var(--container-max);
-  margin: 0 auto var(--sp-5);
+  margin: 0 auto var(--sp-5) 0;
   padding: var(--sp-7) 0 var(--sp-3);
 }
 

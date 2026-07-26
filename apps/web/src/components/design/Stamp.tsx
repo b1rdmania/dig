@@ -7,16 +7,13 @@ interface Props {
 }
 
 /**
- * The bracketed inline tag — `[ MAIN ]`, `[ TIER 1 ]`, `[ LP ]`. All-caps
- * mono with literal square brackets that imply a typewritten stamp.
- * Used for inline metadata cues that don't deserve a full sticker.
+ * Inline metadata tag — `MAIN`, `TIER 1`, `LP`. Small all-caps text for
+ * inline cues that don't deserve a full sticker.
  */
 export function Stamp({ children, title }: Props) {
   return (
     <span className={styles.stamp} title={title}>
-      <span className={styles.bracket}>[</span>
       <span className={styles.body}>{children}</span>
-      <span className={styles.bracket}>]</span>
     </span>
   );
 }

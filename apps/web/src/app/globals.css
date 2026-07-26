@@ -37,12 +37,11 @@
    * (catalog numbers, the Ask Dig workings log). */
   --font-mono: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Söhne",
                "Inter", system-ui, sans-serif;
-  --font-mono-data: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular",
-               Menlo, Monaco, Consolas, monospace;
+  --font-mono-data: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Söhne",
                "Inter", system-ui, sans-serif;
-  --font-serif: "Iowan Old Style", "Charter", "Source Serif Pro", "Iowan",
-                Georgia, "Times New Roman", serif;
+  --font-serif: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Söhne",
+               "Inter", system-ui, sans-serif;
 
   /* Type scale */
   --fs-xs:   11px;

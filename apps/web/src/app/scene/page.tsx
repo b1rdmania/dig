@@ -63,7 +63,6 @@ export default async function ScenesIndexPage() {
   return (
     <div className={styles.page}>
       <header className={styles.pageHeader}>
-        <div className={styles.eyebrow}>[ scenes ] · v0.1</div>
         <h1 className={styles.heading}>Scenes.</h1>
         <p className={styles.lede}>
           Curated entry points to the catalog. Each scene gathers the labels

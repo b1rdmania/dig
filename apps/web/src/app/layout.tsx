@@ -1,7 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Suspense } from "react";
-import { IBM_Plex_Sans, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
-import { Nav } from "@/components/Nav";
+import { IBM_Plex_Sans } from "next/font/google";
 import { Footer } from "@/components/Footer";
 import "./globals.css";
 
@@ -12,20 +10,6 @@ const sans = IBM_Plex_Sans({
   display: "swap",
 });
 
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-mono-body",
-  display: "swap",
-});
-
-const serif = Source_Serif_4({
-  subsets: ["latin"],
-  weight: ["400"],
-  style: ["italic", "normal"],
-  variable: "--font-serif-body",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "dig — house and techno, 1988–2008",
@@ -70,26 +54,22 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${sans.variable} ${mono.variable} ${serif.variable}`}
+      className={sans.variable}
       style={{
-        // Bind next/font CSS variables to the design-system aliases so any
-        // `var(--font-sans)` reference picks up the loaded webfont.
-        // Stacks fall back to the system fonts already declared in
-        // globals.css if the webfont is still loading.
+        // One family. Every design-system alias resolves to the sans stack;
+        // --font-mono-data (system monospace) survives solely for the Ask
+        // Dig workings log. No serif, no mono webfonts.
         ["--font-sans" as string]:
           `var(--font-sans-body), -apple-system, BlinkMacSystemFont, "Söhne", Inter, system-ui, sans-serif`,
         ["--font-mono" as string]:
           `var(--font-sans-body), -apple-system, BlinkMacSystemFont, "Söhne", Inter, system-ui, sans-serif`,
         ["--font-mono-data" as string]:
-          `var(--font-mono-body), ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace`,
+          `ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace`,
         ["--font-serif" as string]:
-          `var(--font-serif-body), "Iowan Old Style", Charter, Georgia, "Times New Roman", serif`,
+          `var(--font-sans-body), -apple-system, BlinkMacSystemFont, "Söhne", Inter, system-ui, sans-serif`,
       }}
     >
       <body>
-        <Suspense fallback={null}>
-          <Nav />
-        </Suspense>
         <main>
           {children}
         </main>

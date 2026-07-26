@@ -1,6 +1,6 @@
 .page {
   max-width: var(--container-max);
-  margin: 0 auto;
+  margin: 0 auto 0 0;
   padding: 0;
   background: var(--paper);
   color: var(--ink);

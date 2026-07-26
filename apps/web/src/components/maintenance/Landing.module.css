@@ -1,6 +1,6 @@
 .maintenance {
   max-width: var(--container-max);
-  margin: 0 auto;
+  margin: 0 auto 0 0;
   padding: clamp(3rem, 8vw, 5rem) 0 var(--sp-8);
   position: relative;
 }
