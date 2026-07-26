@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Dig. Pilot.",
     description: "Three ways to try it.",
-    images: [{ url: "/api/og?kind=pilot&v=2", width: 1200, height: 630, alt: "Dig. Pilot." }],
+    images: [{ url: "/api/og?kind=home&v=3", width: 1200, height: 630, alt: "Dig. Pilot." }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Dig. Pilot.",
     description: "Three ways to try it.",
-    images: ["/api/og?kind=pilot&v=2"],
+    images: ["/api/og?kind=home&v=3"],
   },
 };
 
