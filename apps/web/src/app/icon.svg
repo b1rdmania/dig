@@ -1,14 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <radialGradient id="g" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#2a2018"/>
-      <stop offset="55%" stop-color="#160f08"/>
-      <stop offset="100%" stop-color="#0d0a07"/>
-    </radialGradient>
-  </defs>
-  <rect width="64" height="64" rx="10" fill="#0d0a07"/>
-  <circle cx="32" cy="32" r="22" fill="url(#g)" stroke="#8b5e3c" stroke-opacity=".35"/>
-  <circle cx="32" cy="32" r="8" fill="#8b5e3c"/>
-  <circle cx="32" cy="32" r="2" fill="#f2ece0"/>
+  <rect width="64" height="64" rx="10" fill="#f2ece0"/>
+  <!-- leaning record peeking out the back -->
+  <circle cx="40" cy="26" r="15" fill="#1a1a1a"/>
+  <circle cx="40" cy="26" r="5" fill="#f2ece0"/>
+  <circle cx="40" cy="26" r="1.8" fill="#1a1a1a"/>
+  <!-- record spines standing in the crate -->
+  <rect x="15" y="16" width="5" height="20" rx="1" fill="#1a1a1a" transform="rotate(-8 17.5 26)"/>
+  <rect x="23" y="14" width="5" height="22" rx="1" fill="#b3372f" transform="rotate(-3 25.5 25)"/>
+  <rect x="31" y="15" width="5" height="21" rx="1" fill="#1a1a1a" transform="rotate(3 33.5 25)"/>
+  <!-- milk crate -->
+  <path d="M9 32 L55 32 L51 56 L13 56 Z" fill="#1a1a1a"/>
+  <!-- lattice cut-outs -->
+  <g fill="#f2ece0">
+    <rect x="16" y="38" width="7" height="10"/>
+    <rect x="28" y="38" width="7" height="10"/>
+    <rect x="40" y="38" width="7" height="10"/>
+  </g>
 </svg>
-
