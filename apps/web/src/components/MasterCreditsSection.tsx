@@ -106,9 +106,6 @@ export async function MasterCreditsSection({ masterDiscogsId }: Props) {
         <h2 className={styles.heading}>
           Credits ({totalTrackCredits + totalReleaseCredits})
         </h2>
-        <span className={styles.subhead}>
-          who played, mixed, remixed, engineered
-        </span>
       </header>
 
       {positionOrder.length > 0 && (
@@ -132,7 +129,7 @@ export async function MasterCreditsSection({ masterDiscogsId }: Props) {
 
       {releaseRows.length > 0 && (
         <div className={styles.releaseBlock}>
-          <div className={styles.releaseHeading}>Whole release</div>
+          <div className={styles.releaseHeading}>Release</div>
           <ArtistList rows={releaseRows} />
         </div>
       )}
