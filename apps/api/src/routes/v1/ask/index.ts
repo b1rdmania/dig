@@ -234,7 +234,14 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         provider: PROVIDER,
         apiKey,
         log,
-        onEvent: (e) => write({ type: "status", label: progressLabel(e) }),
+        onEvent: (e) => write({
+          type: "status",
+          label: progressLabel(e),
+          // Raw workings for the UI's drop-down — actual tool + args.
+          detail: e.type === "round"
+            ? `round ${e.round + 1}`
+            : `${e.name} ${JSON.stringify(e.input ?? {})}`.slice(0, 160),
+        }),
       });
 
       const boundMedia = bindMediaToCitations(dedupeMedia(media), answer);

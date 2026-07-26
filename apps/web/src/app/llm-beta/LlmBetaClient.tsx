@@ -9,6 +9,23 @@ import styles from "./page.module.css";
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 const KEY_STORAGE = "dig.llm_beta.access_key";
 
+// Between real progress events, the single activity line rotates through
+// shop business so it never sits still. In persona, never technical.
+const FILLER_PHRASES = [
+  "Riffling the crates…",
+  "Checking the back room…",
+  "Blowing dust off a sleeve…",
+  "Squinting at the runout groove…",
+  "Half-listening on the shop headphones…",
+  "Flipping past the dividers…",
+  "Checking the wants list…",
+  "Cueing one up…",
+  "Muttering about reissues…",
+  "Wiping the stylus…",
+  "Straightening the racks…",
+  "Consulting the ledger under the till…",
+];
+
 interface MediaItem {
   discogs_id: number;
   title: string;
@@ -100,6 +117,19 @@ export function LlmBetaClient() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [activity, setActivity] = useState<string[]>([]);
+  const [activityLine, setActivityLine] = useState<string>("");
+  const fillerIndexRef = useRef(0);
+
+  // Rotate the single activity line through filler phrases while waiting;
+  // real progress events (in the stream handler) overwrite it immediately.
+  useEffect(() => {
+    if (!loading) return;
+    const id = window.setInterval(() => {
+      fillerIndexRef.current = (fillerIndexRef.current + 1) % FILLER_PHRASES.length;
+      setActivityLine(FILLER_PHRASES[fillerIndexRef.current]);
+    }, 2600);
+    return () => window.clearInterval(id);
+  }, [loading]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -140,6 +170,8 @@ export function LlmBetaClient() {
     const nextMessages: Message[] = [...messages, { role: "user", content: q }];
     setMessages(nextMessages);
     setInput("");
+    setActivityLine(FILLER_PHRASES[0]);
+    fillerIndexRef.current = 0;
     setLoading(true);
 
     try {
@@ -187,6 +219,7 @@ export function LlmBetaClient() {
         let evt: {
           type: "status" | "result" | "error";
           label?: string;
+          detail?: string;
           answer?: string;
           media?: MediaItem[];
           mode?: ResponseMode;
@@ -200,7 +233,9 @@ export function LlmBetaClient() {
           return;
         }
         if (evt.type === "status" && evt.label) {
-          setActivity((prev) => (prev[prev.length - 1] === evt.label ? prev : [...prev, evt.label!]));
+          const logLine = evt.detail ?? evt.label;
+          setActivity((prev) => (prev[prev.length - 1] === logLine ? prev : [...prev, logLine]));
+          setActivityLine(evt.label);
         } else if (evt.type === "result") {
           sawTerminal = true;
           setMessages((prev) => [...prev, {
@@ -396,18 +431,16 @@ export function LlmBetaClient() {
 
             {loading && (
               <div className={styles.assistantMsg}>
-                {activity.length === 0 ? (
-                  <p className={styles.thinking}>hold on...</p>
-                ) : (
-                  activity.slice(-4).map((label, i, shown) => (
-                    <p
-                      key={`${label}-${i}`}
-                      className={styles.thinking}
-                      style={{ opacity: i === shown.length - 1 ? 1 : 0.45 }}
-                    >
-                      {label}
-                    </p>
-                  ))
+                <p className={styles.activityLine}>{activityLine || FILLER_PHRASES[0]}</p>
+                {activity.length > 0 && (
+                  <details className={styles.workings}>
+                    <summary>workings</summary>
+                    <div className={styles.workingsLog}>
+                      {activity.map((label, i) => (
+                        <span key={`${label}-${i}`} className={styles.workingsLine}>{label}</span>
+                      ))}
+                    </div>
+                  </details>
                 )}
               </div>
             )}

@@ -40,12 +40,14 @@ GROUNDING — hard rules:
 3. If a tool returns nothing, say so like you'd say it across the counter: "not in here". Don't pad the gap with general knowledge unless you flag it — "off the top of my head, don't quote me".
 4. The stock is scoped on purpose. Rock, jazz, hip-hop, post-2008 EDM — wrong shop. Adjacent stuff (IDM, electro, jungle, Italo, minimal) is in; check before assuming either way.
 5. Never mention tools, databases, catalogs-as-software, or searching. You just know your stock — look things up silently and talk about the records.
+6. NEVER narrate looking things up. No "one sec", "let me check", "be right back", "here we go", "pulling those now" — none of it, ever. The customer never sees you fetch. If you need to look, call the tool and say nothing. Any text you write IS the finished answer: records, opinions, links. If a sentence isn't part of the final answer, don't write it.
 
 FINDING THINGS (never spoken aloud):
 
 Match the digging to the question. A simple ask — "best records on X", one named artist or record — needs one or two lookups, answer, done. Save the multi-hop digging for questions that actually need the trail. The customer is standing at the counter; don't disappear into the back room for five minutes.
 
 - Named artist/label/release → search_catalog to resolve the ID, then get_artist / get_label / get_master.
+- Era/region/sound asks ("Italian proto-trance around '95") → search_catalog with FILTERS, not keyword guesses: style + country + year_min/year_max, empty or minimal query. One filtered search beats five keyword stabs. Results come back curation-weighted — the top ones are the good ones.
 - "Recommend music by X" / discography → get_artist_masters. Always — the video rail depends on it.
 - "What's good on label Y" → get_label_essentials FIRST (core run + related-label directions). get_label_releases only if essentials is empty.
 - Orienting yourself in a sound or era → list_scenes / get_scene, silently.
@@ -211,9 +213,12 @@ async function callOpenRouter(params: {
         max_tokens: params.maxTokens,
         messages: toOpenAiMessages(params.system, params.messages),
         ...(params.tools.length > 0 ? { tools: toOpenAiTools(params.tools) } : {}),
-        // Route to the fastest available provider for the model — latency is
-        // the product constraint here, the loop already multiplies it by 3-5x.
+        // Route to the fastest available provider. Keep the params minimal:
+        // Moonshot's own endpoint rejects frequency_penalty, and k3 has no
+        // full-precision hosts so a quantization pin 404s. (The repetition
+        // degeneration that prompted both was k2.5-specific.)
         provider: { sort: "throughput" },
+        temperature: 0.6,
       }),
       signal: controller.signal,
     });
@@ -394,16 +399,37 @@ export async function runAgenticLoop(params: {
     ...messages,
     {
       role: "user",
-      content: "Based on what you've found so far, please give your final answer.",
+      content:
+        "STOP LOOKING. Write the finished answer NOW using only what you already found. " +
+        "Recommend the records with their [Title](https://app.dig.baby/master/ID) links. " +
+        "Do not say you will check, look, dig, or be back — there are no more lookups. " +
+        "If what you found is thin, say plainly what you do have and leave it there.",
     },
   ];
   const finalCallStart = Date.now();
   const finalResp = await callModel(finalMessages, []);
   log("ask:final_call", { elapsed_ms: Date.now() - finalCallStart, stop_reason: finalResp.stop_reason });
   const textBlock = finalResp.content.find((b) => b.type === "text");
+  let answer = String(textBlock?.text ?? "").trim();
+
+  // Deterministic last resort: if the model still won't write an answer but
+  // the tools DID find records, hand those over rather than shrugging.
+  if (!answer) {
+    const masters = evidenceCollector.filter((e) => e.type === "master").slice(0, 6);
+    if (masters.length > 0) {
+      answer = [
+        "Lost the thread on that one, but here's what I pulled out along the way — have a listen and tell me which direction to dig:",
+        "",
+        ...masters.map((m) => `[${m.title}](${m.dig_url})`),
+      ].join("\n");
+    } else {
+      answer = "That one's sent me down too many aisles — ask it a bit narrower and I'll pull the right crate.";
+    }
+  }
+
   const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : "timeout_degraded";
   return {
-    answer: String(textBlock?.text ?? "").trim() || "That one's sent me down too many aisles — ask it a bit narrower and I'll pull the right crate.",
+    answer,
     model: usedModel,
     tool_calls: toolCallCount,
     media: mediaCollector,
