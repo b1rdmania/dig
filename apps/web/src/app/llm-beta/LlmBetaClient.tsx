@@ -521,7 +521,7 @@ export function LlmBetaClient() {
                   inputRef.current?.scrollIntoView({ block: "nearest" });
                 }, 80);
               }}
-              placeholder="Ask about any artist, release, label, or genre..."
+              placeholder="What are you after?"
               rows={1}
               disabled={loading}
               autoCapitalize="sentences"
