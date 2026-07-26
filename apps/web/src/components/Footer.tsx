@@ -14,6 +14,7 @@ export function Footer() {
         <nav className={styles.links} aria-label="Footer">
           <Link href="/" prefetch={false} className={styles.link}>Home</Link>
           <Link href="/faq" prefetch={false} className={styles.link}>FAQ</Link>
+          <Link href="/progress" prefetch={false} className={styles.link}>How we built it</Link>
           <a
             href="https://github.com/b1rdmania/dig"
             target="_blank"

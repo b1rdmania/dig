@@ -39,12 +39,27 @@
   text-decoration: underline;
 }
 
+.intro {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.introText {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.block {
+  display: block;
+  margin-top: 0.6rem;
+}
+
 .social {
   display: flex;
-  gap: 1rem;
-  border-top: 1px solid var(--line);
-  margin-top: 1.5rem;
-  padding: 1rem 0 2rem;
+  gap: 0.8rem;
+  align-items: center;
 }
 
 .social a {

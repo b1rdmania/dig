@@ -23,8 +23,10 @@ const FAQS: Array<{ q: string; a: React.ReactNode }> = [
         it. I built it as an experiment in what the fun end of big open data
         looks like, which is really something Discogs should be doing
         themselves in 2026. They should probably pay me to build the proper
-        pilot. The long version of the build is at{" "}
-        <a href="/progress">how we built it</a>.
+        pilot.
+        <span className={styles.block}>
+          The long version of the build is at <a href="/progress">how we built it</a>.
+        </span>
       </>
     ),
   },
@@ -57,15 +59,8 @@ export default function FaqPage() {
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>FAQ</h1>
-      <dl className={styles.list}>
-        {FAQS.map(({ q, a }) => (
-          <div key={q} className={styles.item}>
-            <dt className={styles.q}>{q}</dt>
-            <dd className={styles.a}>{a}</dd>
-          </div>
-        ))}
-      </dl>
-
+      <div className={styles.intro}>
+        <p className={styles.introText}>Hi, I&apos;m Andy. Follow me here:</p>
       <div className={styles.social}>
         <a href="https://github.com/b1rdmania" target="_blank" rel="noreferrer" aria-label="GitHub">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden>
@@ -78,6 +73,16 @@ export default function FaqPage() {
           </svg>
         </a>
       </div>
+      </div>
+      <dl className={styles.list}>
+        {FAQS.map(({ q, a }) => (
+          <div key={q} className={styles.item}>
+            <dt className={styles.q}>{q}</dt>
+            <dd className={styles.a}>{a}</dd>
+          </div>
+        ))}
+      </dl>
+
     </div>
   );
 }
