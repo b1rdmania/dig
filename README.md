@@ -12,9 +12,9 @@ Discogs publishes its entire catalog every month as CC0 XML, around 200 million 
 
 ## Three ways in
 
-- **Search** — [app.dig.baby](https://app.dig.baby). Works like Discogs: artists, labels, records. The difference: every record plays, and each label carries a curated core run of its essential records.
-- **AI chat** — [/llm-beta](https://app.dig.baby/llm-beta), key-gated beta. An agentic loop over the catalog: every record it names comes from a tool call in that turn, links to its page, and renders its video. No tool result, no claim. Sessions bag up into one YouTube playlist plus a Discogs marketplace link per record.
-- **MCP** — add `https://dig-mcp.fly.dev/mcp` as a custom connector in Claude. Claude can then search the catalog, walk the credit and remix graph, pull label essentials, and build session playlists. No code, no API key.
+- **Search**: [app.dig.baby](https://app.dig.baby). Works like Discogs: artists, labels, records. The difference: every record plays, and each label carries a curated core run of its essential records.
+- **AI chat**: [/llm-beta](https://app.dig.baby/llm-beta), key-gated beta. An agentic loop over the catalog: every record it names comes from a tool call in that turn, links to its page, and renders its video. No tool result, no claim. Sessions bag up into one YouTube playlist plus a Discogs marketplace link per record.
+- **MCP**: add `https://dig-mcp.fly.dev/mcp` as a custom connector in Claude. Claude can then search the catalog, walk the credit and remix graph, pull label essentials, and build session playlists. No code, no API key.
 
 ## What's underneath
 
