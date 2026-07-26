@@ -277,7 +277,7 @@ async function LabelContent({ id }: { id: string }) {
         {ed?.blurb && (
           <>
             <div className={styles.blurb}>“{ed.blurb}”</div>
-            <div className={styles.blurbAttrib}>—— editorial · dig</div>
+            <div className={styles.blurbAttrib}>editorial · dig</div>
           </>
         )}
 

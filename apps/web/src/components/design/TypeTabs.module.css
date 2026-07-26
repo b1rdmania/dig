@@ -9,7 +9,7 @@
   margin: var(--sp-4) 0 var(--sp-3);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 

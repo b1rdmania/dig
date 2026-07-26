@@ -42,7 +42,7 @@
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-bottom: var(--sp-2);
   opacity: 0.9;
@@ -82,7 +82,7 @@
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.85;
 }

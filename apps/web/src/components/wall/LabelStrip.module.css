@@ -74,8 +74,8 @@
 
 .roleBadge {
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
+  font-size: 11px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-soft);
   background: color-mix(in srgb, var(--strip-accent) 15%, var(--paper));
@@ -95,7 +95,7 @@
   display: flex;
   gap: var(--sp-2);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--ink-soft);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -147,7 +147,7 @@
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .full .releaseYear {
@@ -179,7 +179,7 @@
   font-family: var(--font-sans);
   font-style: italic;
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -192,7 +192,7 @@
 .empty {
   padding: var(--sp-3);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--ink-faint);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -205,10 +205,10 @@
 
 /* --- footer --- */
 .footer {
-  border-top: 1px dashed var(--rule);
+  border-top: 1px solid var(--rule);
   padding: var(--sp-2) var(--sp-3);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.06em;

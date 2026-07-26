@@ -14,7 +14,7 @@
   color: var(--ink-soft);
   padding: var(--sp-2) var(--sp-3);
   background: var(--surface);
-  border: 1px dashed var(--rule);
+  border: 1px solid var(--rule);
   margin-bottom: var(--sp-3);
   display: inline-block;
   letter-spacing: 0.04em;

@@ -38,12 +38,12 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--ink-soft);
   letter-spacing: 0.04em;
   margin-top: var(--sp-1);
   padding-top: var(--sp-1);
-  border-top: 1px dashed var(--rule);
+  border-top: 1px solid var(--rule);
 }
 
 @media (max-width: 900px) {
@@ -94,8 +94,8 @@
 
 .sceneAxis {
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: 11px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-soft);
   background: color-mix(in srgb, var(--scene-accent) 12%, var(--paper));
@@ -118,7 +118,7 @@
   gap: var(--sp-2);
   align-items: center;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.06em;

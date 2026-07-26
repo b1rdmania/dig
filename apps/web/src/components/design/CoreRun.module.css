@@ -62,8 +62,8 @@
 
 .pick {
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
+  font-size: 11px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink);
   background: color-mix(in oklab, var(--paper) 70%, var(--accent, var(--ink)) 30%);
@@ -78,7 +78,7 @@
   align-items: baseline;
   gap: 6px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--ink-soft);
   letter-spacing: 0.04em;
   text-transform: uppercase;

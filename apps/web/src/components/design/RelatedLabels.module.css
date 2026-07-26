@@ -56,9 +56,9 @@
 
 .dirLabel {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   color: var(--ink-soft);
   font-weight: 600;
 }
@@ -90,7 +90,7 @@
   display: flex;
   gap: var(--sp-2);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--ink-faint);
   letter-spacing: 0.06em;
   text-transform: uppercase;

@@ -3,17 +3,17 @@ import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "Dig. Pilot.",
-  description: "Two ways to try it.",
+  description: "Three ways to try it.",
   robots: { index: false, follow: false },
   openGraph: {
     title: "Dig. Pilot.",
-    description: "Two ways to try it.",
+    description: "Three ways to try it.",
     images: [{ url: "/api/og?kind=home", width: 1200, height: 630, alt: "Dig. Beta." }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Dig. Pilot.",
-    description: "Two ways to try it.",
+    description: "Three ways to try it.",
     images: ["/api/og?kind=home"],
   },
 };
@@ -26,11 +26,21 @@ export default function RussPage() {
       <h1 className={styles.title}>Dig. Pilot.</h1>
       <p className={styles.lede}>
         80,000 house and techno records, 1985–2008, built on Discogs open data.
-        Two ways to try it.
+        Three ways to try it.
       </p>
 
       <section className={styles.section}>
-        <h2 className={styles.heading}>1 · On the web</h2>
+        <h2 className={styles.heading}>1 · Search it</h2>
+        <p>
+          <a href="https://app.dig.baby/">app.dig.baby</a> works like Discogs:
+          search an artist, a label, a record. The difference: every record
+          plays — YouTube is wired straight into the pages — and each label
+          carries a curated core run of its essential records.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.heading}>2 · Chat on the web</h2>
         <p>
           Open <a href="https://app.dig.baby/llm-beta">app.dig.baby/llm-beta</a>.
           Enter this key:
@@ -49,7 +59,7 @@ export default function RussPage() {
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.heading}>2 · In the Claude app</h2>
+        <h2 className={styles.heading}>3 · In the Claude app</h2>
         <p>
           <strong>Settings → Connectors → Add custom connector.</strong> Paste
           this URL. Leave the rest blank.

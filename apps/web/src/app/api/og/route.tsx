@@ -304,7 +304,7 @@ function renderHome(): ImageResponse {
         <div
           style={{
             color: "#1a1a1a",
-            fontSize: "200px",
+            fontSize: "240px",
             lineHeight: 1,
             letterSpacing: "-0.03em",
             fontWeight: 600,
@@ -314,22 +314,11 @@ function renderHome(): ImageResponse {
         </div>
         <div
           style={{
-            color: "#8a8578",
-            fontSize: "200px",
-            lineHeight: 1,
-            letterSpacing: "-0.03em",
-            fontWeight: 600,
-          }}
-        >
-          Beta.
-        </div>
-        <div
-          style={{
             position: "absolute",
             bottom: "60px",
             left: "80px",
             color: "#444444",
-            fontSize: "28px",
+            fontSize: "44px",
           }}
         >
           House and techno, 1988–2008.
