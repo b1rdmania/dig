@@ -359,15 +359,14 @@ export function LlmBetaClient() {
       return;
     }
 
-    // Backfill YouTube links and proper titles for cited records that didn't
-    // come with media (text-cited masters only carry an ID).
+    // Backfill canonical titles for every row (media rows carry YouTube video
+    // captions like "Mr. Fingers - Washing Machine [TX127]", not the record's
+    // name) and YouTube links for text-cited rows that came without one.
     await Promise.all(rows.map(async (r) => {
-      const needsName = r.artist === null;
       const needsVideo = !r.ytId;
-      if (!needsName && !needsVideo) return;
       try {
         const [detailRes, videoRes] = await Promise.all([
-          needsName ? fetch(`${API_URL}/v1/masters/${r.id}`) : Promise.resolve(null),
+          fetch(`${API_URL}/v1/masters/${r.id}`),
           needsVideo ? fetch(`${API_URL}/v1/masters/${r.id}/videos?limit=3`) : Promise.resolve(null),
         ]);
         if (detailRes?.ok) {
@@ -446,6 +445,9 @@ export function LlmBetaClient() {
       {hasKey && (
         <div className={styles.chatShell}>
           <div className={styles.thread}>
+            {messages.length === 0 && !loading && (
+              <p className={styles.thinking}>Go on then — an artist, a label, a sound. Ask.</p>
+            )}
             {messages.map((m, i) => (
               <div key={i} className={m.role === "user" ? styles.userMsg : styles.assistantMsg}>
                 {m.role === "user" ? (

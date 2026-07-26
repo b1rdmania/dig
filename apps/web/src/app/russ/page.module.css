@@ -1,0 +1,53 @@
+.page {
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto 0 0;
+  min-height: calc(100dvh - 160px);
+}
+
+.title {
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 400;
+  line-height: 1;
+  margin: 0.5rem 0 1rem;
+}
+
+.lede {
+  font-size: 1rem;
+  color: var(--ink-soft, var(--ink));
+  line-height: 1.55;
+  margin-bottom: 1.5rem;
+}
+
+.section {
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  margin-bottom: 1.6rem;
+}
+
+.section p {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0 0 0.75rem;
+}
+
+.heading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.6rem;
+}
+
+.key {
+  font-family: var(--font-mono-data, monospace);
+  font-size: 0.9rem;
+  border: 1px solid var(--line);
+  padding: 0.5rem 0.7rem;
+  user-select: all;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.section a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

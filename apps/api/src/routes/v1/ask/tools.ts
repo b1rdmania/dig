@@ -16,6 +16,9 @@ import {
   getScene,
   getLabelCoreRun,
   getLabelRelated,
+  getArtistRuleACredits,
+  getArtistCollaborators,
+  getArtistGroupsAndMembers,
 } from "@dig/domain";
 import type { MediaItem, EvidenceItem } from "./types.js";
 import { isAllowedMasterId, INVALID_MASTER_ID_ERROR } from "./binding.js";
@@ -138,6 +141,45 @@ export const TOOLS = [
         },
       },
       required: ["slug"],
+    },
+  },
+  {
+    name: "get_artist_credits",
+    description:
+      "An artist's credit work on in-scope masters — remixes, production, mixing, writing, engineering — including credits under their aliases. One row per master with roles and per-track lines. role accepts a family (remix, produce, mix, master, write, vocal, engineer) or an exact role. With role=remix, masters where the artist is the headline act are excluded, so the result is 'remixes they did for OTHERS'. The tool for 'what did X remix' and for going deeper on an artist's fingerprints.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        discogs_id: { type: "number", description: "Discogs artist ID" },
+        role: { type: "string", description: "Role family (remix, produce, mix, master, write, vocal, engineer) or exact role. Omit for all." },
+        limit: { type: "number", description: "Max masters (1–50, default 20)" },
+      },
+      required: ["discogs_id"],
+    },
+  },
+  {
+    name: "get_artist_collaborators",
+    description:
+      "An artist's closest collaborators from the credit graph: people who appear on the same in-scope masters (across all the artist's aliases), with shared-record counts and roles. The tool for 'who did X work with' and for finding allied names to dig into.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        discogs_id: { type: "number", description: "Discogs artist ID" },
+        limit: { type: "number", description: "Max collaborators (1–30, default 10)" },
+      },
+      required: ["discogs_id"],
+    },
+  },
+  {
+    name: "get_artist_groups",
+    description:
+      "An artist's group/member edges: groups they belong to, members (if the artist IS a group), and bandmates — each with in-scope master counts. The tool for aliases and 'is X part of Y' (e.g. Fingers Inc. ↔ Larry Heard).",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        discogs_id: { type: "number", description: "Discogs artist ID" },
+      },
+      required: ["discogs_id"],
     },
   },
 ];
@@ -475,6 +517,74 @@ export async function executeTool(
           blurb: b.blurb,
         })),
         dig_url: `https://app.dig.baby/scene/${scene.slug}`,
+      };
+    }
+
+    if (name === "get_artist_credits") {
+      const id = Number(input.discogs_id);
+      const role = input.role ? String(input.role) : null;
+      const limit = Math.min(Math.max(Number(input.limit ?? 20), 1), 50);
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const isRemixRole = (role ?? "").toLowerCase() === "remix";
+      const result = await getArtistRuleACredits(db, id, batchId, {
+        limit,
+        roleFilter: role,
+        includeAliases: true,
+        excludeSelfPrimary: isRemixRole,
+      });
+      for (const l of result.links.slice(0, 20)) {
+        allowedMasterIds.add(l.master_discogs_id);
+        evidenceCollector.push({
+          type: "master",
+          discogs_id: l.master_discogs_id,
+          title: l.master_title ?? `Master ${l.master_discogs_id}`,
+          dig_url: `https://app.dig.baby/master/${l.master_discogs_id}`,
+        });
+      }
+      return {
+        credits: result.links.map((l) => ({
+          master_discogs_id: l.master_discogs_id,
+          title: l.master_title,
+          year: l.master_year,
+          primary_artist: l.primary_artist_name,
+          primary_label: l.primary_label_name,
+          roles: l.roles,
+          dig_url: `https://app.dig.baby/master/${l.master_discogs_id}`,
+        })),
+        has_more: result.pagination?.has_more ?? false,
+      };
+    }
+
+    if (name === "get_artist_collaborators") {
+      const id = Number(input.discogs_id);
+      const limit = Math.min(Math.max(Number(input.limit ?? 10), 1), 30);
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const result = await getArtistCollaborators(db, id, batchId, { limit });
+      return {
+        collaborators: result.collaborators.map((c) => ({
+          discogs_id: c.discogs_id,
+          name: c.name,
+          masters_together: c.masters_together,
+          roles: c.roles,
+          dig_url: `https://app.dig.baby/artist/${c.discogs_id}`,
+        })),
+      };
+    }
+
+    if (name === "get_artist_groups") {
+      const id = Number(input.discogs_id);
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const result = await getArtistGroupsAndMembers(db, id, batchId);
+      const edge = (e: { discogs_id: number; name: string | null; master_count: number }) => ({
+        discogs_id: e.discogs_id,
+        name: e.name,
+        master_count: e.master_count,
+        dig_url: `https://app.dig.baby/artist/${e.discogs_id}`,
+      });
+      return {
+        groups: result.groups.map(edge),
+        members: result.members.map(edge),
+        bandmates: result.bandmates.map(edge),
       };
     }
 

@@ -38,13 +38,17 @@ GROUNDING — hard rules:
 1. Every concrete claim about an artist, label, release, year, or credit MUST come from a tool result you obtained THIS turn. If you didn't look it up, you don't know it.
 2. Every artist, label, or master you name must have been returned by a tool call this turn. Never invent IDs, titles, or years.
 3. If a tool returns nothing, say so like you'd say it across the counter: "not in here". Don't pad the gap with general knowledge unless you flag it — "off the top of my head, don't quote me".
+3a. Leaps start in your head and end on the shelf. Thinking of an artist, label, or record the customer didn't mention is exactly what you're for — then check the stock for it before recommending. If it's in, link it like anything else; if it's not, you can still name it as a pointer, flagged honestly ("not one of mine, but that's the thread").
 4. The stock is scoped on purpose. Rock, jazz, hip-hop, post-2008 EDM — wrong shop. Adjacent stuff (IDM, electro, jungle, Italo, minimal) is in; check before assuming either way.
 5. Never mention tools, databases, catalogs-as-software, or searching. You just know your stock — look things up silently and talk about the records.
 6. NEVER narrate looking things up. No "one sec", "let me check", "be right back", "here we go", "pulling those now" — none of it, ever. The customer never sees you fetch. If you need to look, call the tool and say nothing. Any text you write IS the finished answer: records, opinions, links. If a sentence isn't part of the final answer, don't write it.
+7. Not every turn is a lookup. When the customer pushes back, complains, corrects you, or steers ("none of these are trippy", "that's not what I meant") — that's conversation. Answer it in voice: own the miss, sharpen your read of what they want, and re-aim. NEVER respond to feedback with silence or a brush-off; silence across the counter is how you lose a customer.
 
 FINDING THINGS (never spoken aloud):
 
 Match the digging to the question. A simple ask — "best records on X", one named artist or record — needs one or two lookups, answer, done. Save the multi-hop digging for questions that actually need the trail. The customer is standing at the counter; don't disappear into the back room for five minutes.
+
+When they ask to go DEEPER on an artist — allied stuff, engineers, the weird end — you have two sources and you should use both. The credit graph (get_artist_credits, get_artist_collaborators, get_artist_groups) gives you the documented connections: aliases, remix work, who's actually on the records. And your own knowledge of the scene gives you the leaps a real shop owner makes — the protégé, the label that carried the torch, the record that answers the itch from a different city. Leaps are welcome and encouraged WHEN they're connected: say why this record follows from where the conversation is ("same lineage, pushed further out"), not just that it's canon from the same decade. A list of famous records with no thread back to what the customer asked is the failure mode — not the leap itself.
 
 - Named artist/label/release → search_catalog to resolve the ID, then get_artist / get_label / get_master.
 - Era/region/sound asks ("Italian proto-trance around '95") → search_catalog with FILTERS, not keyword guesses: style + country + year_min/year_max, empty or minimal query. One filtered search beats five keyword stabs. Results come back curation-weighted — the top ones are the good ones.
@@ -314,11 +318,26 @@ export async function runAgenticLoop(params: {
 
   log("ask:loop_start", { model: params.model, history_turns: params.history.length, question_len: params.question.length });
 
+  // When the loop runs out of road (deadline or rounds) and the model still
+  // hasn't written an answer, hand over whatever the tools actually found
+  // rather than shrugging.
+  const evidenceHandover = (): string => {
+    const masters = evidenceCollector.filter((e) => e.type === "master").slice(0, 6);
+    if (masters.length > 0) {
+      return [
+        "Lost the thread on that one, but here's what I pulled out along the way — have a listen and tell me which direction to dig:",
+        "",
+        ...masters.map((m) => `[${m.title}](${m.dig_url})`),
+      ].join("\n");
+    }
+    return "That one's sent me down too many aisles — ask it a bit narrower and I'll pull the right crate.";
+  };
+
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     if (Date.now() > deadline) {
       log("ask:deadline_exceeded", { round, tool_calls: toolCallCount });
       const mode: ResponseMode = evidenceCollector.length > 0 ? "timeout_degraded" : "grounded_empty";
-      return { answer: "That one's sent me down too many aisles — ask it a bit narrower and I'll pull the right crate.", model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode };
+      return { answer: evidenceHandover(), model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode };
     }
 
     const callStart = Date.now();
@@ -340,7 +359,7 @@ export async function runAgenticLoop(params: {
 
     if (response.stop_reason === "end_turn" || response.stop_reason === "max_tokens") {
       const textBlock = response.content.find((b) => b.type === "text");
-      const answer = String(textBlock?.text ?? "").trim() || "Not finding that in here. Have a flick through the shelves yourself — or ask me something narrower.";
+      const answer = String(textBlock?.text ?? "").trim() || "Go on — say that again for me. What is it you're actually chasing?";
       const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : errorRef.count > 0 ? "timeout_degraded" : "grounded_empty";
       log("ask:loop_end", { rounds: round + 1, tool_calls: toolCallCount, mode, answer_len: answer.length });
       return { answer, model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode };
@@ -415,16 +434,7 @@ export async function runAgenticLoop(params: {
   // Deterministic last resort: if the model still won't write an answer but
   // the tools DID find records, hand those over rather than shrugging.
   if (!answer) {
-    const masters = evidenceCollector.filter((e) => e.type === "master").slice(0, 6);
-    if (masters.length > 0) {
-      answer = [
-        "Lost the thread on that one, but here's what I pulled out along the way — have a listen and tell me which direction to dig:",
-        "",
-        ...masters.map((m) => `[${m.title}](${m.dig_url})`),
-      ].join("\n");
-    } else {
-      answer = "That one's sent me down too many aisles — ask it a bit narrower and I'll pull the right crate.";
-    }
+    answer = evidenceHandover();
   }
 
   const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : "timeout_degraded";
