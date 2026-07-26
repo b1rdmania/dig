@@ -5,6 +5,17 @@ export const metadata: Metadata = {
   title: "Dig. Pilot.",
   description: "Two ways to try it.",
   robots: { index: false, follow: false },
+  openGraph: {
+    title: "Dig. Pilot.",
+    description: "Two ways to try it.",
+    images: [{ url: "/api/og?kind=home", width: 1200, height: 630, alt: "Dig. Beta." }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dig. Pilot.",
+    description: "Two ways to try it.",
+    images: ["/api/og?kind=home"],
+  },
 };
 
 const ACCESS_KEY = "dig-beta-1504eb2560f5b76b991e472b";

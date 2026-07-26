@@ -9,10 +9,8 @@
 
 .item {
   --card-accent: var(--ink);
-  background: var(--paper);
-  border: 1px solid var(--rule);
+  border-top: 1px solid var(--rule);
   position: relative;
-  transition: border-color 100ms, transform 100ms;
 }
 
 .item::before {
@@ -25,9 +23,9 @@
   background: var(--card-accent);
 }
 
-.item:hover {
-  border-color: var(--ink);
-  transform: translateY(-1px);
+.item:hover .name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .link {
@@ -83,8 +81,6 @@
 
 .blurb {
   margin: 0;
-  font-family: var(--font-serif);
-  font-style: italic;
   font-size: 12px;
   line-height: 1.4;
   color: var(--ink-soft);

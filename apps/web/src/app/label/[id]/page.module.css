@@ -91,7 +91,6 @@
 
 .blurb {
   font-family: var(--font-serif);
-  font-style: italic;
   font-size: var(--fs-lg);
   line-height: 1.45;
   color: var(--ink);
@@ -209,7 +208,7 @@
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--ink-soft);
-  border: 1px dashed var(--rule);
+  border: 1px solid var(--rule);
   padding: 3px 6px;
 }
 
@@ -223,7 +222,7 @@
 .provenanceWrap {
   margin-top: var(--sp-6);
   padding-top: var(--sp-4);
-  border-top: 1px dashed var(--rule);
+  border-top: 1px solid var(--rule);
 }
 
 .empty {

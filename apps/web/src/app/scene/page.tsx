@@ -67,11 +67,6 @@ export default async function ScenesIndexPage() {
         <p className={styles.lede}>
           Each scene gathers the labels that defined a city, a sound, or a moment.
         </p>
-        <div className={styles.toolbar}>
-          <Link href="/wall" className={styles.toolbarLink}>
-            ← View the whole wall
-          </Link>
-        </div>
         <p className={styles.aside}>
           We also built a drum-pattern generator from some of these scenes —{" "}
           <a href="https://ghost-pattern.pages.dev/" target="_blank" rel="noreferrer">try it</a>.

@@ -248,11 +248,10 @@ export default function AboutPage() {
       <section className={styles.section}>
         <h2 className={styles.heading}>Links</h2>
         <div className={styles.linkList}>
-          <Link href="/" className={styles.extLink}>The wall</Link>
+          <Link href="/" className={styles.extLink}>Home</Link>
           <Link href="/scene" className={styles.extLink}>Scenes</Link>
-          <Link href="/wall" className={styles.extLink}>Full wall</Link>
           <Link href="/search" className={styles.extLink}>Search</Link>
-          <Link href="/llm-beta" className={styles.extLink}>LLM beta</Link>
+          <Link href="/llm-beta" className={styles.extLink}>Beta</Link>
           <a href="https://github.com/b1rdmania/dig" target="_blank" rel="noreferrer" className={styles.extLink}>
             GitHub
           </a>

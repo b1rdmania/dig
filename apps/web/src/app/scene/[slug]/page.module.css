@@ -80,7 +80,6 @@
 
 .lede {
   font-family: var(--font-serif);
-  font-style: italic;
   font-size: var(--fs-md);
   color: var(--ink-soft);
   max-width: 64ch;
@@ -208,7 +207,6 @@
 
 .bridgeBlurb {
   font-family: var(--font-serif);
-  font-style: italic;
   font-size: var(--fs-sm);
   color: var(--ink-soft);
   margin: 0;

@@ -1,7 +1,6 @@
 .roster {
-  border: 1px solid var(--rule);
-  background: var(--surface);
-  padding: var(--sp-5);
+  border-top: 1px solid var(--rule);
+  padding-top: var(--sp-3);
 }
 
 .heading {
@@ -25,7 +24,7 @@
   grid-template-columns: 1fr auto;
   gap: var(--sp-3);
   padding: var(--sp-2) 0;
-  border-bottom: 1px dashed var(--rule);
+  border-bottom: 1px solid var(--rule);
   align-items: baseline;
 }
 

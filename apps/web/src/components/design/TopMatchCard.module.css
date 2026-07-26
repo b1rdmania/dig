@@ -67,7 +67,6 @@
 
 .blurb {
   font-family: var(--font-serif);
-  font-style: italic;
   font-size: var(--fs-base);
   line-height: 1.45;
   margin: var(--sp-3) 0 0;
