@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import { Footer } from "@/components/Footer";
+import { HomeLink } from "@/components/HomeLink";
 import "./globals.css";
 
 const sans = IBM_Plex_Sans({
@@ -68,6 +69,7 @@ export default function RootLayout({
     >
       <body>
         <main>
+          <HomeLink />
           {children}
         </main>
         <Footer />

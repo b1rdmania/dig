@@ -1,0 +1,15 @@
+.wrap {
+  margin-bottom: var(--sp-4, 1rem);
+}
+
+.link {
+  font-size: var(--fs-sm, 13px);
+  color: var(--ink-soft, var(--ink));
+  text-decoration: none;
+}
+
+.link:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

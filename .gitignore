@@ -34,3 +34,4 @@ coverage/
 # MCP local config
 .mcp.json
 *.tsbuildinfo
+no-dead-ends-report.json
