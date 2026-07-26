@@ -36,6 +36,11 @@ import {
   getScene,
   getLabelCoreRun,
   getLabelRelated,
+  getArtistRuleACredits,
+  getArtistCrossScopeCredits,
+  getMasterCredits,
+  getArtistCollaborators,
+  getArtistGroupsAndMembers,
   type SearchEntityType,
 } from "@dig/domain";
 import { toolError, toolResult } from "./contracts.js";
@@ -719,6 +724,190 @@ server.tool(
   },
 );
 
+// ---------------------------------------------------------------------------
+// Tool: get_artist_credits
+// ---------------------------------------------------------------------------
+
+server.tool(
+  "get_artist_credits",
+  "Get an artist's credit work on in-scope masters — remixes, production, " +
+  "mixing, writing, engineering — including credits under their aliases. " +
+  "One row per master with the roles held and per-track credit lines. " +
+  "role filter accepts a family (remix, produce, mix, master, write, vocal, " +
+  "engineer) or an exact normalised role. With role=remix, masters where the " +
+  "artist is the headline act are excluded by default, so the result is " +
+  "'remixes they did for OTHERS'. This is the tool for questions like " +
+  "'what did Larry Heard remix in the 90s'.",
+  {
+    discogs_id: z.number().int().min(1).describe("Discogs artist ID"),
+    role: z.string().optional().describe("Role family (remix, produce, mix, master, write, vocal, engineer) or exact role. Omit for all credit roles."),
+    limit: z.number().int().min(1).max(200).default(50).describe("Max masters (1-200, default 50)"),
+    include_self_primary: z.boolean().optional().describe("Include masters where the artist is the headline credit (default: false for role=remix, true otherwise)"),
+  },
+  async ({ discogs_id, role, limit, include_self_primary }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
+    try {
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const isRemixRole = (role ?? "").toLowerCase() === "remix";
+      const excludeSelfPrimary = include_self_primary !== undefined ? !include_self_primary : isRemixRole;
+      const result = await getArtistRuleACredits(db, discogs_id, batchId, {
+        limit,
+        roleFilter: role ?? null,
+        includeAliases: true,
+        excludeSelfPrimary,
+      });
+      return toolResult(result, { tool: "get_artist_credits", requestId });
+    } catch (err: any) {
+      console.error("[mcp] get_artist_credits error:", err);
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_artist_credits", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_artist_credits", status, Date.now() - started, errorCode);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Tool: get_artist_cross_scope_credits
+// ---------------------------------------------------------------------------
+
+server.tool(
+  "get_artist_cross_scope_credits",
+  "Get an artist's credits on releases OUTSIDE the scene-scoped catalog " +
+  "(host release title, artist, label, year, the role, and an outbound " +
+  "Discogs URL — these entities aren't hosted on Dig). Use together with " +
+  "get_artist_credits to build the full picture of someone's remix and " +
+  "production work beyond the house/techno scope.",
+  {
+    discogs_id: z.number().int().min(1).describe("Discogs artist ID"),
+    role: z.string().optional().describe("Role family (remix, produce, mix, master, write, vocal, engineer) or exact role. Omit for all."),
+    limit: z.number().int().min(1).max(200).default(50).describe("Max credits (1-200, default 50)"),
+  },
+  async ({ discogs_id, role, limit }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
+    try {
+      const result = await getArtistCrossScopeCredits(db, discogs_id, {
+        limit,
+        roleFilter: role ?? null,
+      });
+      return toolResult(result, { tool: "get_artist_cross_scope_credits", requestId });
+    } catch (err: any) {
+      console.error("[mcp] get_artist_cross_scope_credits error:", err);
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_artist_cross_scope_credits", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_artist_cross_scope_credits", status, Date.now() - started, errorCode);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Tool: get_master_credits
+// ---------------------------------------------------------------------------
+
+server.tool(
+  "get_master_credits",
+  "Get the full credit sheet for a master release: per-track credits " +
+  "(remixer, producer, writer per track position) and release-level credits " +
+  "(Mastered By, A&R, artwork). Answers 'who remixed / produced / wrote " +
+  "what' on a specific record.",
+  {
+    discogs_id: z.number().int().min(1).describe("Discogs master release ID"),
+  },
+  async ({ discogs_id }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
+    try {
+      const result = await getMasterCredits(db, discogs_id);
+      return toolResult(result, { tool: "get_master_credits", requestId });
+    } catch (err: any) {
+      console.error("[mcp] get_master_credits error:", err);
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_master_credits", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_master_credits", status, Date.now() - started, errorCode);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Tool: get_artist_collaborators
+// ---------------------------------------------------------------------------
+
+server.tool(
+  "get_artist_collaborators",
+  "Get an artist's closest collaborators from the credit graph: people who " +
+  "appear on the same in-scope masters (across all the artist's aliases), " +
+  "with how many records they share and the roles taken. Answers 'who did " +
+  "X work with'.",
+  {
+    discogs_id: z.number().int().min(1).describe("Discogs artist ID"),
+    limit: z.number().int().min(1).max(30).default(10).describe("Max collaborators (1-30, default 10)"),
+  },
+  async ({ discogs_id, limit }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
+    try {
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const result = await getArtistCollaborators(db, discogs_id, batchId, { limit });
+      return toolResult(result, { tool: "get_artist_collaborators", requestId });
+    } catch (err: any) {
+      console.error("[mcp] get_artist_collaborators error:", err);
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_artist_collaborators", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_artist_collaborators", status, Date.now() - started, errorCode);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Tool: get_artist_groups
+// ---------------------------------------------------------------------------
+
+server.tool(
+  "get_artist_groups",
+  "Get an artist's group/member edges: groups they belong to, members (if " +
+  "the artist IS a group), and bandmates — each with in-scope master counts. " +
+  "Use to resolve 'is X part of Y' and to hop between a group and its " +
+  "members (e.g. Fingers Inc. ↔ Larry Heard).",
+  {
+    discogs_id: z.number().int().min(1).describe("Discogs artist ID"),
+  },
+  async ({ discogs_id }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
+    try {
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const result = await getArtistGroupsAndMembers(db, discogs_id, batchId);
+      return toolResult(result, { tool: "get_artist_groups", requestId });
+    } catch (err: any) {
+      console.error("[mcp] get_artist_groups error:", err);
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_artist_groups", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_artist_groups", status, Date.now() - started, errorCode);
+    }
+  },
+);
+
 return server;
 }
 
@@ -850,5 +1039,5 @@ app.listen(PORT, () => {
   console.log(`[dig-mcp]   SSE (legacy) : GET  /sse`);
   console.log(`[dig-mcp]   Post endpoint: POST /messages?sessionId=<id>`);
   console.log(`[dig-mcp]   Scope        : 90s house & techno (~80k masters)`);
-  console.log(`[dig-mcp]   Tools        : search_catalog, get_artist, get_label, get_master, get_release_shadow, traverse_links, list_scenes, get_scene, get_label_essentials (+ get_release [GONE])`);
+  console.log(`[dig-mcp]   Tools        : search_catalog, get_artist, get_label, get_master, get_release_shadow, traverse_links, list_scenes, get_scene, get_label_essentials, get_artist_credits, get_artist_cross_scope_credits, get_master_credits, get_artist_collaborators, get_artist_groups (+ get_release [GONE])`);
 });
