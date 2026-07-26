@@ -99,6 +99,7 @@ export function LlmBetaClient() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activity, setActivity] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -147,7 +148,7 @@ export function LlmBetaClient() {
         content: m.content,
       }));
 
-      const res = await fetch(`${API_URL}/v1/ask`, {
+      const res = await fetch(`${API_URL}/v1/ask/stream`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -156,26 +157,71 @@ export function LlmBetaClient() {
         body: JSON.stringify({ question: q, history }),
       });
 
-      const data = await res.json() as {
-        answer?: string;
-        media?: MediaItem[];
-        mode?: ResponseMode;
-        evidence?: EvidenceItem[];
-        meta?: { tool_calls?: number };
-        error?: { code: string; message: string };
-      };
-
-      if (data.error) {
-        setMessages((prev) => [...prev, { role: "assistant", content: data.error!.message, error: true, mode: data.mode }]);
-      } else {
+      // Pre-stream failures (bad key, rate limit, config) come back as plain
+      // JSON with an error status; only a 200 carries the NDJSON stream.
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => null) as { error?: { message: string }; mode?: ResponseMode } | null;
         setMessages((prev) => [...prev, {
           role: "assistant",
-          content: data.answer ?? "",
-          media: data.media ?? [],
-          mode: data.mode,
-          evidence: data.evidence ?? [],
-          tool_calls: data.meta?.tool_calls ?? 0,
+          content: data?.error?.message ?? "Request failed — check your access key.",
+          error: true,
+          mode: data?.mode,
         }]);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let sawTerminal = false;
+
+      const handleLine = (line: string) => {
+        if (!line.trim()) return;
+        let evt: {
+          type: "status" | "result" | "error";
+          label?: string;
+          answer?: string;
+          media?: MediaItem[];
+          mode?: ResponseMode;
+          evidence?: EvidenceItem[];
+          meta?: { tool_calls?: number };
+          error?: { code: string; message: string };
+        };
+        try {
+          evt = JSON.parse(line);
+        } catch {
+          return;
+        }
+        if (evt.type === "status" && evt.label) {
+          setActivity((prev) => (prev[prev.length - 1] === evt.label ? prev : [...prev, evt.label!]));
+        } else if (evt.type === "result") {
+          sawTerminal = true;
+          setMessages((prev) => [...prev, {
+            role: "assistant",
+            content: evt.answer ?? "",
+            media: evt.media ?? [],
+            mode: evt.mode,
+            evidence: evt.evidence ?? [],
+            tool_calls: evt.meta?.tool_calls ?? 0,
+          }]);
+        } else if (evt.type === "error") {
+          sawTerminal = true;
+          setMessages((prev) => [...prev, { role: "assistant", content: evt.error?.message ?? "Something went wrong.", error: true, mode: evt.mode }]);
+        }
+      };
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) handleLine(line);
+      }
+      if (buffer.trim()) handleLine(buffer);
+
+      if (!sawTerminal) {
+        setMessages((prev) => [...prev, { role: "assistant", content: "The connection dropped mid-answer — try again.", error: true }]);
       }
     } catch {
       setMessages((prev) => [...prev, {
@@ -185,6 +231,7 @@ export function LlmBetaClient() {
       }]);
     } finally {
       setLoading(false);
+      setActivity([]);
       inputRef.current?.focus();
       resizeComposer();
     }
@@ -275,7 +322,19 @@ export function LlmBetaClient() {
 
             {loading && (
               <div className={styles.assistantMsg}>
-                <p className={styles.thinking}>thinking...</p>
+                {activity.length === 0 ? (
+                  <p className={styles.thinking}>hold on...</p>
+                ) : (
+                  activity.slice(-4).map((label, i, shown) => (
+                    <p
+                      key={`${label}-${i}`}
+                      className={styles.thinking}
+                      style={{ opacity: i === shown.length - 1 ? 1 : 0.45 }}
+                    >
+                      {label}
+                    </p>
+                  ))
+                )}
               </div>
             )}
 
