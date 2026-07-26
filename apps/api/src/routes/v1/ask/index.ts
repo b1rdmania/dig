@@ -7,12 +7,18 @@ import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import type { AnthropicMessage, ResponseMode } from "./types.js";
 import { requirePrivateKey } from "./auth.js";
-import { runAgenticLoop } from "./loop.js";
+import { runAgenticLoop, type LlmProvider } from "./loop.js";
 import { bindMediaToCitations, dedupeMedia, dedupeEvidence, extractCitedMasterIds } from "./binding.js";
 
 export type { MediaItem, EvidenceItem, ResponseMode } from "./types.js";
 
-const DEFAULT_MODEL = process.env.LLM_MODEL ?? "claude-sonnet-4-6";
+// Provider selection: set OPENROUTER_API_KEY to run server-side via OpenRouter
+// (Kimi by default); otherwise falls back to the original BYO-Anthropic-key flow.
+const PROVIDER: LlmProvider =
+  (process.env.LLM_PROVIDER as LlmProvider | undefined) ??
+  (process.env.OPENROUTER_API_KEY ? "openrouter" : "anthropic");
+const DEFAULT_MODEL =
+  process.env.LLM_MODEL ?? (PROVIDER === "openrouter" ? "moonshotai/kimi-k3" : "claude-sonnet-4-6");
 const MAX_HISTORY_TURNS = 6;
 
 interface AskBody {
@@ -33,11 +39,21 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     const auth = requirePrivateKey(req);
     if (!auth.ok) return reply.status(auth.status).send(auth.body);
 
-    const anthropicApiKey = String(req.headers["x-anthropic-api-key"] ?? "").trim();
-    if (!anthropicApiKey) {
-      return reply.status(503).send({
-        error: { code: "CONFIG_ERROR", message: "x-anthropic-api-key header is required", details: null },
-      });
+    let apiKey: string;
+    if (PROVIDER === "openrouter") {
+      apiKey = String(process.env.OPENROUTER_API_KEY ?? "").trim();
+      if (!apiKey) {
+        return reply.status(503).send({
+          error: { code: "CONFIG_ERROR", message: "LLM provider is not configured", details: null },
+        });
+      }
+    } else {
+      apiKey = String(req.headers["x-anthropic-api-key"] ?? "").trim();
+      if (!apiKey) {
+        return reply.status(503).send({
+          error: { code: "CONFIG_ERROR", message: "x-anthropic-api-key header is required", details: null },
+        });
+      }
     }
 
     const body = req.body ?? {};
@@ -67,7 +83,8 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         history,
         model,
         maxTokens,
-        anthropicApiKey,
+        provider: PROVIDER,
+        apiKey,
         log,
       });
 
@@ -97,11 +114,15 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       });
     } catch (err: any) {
       log("ask:request_failed", { elapsed_ms: Date.now() - started, error: String(err?.message ?? err), status: err?.status });
-      const status = err?.status === 401 ? 401 : 502;
+      // 401 passthrough only makes sense on the BYO-key flow; with a
+      // server-side OpenRouter key, upstream auth failures are our config
+      // problem, not the client's.
+      const isClientAuth = PROVIDER === "anthropic" && err?.status === 401;
+      const status = isClientAuth ? 401 : 502;
       return reply.status(status).send({
         error: {
-          code: err?.status === 401 ? "ANTHROPIC_AUTH_ERROR" : "LLM_UPSTREAM_ERROR",
-          message: err?.status === 401
+          code: isClientAuth ? "ANTHROPIC_AUTH_ERROR" : "LLM_UPSTREAM_ERROR",
+          message: isClientAuth
             ? "Invalid Anthropic API key"
             : "Failed to generate response",
           // Upstream error detail goes to the structured log above, not to

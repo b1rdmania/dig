@@ -7,7 +7,7 @@ import { extractYouTubeId } from "@/lib/media";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
-const KEY_STORAGE = "dig.llm_beta.anthropic_key";
+const KEY_STORAGE = "dig.llm_beta.access_key";
 
 interface MediaItem {
   discogs_id: number;
@@ -95,7 +95,7 @@ function VideoRail({ media }: { media: MediaItem[] }) {
 }
 
 export function LlmBetaClient() {
-  const [anthropicKey, setAnthropicKey] = useState("");
+  const [accessKey, setAnthropicKey] = useState("");
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -124,7 +124,7 @@ export function LlmBetaClient() {
     resizeComposer();
   }, [input]);
 
-  function updateAnthropicKey(value: string) {
+  function updateAccessKey(value: string) {
     setAnthropicKey(value);
     try {
       if (value.trim()) window.sessionStorage.setItem(KEY_STORAGE, value.trim());
@@ -134,7 +134,7 @@ export function LlmBetaClient() {
 
   async function ask() {
     const q = input.trim();
-    if (!q || !anthropicKey.trim() || loading) return;
+    if (!q || !accessKey.trim() || loading) return;
 
     const nextMessages: Message[] = [...messages, { role: "user", content: q }];
     setMessages(nextMessages);
@@ -151,7 +151,7 @@ export function LlmBetaClient() {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-anthropic-api-key": anthropicKey.trim(),
+          "x-api-key": accessKey.trim(),
         },
         body: JSON.stringify({ question: q, history }),
       });
@@ -197,7 +197,7 @@ export function LlmBetaClient() {
     }
   }
 
-  const hasKey = anthropicKey.trim().length > 0;
+  const hasKey = accessKey.trim().length > 0;
 
   return (
     <div className={styles.page}>
@@ -205,7 +205,7 @@ export function LlmBetaClient() {
         <p className={styles.eyebrow}>Private Beta</p>
         <h1 className={styles.title}>Ask Dig.</h1>
         <p className={styles.lede}>An intelligent music assistant.</p>
-        <p className={styles.lede}>Your Anthropic key is never saved server-side.</p>
+        <p className={styles.lede}>Grounded in the Dig catalog — every answer cites real records.</p>
       </section>
 
       <section className={styles.supportStrip}>
@@ -218,14 +218,14 @@ export function LlmBetaClient() {
 
       {!hasKey && (
         <section className={styles.keySection}>
-          <label className={styles.label} htmlFor="anthropic-key">Anthropic API Key to get started</label>
+          <label className={styles.label} htmlFor="access-key">Beta access key to get started</label>
           <input
-            id="anthropic-key"
+            id="access-key"
             className={styles.input}
             type="password"
-            value={anthropicKey}
-            onChange={(e) => updateAnthropicKey(e.target.value)}
-            placeholder="sk-ant-..."
+            value={accessKey}
+            onChange={(e) => updateAccessKey(e.target.value)}
+            placeholder="dig-beta-..."
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
@@ -313,7 +313,7 @@ export function LlmBetaClient() {
 
           <div className={styles.inputMeta}>
             <p className={styles.help}>Enter to send · Shift+Enter for new line</p>
-            <button className={styles.clearKey} type="button" onClick={() => { updateAnthropicKey(""); setMessages([]); }}>
+            <button className={styles.clearKey} type="button" onClick={() => { updateAccessKey(""); setMessages([]); }}>
               Clear key + history
             </button>
           </div>

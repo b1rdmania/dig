@@ -1,5 +1,8 @@
 // ---------------------------------------------------------------------------
-// Anthropic API — agentic loop with native tool use
+// LLM agentic loop with native tool use.
+// Two providers behind one internal contract (Anthropic content blocks):
+//   - anthropic: api.anthropic.com/v1/messages, BYO key from the client
+//   - openrouter: openrouter.ai chat-completions (Kimi etc.), server-side key
 // ---------------------------------------------------------------------------
 
 import type { Kysely } from "@dig/db";
@@ -100,12 +103,165 @@ async function callAnthropic(params: {
     throw err;
   }
 
-  return res.json() as Promise<{
-    id: string;
-    model: string;
-    stop_reason: "end_turn" | "tool_use" | "max_tokens";
-    content: AnthropicContentBlock[];
-  }>;
+  return res.json() as Promise<LlmResponse>;
+}
+
+interface LlmResponse {
+  id?: string;
+  model: string;
+  stop_reason: "end_turn" | "tool_use" | "max_tokens";
+  content: AnthropicContentBlock[];
+}
+
+export type LlmProvider = "anthropic" | "openrouter";
+
+// ---------------------------------------------------------------------------
+// OpenRouter — OpenAI chat-completions wire format, translated to and from
+// the internal Anthropic-block contract so the loop logic stays unchanged.
+// ---------------------------------------------------------------------------
+
+function toOpenAiTools(tools: typeof TOOLS) {
+  return tools.map((t) => ({
+    type: "function" as const,
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: (t as { input_schema?: unknown }).input_schema ?? { type: "object", properties: {} },
+    },
+  }));
+}
+
+function toOpenAiMessages(system: string, messages: AnthropicMessage[]) {
+  const out: Array<Record<string, unknown>> = [{ role: "system", content: system }];
+  for (const msg of messages) {
+    if (typeof msg.content === "string") {
+      out.push({ role: msg.role, content: msg.content });
+      continue;
+    }
+    if (msg.role === "assistant") {
+      const text = msg.content
+        .filter((b) => b.type === "text")
+        .map((b) => String((b as { text?: unknown }).text ?? ""))
+        .join("\n");
+      const toolCalls = msg.content
+        .filter((b) => b.type === "tool_use")
+        .map((b) => ({
+          id: String((b as { id?: unknown }).id ?? ""),
+          type: "function" as const,
+          function: {
+            name: String((b as { name?: unknown }).name ?? ""),
+            arguments: JSON.stringify((b as { input?: unknown }).input ?? {}),
+          },
+        }));
+      out.push({
+        role: "assistant",
+        content: text || null,
+        ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {}),
+      });
+    } else {
+      for (const b of msg.content) {
+        if (b.type === "tool_result") {
+          out.push({
+            role: "tool",
+            tool_call_id: String((b as { tool_use_id?: unknown }).tool_use_id ?? ""),
+            content: String((b as { content?: unknown }).content ?? ""),
+          });
+        } else if (b.type === "text") {
+          out.push({ role: "user", content: String((b as { text?: unknown }).text ?? "") });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+async function callOpenRouter(params: {
+  model: string;
+  system: string;
+  messages: AnthropicMessage[];
+  tools: typeof TOOLS;
+  maxTokens: number;
+  apiKey: string;
+}): Promise<LlmResponse> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ANTHROPIC_CALL_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${params.apiKey}`,
+        "http-referer": "https://app.dig.baby",
+        "x-title": "Dig",
+      },
+      body: JSON.stringify({
+        model: params.model,
+        max_tokens: params.maxTokens,
+        messages: toOpenAiMessages(params.system, params.messages),
+        ...(params.tools.length > 0 ? { tools: toOpenAiTools(params.tools) } : {}),
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!res.ok) {
+    const text = await res.text();
+    const err = new Error(`OpenRouter error ${res.status}: ${text.slice(0, 400)}`) as Error & {
+      status?: number;
+    };
+    err.status = res.status;
+    throw err;
+  }
+
+  const data = (await res.json()) as {
+    model?: string;
+    choices?: Array<{
+      finish_reason?: string;
+      message?: {
+        content?: string | null;
+        tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: string } }>;
+      };
+    }>;
+    error?: { message?: string; code?: number };
+  };
+
+  // OpenRouter can return 200 with an error body (e.g. provider outage, key cap).
+  if (data.error) {
+    const err = new Error(`OpenRouter error: ${String(data.error.message ?? "unknown").slice(0, 400)}`) as Error & { status?: number };
+    err.status = Number(data.error.code) || 502;
+    throw err;
+  }
+
+  const choice = data.choices?.[0];
+  const message = choice?.message ?? {};
+  const content: AnthropicContentBlock[] = [];
+  if (typeof message.content === "string" && message.content.length > 0) {
+    content.push({ type: "text", text: message.content });
+  }
+  for (const tc of message.tool_calls ?? []) {
+    let input: unknown;
+    try {
+      input = JSON.parse(tc.function?.arguments || "{}");
+    } catch {
+      input = {};
+    }
+    content.push({
+      type: "tool_use",
+      id: String(tc.id ?? ""),
+      name: String(tc.function?.name ?? ""),
+      input,
+    });
+  }
+
+  const finish = String(choice?.finish_reason ?? "stop");
+  const stop_reason: LlmResponse["stop_reason"] =
+    finish === "tool_calls" ? "tool_use" : finish === "length" ? "max_tokens" : "end_turn";
+
+  return { model: String(data.model ?? params.model), stop_reason, content };
 }
 
 export async function runAgenticLoop(params: {
@@ -114,10 +270,16 @@ export async function runAgenticLoop(params: {
   history: AnthropicMessage[];
   model: string;
   maxTokens: number;
-  anthropicApiKey: string;
+  provider: LlmProvider;
+  apiKey: string;
   log: (msg: string, extra?: Record<string, unknown>) => void;
 }): Promise<{ answer: string; model: string; tool_calls: number; media: MediaItem[]; evidence: EvidenceItem[]; mode: ResponseMode }> {
   const { log } = params;
+
+  const callModel = (messages: AnthropicMessage[], tools: typeof TOOLS): Promise<LlmResponse> =>
+    params.provider === "openrouter"
+      ? callOpenRouter({ model: params.model, system: SYSTEM_PROMPT, messages, tools, maxTokens: params.maxTokens, apiKey: params.apiKey })
+      : callAnthropic({ model: params.model, system: SYSTEM_PROMPT, messages, tools, maxTokens: params.maxTokens, anthropicApiKey: params.apiKey });
   const messages: AnthropicMessage[] = [
     ...params.history,
     { role: "user", content: params.question },
@@ -141,25 +303,18 @@ export async function runAgenticLoop(params: {
     }
 
     const callStart = Date.now();
-    log("ask:anthropic_call", { round, messages_in_context: messages.length });
+    log("ask:llm_call", { round, provider: params.provider, messages_in_context: messages.length });
 
-    let response: Awaited<ReturnType<typeof callAnthropic>>;
+    let response: LlmResponse;
     try {
-      response = await callAnthropic({
-        model: params.model,
-        system: SYSTEM_PROMPT,
-        messages,
-        tools: TOOLS,
-        maxTokens: params.maxTokens,
-        anthropicApiKey: params.anthropicApiKey,
-      });
+      response = await callModel(messages, TOOLS);
     } catch (err: any) {
-      log("ask:anthropic_error", { round, elapsed_ms: Date.now() - callStart, error: String(err?.message ?? err) });
+      log("ask:llm_error", { round, provider: params.provider, elapsed_ms: Date.now() - callStart, error: String(err?.message ?? err) });
       throw err;
     }
 
     const callMs = Date.now() - callStart;
-    log("ask:anthropic_response", { round, elapsed_ms: callMs, stop_reason: response.stop_reason, model: response.model });
+    log("ask:llm_response", { round, elapsed_ms: callMs, stop_reason: response.stop_reason, model: response.model });
 
     usedModel = response.model ?? params.model;
 
@@ -225,14 +380,7 @@ export async function runAgenticLoop(params: {
     },
   ];
   const finalCallStart = Date.now();
-  const finalResp = await callAnthropic({
-    model: params.model,
-    system: SYSTEM_PROMPT,
-    messages: finalMessages,
-    tools: [],
-    maxTokens: params.maxTokens,
-    anthropicApiKey: params.anthropicApiKey,
-  });
+  const finalResp = await callModel(finalMessages, []);
   log("ask:final_call", { elapsed_ms: Date.now() - finalCallStart, stop_reason: finalResp.stop_reason });
   const textBlock = finalResp.content.find((b) => b.type === "text");
   const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : "timeout_degraded";

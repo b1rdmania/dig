@@ -46,7 +46,7 @@ Entity model: `artist | label | master` are the only public entities. `release_s
 - **Health**: https://dig-api.fly.dev/v1/health
 - **Marketing**: https://dig.baby (Vercel)
 - **GitHub**: https://github.com/b1rdmania/dig
-- **MCP**: ARCHIVED 2026-04-16 — source in `apps/mcp/`, revival notes in `apps/mcp/README.md`
+- **MCP**: LIVE (revived 2026-07-26) — `https://dig-mcp.fly.dev/sse`, scales to zero when idle; see `apps/mcp/README.md`
 
 ## Key Commands
 - `pnpm dev` — start API server · `pnpm dev:web` — Next.js frontend (port 3002)
@@ -109,9 +109,9 @@ docker-compose.yml         — local Postgres + Redis
 - Search telemetry loop: `/v1/events` rolls search_submitted/search_result_clicked into `enrich.search_quality_daily`; run `scripts/search-quality-report.ts` to get zero-result rate + CTR before re-tuning ranking constants
 - Known follow-ups: telemetry-driven ranking review once relaunch traffic accrues, MCP revival decision
 
-## MCP Tools (frozen at archive — `apps/mcp/src/server.ts`)
-`search_catalog`, `get_artist`, `get_label`, `get_master`, `get_release`, `traverse_links`.
-The in-product chat (`apps/api/src/routes/v1/ask/`) wraps the same tools plus `list_scenes`, `get_scene`, `get_label_essentials` (never ported to MCP before archive).
+## MCP Tools (`apps/mcp/src/server.ts`, revived 2026-07-26)
+`search_catalog`, `get_artist`, `get_label`, `get_master`, `get_release_shadow`, `traverse_links`, `list_scenes`, `get_scene`, `get_label_essentials` (+ deprecated `get_release` → GONE).
+The in-product chat (`apps/api/src/routes/v1/ask/`) wraps the same domain layer; its LLM is provider-switchable — server-side OpenRouter (Kimi, `OPENROUTER_API_KEY` + `LLM_MODEL`) or BYO-Anthropic-key fallback.
 
 ## Important References
 - [Operating Guide](docs/operating-implementation-guide.md) — canonical execution workflow

@@ -31,6 +31,10 @@ import {
   getMasterReleases,
   getMasterVideos,
   getBatchForTable,
+  listScenes,
+  getScene,
+  getLabelCoreRun,
+  getLabelRelated,
   type SearchEntityType,
 } from "@dig/domain";
 import { toolError, toolResult } from "./contracts.js";
@@ -520,11 +524,14 @@ server.tool(
     let status: "ok" | "error" = "ok";
     let errorCode: string | null = null;
     try {
+      // release_shadow and master_videos_unified carry no batch_id — they are
+      // rebuilt atomically with the active batch. Resolve batch context via
+      // catalog.masters, same as the REST API's traversal routes.
       const LINK_TABLE: Record<string, string> = {
         artist_masters: "catalog.master_artists",
         label_releases: "catalog.masters",
-        master_releases: "catalog.release_shadow",
-        master_videos: "catalog.master_videos_unified",
+        master_releases: "catalog.masters",
+        master_videos: "catalog.masters",
       };
       const table = LINK_TABLE[link_type] ?? "catalog.masters";
       const { batchId, dumpDate } = await getBatchForTable(db, table);
@@ -558,6 +565,150 @@ server.tool(
       });
     } finally {
       logToolInvocation(requestId, "traverse_links", status, Date.now() - started, errorCode);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Tool: list_scenes
+// ---------------------------------------------------------------------------
+
+server.tool(
+  "list_scenes",
+  "List all curated scenes (Detroit Core, Berlin Techno, Chicago House, Dub " +
+  "Techno, Cologne Minimal, etc.). Returns slug, name, axis (geography/sound/" +
+  "era/cluster/bridge/micro), city, era window, blurb, and label count. Use " +
+  "this to find a scene slug before calling get_scene.",
+  {},
+  async () => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
+    try {
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const scenes = await listScenes(db, batchId);
+      return toolResult(
+        {
+          scenes: scenes.map((s) => ({
+            slug: s.slug,
+            name: s.name,
+            axis: s.axis,
+            city: s.city,
+            era: s.era_start && s.era_end ? `${s.era_start}-${s.era_end}` : s.era_start ? `${s.era_start}-` : null,
+            blurb: s.blurb,
+            label_count: s.label_count,
+            dig_url: `https://app.dig.baby/scene/${s.slug}`,
+          })),
+          total: scenes.length,
+        },
+        { tool: "list_scenes", requestId },
+      );
+    } catch (err: any) {
+      console.error("[mcp] list_scenes error:", err);
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "list_scenes", requestId });
+    } finally {
+      logToolInvocation(requestId, "list_scenes", status, Date.now() - started, errorCode);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Tool: get_scene
+// ---------------------------------------------------------------------------
+
+server.tool(
+  "get_scene",
+  "Get full detail for one curated scene by slug: member labels (with role: " +
+  "core/adjacent/bridge), bridges to other scenes, and blurb. Use after " +
+  "list_scenes to drill into a specific scene.",
+  {
+    slug: z.string().min(1).max(80).describe("Scene slug from list_scenes (e.g. 'detroit-core')"),
+  },
+  async ({ slug }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
+    try {
+      const { batchId } = await getBatchForTable(db, "catalog.masters");
+      const scene = await getScene(db, slug.trim(), batchId);
+      if (!scene) {
+        status = "error";
+        errorCode = "NOT_FOUND";
+        return toolError("NOT_FOUND", `Scene not found: ${slug}`, { tool: "get_scene", requestId });
+      }
+      return toolResult({ scene }, { tool: "get_scene", requestId });
+    } catch (err: any) {
+      console.error("[mcp] get_scene error:", err);
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_scene", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_scene", status, Date.now() - started, errorCode);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Tool: get_label_essentials
+// ---------------------------------------------------------------------------
+
+server.tool(
+  "get_label_essentials",
+  "Get the curated 'core run' for a label (essential listening, up to 10 " +
+  "masters) plus directional related labels (deeper, harder, rawer, cleaner, " +
+  "weirder, poppier, earlier, later). Prefer this over traverse_links " +
+  "label_releases when someone asks what's good on a label. Falls back empty " +
+  "if the label has no curated run yet.",
+  {
+    discogs_id: z.number().int().min(1).describe("Discogs label ID"),
+  },
+  async ({ discogs_id }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
+    try {
+      const [coreRun, related] = await Promise.all([
+        getLabelCoreRun(db, discogs_id, 10),
+        getLabelRelated(db, discogs_id),
+      ]);
+      return toolResult(
+        {
+          label_id: discogs_id,
+          core_run: coreRun.map((m) => ({
+            master_discogs_id: m.master_discogs_id,
+            title: m.title,
+            year: m.year,
+            primary_artist: m.primary_artist_name,
+            source: m.source,
+            note: m.note,
+            dig_url: `https://app.dig.baby/master/${m.master_discogs_id}`,
+          })),
+          related: related.map((r) => ({
+            to_label_id: r.to_label_id,
+            to_label_name: r.to_label_name,
+            direction: r.direction,
+            blurb: r.blurb,
+            master_count: r.to_label_master_count,
+            dig_url: `https://app.dig.baby/label/${r.to_label_id}`,
+          })),
+          note: coreRun.length === 0
+            ? "No curated core run for this label yet — fall back to traverse_links label_releases."
+            : undefined,
+        },
+        { tool: "get_label_essentials", requestId },
+      );
+    } catch (err: any) {
+      console.error("[mcp] get_label_essentials error:", err);
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "get_label_essentials", requestId });
+    } finally {
+      logToolInvocation(requestId, "get_label_essentials", status, Date.now() - started, errorCode);
     }
   },
 );
@@ -643,5 +794,5 @@ app.listen(PORT, () => {
   console.log(`[dig-mcp]   SSE endpoint : GET  /sse`);
   console.log(`[dig-mcp]   Post endpoint: POST /messages?sessionId=<id>`);
   console.log(`[dig-mcp]   Scope        : 90s house & techno (~80k masters)`);
-  console.log(`[dig-mcp]   Tools        : search_catalog, get_artist, get_label, get_master, get_release_shadow, traverse_links (+ get_release [GONE])`);
+  console.log(`[dig-mcp]   Tools        : search_catalog, get_artist, get_label, get_master, get_release_shadow, traverse_links, list_scenes, get_scene, get_label_essentials (+ get_release [GONE])`);
 });

@@ -72,19 +72,18 @@ async function main() {
     assert(def.results[0].type === "master", "first result is a master when no type given");
   }
 
-  // --- search_catalog (degraded: empty_tsquery on a stop word against masters) ---
-  console.log("\n--- search_catalog (empty_tsquery) ---");
+  // --- search_catalog (stop-word query — search v2 'simple' config serves these) ---
+  console.log("\n--- search_catalog (stop-word query, search v2) ---");
   const stopResult = await client.callTool({
     name: "search_catalog",
     arguments: { query: "The", type: "master" },
   });
   const sw = JSON.parse((stopResult.content as any)[0].text);
-  assert(sw.meta.degraded === true, "degraded is true for stop word");
-  assert(sw.meta.degraded_reason === "empty_tsquery", "reason is empty_tsquery");
-  assert(sw.results.length === 0, "0 results for stop word");
-  console.log(`  Degraded: ${sw.meta.degraded}, reason: ${sw.meta.degraded_reason}`);
+  assert(sw.meta.degraded === false, "stop-word query is not degraded under search v2");
+  assert(Array.isArray(sw.results), "stop-word query returns a results array");
+  console.log(`  Degraded: ${sw.meta.degraded}, results: ${sw.results.length}`);
 
-  // --- search_catalog (release deprecated → degraded empty) ---
+  // --- search_catalog (release deprecated → empty) ---
   console.log("\n--- search_catalog (type=release deprecated) ---");
   const relResult = await client.callTool({
     name: "search_catalog",
@@ -92,8 +91,7 @@ async function main() {
   });
   const rel = JSON.parse((relResult.content as any)[0].text);
   assert(rel.results.length === 0, "type=release returns 0 results");
-  assert(rel.meta.degraded === true, "type=release is flagged degraded");
-  console.log(`  Release search degraded: ${rel.meta.degraded_reason}`);
+  console.log(`  Release results: ${rel.results.length} (deprecated entity)`);
 
   // --- get_artist ---
   console.log("\n--- get_artist ---");

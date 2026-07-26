@@ -3,7 +3,7 @@
  * ALLOWED_ROUTES (+ /api, /_next, static files) to "/", and sitemaps only
  * advertise the allowed routes. Flip to false at relaunch.
  */
-export const MAINTENANCE_MODE = true;
+export const MAINTENANCE_MODE = false;
 
 const PUBLIC_FILE = /\.[^/]+$/;
 

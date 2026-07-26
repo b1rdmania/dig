@@ -1,9 +1,9 @@
-# dig-mcp — ARCHIVED
+# dig-mcp
 
-> **Status: archived as of 2026-04-16.** The hosted public MCP at
-> `https://dig-mcp.fly.dev/sse` is offline. The Fly app is parked at zero
-> machines (zero cost) so the URL stays reserved; the source remains here for
-> anyone who wants to revive or self-host it.
+> **Status: revived 2026-07-26.** The hosted MCP at `https://dig-mcp.fly.dev/sse`
+> is live again, serving the scene-scoped catalog from `dig-db-scene`. The
+> machine scales to zero when idle, so steady-state cost is pennies.
+> (Previously archived 2026-04-16 — history below.)
 
 ## Why archived
 
@@ -15,18 +15,19 @@ public SSE surface for zero callers wasn't worth the operational overhead.
 
 ## What it is
 
-Fastify + `@modelcontextprotocol/sdk` SSE server that wraps `@dig/domain`.
-Six tools at archive time:
+Express + `@modelcontextprotocol/sdk` SSE server that wraps `@dig/domain`.
+Tools:
 
 - `search_catalog`
 - `get_artist`
 - `get_label`
 - `get_master`
-- `get_release`
+- `get_release_shadow` (resolve a release ID to its master)
 - `traverse_links`
-
-(The newer v2 surfaces — `list_scenes`, `get_scene`, `get_label_essentials`
-— were only ever wired into the in-app `/v1/ask` route, not into the MCP.)
+- `list_scenes` (added at revival — previously in-app only)
+- `get_scene` (added at revival)
+- `get_label_essentials` (added at revival — curated core runs + directional related labels)
+- `get_release` (deprecated, returns GONE)
 
 ## Reviving it
 
