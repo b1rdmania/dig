@@ -26,15 +26,6 @@ export const metadata = {
 
 export const revalidate = 600;
 
-const AXIS_LABEL: Record<string, string> = {
-  geography: "scene",
-  cluster: "cluster",
-  sound: "sound",
-  era: "era",
-  bridge: "bridge",
-  micro: "micro",
-};
-
 function formatEra(start: number | null, end: number | null): string | null {
   if (start == null && end == null) return null;
   if (start != null && end != null) return `${start}–${end}`;
@@ -63,48 +54,36 @@ export default async function ScenesIndexPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeading
-        title="Scenes."
-        lede="Each scene gathers the labels that defined a city, a sound, or a moment."
-      >
+      <PageHeading title="Scenes." lede="The labels that defined an era.">
         <p className={styles.aside}>
           We also built a drum-pattern generator from some of these scenes —{" "}
           <a href="https://ghost-pattern.pages.dev/" target="_blank" rel="noreferrer">try it</a>.
         </p>
       </PageHeading>
 
-      {order.map((axis) => {
-        const scenes = grouped[axis];
-        if (!scenes || scenes.length === 0) return null;
-        return (
-          <section key={axis} className={styles.axisSection}>
-            <h2 className={styles.axisHeading}>{AXIS_LABEL[axis] ?? axis}</h2>
-            <div className={styles.rows}>
-              {scenes.map((s) => {
-                const era = formatEra(s.era_start, s.era_end);
-                const accent = s.palette?.accent ?? "#1a1a1a";
-                return (
-                  <Link
-                    key={s.slug}
-                    href={`/scene/${s.slug}`}
-                    className={styles.row}
-                    style={{ "--card-accent": accent } as React.CSSProperties}
-                  >
-                    <span className={styles.rowAccent} aria-hidden />
-                    <span className={styles.rowMain}>
-                      <span className={styles.rowTitle}>{s.name}</span>
-                      <span className={styles.rowMeta}>
-                        {[s.city, era].filter(Boolean).join(" · ")}
-                      </span>
-                      {s.blurb && <span className={styles.rowBlurb}>{s.blurb}</span>}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
+      <div className={styles.rows}>
+        {order.flatMap((axis) => grouped[axis] ?? []).map((s) => {
+          const era = formatEra(s.era_start, s.era_end);
+          const accent = s.palette?.accent ?? "#1a1a1a";
+          return (
+            <Link
+              key={s.slug}
+              href={`/scene/${s.slug}`}
+              className={styles.row}
+              style={{ "--card-accent": accent } as React.CSSProperties}
+            >
+              <span className={styles.rowAccent} aria-hidden />
+              <span className={styles.rowMain}>
+                <span className={styles.rowTitle}>{s.name}</span>
+                <span className={styles.rowMeta}>
+                  {[s.city, era].filter(Boolean).join(" · ")}
+                </span>
+                {s.blurb && <span className={styles.rowBlurb}>{s.blurb}</span>}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }

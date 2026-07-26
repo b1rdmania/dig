@@ -32,21 +32,16 @@
   text-decoration: underline;
 }
 
-.intro {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.introText {
-  margin: 0;
-  font-size: 0.95rem;
-}
-
 .block {
   display: block;
   margin-top: 0.6rem;
+}
+
+.follow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.8rem;
 }
 
 .social {

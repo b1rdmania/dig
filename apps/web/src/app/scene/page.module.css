@@ -33,22 +33,6 @@
   text-underline-offset: 3px;
 }
 
-.axisSection {
-  margin-top: var(--sp-7);
-}
-
-.axisHeading {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  font-weight: 600;
-  margin: 0 0 var(--sp-4);
-  padding-bottom: var(--sp-2);
-  border-bottom: 1px solid var(--rule);
-}
-
 /* Ruled index — rows and hairlines, not boxes. The scene's palette accent
  * is the one colour gesture, as a small square tick. */
 
