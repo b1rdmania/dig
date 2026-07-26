@@ -33,9 +33,7 @@ export default function RussPage() {
         <h2 className={styles.heading}>1 · Search it</h2>
         <p>
           <a href="https://app.dig.baby/">app.dig.baby</a> works like Discogs:
-          search an artist, a label, a record. The difference: every record
-          plays — YouTube is wired straight into the pages — and each label
-          carries a curated core run of its essential records.
+          search an artist, a label, a record, watch the video.
         </p>
       </section>
 
@@ -46,14 +44,10 @@ export default function RussPage() {
           Enter this key:
         </p>
         <p className={styles.key}>{ACCESS_KEY}</p>
-        <p>
-          Ask it for records. Try <em>&ldquo;what did Larry Heard remix between 92
-          and 96?&rdquo;</em> Every record it names is real, linked, with the video
-          under the answer.
-        </p>
+        <p>Ask it about records.</p>
         <p>
           Press <strong>Bag it up</strong> when you have a pile. You get one
-          YouTube link that plays the lot, and each record&apos;s Discogs
+          YouTube link with a playlist, and each record&apos;s Discogs
           marketplace link.
         </p>
       </section>
@@ -67,8 +61,7 @@ export default function RussPage() {
         <p className={styles.key}>https://dig-mcp.fly.dev/mcp</p>
         <p>
           Turn it on in a chat. Claude can then search the catalog, follow remix
-          credits, and bag up a session the same way. Ask it{" "}
-          <em>&ldquo;who did Larry Heard actually work with?&rdquo;</em>
+          credits, and bag up a session the same way.
         </p>
         <img src="/pilot/connector.png" alt="Claude's Connectors settings with Dig MCP added as a custom connector" className={styles.shot} />
       </section>
