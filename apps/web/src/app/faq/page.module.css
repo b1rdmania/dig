@@ -38,3 +38,19 @@
 .a a {
   text-decoration: underline;
 }
+
+.social {
+  display: flex;
+  gap: 1rem;
+  border-top: 1px solid var(--line);
+  margin-top: 1.5rem;
+  padding: 1rem 0 2rem;
+}
+
+.social a {
+  color: var(--ink-soft, var(--fg));
+}
+
+.social a:hover {
+  color: var(--fg);
+}
