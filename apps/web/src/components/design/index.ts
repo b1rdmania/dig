@@ -8,6 +8,7 @@
  */
 
 export { Page, type PageAccent } from "./Page";
+export { PageHeading } from "./PageHeading";
 export { Sticker, type StickerTone } from "./Sticker";
 export { Stamp } from "./Stamp";
 export { Rule } from "./Rule";

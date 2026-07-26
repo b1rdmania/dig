@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { extractYouTubeId } from "@/lib/media";
+import { PageHeading } from "@/components/design";
 import styles from "./page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
@@ -420,9 +421,7 @@ export function LlmBetaClient() {
 
   return (
     <div className={styles.page}>
-      <section className={styles.hero}>
-        <h1 className={styles.title}>Dig. Beta.</h1>
-      </section>
+      <PageHeading title="Dig. Beta." />
 
       {!hasKey && (
         <section className={styles.keySection}>

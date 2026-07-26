@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PageHeading } from "@/components/design";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -58,7 +59,7 @@ const FAQS: Array<{ q: string; a: React.ReactNode }> = [
 export default function FaqPage() {
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>FAQ</h1>
+      <PageHeading title="FAQ." />
       <div className={styles.intro}>
         <p className={styles.introText}>Hi, I&apos;m Andy. Follow me here:</p>
       <div className={styles.social}>

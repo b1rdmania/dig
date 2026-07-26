@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { PageHeading } from "@/components/design";
 import { SearchBar } from "@/components/SearchBar";
 import { SearchContent } from "@/components/SearchContent";
 import { MaintenanceLanding } from "@/components/maintenance/Landing";
@@ -22,9 +23,7 @@ interface Props {
 
 function HomeHero() {
   return (
-    <section className={styles.hero}>
-      <h1 className={styles.heading}>Dig.</h1>
-      <p className={styles.lede}>House and techno, 1988 to 2008.</p>
+    <PageHeading title="Dig." lede="House and techno, 1988 to 2008.">
       <div className={styles.wallToolbar}>
         <Link href="/scene" className={styles.toolbarLink}>Scenes →</Link>
         <span className={styles.toolbarSep}>·</span>
@@ -32,7 +31,7 @@ function HomeHero() {
         <span className={styles.toolbarSep}>·</span>
         <Link href="/faq" className={styles.toolbarLink}>FAQ →</Link>
       </div>
-    </section>
+    </PageHeading>
   );
 }
 

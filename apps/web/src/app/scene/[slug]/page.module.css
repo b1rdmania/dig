@@ -87,45 +87,6 @@
   line-height: 1.5;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.chip {
-  padding: 4px 10px;
-  border: 1px solid var(--rule);
-  color: var(--ink-soft);
-  text-decoration: none;
-  background: var(--paper);
-}
-
-.chip:hover {
-  border-color: var(--ink);
-  color: var(--ink);
-}
-
-.chipActive {
-  background: var(--ink);
-  color: var(--paper);
-  border-color: var(--ink);
-}
-
-.toolbarSep {
-  color: var(--ink-faint);
-  margin: 0 var(--sp-1);
-}
-
-.toolbarStat {
-  color: var(--ink-soft);
-  font-variant-numeric: tabular-nums;
-}
-
 .bridges {
   margin-top: var(--sp-8);
   padding-top: var(--sp-5);

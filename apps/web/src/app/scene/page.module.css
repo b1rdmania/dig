@@ -4,38 +4,6 @@
   padding-bottom: var(--sp-9);
 }
 
-.pageHeader {
-  margin-bottom: var(--sp-7);
-}
-
-.eyebrow {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  font-weight: 600;
-  margin-bottom: var(--sp-3);
-}
-
-.heading {
-  font-family: var(--font-sans);
-  font-size: clamp(2rem, 5vw, 3.4rem);
-  line-height: 1.05;
-  letter-spacing: -0.015em;
-  color: var(--ink);
-  margin: 0 0 var(--sp-3);
-  font-weight: 500;
-}
-
-.lede {
-  font-size: var(--fs-md);
-  color: var(--ink-soft);
-  max-width: 56ch;
-  line-height: 1.5;
-  margin: 0 0 var(--sp-5);
-}
-
 .toolbar {
   display: flex;
   align-items: center;
@@ -142,9 +110,3 @@
   overflow: hidden;
 }
 
-.rowCount {
-  font-size: var(--fs-sm);
-  color: var(--ink-soft);
-  white-space: nowrap;
-  margin-top: 4px;
-}

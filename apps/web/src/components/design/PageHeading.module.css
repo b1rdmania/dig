@@ -1,0 +1,24 @@
+.header {
+  max-width: var(--container-max);
+  margin: 0 auto var(--sp-5) 0;
+  padding: var(--sp-7) 0 var(--sp-3);
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: clamp(2.4rem, 7vw, 4.4rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--ink);
+}
+
+.lede {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--fs-lg);
+  color: var(--ink-soft);
+  margin: var(--sp-3) 0 0;
+  max-width: 56ch;
+}

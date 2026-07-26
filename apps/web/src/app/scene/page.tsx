@@ -2,6 +2,7 @@ import Link from "next/link";
 import { digFetch, ApiRequestError } from "@/lib/api";
 import type { ListScenesResponse } from "@/lib/types";
 import { ErrorMessage } from "@/components/ErrorMessage";
+import { PageHeading } from "@/components/design";
 import styles from "./page.module.css";
 
 export const metadata = {
@@ -62,16 +63,15 @@ export default async function ScenesIndexPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.pageHeader}>
-        <h1 className={styles.heading}>Scenes.</h1>
-        <p className={styles.lede}>
-          Each scene gathers the labels that defined a city, a sound, or a moment.
-        </p>
+      <PageHeading
+        title="Scenes."
+        lede="Each scene gathers the labels that defined a city, a sound, or a moment."
+      >
         <p className={styles.aside}>
           We also built a drum-pattern generator from some of these scenes —{" "}
           <a href="https://ghost-pattern.pages.dev/" target="_blank" rel="noreferrer">try it</a>.
         </p>
-      </header>
+      </PageHeading>
 
       {order.map((axis) => {
         const scenes = grouped[axis];
@@ -97,9 +97,6 @@ export default async function ScenesIndexPage() {
                         {[s.city, era].filter(Boolean).join(" · ")}
                       </span>
                       {s.blurb && <span className={styles.rowBlurb}>{s.blurb}</span>}
-                    </span>
-                    <span className={styles.rowCount}>
-                      {s.label_count} {s.label_count === 1 ? "label" : "labels"}
                     </span>
                   </Link>
                 );

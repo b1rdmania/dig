@@ -13,7 +13,6 @@ import styles from "./page.module.css";
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ density?: string }>;
 }
 
 export const revalidate = 600;
@@ -102,13 +101,11 @@ function formatEra(start: number | null, end: number | null): string | null {
   return null;
 }
 
-export default async function ScenePage({ params, searchParams }: Props) {
+export default async function ScenePage({ params }: Props) {
   const { slug } = await params;
-  const sp = await searchParams;
-  const density = sp.density === "compact" || sp.density === "full" ? sp.density : "medium";
 
   const [wallResult, detailResult] = await Promise.all([
-    digFetch<SceneWallResponse>(`/v1/scenes/${slug}/wall?density=${density}`, {
+    digFetch<SceneWallResponse>(`/v1/scenes/${slug}/wall?density=medium`, {
       revalidate: 600,
     })
       .then((d) => ({ ok: true as const, data: d }))
@@ -162,20 +159,11 @@ export default async function ScenePage({ params, searchParams }: Props) {
         </div>
         <h1 className={styles.heading}>{wall.name}</h1>
         {wall.blurb && <p className={styles.lede}>{wall.blurb}</p>}
-        <div className={styles.toolbar}>
-          <DensityChip current={density} value="compact" slug={slug} />
-          <DensityChip current={density} value="medium" slug={slug} />
-          <DensityChip current={density} value="full" slug={slug} />
-          <span className={styles.toolbarSep}>·</span>
-          <span className={styles.toolbarStat}>
-            {wall.label_count} {wall.label_count === 1 ? "label" : "labels"}
-          </span>
-        </div>
       </header>
 
       <CatalogWall
         scenes={[scene]}
-        density={density}
+        density="medium"
         showTitleBlock={false}
         showSceneHeaders={false}
       />
@@ -184,18 +172,6 @@ export default async function ScenePage({ params, searchParams }: Props) {
         <BridgesSection scene={detailData.scene} />
       )}
     </div>
-  );
-}
-
-function DensityChip({ current, value, slug }: { current: string; value: "compact" | "medium" | "full"; slug: string }) {
-  const active = current === value;
-  return (
-    <Link
-      href={value === "medium" ? `/scene/${slug}` : `/scene/${slug}?density=${value}`}
-      className={`${styles.chip} ${active ? styles.chipActive : ""}`}
-    >
-      {value}
-    </Link>
   );
 }
 

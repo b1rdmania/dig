@@ -10,23 +10,6 @@
   align-content: start;
 }
 
-.hero {
-  padding: 0.25rem 0 0.5rem;
-}
-
-.eyebrow {
-  font-size: 0.75rem;
-  color: var(--fg-faint);
-  margin-bottom: 0.35rem;
-}
-
-.title {
-  font-size: clamp(2.5rem, 8vw, 4.5rem);
-  font-weight: 400;
-  line-height: 1;
-  margin-bottom: 0.65rem;
-}
-
 .lede {
   font-size: 0.95rem;
   color: var(--fg-muted);
