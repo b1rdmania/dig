@@ -455,7 +455,7 @@ export function LlmBetaClient() {
         <div className={styles.chatShell}>
           <div className={styles.thread}>
             {messages.length === 0 && !loading && (
-              <p className={styles.thinking}>Go on then — an artist, a label, a sound. Ask.</p>
+              <p className={styles.thinking}>Ask about an artist, a label, a sound.</p>
             )}
             {messages.map((m, i) => (
               <div key={i} className={m.role === "user" ? styles.userMsg : styles.assistantMsg}>
