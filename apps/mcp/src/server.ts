@@ -16,6 +16,7 @@
 import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { createDb } from "@dig/db";
@@ -732,7 +733,52 @@ app.get("/usage", (_req, res) => {
   res.json(getMcpUsageSnapshot());
 });
 
-// One transport + one McpServer instance per SSE connection.
+// ---------------------------------------------------------------------------
+// Streamable HTTP transport (modern default — what Claude.ai custom
+// connectors speak). Stateless: a fresh McpServer per request, no session
+// tracking needed. Mount JSON parsing on this route only — the legacy
+// /messages route parses its own body inside handlePostMessage.
+// ---------------------------------------------------------------------------
+
+app.post("/mcp", express.json({ limit: "1mb" }), async (req, res) => {
+  const server = buildServer();
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  res.on("close", () => {
+    void transport.close();
+    void server.close();
+  });
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (err) {
+    console.error("[mcp] streamable request failed:", err);
+    if (!res.headersSent) {
+      res.status(500).json({
+        jsonrpc: "2.0",
+        error: { code: -32603, message: "Internal server error" },
+        id: null,
+      });
+    }
+  }
+});
+
+// Stateless mode has no server-initiated stream or session to manage.
+app.get("/mcp", (_req, res) => {
+  res.status(405).json({
+    jsonrpc: "2.0",
+    error: { code: -32000, message: "Method not allowed: stateless transport, POST only" },
+    id: null,
+  });
+});
+app.delete("/mcp", (_req, res) => {
+  res.status(405).json({
+    jsonrpc: "2.0",
+    error: { code: -32000, message: "Method not allowed: stateless transport, POST only" },
+    id: null,
+  });
+});
+
+// One transport + one McpServer instance per SSE connection (legacy transport).
 const MAX_SESSIONS = 16;
 interface Session {
   transport: SSEServerTransport;
@@ -800,7 +846,8 @@ app.post("/messages", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[dig-mcp] MCP server listening on http://localhost:${PORT}`);
-  console.log(`[dig-mcp]   SSE endpoint : GET  /sse`);
+  console.log(`[dig-mcp]   Streamable   : POST /mcp (stateless — use this for Claude.ai connectors)`);
+  console.log(`[dig-mcp]   SSE (legacy) : GET  /sse`);
   console.log(`[dig-mcp]   Post endpoint: POST /messages?sessionId=<id>`);
   console.log(`[dig-mcp]   Scope        : 90s house & techno (~80k masters)`);
   console.log(`[dig-mcp]   Tools        : search_catalog, get_artist, get_label, get_master, get_release_shadow, traverse_links, list_scenes, get_scene, get_label_essentials (+ get_release [GONE])`);
