@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { IBM_Plex_Sans, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { TrailBar } from "@/components/TrailBar";
 import "./globals.css";
 
 const sans = IBM_Plex_Sans({
@@ -89,7 +88,6 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <Nav />
         </Suspense>
-        <TrailBar />
         <main>
           {children}
         </main>
