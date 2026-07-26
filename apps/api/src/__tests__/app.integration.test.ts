@@ -107,8 +107,9 @@ describe.skipIf(!DATABASE_URL)("app integration", () => {
   });
 
   it("anonymous requests get the anonymous rate-limit tier", async () => {
+    const { RATE_LIMITS } = await import("../app.js");
     const res = await app.inject({ method: "GET", url: "/v1/health" });
-    expect(res.headers["x-ratelimit-limit"]).toBe("180");
+    expect(res.headers["x-ratelimit-limit"]).toBe(String(RATE_LIMITS.anonymous));
   });
 
   it("unknown API keys are downgraded to the anonymous tier", async () => {
@@ -117,7 +118,8 @@ describe.skipIf(!DATABASE_URL)("app integration", () => {
       url: "/v1/health",
       headers: { "x-api-key": "totally-bogus" },
     });
-    expect(res.headers["x-ratelimit-limit"]).toBe("180");
+    const { RATE_LIMITS } = await import("../app.js");
+    expect(res.headers["x-ratelimit-limit"]).toBe(String(RATE_LIMITS.anonymous));
   });
 
   it("valid API keys get the keyed rate-limit tier", async () => {

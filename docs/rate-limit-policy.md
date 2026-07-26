@@ -6,7 +6,7 @@ Locked for Phase 3 public alpha. Changes require discussion + version bump.
 
 | Tier | Identifier | Limit | Window | Use case |
 |------|-----------|-------|--------|----------|
-| Anonymous | Client IP | 180 req/min | Sliding | Browser, casual curl, unauthenticated agents |
+| Anonymous | Client IP | 400 req/min | Sliding | Browser, casual curl, unauthenticated agents |
 | Keyed | `X-API-Key` header | 1000 req/min | Sliding | Registered agents, MCP clients, integrators |
 
 ## MCP Beta Guardrail Policy (Week 1)
