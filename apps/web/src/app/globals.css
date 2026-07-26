@@ -169,6 +169,17 @@ main {
   }
 }
 
+/* iOS Safari zooms the page when a focused field's font-size is under 16px,
+ * and doesn't zoom back out on blur. Never let form fields go smaller on
+ * touch-sized screens. */
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* Reduce motion gracefully */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

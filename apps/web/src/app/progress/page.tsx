@@ -87,6 +87,75 @@ function PipelineDiagram() {
   );
 }
 
+function AskLoopDiagram() {
+  const box = { fill: "none", stroke: "#1a1a1a", strokeWidth: 1 } as const;
+  const label = { fontSize: 13, fill: "#1a1a1a", fontFamily: "inherit" } as const;
+  const small = { fontSize: 11, fill: "#6f6d68", fontFamily: "inherit" } as const;
+  const arrow = { stroke: "#1a1a1a", strokeWidth: 1, markerEnd: "url(#b)" } as const;
+  return (
+    <svg viewBox="0 0 720 120" className={styles.diagram} role="img" aria-label="The ask loop: a question goes to the model, the model calls tools against the catalog, and the answer carries links and videos">
+      <defs>
+        <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="#1a1a1a" strokeWidth="1.5" />
+        </marker>
+      </defs>
+      <rect x="8" y="36" width="110" height="44" {...box} />
+      <text x="20" y="56" {...label}>Question</text>
+      <text x="20" y="72" {...small}>the counter</text>
+      <line x1="118" y1="58" x2="150" y2="58" {...arrow} />
+      <rect x="152" y="36" width="110" height="44" {...box} />
+      <text x="164" y="56" {...label}>Model</text>
+      <text x="164" y="72" {...small}>Kimi · rules</text>
+      <line x1="262" y1="48" x2="294" y2="48" {...arrow} />
+      <line x1="294" y1="68" x2="262" y2="68" {...arrow} />
+      <rect x="296" y="36" width="110" height="44" {...box} />
+      <text x="308" y="56" {...label}>Tools</text>
+      <text x="308" y="72" {...small}>search · credits</text>
+      <line x1="406" y1="58" x2="438" y2="58" {...arrow} />
+      <rect x="440" y="36" width="110" height="44" {...box} />
+      <text x="452" y="56" {...label}>Catalog</text>
+      <text x="452" y="72" {...small}>Postgres</text>
+      <line x1="207" y1="80" x2="207" y2="104" {...arrow} />
+      <rect x="8" y="36" width="0" height="0" fill="none" />
+      <text x="220" y="100" {...small}>answer: every record a tool result, linked, with its video</text>
+    </svg>
+  );
+}
+
+function BatchFlipDiagram() {
+  const box = { fill: "none", stroke: "#1a1a1a", strokeWidth: 1 } as const;
+  const faded = { fill: "none", stroke: "#97938a", strokeWidth: 1, strokeDasharray: "3 3" } as const;
+  const label = { fontSize: 13, fill: "#1a1a1a", fontFamily: "inherit" } as const;
+  const small = { fontSize: 11, fill: "#6f6d68", fontFamily: "inherit" } as const;
+  const arrow = { stroke: "#1a1a1a", strokeWidth: 1, markerEnd: "url(#c)" } as const;
+  return (
+    <svg viewBox="0 0 720 130" className={styles.diagram} role="img" aria-label="A rebuild writes a fresh batch next to the live one, the gates run, and the product flips only when they pass">
+      <defs>
+        <marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="#1a1a1a" strokeWidth="1.5" />
+        </marker>
+      </defs>
+      <rect x="8" y="20" width="110" height="44" {...box} />
+      <text x="20" y="40" {...label}>New dump</text>
+      <text x="20" y="56" {...small}>monthly</text>
+      <line x1="118" y1="42" x2="150" y2="42" {...arrow} />
+      <rect x="152" y="20" width="130" height="44" {...box} />
+      <text x="164" y="40" {...label}>Batch N+1</text>
+      <text x="164" y="56" {...small}>written alongside</text>
+      <rect x="152" y="74" width="130" height="36" {...faded} />
+      <text x="164" y="96" {...small}>batch N · still live</text>
+      <line x1="282" y1="42" x2="314" y2="42" {...arrow} />
+      <rect x="316" y="20" width="200" height="44" {...box} />
+      <text x="328" y="40" {...label}>Gates</text>
+      <text x="328" y="56" {...small}>parity · dead-ends · smoke</text>
+      <line x1="516" y1="42" x2="548" y2="42" {...arrow} />
+      <rect x="550" y="20" width="110" height="44" {...box} />
+      <text x="562" y="40" {...label}>Flip</text>
+      <text x="562" y="56" {...small}>only on pass</text>
+    </svg>
+  );
+}
+
 export default function ProgressPage() {
   return (
     <div className={styles.page}>
@@ -160,6 +229,8 @@ export default function ProgressPage() {
           session can be bagged up into one YouTube playlist plus a Discogs
           marketplace link per record.
         </p>
+        <AskLoopDiagram />
+        <img src="/build/chat-bag.png" alt="A chat session bagged up: the video rail, one play-the-lot YouTube link, and each record with listen, buy, and dig links" className={styles.shot} />
         <Sources items={[
           { label: "ask/", href: SRC.ask },
           { label: "loop.ts", href: SRC.loop },
@@ -177,6 +248,7 @@ export default function ProgressPage() {
           ships its own instructions at connect time, so a client knows how to
           talk about the records and where the catalog&apos;s edges are.
         </p>
+        <img src="/build/claude-mcp.png" alt="Claude using the dig connector: loading the tools, finding the Italo House style tag, and pulling recommendations" className={styles.shot} />
         <Sources items={[
           { label: "server.ts", href: SRC.mcp },
           { label: "instructions.ts", href: SRC.instructions },
@@ -205,6 +277,7 @@ export default function ProgressPage() {
           by real usage telemetry (zero-result rate, click-through) so ranking
           changes are argued with numbers.
         </p>
+        <BatchFlipDiagram />
         <Sources items={[
           { label: "schema.ts", href: SRC.schema },
           { label: "migrations", href: SRC.migrations },

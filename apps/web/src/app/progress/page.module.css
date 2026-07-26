@@ -52,6 +52,13 @@
   margin: 0 0 0.75rem;
 }
 
+.shot {
+  width: 100%;
+  border: 1px solid var(--rule);
+  margin: 0.25rem 0 0.9rem;
+  display: block;
+}
+
 .sources {
   display: flex;
   flex-wrap: wrap;
