@@ -177,6 +177,7 @@ export default async function ScenePage({ params, searchParams }: Props) {
         scenes={[scene]}
         density={density}
         showTitleBlock={false}
+        showSceneHeaders={false}
       />
 
       {detailData && (detailData.scene.bridges_out.length > 0 || detailData.scene.bridges_in.length > 0) && (

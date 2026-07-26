@@ -35,6 +35,7 @@ export interface CatalogWallProps {
   density?: StripDensity;
   /** Show the document-style title block in the top-right */
   showTitleBlock?: boolean;
+  showSceneHeaders?: boolean;
   /** Optional title block content overrides */
   titleBlock?: {
     title?: string;
@@ -79,6 +80,7 @@ export function CatalogWall({
   scenes,
   density = "compact",
   showTitleBlock = true,
+  showSceneHeaders = true,
   titleBlock,
 }: CatalogWallProps) {
   const totalLabels = scenes.reduce((acc, s) => acc + s.labels.length, 0);
@@ -122,6 +124,7 @@ export function CatalogWall({
               style={sceneStyle}
               aria-label={scene.name}
             >
+              {showSceneHeaders && (
               <header className={styles.sceneHeader}>
                 <Link href={`/scene/${scene.slug}`} className={styles.sceneHeading}>
                   <span className={styles.sceneAxis}>{AXIS_LABEL[scene.axis] ?? scene.axis}</span>
@@ -135,6 +138,7 @@ export function CatalogWall({
                   <span className={styles.sceneCount}>{scene.labels.length} labels</span>
                 </div>
               </header>
+              )}
 
               <div className={styles.strips}>
                 {scene.labels.length === 0 ? (

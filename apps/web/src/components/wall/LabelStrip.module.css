@@ -177,7 +177,6 @@
 
 .releaseArtist {
   font-family: var(--font-sans);
-  font-style: italic;
   color: var(--ink-soft);
   font-size: 11px;
   white-space: nowrap;

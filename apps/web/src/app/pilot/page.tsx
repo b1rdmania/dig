@@ -38,7 +38,7 @@ export default function RussPage() {
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.heading}>2 · Chat on the web</h2>
+        <h2 className={styles.heading}>2 · AI chat</h2>
         <p>
           Open <a href="https://app.dig.baby/llm-beta">app.dig.baby/llm-beta</a>.
           Enter this key:
