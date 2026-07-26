@@ -326,6 +326,15 @@ async function searchRanked(
       // cursor predicate compares against, so it must be what we encode.
       .select(sql`ts_rank_cd(search_vector, ${tsqueryFn})`.as("raw_rank") as any)
       .where(sql`ts_rank_cd(search_vector, ${tsqueryFn}) > ${MIN_RANK_THRESHOLD}` as any);
+  } else if (type === "master") {
+    // Filter-only master search: rank by curation weight instead of falling
+    // back to discogs_id-desc (which is meaningless newest-ID-first noise).
+    // raw_rank carries the integer weight — the cursor predicate and encode
+    // must agree on this quantity. rank is weight/100 so it flows through the
+    // relevance clamp (weights are 0..~30) and keeps node-side sort ordering.
+    query = query
+      .select(sql`COALESCE(scene_weight, 0) / 100.0`.as("rank") as any)
+      .select(sql`COALESCE(scene_weight, 0)`.as("raw_rank") as any);
   } else {
     query = query
       .select(sql`0`.as("rank") as any)
@@ -367,12 +376,18 @@ async function searchRanked(
     query = query.where(
       sql`(ts_rank_cd(search_vector, ${tsqueryFn}), discogs_id) < (${cursorData.rank}, ${cursorData.discogs_id})` as any,
     );
+  } else if (cursorData && type === "master") {
+    query = query.where(
+      sql`(COALESCE(scene_weight, 0), discogs_id) < (${cursorData.rank}, ${cursorData.discogs_id})` as any,
+    );
   } else if (cursorData) {
     query = query.where("discogs_id" as any, "<", cursorData.discogs_id);
   }
 
   if (tsquery) {
     query = query.orderBy(sql`rank` as any, "desc").orderBy("discogs_id" as any, "desc");
+  } else if (type === "master") {
+    query = query.orderBy(sql`COALESCE(scene_weight, 0)` as any, "desc").orderBy("discogs_id" as any, "desc");
   } else {
     query = query.orderBy("discogs_id" as any, "desc");
   }

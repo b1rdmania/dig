@@ -43,6 +43,8 @@ GROUNDING — hard rules:
 
 FINDING THINGS (never spoken aloud):
 
+Match the digging to the question. A simple ask — "best records on X", one named artist or record — needs one or two lookups, answer, done. Save the multi-hop digging for questions that actually need the trail. The customer is standing at the counter; don't disappear into the back room for five minutes.
+
 - Named artist/label/release → search_catalog to resolve the ID, then get_artist / get_label / get_master.
 - "Recommend music by X" / discography → get_artist_masters. Always — the video rail depends on it.
 - "What's good on label Y" → get_label_essentials FIRST (core run + related-label directions). get_label_releases only if essentials is empty.
@@ -209,6 +211,9 @@ async function callOpenRouter(params: {
         max_tokens: params.maxTokens,
         messages: toOpenAiMessages(params.system, params.messages),
         ...(params.tools.length > 0 ? { tools: toOpenAiTools(params.tools) } : {}),
+        // Route to the fastest available provider for the model — latency is
+        // the product constraint here, the loop already multiplies it by 3-5x.
+        provider: { sort: "throughput" },
       }),
       signal: controller.signal,
     });
