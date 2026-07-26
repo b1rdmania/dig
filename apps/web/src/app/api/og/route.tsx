@@ -32,6 +32,9 @@ export async function GET(req: NextRequest) {
   if (kind === "home") {
     return renderHome();
   }
+  if (kind === "pilot") {
+    return renderPilot();
+  }
   return renderDefault(searchParams);
 }
 
@@ -322,6 +325,54 @@ function renderHome(): ImageResponse {
           }}
         >
           House and techno, 1988–2008.
+        </div>
+      </div>
+    ),
+    { width: 1200, height: 630 },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// pilot card — for /pilot
+// ---------------------------------------------------------------------------
+
+function renderPilot(): ImageResponse {
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          backgroundColor: "#f4f1e8",
+          padding: "60px 80px",
+          fontFamily: "sans-serif",
+          position: "relative",
+        }}
+      >
+        <div
+          style={{
+            color: "#1a1a1a",
+            fontSize: "180px",
+            lineHeight: 1,
+            letterSpacing: "-0.03em",
+            fontWeight: 600,
+          }}
+        >
+          Dig. Pilot.
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            bottom: "60px",
+            left: "80px",
+            color: "#444444",
+            fontSize: "44px",
+          }}
+        >
+          Three ways to try it.
         </div>
       </div>
     ),
