@@ -272,17 +272,30 @@ export function LlmBetaClient() {
       return;
     }
 
-    // Backfill YouTube links for cited records that didn't come with a video.
-    await Promise.all(rows.filter((r) => !r.ytId).map(async (r) => {
+    // Backfill YouTube links and proper titles for cited records that didn't
+    // come with media (text-cited masters only carry an ID).
+    await Promise.all(rows.map(async (r) => {
+      const needsName = r.artist === null;
+      const needsVideo = !r.ytId;
+      if (!needsName && !needsVideo) return;
       try {
-        const res = await fetch(`${API_URL}/v1/masters/${r.id}/videos?limit=3`);
-        if (!res.ok) return;
-        const data = await res.json() as { videos?: Array<{ url?: string }> };
-        for (const v of data.videos ?? []) {
-          const vid = extractYouTubeId(String(v.url ?? ""));
-          if (vid) { r.ytId = vid; break; }
+        const [detailRes, videoRes] = await Promise.all([
+          needsName ? fetch(`${API_URL}/v1/masters/${r.id}`) : Promise.resolve(null),
+          needsVideo ? fetch(`${API_URL}/v1/masters/${r.id}/videos?limit=3`) : Promise.resolve(null),
+        ]);
+        if (detailRes?.ok) {
+          const d = await detailRes.json() as { master?: { title?: string; primary_artist?: { name?: string } } };
+          if (d.master?.title) r.title = d.master.title;
+          if (d.master?.primary_artist?.name) r.artist = d.master.primary_artist.name;
         }
-      } catch { /* leave it video-less */ }
+        if (videoRes?.ok) {
+          const data = await videoRes.json() as { videos?: Array<{ url?: string }> };
+          for (const v of data.videos ?? []) {
+            const vid = extractYouTubeId(String(v.url ?? ""));
+            if (vid) { r.ytId = vid; break; }
+          }
+        }
+      } catch { /* leave the fallback label */ }
     }));
 
     const videoIds = rows.map((r) => r.ytId).filter(Boolean) as string[];
