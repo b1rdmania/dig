@@ -438,6 +438,13 @@ export function LlmBetaClient() {
             spellCheck={false}
             autoFocus
           />
+          <p className={styles.keyRequest}>
+            No key?{" "}
+            <a href="mailto:andy@cherrygalore.com?subject=Please%20send%20me%20a%20key%20so%20I%20can%20test%20out%20the%20LLM%20layer">
+              Request one here
+            </a>
+            .
+          </p>
         </section>
       )}
 

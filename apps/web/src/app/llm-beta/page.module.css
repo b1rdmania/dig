@@ -47,6 +47,21 @@
   gap: 0.5rem;
 }
 
+.keyRequest {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--fg-muted);
+}
+
+.keyRequest a {
+  text-decoration: underline;
+  color: inherit;
+}
+
+.keyRequest a:hover {
+  color: var(--fg);
+}
+
 .keyRow {
   display: flex;
   gap: 0.5rem;
