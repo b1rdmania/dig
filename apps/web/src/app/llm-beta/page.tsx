@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { LlmBetaClient } from "./LlmBetaClient";
 
 export const metadata: Metadata = {
-  title: "Dig. Beta.",
-  description: "Ask the catalog for records. Private beta.",
+  title: "Dig. AI Chat.",
+  description: "Chat music, get suggestions, playlists, Discogs links. Private beta.",
 };
 
 export default function LlmBetaPage() {

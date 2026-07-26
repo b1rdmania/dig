@@ -421,7 +421,10 @@ export function LlmBetaClient() {
 
   return (
     <div className={styles.page}>
-      <PageHeading title="Dig. Beta." />
+      <PageHeading
+        title="Dig. AI Chat."
+        lede="Chat music, get suggestions, playlists, Discogs links."
+      />
 
       {!hasKey && (
         <section className={styles.keySection}>
