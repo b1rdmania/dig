@@ -10,6 +10,7 @@ import type {
 import { CatalogWall, type WallScene } from "@/components/wall";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { TrailRecorder } from "@/components/TrailRecorder";
+import { ScenePlaylistPlayer } from "./ScenePlaylistPlayer";
 import styles from "./page.module.css";
 
 interface Props {
@@ -166,18 +167,12 @@ export default async function ScenePage({ params }: Props) {
         {wall.blurb && <p className={styles.lede}>{wall.blurb}</p>}
       </header>
 
-      {playlist?.playlist_url && (
-        <a
-          href={playlist.playlist_url}
-          target="_blank"
-          rel="noreferrer"
-          className={styles.playRow}
-        >
-          <span className={styles.playLabel}>Press play</span>
-          <span className={styles.playMeta}>
-            the scene in {playlist.video_count} records
-          </span>
-        </a>
+      {playlist && playlist.video_count > 0 && (
+        <ScenePlaylistPlayer
+          videoIds={playlist.records.map((r) => r.video_id)}
+          watchUrl={playlist.playlist_url}
+          count={playlist.video_count}
+        />
       )}
 
       <CatalogWall

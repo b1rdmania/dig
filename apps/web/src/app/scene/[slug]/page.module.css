@@ -174,22 +174,36 @@
   line-height: 1.45;
 }
 
+.playBlock {
+  margin-bottom: var(--sp-6);
+}
+
 .playRow {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: var(--sp-3);
   border-top: 3px solid var(--scene-accent, var(--ink));
-  border-bottom: 1px solid var(--rule);
   padding: var(--sp-4) 0;
-  margin-bottom: var(--sp-6);
-  text-decoration: none;
   color: var(--ink);
 }
 
-.playRow:hover .playLabel {
+.playFrame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--rule);
+  background: var(--ink);
+}
+
+.playOut {
+  color: inherit;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 2px;
+}
+
+.playOut:hover {
+  color: var(--ink);
 }
 
 .playLabel {
