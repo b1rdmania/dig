@@ -44,6 +44,7 @@ import {
   type SearchEntityType,
 } from "@dig/domain";
 import { toolError, toolResult } from "./contracts.js";
+import { SERVER_INSTRUCTIONS } from "./instructions.js";
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -229,10 +230,14 @@ function rateLimitMiddleware(req: express.Request, res: express.Response, next: 
 // ---------------------------------------------------------------------------
 
 function buildServer(): McpServer {
-const server = new McpServer({
-  name: "dig-catalog",
-  version: "0.2.0-scene",
-});
+const server = new McpServer(
+  {
+    name: "dig-catalog",
+    version: "0.2.0-scene",
+  },
+  // Served to clients at initialize time — the connector's CLAUDE.md.
+  { instructions: SERVER_INSTRUCTIONS },
+);
 
 // ---------------------------------------------------------------------------
 // Tool: search_catalog
