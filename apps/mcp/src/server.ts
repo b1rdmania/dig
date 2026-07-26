@@ -215,9 +215,14 @@ function rateLimitMiddleware(req: express.Request, res: express.Response, next: 
 }
 
 // ---------------------------------------------------------------------------
-// MCP server instance
+// MCP server factory — one instance per SSE connection. The SDK Server is
+// single-transport, so a shared instance can serve only one client at a time;
+// a per-connection instance lets Claude.ai, IDEs, and smoke tests coexist.
+// (Tool registrations below run inside this factory; bodies keep their
+// original top-level indentation.)
 // ---------------------------------------------------------------------------
 
+function buildServer(): McpServer {
 const server = new McpServer({
   name: "dig-catalog",
   version: "0.2.0-scene",
@@ -713,6 +718,9 @@ server.tool(
   },
 );
 
+return server;
+}
+
 // ---------------------------------------------------------------------------
 // Express app — SSE transport
 // ---------------------------------------------------------------------------
@@ -724,29 +732,31 @@ app.get("/usage", (_req, res) => {
   res.json(getMcpUsageSnapshot());
 });
 
-// One transport instance per SSE connection.
-const transports = new Map<string, SSEServerTransport>();
-let activeSessionId: string | null = null;
+// One transport + one McpServer instance per SSE connection.
+const MAX_SESSIONS = 16;
+interface Session {
+  transport: SSEServerTransport;
+  server: McpServer;
+}
+const sessions = new Map<string, Session>();
 
 app.get("/sse", async (_req, res) => {
-  // MCP SDK Server instance is single-transport; reject concurrent sessions
-  // explicitly instead of throwing and crashing the process.
-  if (activeSessionId && transports.has(activeSessionId)) {
+  if (sessions.size >= MAX_SESSIONS) {
     res.status(503).json({
-      error: "MCP server currently has an active session. Retry shortly.",
+      error: "MCP server is at session capacity. Retry shortly.",
       code: "MCP_SESSION_BUSY",
     });
     return;
   }
 
   const transport = new SSEServerTransport("/messages", res);
-  transports.set(transport.sessionId, transport);
-  activeSessionId = transport.sessionId;
+  const server = buildServer();
+  sessions.set(transport.sessionId, { transport, server });
+  console.log(`[mcp] session opened: ${transport.sessionId} (${sessions.size} active)`);
 
   res.on("close", () => {
-    transports.delete(transport.sessionId);
-    if (activeSessionId === transport.sessionId) activeSessionId = null;
-    // Ensure server can accept a new connection after client disconnect.
+    sessions.delete(transport.sessionId);
+    console.log(`[mcp] session closed: ${transport.sessionId} (${sessions.size} active)`);
     void server.close().catch((err) => {
       console.warn("[mcp] server.close() on SSE disconnect failed:", err);
     });
@@ -755,8 +765,7 @@ app.get("/sse", async (_req, res) => {
   try {
     await server.connect(transport);
   } catch (err) {
-    transports.delete(transport.sessionId);
-    if (activeSessionId === transport.sessionId) activeSessionId = null;
+    sessions.delete(transport.sessionId);
     console.error("[mcp] failed to connect transport:", err);
     if (!res.headersSent) {
       res.status(500).json({
@@ -775,14 +784,14 @@ app.post("/messages", async (req, res) => {
     return;
   }
 
-  const transport = transports.get(sessionId);
+  const session = sessions.get(sessionId);
 
-  if (!transport) {
+  if (!session) {
     res.status(404).json({ error: `No active session: ${sessionId}` });
     return;
   }
 
-  await transport.handlePostMessage(req, res);
+  await session.transport.handlePostMessage(req, res);
 });
 
 // ---------------------------------------------------------------------------
