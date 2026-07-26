@@ -6,12 +6,11 @@ import styles from "./HomeLink.module.css";
 
 /**
  * The site has no header — this is the one piece of wayfinding chrome:
- * a small "← home" at the top of every page except home itself and the
- * chrome-free pilot page.
+ * a small "← home" at the top of every page except home itself.
  */
 export function HomeLink() {
   const pathname = usePathname();
-  if (pathname === "/" || pathname === "/pilot") return null;
+  if (pathname === "/") return null;
   return (
     <div className={styles.wrap}>
       <Link href="/" className={styles.link}>← home</Link>
