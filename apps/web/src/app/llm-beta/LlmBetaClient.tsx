@@ -244,9 +244,12 @@ export function LlmBetaClient() {
     }
   }
 
-  function bagItUp() {
-    // Compile the session report from everything cited so far: media rows
-    // carry the YouTube links, evidence rows catch video-less masters.
+  async function bagItUp() {
+    // Compile the session report from records the assistant actually
+    // recommended: media rows are already citation-bound, and masters whose
+    // dig.baby URL appears in the answer text count even without a video.
+    // Evidence alone does NOT qualify — it includes every record the model
+    // merely glanced at while searching, which is noise, not the session.
     const seen = new Set<number>();
     const rows: Array<{ id: number; title: string; artist: string | null; ytId: string | null }> = [];
     for (const m of messages) {
@@ -255,13 +258,32 @@ export function LlmBetaClient() {
         seen.add(item.discogs_id);
         rows.push({ id: item.discogs_id, title: item.title, artist: item.artist, ytId: extractYouTubeId(item.youtube_url) });
       }
-      for (const ev of m.evidence ?? []) {
-        if (ev.type !== "master" || seen.has(ev.discogs_id)) continue;
-        seen.add(ev.discogs_id);
-        rows.push({ id: ev.discogs_id, title: ev.title, artist: null, ytId: null });
+      if (m.role !== "assistant" || m.error) continue;
+      const citedIds = [...m.content.matchAll(/app\.dig\.baby\/master\/(\d+)/g)].map((match) => Number(match[1]));
+      for (const id of citedIds) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const ev = (m.evidence ?? []).find((e) => e.type === "master" && e.discogs_id === id);
+        rows.push({ id, title: ev?.title ?? `Master ${id}`, artist: null, ytId: null });
       }
     }
-    if (rows.length === 0) return;
+    if (rows.length === 0) {
+      setMessages((prev) => [...prev, { role: "assistant", content: "Nothing to bag yet — get me to actually recommend some records first.", error: true }]);
+      return;
+    }
+
+    // Backfill YouTube links for cited records that didn't come with a video.
+    await Promise.all(rows.filter((r) => !r.ytId).map(async (r) => {
+      try {
+        const res = await fetch(`${API_URL}/v1/masters/${r.id}/videos?limit=3`);
+        if (!res.ok) return;
+        const data = await res.json() as { videos?: Array<{ url?: string }> };
+        for (const v of data.videos ?? []) {
+          const vid = extractYouTubeId(String(v.url ?? ""));
+          if (vid) { r.ytId = vid; break; }
+        }
+      } catch { /* leave it video-less */ }
+    }));
 
     const videoIds = rows.map((r) => r.ytId).filter(Boolean) as string[];
     const lines: string[] = [];
