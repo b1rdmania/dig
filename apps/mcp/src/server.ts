@@ -233,7 +233,7 @@ function buildServer(): McpServer {
 const server = new McpServer(
   {
     name: "dig-catalog",
-    version: "0.2.0-scene",
+    version: "0.5.0",
   },
   // Served to clients at initialize time — the connector's CLAUDE.md.
   { instructions: SERVER_INSTRUCTIONS },

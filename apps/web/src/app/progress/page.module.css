@@ -19,6 +19,14 @@
   margin-bottom: 1.5rem;
 }
 
+.pullquote {
+  font-size: 1.15rem;
+  line-height: 1.5;
+  border-left: 3px solid var(--ink);
+  padding-left: 1rem;
+  margin: 0 0 1.5rem;
+}
+
 .diagram {
   width: 100%;
   height: auto;

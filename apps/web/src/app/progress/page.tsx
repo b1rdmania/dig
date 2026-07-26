@@ -94,6 +94,12 @@ export default function ProgressPage() {
         the whole thing around one trick: the database is a build artifact.
       </p>
 
+      <p className={styles.pullquote}>
+        ngl rebuilding the database was a cunt of a job. took 2 weeks running
+        locally, then we parsed, tidied and moved to a Fly host. i think it was
+        200m lines of data.
+      </p>
+
       <PipelineDiagram />
 
       <section className={styles.section}>
