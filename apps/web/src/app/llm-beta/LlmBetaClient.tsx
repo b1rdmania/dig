@@ -11,6 +11,8 @@ const KEY_STORAGE = "dig.llm_beta.access_key";
 
 // Between real progress events, the single activity line rotates through
 // shop business so it never sits still. In persona, never technical.
+// Picked at random; each phrase holds for a while — a shopkeeper doesn't
+// change activity every two seconds.
 const FILLER_PHRASES = [
   "Riffling the crates…",
   "Checking the back room…",
@@ -24,6 +26,56 @@ const FILLER_PHRASES = [
   "Wiping the stylus…",
   "Straightening the racks…",
   "Consulting the ledger under the till…",
+  "Asking Zaf…",
+  "Ignoring the phone…",
+  "Re-sleeving a 12\"…",
+  "Peering over the glasses…",
+  "Checking behind the counter…",
+  "Going through the new arrivals box…",
+  "Sticking the kettle on…",
+  "Turning the promo pile over…",
+  "Reading the matrix number…",
+  "Checking the sold wall…",
+  "Having a think…",
+  "Weighing up two pressings…",
+  "Digging out the box under the stairs…",
+  "Checking what came in Tuesday…",
+  "Squaring up the display copies…",
+  "Looking for the other copy…",
+  "Chasing a hunch…",
+  "Pulling the divider card…",
+  "Flicking to the T section…",
+  "Rummaging in the overstock…",
+  "Checking the label discography…",
+  "Trying to remember the B-side…",
+  "Holding it up to the light…",
+  "Checking the sleeve for ringwear…",
+  "Cross-referencing the wants book…",
+  "Tapping the counter…",
+  "Frowning at a bootleg…",
+  "Refiling something someone left out…",
+  "Checking the window display…",
+  "Going down the rabbit hole…",
+  "Following the thread…",
+  "Second-guessing the year…",
+  "Pulling the shop copy…",
+  "Listening for the intro…",
+  "Skipping to the breakdown…",
+  "Checking both catalogues…",
+  "Remembering who bought the last one…",
+  "Looking at the shelf above the singles…",
+  "Moving the cat off the box…",
+  "Checking the represses…",
+  "Dusting the platter…",
+  "Dropping the needle for a second…",
+  "Marking the page in the ledger…",
+  "Sifting the trade-ins…",
+  "Comparing sleeves…",
+  "Double-checking the pressing plant…",
+  "Nipping out the back…",
+  "Turning the sign to 'back in 5'…",
+  "Thumbing the Chicago section…",
+  "Reaching for the top shelf…",
 ];
 
 interface MediaItem {
@@ -116,18 +168,22 @@ export function LlmBetaClient() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activity, setActivity] = useState<string[]>([]);
   const [activityLine, setActivityLine] = useState<string>("");
-  const fillerIndexRef = useRef(0);
 
-  // Rotate the single activity line through filler phrases while waiting;
-  // real progress events (in the stream handler) overwrite it immediately.
+  // Rotate the single activity line through random filler phrases while
+  // waiting; real progress events (in the stream handler) overwrite it
+  // immediately. Each phrase holds for a while — calm, not a slot machine.
   useEffect(() => {
     if (!loading) return;
     const id = window.setInterval(() => {
-      fillerIndexRef.current = (fillerIndexRef.current + 1) % FILLER_PHRASES.length;
-      setActivityLine(FILLER_PHRASES[fillerIndexRef.current]);
-    }, 2600);
+      setActivityLine((prev) => {
+        let next = prev;
+        while (next === prev) {
+          next = FILLER_PHRASES[Math.floor(Math.random() * FILLER_PHRASES.length)];
+        }
+        return next;
+      });
+    }, 13000);
     return () => window.clearInterval(id);
   }, [loading]);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -170,8 +226,7 @@ export function LlmBetaClient() {
     const nextMessages: Message[] = [...messages, { role: "user", content: q }];
     setMessages(nextMessages);
     setInput("");
-    setActivityLine(FILLER_PHRASES[0]);
-    fillerIndexRef.current = 0;
+    setActivityLine(FILLER_PHRASES[Math.floor(Math.random() * FILLER_PHRASES.length)]);
     setLoading(true);
 
     try {
@@ -219,7 +274,6 @@ export function LlmBetaClient() {
         let evt: {
           type: "status" | "result" | "error";
           label?: string;
-          detail?: string;
           answer?: string;
           media?: MediaItem[];
           mode?: ResponseMode;
@@ -233,8 +287,6 @@ export function LlmBetaClient() {
           return;
         }
         if (evt.type === "status" && evt.label) {
-          const logLine = evt.detail ?? evt.label;
-          setActivity((prev) => (prev[prev.length - 1] === logLine ? prev : [...prev, logLine]));
           setActivityLine(evt.label);
         } else if (evt.type === "result") {
           sawTerminal = true;
@@ -273,7 +325,7 @@ export function LlmBetaClient() {
       }]);
     } finally {
       setLoading(false);
-      setActivity([]);
+      setActivityLine("");
       inputRef.current?.focus();
       resizeComposer();
     }
@@ -432,16 +484,6 @@ export function LlmBetaClient() {
             {loading && (
               <div className={styles.assistantMsg}>
                 <p className={styles.activityLine}>{activityLine || FILLER_PHRASES[0]}</p>
-                {activity.length > 0 && (
-                  <details className={styles.workings}>
-                    <summary>workings</summary>
-                    <div className={styles.workingsLog}>
-                      {activity.map((label, i) => (
-                        <span key={`${label}-${i}`} className={styles.workingsLine}>{label}</span>
-                      ))}
-                    </div>
-                  </details>
-                )}
               </div>
             )}
 

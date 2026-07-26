@@ -179,45 +179,6 @@
   50% { opacity: 1; }
 }
 
-.workings {
-  margin-top: 0.4rem;
-}
-
-.workings summary {
-  font-size: 0.7rem;
-  font-family: var(--font-mono-data, monospace);
-  color: var(--fg-faint);
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.workings summary::-webkit-details-marker {
-  display: none;
-}
-
-.workings summary::before {
-  content: "▸ ";
-}
-
-.workings[open] summary::before {
-  content: "▾ ";
-}
-
-.workingsLog {
-  margin-top: 0.35rem;
-  padding-left: 0.85rem;
-  border-left: 1px solid var(--line);
-  display: grid;
-  gap: 0.15rem;
-}
-
-.workingsLine {
-  font-size: 0.7rem;
-  font-family: var(--font-mono-data, monospace);
-  color: var(--fg-faint);
-}
-
 /* Sources */
 
 .sources {
