@@ -160,6 +160,13 @@ export function LlmBetaClient() {
       // Pre-stream failures (bad key, rate limit, config) come back as plain
       // JSON with an error status; only a 200 carries the NDJSON stream.
       if (!res.ok || !res.body) {
+        if (res.status === 401) {
+          // Stale or revoked key restored from a previous session — clear it
+          // and drop back to the key screen instead of a dead-end chat.
+          updateAccessKey("");
+          setMessages([]);
+          return;
+        }
         const data = await res.json().catch(() => null) as { error?: { message: string }; mode?: ResponseMode } | null;
         setMessages((prev) => [...prev, {
           role: "assistant",
@@ -236,6 +243,48 @@ export function LlmBetaClient() {
       resizeComposer();
     }
   }
+
+  function bagItUp() {
+    // Compile the session report from everything cited so far: media rows
+    // carry the YouTube links, evidence rows catch video-less masters.
+    const seen = new Set<number>();
+    const rows: Array<{ id: number; title: string; artist: string | null; ytId: string | null }> = [];
+    for (const m of messages) {
+      for (const item of m.media ?? []) {
+        if (seen.has(item.discogs_id)) continue;
+        seen.add(item.discogs_id);
+        rows.push({ id: item.discogs_id, title: item.title, artist: item.artist, ytId: extractYouTubeId(item.youtube_url) });
+      }
+      for (const ev of m.evidence ?? []) {
+        if (ev.type !== "master" || seen.has(ev.discogs_id)) continue;
+        seen.add(ev.discogs_id);
+        rows.push({ id: ev.discogs_id, title: ev.title, artist: null, ytId: null });
+      }
+    }
+    if (rows.length === 0) return;
+
+    const videoIds = rows.map((r) => r.ytId).filter(Boolean) as string[];
+    const lines: string[] = [];
+    lines.push(`Right — bagged up, ${rows.length} record${rows.length === 1 ? "" : "s"} from this session.`);
+    if (videoIds.length > 0) {
+      lines.push("");
+      lines.push(`▶ [Play the lot on YouTube](https://www.youtube.com/watch_videos?video_ids=${videoIds.join(",")})`);
+    }
+    lines.push("");
+    for (const r of rows) {
+      const name = r.artist ? `${r.artist} — ${r.title}` : r.title;
+      const links = [
+        r.ytId ? `[listen](https://www.youtube.com/watch?v=${r.ytId})` : null,
+        `[buy](https://www.discogs.com/sell/list?master_id=${r.id})`,
+        `[dig](https://app.dig.baby/master/${r.id})`,
+      ].filter(Boolean).join(" · ");
+      lines.push(`${name} — ${links}`);
+      lines.push("");
+    }
+    setMessages((prev) => [...prev, { role: "assistant", content: lines.join("\n") }]);
+  }
+
+  const hasBaggableRecords = messages.some((m) => (m.media?.length ?? 0) > 0 || (m.evidence ?? []).some((e) => e.type === "master"));
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -372,6 +421,11 @@ export function LlmBetaClient() {
 
           <div className={styles.inputMeta}>
             <p className={styles.help}>Enter to send · Shift+Enter for new line</p>
+            {hasBaggableRecords && (
+              <button className={styles.clearKey} type="button" onClick={bagItUp} disabled={loading}>
+                Bag it up ▶
+              </button>
+            )}
             <button className={styles.clearKey} type="button" onClick={() => { updateAccessKey(""); setMessages([]); }}>
               Clear key + history
             </button>

@@ -730,6 +730,97 @@ server.tool(
 );
 
 // ---------------------------------------------------------------------------
+// Tool: build_session_playlist
+// ---------------------------------------------------------------------------
+
+function extractYouTubeVideoId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
+server.tool(
+  "build_session_playlist",
+  "Bag up a listening session: given the master release IDs discussed, " +
+  "returns a single YouTube playlist link that plays them all in order, " +
+  "plus per-record Discogs marketplace buy links (sell/list filtered to the " +
+  "master) and Dig pages. Use when the user wants a session recap, a " +
+  "playlist of what was discussed, or wants to buy the records.",
+  {
+    master_discogs_ids: z.array(z.number().int().min(1)).min(1).max(25)
+      .describe("Master release IDs to include, in play order (1-25)"),
+  },
+  async ({ master_discogs_ids }) => {
+    const requestId = createRequestId();
+    const started = Date.now();
+    let status: "ok" | "error" = "ok";
+    let errorCode: string | null = null;
+    try {
+      const { batchId, dumpDate } = await getBatchForTable(db, "catalog.masters");
+      const ids = [...new Set(master_discogs_ids)];
+
+      const masters = await db
+        .selectFrom("catalog.masters")
+        .select(["discogs_id", "title", "primary_artist_name", "primary_label_name", "year"])
+        .where("batch_id", "=", batchId)
+        .where("discogs_id", "in", ids)
+        .execute();
+      const byId = new Map(masters.map((m) => [m.discogs_id, m]));
+
+      const records = [];
+      const videoIds: string[] = [];
+      for (const id of ids) {
+        const m = byId.get(id);
+        if (!m) continue;
+        let youtubeUrl: string | null = null;
+        try {
+          const videos = await getMasterVideos(db, id, batchId, dumpDate, 3);
+          for (const v of videos.videos ?? []) {
+            const vid = extractYouTubeVideoId(String((v as { url?: unknown }).url ?? ""));
+            if (vid) {
+              youtubeUrl = `https://www.youtube.com/watch?v=${vid}`;
+              videoIds.push(vid);
+              break;
+            }
+          }
+        } catch { /* video-less record — still include it for the buy link */ }
+        records.push({
+          master_discogs_id: id,
+          title: m.title,
+          artist: m.primary_artist_name,
+          label: m.primary_label_name,
+          year: m.year,
+          youtube_url: youtubeUrl,
+          discogs_buy_url: `https://www.discogs.com/sell/list?master_id=${id}`,
+          discogs_url: `https://www.discogs.com/master/${id}`,
+          dig_url: `https://app.dig.baby/master/${id}`,
+        });
+      }
+
+      const playlistUrl = videoIds.length > 0
+        ? `https://www.youtube.com/watch_videos?video_ids=${videoIds.join(",")}`
+        : null;
+
+      return toolResult(
+        {
+          playlist_url: playlistUrl,
+          playlist_video_count: videoIds.length,
+          records,
+          not_found: ids.filter((id) => !byId.has(id)),
+        },
+        { tool: "build_session_playlist", requestId },
+      );
+    } catch (err: any) {
+      console.error("[mcp] build_session_playlist error:", err);
+      status = "error";
+      errorCode = "INTERNAL_ERROR";
+      return toolError("INTERNAL_ERROR", "Internal server error", { tool: "build_session_playlist", requestId });
+    } finally {
+      logToolInvocation(requestId, "build_session_playlist", status, Date.now() - started, errorCode);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
 // Tool: get_artist_credits
 // ---------------------------------------------------------------------------
 
