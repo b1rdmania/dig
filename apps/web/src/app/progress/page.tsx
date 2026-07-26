@@ -23,6 +23,12 @@ const SRC = {
   binding: `${BLOB}/apps/api/src/routes/v1/ask/binding.ts`,
   mcp: `${BLOB}/apps/mcp/src/server.ts`,
   instructions: `${BLOB}/apps/mcp/src/instructions.ts`,
+  schema: `${BLOB}/packages/db/src/schema.ts`,
+  migrations: `${REPO}/tree/main/packages/db/migrations`,
+  parityAudit: `${BLOB}/scripts/migration-parity-audit.ts`,
+  deadEnds: `${BLOB}/scripts/no-dead-ends-check.ts`,
+  smoke: `${BLOB}/scripts/regression-smoke.ts`,
+  searchQuality: `${BLOB}/scripts/search-quality-report.ts`,
 };
 
 function Sources({ items }: { items: Array<{ label: string; href: string }> }) {
@@ -174,6 +180,38 @@ export default function ProgressPage() {
         <Sources items={[
           { label: "server.ts", href: SRC.mcp },
           { label: "instructions.ts", href: SRC.instructions },
+        ]} />
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.heading}>The database, properly</h2>
+        <p>
+          Four schemas: ingest for the raw load, catalog for what the product
+          serves, enrich for the layers on top, auth for keys. Thirty-three
+          migrations, and a CI gate that fails the build if the migration
+          chain and the live schema ever disagree. Every catalog row carries a
+          batch id: a re-ingest writes a fresh batch alongside the old one and
+          the product flips over when it&apos;s ready, so a bad dump can never
+          half-overwrite a good one.
+        </p>
+        <p>
+          Ingest is the ugly part. The monthly dump is around 200 million
+          lines of XML, streamed through SAX parsers so memory stays flat,
+          profiled and normalised before anything touches the catalog schema.
+          Crashed batches get marked failed, not resumed. After every rebuild,
+          the gates run: a no-dead-ends audit that walks canary entities and
+          fails if any public page links to a missing one, a regression smoke
+          suite that hits the live API in CI, and a search-quality report fed
+          by real usage telemetry (zero-result rate, click-through) so ranking
+          changes are argued with numbers.
+        </p>
+        <Sources items={[
+          { label: "schema.ts", href: SRC.schema },
+          { label: "migrations", href: SRC.migrations },
+          { label: "migration-parity-audit.ts", href: SRC.parityAudit },
+          { label: "no-dead-ends-check.ts", href: SRC.deadEnds },
+          { label: "regression-smoke.ts", href: SRC.smoke },
+          { label: "search-quality-report.ts", href: SRC.searchQuality },
         ]} />
       </section>
 
