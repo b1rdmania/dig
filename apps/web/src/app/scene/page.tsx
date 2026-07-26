@@ -65,15 +65,17 @@ export default async function ScenesIndexPage() {
       <header className={styles.pageHeader}>
         <h1 className={styles.heading}>Scenes.</h1>
         <p className={styles.lede}>
-          Curated entry points to the catalog. Each scene gathers the labels
-          that defined a city, a sound, or a moment. Click in to see the wall;
-          click a label to drop into its full discography.
+          Each scene gathers the labels that defined a city, a sound, or a moment.
         </p>
         <div className={styles.toolbar}>
           <Link href="/wall" className={styles.toolbarLink}>
             ← View the whole wall
           </Link>
         </div>
+        <p className={styles.aside}>
+          We also built a drum-pattern generator from some of these scenes —{" "}
+          <a href="https://ghost-pattern.pages.dev/" target="_blank" rel="noreferrer">try it</a>.
+        </p>
       </header>
 
       {order.map((axis) => {
@@ -82,7 +84,7 @@ export default async function ScenesIndexPage() {
         return (
           <section key={axis} className={styles.axisSection}>
             <h2 className={styles.axisHeading}>{AXIS_LABEL[axis] ?? axis}</h2>
-            <div className={styles.cards}>
+            <div className={styles.rows}>
               {scenes.map((s) => {
                 const era = formatEra(s.era_start, s.era_end);
                 const accent = s.palette?.accent ?? "#1a1a1a";
@@ -90,22 +92,20 @@ export default async function ScenesIndexPage() {
                   <Link
                     key={s.slug}
                     href={`/scene/${s.slug}`}
-                    className={styles.card}
+                    className={styles.row}
                     style={{ "--card-accent": accent } as React.CSSProperties}
                   >
-                    <div className={styles.cardAccent} aria-hidden />
-                    <div className={styles.cardBody}>
-                      <h3 className={styles.cardTitle}>{s.name}</h3>
-                      <div className={styles.cardMeta}>
-                        {s.city && <span>{s.city}</span>}
-                        {s.city && era && <span className={styles.cardSep}>·</span>}
-                        {era && <span className={styles.cardEra}>{era}</span>}
-                      </div>
-                      {s.blurb && <p className={styles.cardBlurb}>{s.blurb}</p>}
-                      <div className={styles.cardFooter}>
-                        <span>{s.label_count} {s.label_count === 1 ? "label" : "labels"}</span>
-                      </div>
-                    </div>
+                    <span className={styles.rowAccent} aria-hidden />
+                    <span className={styles.rowMain}>
+                      <span className={styles.rowTitle}>{s.name}</span>
+                      <span className={styles.rowMeta}>
+                        {[s.city, era].filter(Boolean).join(" · ")}
+                      </span>
+                      {s.blurb && <span className={styles.rowBlurb}>{s.blurb}</span>}
+                    </span>
+                    <span className={styles.rowCount}>
+                      {s.label_count} {s.label_count === 1 ? "label" : "labels"}
+                    </span>
                   </Link>
                 );
               })}
