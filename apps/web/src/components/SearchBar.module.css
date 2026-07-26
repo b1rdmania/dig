@@ -42,11 +42,11 @@
   background: transparent;
   color: var(--ink);
   border: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-weight: 600;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   cursor: pointer;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .submit:hover {

@@ -40,7 +40,6 @@ export function SearchBar() {
 
   return (
     <form className={styles.wrapper} onSubmit={onSubmit}>
-      <span className={styles.prompt} aria-hidden>/</span>
       <input
         className={styles.input}
         type="search"
@@ -52,7 +51,7 @@ export function SearchBar() {
         spellCheck={false}
         aria-label="Search the music catalog"
       />
-      <button className={styles.submit} type="submit">↵</button>
+      <button className={styles.submit} type="submit">Search</button>
     </form>
   );
 }

@@ -26,9 +26,11 @@ export function Nav() {
   };
 
   const isSubpage = pathname !== "/";
-  // Home and /search render the canonical SearchBar in-page; the nav's
-  // compact search form would duplicate it.
-  const showNavSearch = isSubpage && pathname !== "/search";
+  // The homepage carries the brand itself (hero + footer) — no header there.
+  if (!isSubpage) return null;
+  // /search renders the canonical SearchBar in-page; the nav's compact
+  // search form would duplicate it.
+  const showNavSearch = pathname !== "/search";
 
   return (
     <nav className={styles.nav}>
@@ -50,7 +52,6 @@ export function Nav() {
         </div>
         {showNavSearch ? (
           <form className={styles.searchForm} onSubmit={onSearchSubmit}>
-            <span className={styles.searchPrompt} aria-hidden>/</span>
             <input
               className={styles.searchInput}
               type="search"
@@ -61,7 +62,7 @@ export function Nav() {
               autoCapitalize="off"
               spellCheck={false}
             />
-            <button className={styles.searchBtn} type="submit">↵</button>
+            <button className={styles.searchBtn} type="submit" aria-label="Search">Search</button>
           </form>
         ) : null}
       </div>

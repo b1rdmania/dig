@@ -26,11 +26,11 @@ function HomeHero() {
       <h1 className={styles.heading}>Dig.</h1>
       <p className={styles.lede}>House and techno, 1988 to 2008.</p>
       <div className={styles.wallToolbar}>
-        <Link href="/wall?density=medium" className={styles.toolbarLink}>The wall →</Link>
-        <span className={styles.toolbarSep}>·</span>
         <Link href="/scene" className={styles.toolbarLink}>Scenes →</Link>
         <span className={styles.toolbarSep}>·</span>
-        <Link href="/llm-beta" className={styles.toolbarLink}>Ask Dig →</Link>
+        <Link href="/llm-beta" className={styles.toolbarLink}>Ask Dig (LLM beta) →</Link>
+        <span className={styles.toolbarSep}>·</span>
+        <Link href="/faq" className={styles.toolbarLink}>FAQ →</Link>
       </div>
     </section>
   );

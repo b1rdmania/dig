@@ -185,7 +185,7 @@
 
 .workings summary {
   font-size: 0.7rem;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono-data, monospace);
   color: var(--fg-faint);
   cursor: pointer;
   list-style: none;
@@ -214,7 +214,7 @@
 
 .workingsLine {
   font-size: 0.7rem;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono-data, monospace);
   color: var(--fg-faint);
 }
 

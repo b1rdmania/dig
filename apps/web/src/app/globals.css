@@ -30,8 +30,14 @@
   --label-accent:     var(--ink);
   --label-accent-ink: var(--paper);
 
-  /* Type stack */
-  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular",
+  /* Type stack.
+   * Rationalised 2026-07: --font-mono resolves to the sans stack — the old
+   * mono-everywhere chrome read as terminal cosplay. True monospace survives
+   * only as --font-mono-data, for genuinely tabular/terminal content
+   * (catalog numbers, the Ask Dig workings log). */
+  --font-mono: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Söhne",
+               "Inter", system-ui, sans-serif;
+  --font-mono-data: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular",
                Menlo, Monaco, Consolas, monospace;
   --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Söhne",
                "Inter", system-ui, sans-serif;

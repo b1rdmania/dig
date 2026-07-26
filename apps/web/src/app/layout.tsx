@@ -79,6 +79,8 @@ export default function RootLayout({
         ["--font-sans" as string]:
           `var(--font-sans-body), -apple-system, BlinkMacSystemFont, "Söhne", Inter, system-ui, sans-serif`,
         ["--font-mono" as string]:
+          `var(--font-sans-body), -apple-system, BlinkMacSystemFont, "Söhne", Inter, system-ui, sans-serif`,
+        ["--font-mono-data" as string]:
           `var(--font-mono-body), ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace`,
         ["--font-serif" as string]:
           `var(--font-serif-body), "Iowan Old Style", Charter, Georgia, "Times New Roman", serif`,

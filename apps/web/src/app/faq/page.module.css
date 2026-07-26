@@ -1,0 +1,40 @@
+.page {
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+  min-height: calc(100dvh - 160px);
+}
+
+.title {
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 400;
+  line-height: 1;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.list {
+  display: grid;
+  gap: 1.4rem;
+  margin: 0;
+}
+
+.item {
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+
+.q {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.a {
+  margin: 0;
+  color: var(--fg-muted, var(--fg));
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.a a {
+  text-decoration: underline;
+}

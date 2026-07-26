@@ -12,6 +12,7 @@ export function Footer() {
           </div>
           <nav className={styles.links} aria-label="Footer">
             <Link href="/" prefetch={false} className={styles.link}>Home</Link>
+            <Link href="/faq" prefetch={false} className={styles.link}>FAQ</Link>
             <a
               href="https://github.com/b1rdmania/dig"
               target="_blank"
@@ -21,11 +22,6 @@ export function Footer() {
               GitHub
             </a>
           </nav>
-        </div>
-        <div className={styles.attribution}>
-          Data from <a href="https://www.discogs.com/data/" target="_blank" rel="noreferrer">Discogs</a> (CC0),{" "}
-          <a href="https://coverartarchive.org/" target="_blank" rel="noreferrer">Cover Art Archive</a>, and{" "}
-          <a href="https://musicbrainz.org/" target="_blank" rel="noreferrer">MusicBrainz</a>.
         </div>
       </div>
     </footer>
