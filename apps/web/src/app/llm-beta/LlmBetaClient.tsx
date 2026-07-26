@@ -307,7 +307,9 @@ export function LlmBetaClient() {
     }
     lines.push("");
     for (const r of rows) {
-      const name = r.artist ? `${r.artist} — ${r.title}` : r.title;
+      // Strip Discogs disambiguation suffixes ("Frequency (3)") for display.
+      const artist = r.artist?.replace(/\s+\(\d+\)$/, "") ?? null;
+      const name = artist ? `${artist} — ${r.title}` : r.title;
       const links = [
         r.ytId ? `[listen](https://www.youtube.com/watch?v=${r.ytId})` : null,
         `[buy](https://www.discogs.com/sell/list?master_id=${r.id})`,
