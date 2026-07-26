@@ -12,14 +12,12 @@ const sans = IBM_Plex_Sans({
 
 
 export const metadata: Metadata = {
-  title: "dig — house and techno, 1988–2008",
-  description:
-    "A curated catalog of house and techno from 1988 to 2008 — the labels, the records, the scenes that built the form.",
+  title: "Dig. Beta.",
+  description: "House and techno, 1988–2008. Browse the catalog or ask it for records.",
   metadataBase: new URL("https://app.dig.baby"),
   openGraph: {
-    title: "dig — house and techno, 1988–2008",
-    description:
-      "A curated catalog of house and techno from 1988 to 2008 — the labels, the records, the scenes that built the form.",
+    title: "Dig. Beta.",
+    description: "House and techno, 1988–2008. Browse the catalog or ask it for records.",
     siteName: "dig",
     locale: "en_US",
     images: [
@@ -27,15 +25,14 @@ export const metadata: Metadata = {
         url: "/api/og?kind=home",
         width: 1200,
         height: 630,
-        alt: "dig — house and techno, 1988–2008",
+        alt: "Dig. Beta. — house and techno, 1988–2008",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "dig — house and techno, 1988–2008",
-    description:
-      "A curated catalog of house and techno from 1988 to 2008 — the labels, the records, the scenes that built the form.",
+    title: "Dig. Beta.",
+    description: "House and techno, 1988–2008. Browse the catalog or ask it for records.",
     images: ["/api/og?kind=home"],
   },
 };

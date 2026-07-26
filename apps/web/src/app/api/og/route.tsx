@@ -67,7 +67,7 @@ async function renderScene(slug: string): Promise<ImageResponse> {
           backgroundColor: "#f4f1e8",
           padding: "60px 70px",
           position: "relative",
-          fontFamily: "serif",
+          fontFamily: "sans-serif",
         }}
       >
         <div
@@ -221,21 +221,10 @@ function renderWall(): ImageResponse {
           flexDirection: "column",
           backgroundColor: "#f4f1e8",
           padding: "60px 70px",
-          fontFamily: "serif",
+          fontFamily: "sans-serif",
           position: "relative",
         }}
       >
-        <div
-          style={{
-            color: "#666666",
-            fontSize: "20px",
-            textTransform: "uppercase",
-            letterSpacing: "3px",
-            marginBottom: "24px",
-          }}
-        >
-          [ wall ] · catalog · v0.1
-        </div>
         <div
           style={{
             color: "#0e0e0e",
@@ -308,56 +297,42 @@ function renderHome(): ImageResponse {
           justifyContent: "center",
           backgroundColor: "#f4f1e8",
           padding: "60px 80px",
-          fontFamily: "serif",
+          fontFamily: "sans-serif",
           position: "relative",
         }}
       >
         <div
           style={{
-            color: "#666666",
-            fontSize: "22px",
-            textTransform: "uppercase",
-            letterSpacing: "3px",
-            marginBottom: "32px",
-          }}
-        >
-          [ v2 ] · house &amp; techno · 1988–2008
-        </div>
-        <div
-          style={{
-            color: "#0e0e0e",
-            fontSize: "240px",
-            lineHeight: 0.95,
-            letterSpacing: "-0.04em",
-            fontWeight: 700,
+            color: "#1a1a1a",
+            fontSize: "200px",
+            lineHeight: 1,
+            letterSpacing: "-0.03em",
+            fontWeight: 600,
           }}
         >
           Dig.
         </div>
         <div
           style={{
-            marginTop: "36px",
-            color: "#444444",
-            fontSize: "30px",
-            fontStyle: "italic",
-            maxWidth: "920px",
-            lineHeight: 1.3,
+            color: "#8a8578",
+            fontSize: "200px",
+            lineHeight: 1,
+            letterSpacing: "-0.03em",
+            fontWeight: 600,
           }}
         >
-          The labels, the records, the scenes that built the form — mapped.
+          Beta.
         </div>
         <div
           style={{
             position: "absolute",
             bottom: "60px",
-            right: "80px",
-            color: "#0e0e0e",
-            fontSize: "26px",
-            fontWeight: 600,
-            letterSpacing: "0.02em",
+            left: "80px",
+            color: "#444444",
+            fontSize: "28px",
           }}
         >
-          dig.baby
+          House and techno, 1988–2008.
         </div>
       </div>
     ),
@@ -397,7 +372,7 @@ function renderDefault(searchParams: URLSearchParams): ImageResponse {
               left: "60px",
               color: "#666666",
               fontSize: "18px",
-              fontFamily: "serif",
+              fontFamily: "sans-serif",
               textTransform: "uppercase",
               letterSpacing: "2px",
             }}
@@ -410,7 +385,7 @@ function renderDefault(searchParams: URLSearchParams): ImageResponse {
           style={{
             color: "#000000",
             fontSize: title.length > 40 ? "48px" : "64px",
-            fontFamily: "serif",
+            fontFamily: "sans-serif",
             textAlign: "center",
             lineHeight: 1.3,
             maxWidth: "900px",
@@ -426,7 +401,7 @@ function renderDefault(searchParams: URLSearchParams): ImageResponse {
             right: "60px",
             color: "#999999",
             fontSize: "20px",
-            fontFamily: "serif",
+            fontFamily: "sans-serif",
           }}
         >
           dig.baby

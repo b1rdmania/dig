@@ -421,7 +421,7 @@ export function LlmBetaClient() {
   return (
     <div className={styles.page}>
       <section className={styles.hero}>
-        <h1 className={styles.title}>Ask Dig.</h1>
+        <h1 className={styles.title}>Dig. Beta.</h1>
       </section>
 
       {!hasKey && (

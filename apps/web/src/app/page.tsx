@@ -28,7 +28,7 @@ function HomeHero() {
       <div className={styles.wallToolbar}>
         <Link href="/scene" className={styles.toolbarLink}>Scenes →</Link>
         <span className={styles.toolbarSep}>·</span>
-        <Link href="/llm-beta" className={styles.toolbarLink}>Ask Dig (LLM beta) →</Link>
+        <Link href="/llm-beta" className={styles.toolbarLink}>Beta →</Link>
         <span className={styles.toolbarSep}>·</span>
         <Link href="/faq" className={styles.toolbarLink}>FAQ →</Link>
       </div>

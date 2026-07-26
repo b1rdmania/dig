@@ -35,7 +35,6 @@ export default function RussPage() {
           YouTube link that plays the lot, and each record&apos;s Discogs
           marketplace link.
         </p>
-        <img src="/pilot/chat.png" alt="A bagged session: video rail, play-the-lot link, and each record with listen, buy, and dig links" className={styles.shot} />
       </section>
 
       <section className={styles.section}>
