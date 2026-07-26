@@ -335,23 +335,12 @@ export function LlmBetaClient() {
   return (
     <div className={styles.page}>
       <section className={styles.hero}>
-        <p className={styles.eyebrow}>Private Beta</p>
         <h1 className={styles.title}>Ask Dig.</h1>
-        <p className={styles.lede}>An intelligent music assistant.</p>
-        <p className={styles.lede}>Grounded in the Dig catalog — every answer cites real records.</p>
-      </section>
-
-      <section className={styles.supportStrip}>
-        <span className={styles.supportLabel}>Need help?</span>
-        <Link href="/feedback" className={styles.supportLink}>Report a bug</Link>
-        <a href="https://x.com/b1rdmania" target="_blank" rel="noreferrer" className={styles.supportLink}>@b1rdmania</a>
-        <a href="https://github.com/b1rdmania/dig" target="_blank" rel="noreferrer" className={styles.supportLink}>GitHub</a>
-        <Link href="/about" className={styles.supportLink}>About</Link>
       </section>
 
       {!hasKey && (
         <section className={styles.keySection}>
-          <label className={styles.label} htmlFor="access-key">Beta access key to get started</label>
+          <label className={styles.label} htmlFor="access-key">Access key</label>
           <input
             id="access-key"
             className={styles.input}
@@ -364,7 +353,6 @@ export function LlmBetaClient() {
             spellCheck={false}
             autoFocus
           />
-          <p className={styles.help}>Stored in this browser session only. Cleared when tab closes.</p>
         </section>
       )}
 
@@ -457,14 +445,13 @@ export function LlmBetaClient() {
           </div>
 
           <div className={styles.inputMeta}>
-            <p className={styles.help}>Enter to send · Shift+Enter for new line</p>
             {hasBaggableRecords && (
               <button className={styles.clearKey} type="button" onClick={bagItUp} disabled={loading}>
                 Bag it up ▶
               </button>
             )}
             <button className={styles.clearKey} type="button" onClick={() => { updateAccessKey(""); setMessages([]); }}>
-              Clear key + history
+              Clear
             </button>
           </div>
         </div>

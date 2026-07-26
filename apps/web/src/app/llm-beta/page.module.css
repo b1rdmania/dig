@@ -5,6 +5,9 @@
   display: grid;
   gap: 1rem;
   min-height: calc(100dvh - 160px);
+  /* Pack rows to the top — without this the grid stretches its two children
+     across the viewport, ballooning the key input on the minimal key screen. */
+  align-content: start;
 }
 
 .hero {
