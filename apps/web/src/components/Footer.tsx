@@ -7,7 +7,7 @@ import styles from "./Footer.module.css";
 export function Footer() {
   const pathname = usePathname();
   // The pilot page is instructions only — no chrome at all.
-  if (pathname === "/russ") return null;
+  if (pathname === "/pilot") return null;
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>

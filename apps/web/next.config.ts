@@ -29,6 +29,13 @@ const nextConfig: NextConfig = {
         destination: "/master/:id",
         permanent: true,
       },
+      // Pilot page moved off /russ — the old URL had a stale share-card
+      // scrape cached by messengers; a fresh path gets a fresh scrape.
+      {
+        source: "/russ",
+        destination: "/pilot",
+        permanent: false,
+      },
     ];
   },
 };
