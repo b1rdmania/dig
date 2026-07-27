@@ -119,7 +119,9 @@
 }
 
 @media (max-width: 720px) {
-  .headerRow,
+  .headerRow {
+    display: none;
+  }
   .row {
     grid-template-columns: 48px 1fr;
     gap: var(--sp-2);

@@ -39,16 +39,16 @@ export function NotFoundTracker() {
       }],
     });
 
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(`${API_URL}/v1/events`, new Blob([payload], { type: "application/json" }));
-    } else {
-      fetch(`${API_URL}/v1/events`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-        keepalive: true,
-      }).catch(() => {});
-    }
+    // sendBeacon always attaches cookies, which trips the credentialed-CORS
+    // preflight against the API origin. keepalive fetch with credentials
+    // omitted is the same fire-and-forget without the baggage.
+    fetch(`${API_URL}/v1/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      credentials: "omit",
+      keepalive: true,
+    }).catch(() => {});
   }, []);
 
   return null;

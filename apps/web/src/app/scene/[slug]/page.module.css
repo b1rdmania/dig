@@ -172,3 +172,11 @@
   text-transform: uppercase;
   color: #6f6d68;
 }
+
+@media (max-width: 640px) {
+  .playRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-1);
+  }
+}

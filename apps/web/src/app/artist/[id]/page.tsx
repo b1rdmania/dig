@@ -20,7 +20,6 @@ import { entityMetadata, BASE_URL } from "@/lib/seo";
 import { musicGroupJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "@/components/JsonLd";
 import { ErrorMessage } from "@/components/ErrorMessage";
-import { Provenance } from "@/components/Provenance";
 import { TrailRecorder } from "@/components/TrailRecorder";
 import { CollapsibleList } from "@/components/CollapsibleList";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
@@ -477,7 +476,6 @@ async function ArtistContent({
             { name: artist.name, url: `${BASE_URL}/artist/${artist.discogs_id}` },
           ]),
         ]} />
-        <Provenance provenance={artist.provenance} />
       </>
     );
   } catch (err) {

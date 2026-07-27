@@ -17,7 +17,6 @@ import { JsonLd } from "@/components/JsonLd";
 import { firstYoutubeThumb } from "@/lib/media";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { MediaSection } from "@/components/MediaSection";
-import { Provenance } from "@/components/Provenance";
 import { PageViewTracker } from "@/components/PageViewTracker";
 import { TrailRecorder } from "@/components/TrailRecorder";
 import { OutboundLink } from "@/components/OutboundLink";
@@ -479,10 +478,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
           ]),
         ]}
       />
-
-      <div className={styles.provenanceWrap}>
-        <Provenance provenance={master.provenance} />
-      </div>
     </Page>
   );
 }

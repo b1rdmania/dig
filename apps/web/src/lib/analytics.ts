@@ -39,16 +39,16 @@ function flush(): void {
   const batch = queue.splice(0, MAX_BATCH_SIZE);
   const payload = JSON.stringify({ events: batch });
 
-  if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-    navigator.sendBeacon(`${API_URL}/v1/events`, new Blob([payload], { type: "application/json" }));
-  } else {
-    fetch(`${API_URL}/v1/events`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: payload,
-      keepalive: true,
-    }).catch(() => {});
-  }
+  // sendBeacon always attaches cookies, which trips the credentialed-CORS
+  // preflight against the API origin. keepalive fetch with credentials
+  // omitted is the same fire-and-forget without the baggage.
+  fetch(`${API_URL}/v1/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    credentials: "omit",
+    keepalive: true,
+  }).catch(() => {});
 }
 
 function scheduleFlush(): void {
