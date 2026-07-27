@@ -39,15 +39,18 @@ const FAQS: Array<{ q: string; a: React.ReactNode }> = [
     q: "What is Dig now?",
     a: (
       <>
-        Slimmed down to house and techno, with an LLM layer on top: query the
-        catalog directly, chat about your collection and the artists you like,
-        get recommendations with YouTube links. Works pretty well. It runs on
-        a Kimi backend. The search database needs a bit of tweaking (some
-        tracks and artists are missing), but as a beta demo I&apos;m happy with
-        it. I built it as an experiment in what the fun end of big open data
-        looks like, which is really something Discogs should be doing
-        themselves in 2026. They should probably pay me to build the proper
-        pilot.
+        I slimmed this idea down to house and techno, with an LLM layer on
+        top: query the Discogs catalog directly, chat about your collection
+        and the artists you like, get recommendations with YouTube links. It
+        works pretty well and runs on a Kimi backend.
+        <span className={styles.block}>
+          The search database needs a bit of tweaking (some tracks and artists
+          are missing), but as a beta demo I&apos;m happy.
+        </span>
+        <span className={styles.block}>
+          Take it as an open experiment in what Discogs could be. They own an
+          impressive dataset and can commoditise it in fun ways.
+        </span>
         <span className={styles.block}>
           Dig is demo only. Deliberately light. No logins. Runs on my API
           credits (Kimi 3).{" "}
@@ -71,6 +74,10 @@ const FAQS: Array<{ q: string; a: React.ReactNode }> = [
         <a href="https://musicbrainz.org/" target="_blank" rel="noreferrer">MusicBrainz</a>{" "}
         (CC0). The editorial layer is mine: the scenes, the core runs, the
         related-label edges.
+        <span className={styles.block}>
+          The search database needs a bit of tweaking (some tracks and artists
+          are missing), but as a beta demo I&apos;m happy with it.
+        </span>
       </>
     ),
   },
@@ -83,8 +90,7 @@ const FAQS: Array<{ q: string; a: React.ReactNode }> = [
         Discogs, and every record here links straight to it.
         <span className={styles.block}>
           We stick to the Discogs ToS, so as yet we can&apos;t use their cover
-          art or integrate your collection and wantlist. Boo. Sleeve images
-          here come from the Cover Art Archive instead.
+          art or integrate your collection and wantlist. Boo.
         </span>
       </>
     ),
