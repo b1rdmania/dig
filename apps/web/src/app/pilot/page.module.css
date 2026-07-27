@@ -60,13 +60,13 @@
   display: block;
 }
 
-.ledeAside {
-  margin: 0.4rem 0 0;
-  font-size: 0.9rem;
-  color: var(--ink-muted, var(--fg-muted));
+.faqLine {
+  font-size: var(--fs-base, 1rem);
+  color: var(--ink, var(--fg));
+  margin: 0 0 1.5rem;
 }
 
-.ledeAside a {
+.faqLine a {
   color: var(--ink, var(--fg));
   text-decoration: underline;
   text-underline-offset: 3px;

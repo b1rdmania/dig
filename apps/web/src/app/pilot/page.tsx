@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PageHeading } from "@/components/design";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -23,13 +24,13 @@ const ACCESS_KEY = "dig-beta-1504eb2560f5b76b991e472b";
 export default function RussPage() {
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Dig. Beta Access.</h1>
-      <p className={styles.lede}>
-        80,000 house and techno records, 1985–2008, built on Discogs open data.
-        Three ways to try it.
-      </p>
-      <p className={styles.ledeAside}>
-        For more about Dig, check the <a href="/faq">FAQ</a>.
+      <PageHeading
+        title="Dig. Beta Access."
+        lede="80,000 house and techno records, 1985–2008, built on Discogs open data. Three ways to try it."
+      />
+      <p className={styles.faqLine}>
+        For more about the project, check the{" "}
+        <a href="/faq" target="_blank" rel="noreferrer">FAQ</a>.
       </p>
 
       <section className={styles.section}>
