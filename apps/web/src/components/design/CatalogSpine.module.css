@@ -7,7 +7,6 @@
 .row {
   display: grid;
   grid-template-columns:
-    32px              /* # */
     52px              /* Year */
     1fr               /* Title */
     minmax(120px, 200px);  /* Artist */
@@ -44,12 +43,6 @@
   color: var(--ink-faint);
   text-decoration: none;
   cursor: default;
-}
-
-.colNum {
-  color: var(--ink-muted);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 .colYear {
@@ -128,11 +121,11 @@
 @media (max-width: 720px) {
   .headerRow,
   .row {
-    grid-template-columns: 28px 48px 1fr;
+    grid-template-columns: 48px 1fr;
     gap: var(--sp-2);
   }
   .colArtist {
-    grid-column: 3;
+    grid-column: 2;
     color: var(--ink-soft);
     font-size: var(--fs-sm);
     margin-top: -2px;

@@ -22,7 +22,7 @@ interface Props {
 
 /**
  * The catalog spine — the vertical chronological timeline of a label's
- * releases, rendered as numbered mono-aligned rows. The defining
+ * releases, rendered as mono-aligned rows. The defining
  * component of the redesign.
  *
  * Decade markers are inserted automatically when the year column rolls
@@ -39,7 +39,6 @@ export function CatalogSpine({ rows, emptyMessage = "No in-scope releases for th
   return (
     <div className={styles.spine}>
       <div className={styles.headerRow}>
-        <span className={styles.colNum} />
         <span className={styles.colYear} />
         <span className={styles.colTitle}>Title</span>
         <span className={styles.colArtist}>Artist</span>
@@ -50,7 +49,6 @@ export function CatalogSpine({ rows, emptyMessage = "No in-scope releases for th
         const decadeMarker = decade !== null && decade !== lastDecade;
         if (decade !== null) lastDecade = decade;
 
-        const positionStr = row.position.toString().padStart(2, "0");
         const inScope = row.in_scope !== false;
 
         return (
@@ -62,7 +60,6 @@ export function CatalogSpine({ rows, emptyMessage = "No in-scope releases for th
               </div>
             )}
             <div className={`${styles.row} ${inScope ? "" : styles.outOfScope}`}>
-              <span className={styles.colNum}>{positionStr}</span>
               <span className={styles.colYear}>{row.year ?? "—"}</span>
               <span className={styles.colTitle}>
                 {inScope ? (
