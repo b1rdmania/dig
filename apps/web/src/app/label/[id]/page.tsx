@@ -22,13 +22,11 @@ import { discogsUrl, urlLabel } from "@/lib/format";
 import { entityMetadata, BASE_URL } from "@/lib/seo";
 import { labelJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "@/components/JsonLd";
-import { Provenance } from "@/components/Provenance";
 import { TrailRecorder } from "@/components/TrailRecorder";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import {
   Page,
-  Sticker,
   CatalogSpine,
   RosterColumn,
   LinerNotes,
@@ -97,7 +95,6 @@ async function LabelContent({ id }: { id: string }) {
 
   const label = labelData.label;
   const ed = label.editorial;
-  const tier = ed?.tier ?? label.tier;
   const coreRun = labelData.core_run ?? [];
   const relatedLabels = labelData.related ?? [];
 
@@ -205,13 +202,6 @@ async function LabelContent({ id }: { id: string }) {
         {ed?.location && <div className={styles.eyebrow}>{ed.location}</div>}
         <h1 className={styles.title}>
           <span>{label.name}</span>
-          {tier === "tier1" && (
-            <span className={styles.tier1Sticker}>
-              <Sticker tone="tier1" size="md" title="Canonical scene label (editorial tier 1)">
-                Tier 1
-              </Sticker>
-            </span>
-          )}
         </h1>
 
         {label.parent_label?.name && (
@@ -396,10 +386,6 @@ async function LabelContent({ id }: { id: string }) {
             </div>
           </LinerNotes.Section>
         </LinerNotes>
-      </div>
-
-      <div className={styles.provenanceWrap}>
-        <Provenance provenance={label.provenance} />
       </div>
 
       <JsonLd data={[

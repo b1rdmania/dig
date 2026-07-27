@@ -66,12 +66,7 @@ export default async function ScenesIndexPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeading title="Scenes." lede="The labels that defined an era.">
-        <p className={styles.aside}>
-          We also built a drum-pattern generator from some of these scenes —{" "}
-          <a href="https://ghost-pattern.pages.dev/" target="_blank" rel="noreferrer">try it</a>.
-        </p>
-      </PageHeading>
+      <PageHeading title="Scenes." lede="The labels that defined an era." />
 
       <div className={styles.rows}>
         {demoteObvious(order.flatMap((axis) => grouped[axis] ?? [])).map((s) => {

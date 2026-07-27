@@ -1,7 +1,6 @@
 .block {
-  border: 1px solid var(--line);
-  padding: 0.7rem 0.8rem 0.6rem;
-  background: transparent;
+  border-top: 1px solid var(--rule-bold, var(--ink));
+  padding: 0.7rem 0 0.6rem;
 }
 
 .head {
@@ -33,7 +32,7 @@
 
 .row {
   padding: 0.4rem 0;
-  border-top: 1px dashed var(--line);
+  border-top: 1px solid var(--line);
 }
 
 .row:first-child {
@@ -61,13 +60,16 @@
 }
 
 .roleChip {
-  font-size: 0.62rem;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0.05rem 0.36rem;
-  border: 1px solid var(--line);
-  color: var(--fg-muted);
+  letter-spacing: 0.06em;
+  color: var(--ink-muted, var(--fg-muted));
   white-space: nowrap;
+}
+
+.roleChip + .roleChip::before {
+  content: "\00b7\2002";
+  color: var(--ink-muted);
 }
 
 .count {

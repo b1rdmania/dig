@@ -114,6 +114,10 @@ export default function FaqPage() {
         ))}
       </dl>
 
+      <p className={styles.aside}>
+        We also built a drum-pattern generator from some of these scenes —{" "}
+        <a href="https://ghost-pattern.pages.dev/" target="_blank" rel="noreferrer">try it</a>.
+      </p>
     </div>
   );
 }

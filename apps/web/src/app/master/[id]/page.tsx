@@ -6,12 +6,9 @@ import {
   isMasterResponse,
   isReleaseShadowResponse,
   isTraversalResponse,
-  isLabelResponse,
   type MasterResponse,
   type ReleaseShadowResponse,
   type TraversalResponse,
-  type LabelResponse,
-  type LabelEditorial,
 } from "@/lib/types";
 import { discogsUrl, formatDuration } from "@/lib/format";
 import { entityMetadata, BASE_URL } from "@/lib/seo";
@@ -26,7 +23,7 @@ import { TrailRecorder } from "@/components/TrailRecorder";
 import { OutboundLink } from "@/components/OutboundLink";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ReleaseNavRenderer } from "@/components/ReleaseNav";
-import { Page, Sticker, Stamp, LinerNotes } from "@/components/design";
+import { Page, Stamp, LinerNotes } from "@/components/design";
 import { MasterCreditsSection } from "@/components/MasterCreditsSection";
 import styles from "./page.module.css";
 
@@ -301,8 +298,8 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
     meta: { source_type: "master", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
   };
 
-  // Phase 2: parallel — cover art, notable versions, label palette/tier, artist nav rail.
-  const [coverUrl, versionsData, labelMeta, navData] = await Promise.all([
+  // Phase 2: parallel — cover art, notable versions, artist nav rail.
+  const [coverUrl, versionsData, navData] = await Promise.all([
     mainReleaseId
       ? digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${mainReleaseId}/cover`, {
           revalidate: 3600,
@@ -313,17 +310,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
     digFetch<TraversalResponse>(`/v1/masters/${id}/releases?limit=40`, { revalidate: 300 })
       .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
       .catch(() => defaultTraversal),
-    primaryLabelId
-      ? digFetch<LabelResponse>(`/v1/labels/${primaryLabelId}`, { revalidate: 3600 })
-          .then((d) => {
-            if (!isLabelResponse(d)) return null;
-            return {
-              tier: d.label.editorial?.tier ?? d.label.tier,
-              editorial: d.label.editorial ?? null,
-            };
-          })
-          .catch(() => null)
-      : Promise.resolve<{ tier: "tier1" | "denylist" | null; editorial: LabelEditorial | null } | null>(null),
     primaryArtistId
       ? digFetch<TraversalResponse>(`/v1/artists/${primaryArtistId}/masters?sort=oldest&limit=500`, {
           revalidate: 300,
@@ -345,7 +331,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
     }
   }
 
-  const isTier1 = labelMeta?.tier === "tier1";
 
   return (
     <Page
@@ -368,11 +353,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
           <div className={styles.info}>
             <div className={styles.titleRow}>
               <h1 className={styles.title}>{master.title}</h1>
-              {isTier1 && (
-                <Sticker tone="tier1" size="md" title="Canonical scene label">
-                  Tier 1
-                </Sticker>
-              )}
             </div>
 
             {(primaryArtistName || primaryLabelName) && (

@@ -142,23 +142,17 @@
 }
 
 .linkPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   font-family: var(--font-sans);
   font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink);
-  border: 1px solid var(--rule);
-  padding: 4px 8px;
-  text-decoration: none;
-  margin: 0 var(--sp-2) var(--sp-2) 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .linkPill:hover {
-  border-color: var(--ink);
-  text-decoration: none;
+  color: var(--ink-soft);
 }
 
 .linkRow {
