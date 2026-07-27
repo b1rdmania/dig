@@ -86,23 +86,6 @@ function sceneWallToWallScene(wall: SceneWallResponse["wall"]): WallScene {
   };
 }
 
-const AXIS_LABEL: Record<string, string> = {
-  geography: "scene",
-  cluster: "cluster",
-  sound: "sound",
-  era: "era",
-  bridge: "bridge",
-  micro: "micro",
-};
-
-function formatEra(start: number | null, end: number | null): string | null {
-  if (start == null && end == null) return null;
-  if (start != null && end != null) return `${start}–${end}`;
-  if (start != null) return `${start}–`;
-  if (end != null) return `?–${end}`;
-  return null;
-}
-
 export default async function ScenePage({ params }: Props) {
   const { slug } = await params;
 
@@ -134,7 +117,6 @@ export default async function ScenePage({ params }: Props) {
   const playlist = playlistResult.ok ? playlistResult.data.playlist : null;
 
   const wall = wallData.wall;
-  const era = formatEra(wall.era_start, wall.era_end);
   const accent = wall.palette?.accent ?? "#1a1a1a";
 
   const scene: WallScene = sceneWallToWallScene(wall);
@@ -152,16 +134,6 @@ export default async function ScenePage({ params }: Props) {
           <Link href="/scene" className={styles.crumbLink}>
             ← all scenes
           </Link>
-        </div>
-        <div className={styles.eyebrow}>
-          <span className={styles.axisBadge}>{AXIS_LABEL[wall.axis] ?? wall.axis}</span>
-          {wall.city && <span>{wall.city}</span>}
-          {era && (
-            <>
-              <span className={styles.metaSep}>·</span>
-              <span className={styles.eyebrowEra}>{era}</span>
-            </>
-          )}
         </div>
         <h1 className={styles.heading}>{wall.name}</h1>
         {wall.blurb && <p className={styles.lede}>{wall.blurb}</p>}

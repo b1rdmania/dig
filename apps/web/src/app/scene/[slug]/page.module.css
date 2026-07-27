@@ -40,34 +40,6 @@
   text-decoration: underline;
 }
 
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  margin-bottom: var(--sp-3);
-}
-
-.axisBadge {
-  background: var(--scene-accent);
-  color: var(--paper);
-  padding: 2px 8px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-}
-
-.metaSep {
-  color: var(--ink-faint);
-}
-
-.eyebrowEra {
-  font-variant-numeric: tabular-nums;
-}
-
 .heading {
   font-family: var(--font-sans);
   font-size: clamp(2.2rem, 6vw, 4rem);
