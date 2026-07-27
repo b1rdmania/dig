@@ -105,13 +105,12 @@ function MastersSection({
 }) {
   return (
     <section className={styles.section}>
-      <h2 className={styles.heading}>
-        Releases{data.pagination.total_estimate != null
-          ? ` (${data.pagination.total_estimate})`
-          : data.links.length > 0
-          ? ` (${data.links.length})`
-          : ""}
-      </h2>
+      <header className={styles.sectionHead}>
+        <h2 className={styles.heading}>Releases</h2>
+        <span className={styles.sectionMeta}>
+          {data.pagination.total_estimate ?? (data.links.length > 0 ? data.links.length : "")}
+        </span>
+      </header>
       <FilterChips id={id} active={activeFilter} />
       {data.links.length === 0 && (
         <div className={styles.small}>No releases found.</div>
@@ -421,7 +420,6 @@ async function ArtistContent({
               </Suspense>
             </div>
             <div className={styles.heroBody}>
-              <div className={styles.eyebrow}>ARTIST · #{artist.discogs_id}</div>
               <h1 className={styles.title}>{artist.name}</h1>
               {artist.real_name && <div className={styles.subtitle}>Real name: {artist.real_name}</div>}
               <div className={styles.links}>

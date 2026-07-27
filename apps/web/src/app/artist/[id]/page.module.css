@@ -57,8 +57,6 @@
 
 .subtitle {
   margin-top: var(--sp-3);
-  font-family: var(--font-serif);
-  font-style: italic;
   color: var(--ink-soft);
   font-size: var(--fs-md);
 }
@@ -77,15 +75,12 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink);
-  text-decoration: none;
-  border: 1px solid var(--ink);
-  padding: 5px 9px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .link:hover {
-  background: var(--ink);
-  color: var(--paper);
-  text-decoration: none;
+  color: var(--ink-soft);
 }
 
 .section {
@@ -273,4 +268,16 @@
   font-size: var(--fs-xs);
   color: var(--ink-muted);
   letter-spacing: 0.04em;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.sectionMeta {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
 }

@@ -1,11 +1,11 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.7rem;
-  color: var(--fg-faint);
-  border: 1px solid var(--line);
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius);
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted, var(--fg-faint));
   margin-top: 0.75rem;
 }

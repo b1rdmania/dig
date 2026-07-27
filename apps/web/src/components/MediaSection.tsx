@@ -100,7 +100,10 @@ export function MediaSection({ videos }: { videos: ReleaseVideo[] }) {
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.heading}>Media ({items.length})</h2>
+      <header className={styles.head}>
+        <h2 className={styles.heading}>Media</h2>
+        <span className={styles.headMeta}>{items.length}</span>
+      </header>
       <div className={styles.grid}>
         {embeds.map((v, i) => (
           <EmbedCard key={v.youtubeId} video={v} index={i} />

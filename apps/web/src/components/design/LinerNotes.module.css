@@ -1,8 +1,6 @@
 .notes {
-  border: 1px solid var(--ink);
-  padding: var(--sp-5) var(--sp-5) var(--sp-4);
-  background: var(--paper);
-  position: relative;
+  border-top: 1px solid var(--ink);
+  padding: var(--sp-3) 0 0;
 }
 
 .eyebrow {
@@ -11,12 +9,8 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-muted);
-  position: absolute;
-  top: -8px;
-  left: 16px;
-  background: var(--paper);
-  padding: 0 8px;
+  color: var(--ink);
+  margin: 0 0 var(--sp-2);
 }
 
 .section {

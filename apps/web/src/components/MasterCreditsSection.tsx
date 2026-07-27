@@ -103,9 +103,8 @@ export async function MasterCreditsSection({ masterDiscogsId }: Props) {
   return (
     <section className={styles.section}>
       <header className={styles.head}>
-        <h2 className={styles.heading}>
-          Credits ({totalTrackCredits + totalReleaseCredits})
-        </h2>
+        <h2 className={styles.heading}>Credits</h2>
+        <span className={styles.headMeta}>{totalTrackCredits + totalReleaseCredits}</span>
       </header>
 
       {positionOrder.length > 0 && (

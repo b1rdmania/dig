@@ -250,7 +250,7 @@ function NotableVersionsRenderer({
         return (
           <div key={link.discogs_id} className={styles.versionRow}>
             <span className={styles.versionMain}>
-              {isMain && <Sticker tone="ink" size="sm">Main</Sticker>}
+              {isMain && <span className={styles.mainTag}>Main</span>}
               <span className={styles.versionTitle}>{link.title || `Version ${link.discogs_id}`}</span>
             </span>
             <span className={styles.versionMeta}>
@@ -366,18 +366,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
 
       <section className={styles.hero}>
         {palette && <div className={styles.accentRule} aria-hidden />}
-        <div className={styles.eyebrow}>
-          <span>RELEASE</span>
-          <span className={styles.eyebrowSep}>·</span>
-          <span>#{master.discogs_id}</span>
-          {master.year && (
-            <>
-              <span className={styles.eyebrowSep}>·</span>
-              <span>{master.year}</span>
-            </>
-          )}
-        </div>
-
         <div className={styles.heroBody}>
           <div className={styles.cover}>
             <CoverRenderer coverUrl={coverUrl} title={master.title} videos={master.videos} />
@@ -415,6 +403,12 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
             )}
 
             <div className={styles.metaStrip}>
+              {master.year && (
+                <span className={styles.metaItem}>
+                  <span className={styles.metaKey}>Year</span>
+                  <span className={styles.metaVal}>{master.year}</span>
+                </span>
+              )}
               {master.primary_country && (
                 <span className={styles.metaItem}>
                   <span className={styles.metaKey}>Country</span>

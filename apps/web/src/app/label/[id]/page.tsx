@@ -212,17 +212,7 @@ async function LabelContent({ id }: { id: string }) {
         <Suspense fallback={null}>
           <LabelHeroImage discogsId={label.discogs_id} labelName={label.name} mode="mark" />
         </Suspense>
-        <div className={styles.eyebrow}>
-          <span>LABEL</span>
-          <span className={styles.eyebrowSep}>·</span>
-          <span>#{label.discogs_id}</span>
-          {ed?.location && (
-            <>
-              <span className={styles.eyebrowSep}>·</span>
-              <span>{ed.location}</span>
-            </>
-          )}
-        </div>
+        {ed?.location && <div className={styles.eyebrow}>{ed.location}</div>}
         <h1 className={styles.title}>
           {hasCuratedWordmark(label.discogs_id) || (tier === "tier1" && palette) ? (
             <LabelWordmark

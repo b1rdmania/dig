@@ -6,23 +6,31 @@
 .head {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: 0.5rem;
-  flex-wrap: wrap;
   margin-bottom: 0.6rem;
 }
 
-.heading {
+.headMeta {
   font-size: 0.8rem;
-  font-weight: bold;
-  color: var(--fg-muted);
+  color: var(--ink-muted, var(--fg-muted));
+}
+
+.heading {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: var(--ink);
 }
 
 .subhead {
-  font-size: 0.72rem;
-  color: var(--fg-muted);
-  font-style: italic;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted, var(--fg-muted));
 }
 
 .trackBlock {
@@ -31,7 +39,7 @@
 }
 
 .trackGroup {
-  border-top: 1px dashed var(--line);
+  border-top: 1px solid var(--line);
   padding: 0.5rem 0 0.1rem;
 }
 
@@ -90,19 +98,18 @@
 }
 
 .roleChip {
-  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0.08rem 0.4rem;
-  border: 1px solid var(--line);
-  color: var(--fg-muted);
+  letter-spacing: 0.06em;
+  color: var(--ink-muted, var(--fg-muted));
   white-space: nowrap;
 }
 
 .releaseBlock {
   margin-top: 0.9rem;
   padding-top: 0.7rem;
-  border-top: 1px dashed var(--line);
+  border-top: 1px solid var(--line);
 }
 
 .releaseHeading {
