@@ -96,6 +96,11 @@ export default async function ScenesIndexPage() {
           );
         })}
       </div>
+
+      <p className={`${styles.aside} ${styles.asideFoot}`}>
+        We also built a drum-pattern generator from some of these scenes —{" "}
+        <a href="https://ghost-pattern.pages.dev/" target="_blank" rel="noreferrer">try it</a>.
+      </p>
     </div>
   );
 }
