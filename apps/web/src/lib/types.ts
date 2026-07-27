@@ -1024,3 +1024,12 @@ export interface LabelPlaylist {
 export interface LabelPlaylistResponse {
   playlist: LabelPlaylist;
 }
+
+export interface LabelSleeve {
+  master_discogs_id: number;
+  cover_url: string;
+}
+
+export interface LabelSleevesResponse {
+  sleeves: LabelSleeve[];
+}

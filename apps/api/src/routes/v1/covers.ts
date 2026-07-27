@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Kysely, Database } from "@dig/db";
-import { getCoverUrl } from "@dig/domain";
+import { getCoverUrl, getLabelSleeves, getBatchForTable } from "@dig/domain";
 
 const PG_INT4_MAX = 2_147_483_647;
 
@@ -24,5 +24,17 @@ export function registerCoverRoutes(
 
     const result = await getCoverUrl(db, redis, discogsId);
     return reply.send({ cover: result });
+  });
+
+  app.get("/v1/labels/:discogs_id/sleeves", async (req, reply) => {
+    const discogsId = parseDiscogsId((req.params as any).discogs_id);
+    if (!discogsId) {
+      return reply.status(400).send({
+        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
+      });
+    }
+    const { batchId } = await getBatchForTable(db, "catalog.masters");
+    const sleeves = await getLabelSleeves(db, redis, discogsId, batchId);
+    return reply.send({ sleeves });
   });
 }

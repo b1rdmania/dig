@@ -76,7 +76,18 @@ const FAQS: Array<{ q: string; a: React.ReactNode }> = [
   },
   {
     q: "Is this Discogs?",
-    a: "No. Independent, built on their openly licensed data. Pressing-level detail (versions, matrix numbers, marketplace listings) lives on Discogs, and every record here links straight to it.",
+    a: (
+      <>
+        No. Independent, built on their openly licensed data. Pressing-level
+        detail (versions, matrix numbers, marketplace listings) lives on
+        Discogs, and every record here links straight to it.
+        <span className={styles.block}>
+          We stick to the Discogs ToS, so as yet we can&apos;t use their cover
+          art or integrate your collection and wantlist. Boo. Sleeve images
+          here come from the Cover Art Archive instead.
+        </span>
+      </>
+    ),
   },
   {
     q: "Why is a record missing?",

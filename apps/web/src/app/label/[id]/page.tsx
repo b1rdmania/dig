@@ -15,6 +15,7 @@ import {
   type LabelRosterResponse,
   type LabelStylesResponse,
   type LabelPlaylistResponse,
+  type LabelSleevesResponse,
   type ArtistResponse,
 } from "@/lib/types";
 import { discogsUrl, urlLabel } from "@/lib/format";
@@ -124,7 +125,7 @@ async function LabelContent({ id }: { id: string }) {
   const artistIdsToResolve = [...new Set(profileRefs.artists)].slice(0, 10);
   const labelIdsToResolve = [...new Set(profileRefs.labels)].slice(0, 5);
 
-  const [releasesData, rosterData, linkoutsData, stylesData, playlistData, ...nameResults] = await Promise.all([
+  const [releasesData, rosterData, linkoutsData, stylesData, playlistData, sleeves, ...nameResults] = await Promise.all([
     digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=200&sort=chronological`, { revalidate: 300 })
       .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
       .catch(() => defaultTraversal),
@@ -140,6 +141,9 @@ async function LabelContent({ id }: { id: string }) {
     digFetch<LabelPlaylistResponse>(`/v1/labels/${id}/playlist`, { revalidate: 3600 })
       .then((d) => d.playlist ?? null)
       .catch(() => null),
+    digFetch<LabelSleevesResponse>(`/v1/labels/${id}/sleeves`, { revalidate: 3600 })
+      .then((d) => d.sleeves ?? [])
+      .catch(() => [] as LabelSleevesResponse["sleeves"]),
     ...artistIdsToResolve.map((aid) =>
       digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 })
         .then((d) => (isArtistResponse(d) ? [`a${aid}`, d.artist.name] as [string, string] : null))
@@ -257,6 +261,21 @@ async function LabelContent({ id }: { id: string }) {
         )}
 
       </div>
+
+      {sleeves.length >= 4 && (
+        <div className={styles.sleeveWall} aria-label="Sleeve wall">
+          {sleeves.map((s) => (
+            <Link
+              key={s.master_discogs_id}
+              href={`/master/${s.master_discogs_id}`}
+              className={styles.sleeve}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={s.cover_url} alt="" loading="lazy" />
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className={styles.body}>
         <div className={styles.spineCol}>

@@ -102,3 +102,69 @@ export async function getCoverUrl(
     return { url: null, source: "placeholder", mbid };
   }
 }
+
+// ---------------------------------------------------------------------------
+// getLabelSleeves — a wall of real cover art for a label
+// ---------------------------------------------------------------------------
+
+export interface LabelSleeve {
+  master_discogs_id: number;
+  cover_url: string;
+}
+
+type RedisLike = {
+  get(k: string): Promise<string | null>;
+  set(k: string, v: string, ex: string, t: number): Promise<unknown>;
+} | null;
+
+/**
+ * Resolve up to `want` sleeve images for a label's top masters — core-run
+ * entries first, then by scene weight. Covers come from the Cover Art
+ * Archive via the existing per-release resolver (Redis-cached), NOT from
+ * Discogs, so the sleeve wall stays inside their ToS. Masters without a
+ * resolvable cover simply don't make the wall.
+ */
+export async function getLabelSleeves(
+  db: Kysely<Database>,
+  redis: RedisLike,
+  labelId: number,
+  batchId: string,
+  want: number = 12,
+): Promise<LabelSleeve[]> {
+  const candidates = await sql<{
+    discogs_id: number;
+    main_release_discogs_id: number;
+  }>`
+    SELECT m.discogs_id, m.main_release_discogs_id
+    FROM catalog.masters m
+    LEFT JOIN enrich.label_core_run cr
+      ON cr.master_discogs_id = m.discogs_id
+     AND cr.discogs_label_id = ${labelId}
+    WHERE m.primary_label_discogs_id = ${labelId}
+      AND m.batch_id = ${batchId}
+      AND m.main_release_discogs_id IS NOT NULL
+    ORDER BY (cr.rank IS NULL) ASC, cr.rank ASC, m.scene_weight DESC, m.year ASC NULLS LAST
+    LIMIT ${Math.max(want * 3, 24)}
+  `.execute(db);
+
+  const sleeves: LabelSleeve[] = [];
+  const BATCH = 8;
+  for (let i = 0; i < candidates.rows.length && sleeves.length < want; i += BATCH) {
+    const batch = candidates.rows.slice(i, i + BATCH);
+    const results = await Promise.allSettled(
+      batch.map(async (c) => ({
+        master_discogs_id: c.discogs_id,
+        cover: await getCoverUrl(db, redis, c.main_release_discogs_id),
+      })),
+    );
+    for (const r of results) {
+      if (r.status === "fulfilled" && r.value.cover.url && sleeves.length < want) {
+        sleeves.push({
+          master_discogs_id: r.value.master_discogs_id,
+          cover_url: r.value.cover.url,
+        });
+      }
+    }
+  }
+  return sleeves;
+}
