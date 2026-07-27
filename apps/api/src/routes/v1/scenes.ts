@@ -7,7 +7,7 @@ import {
   listScenes,
   getBatchForTable,
 } from "@dig/domain";
-import { isPgTimeout, withTimeout, timeoutReply as sharedTimeoutReply } from "./util.js";
+import { isPgTimeout, withTimeout, cachePublic, timeoutReply as sharedTimeoutReply } from "./util.js";
 
 const SCENES_TIMEOUT_MS = 8_000;
 
@@ -39,6 +39,7 @@ export function registerScenesRoutes(app: FastifyInstance, db: Kysely<Database>)
       const scenes = await withTimeout(db, SCENES_TIMEOUT_MS, (trx) =>
         listScenes(trx, batchId),
       );
+      cachePublic(reply);
       return reply.send({
         scenes,
         meta: {
@@ -72,6 +73,7 @@ export function registerScenesRoutes(app: FastifyInstance, db: Kysely<Database>)
           error: { code: "NOT_FOUND", message: `Scene '${slug}' not found`, details: null },
         });
       }
+      cachePublic(reply);
       return reply.send({
         scene,
         meta: {
@@ -106,6 +108,7 @@ export function registerScenesRoutes(app: FastifyInstance, db: Kysely<Database>)
           error: { code: "NOT_FOUND", message: `Scene '${slug}' not found`, details: null },
         });
       }
+      cachePublic(reply);
       return reply.send({
         wall,
         meta: {
@@ -138,6 +141,7 @@ export function registerScenesRoutes(app: FastifyInstance, db: Kysely<Database>)
           error: { code: "NOT_FOUND", message: `Scene '${slug}' not found`, details: null },
         });
       }
+      cachePublic(reply);
       return reply.send({
         playlist,
         meta: {

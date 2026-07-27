@@ -45,3 +45,16 @@ export function invalidIdReply(reply: FastifyReply) {
     error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
   });
 }
+
+/**
+ * CDN-grade caching for catalog data that only moves on dump cycles or
+ * seed edits. Safe on any anonymous public GET; per-client headers
+ * (rate-limit counters) are advisory only. stale-while-revalidate keeps
+ * edges warm across the revalidation window.
+ */
+export function cachePublic(reply: FastifyReply, sMaxAge = 3600): void {
+  reply.header(
+    "cache-control",
+    `public, s-maxage=${sMaxAge}, stale-while-revalidate=86400`,
+  );
+}

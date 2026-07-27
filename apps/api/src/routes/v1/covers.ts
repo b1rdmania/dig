@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Kysely, Database } from "@dig/db";
 import { getCoverUrl, getLabelSleeves, getBatchForTable } from "@dig/domain";
+import { cachePublic } from "./util.js";
 
 const PG_INT4_MAX = 2_147_483_647;
 
@@ -35,6 +36,7 @@ export function registerCoverRoutes(
     }
     const { batchId } = await getBatchForTable(db, "catalog.masters");
     const sleeves = await getLabelSleeves(db, redis, discogsId, batchId);
+    cachePublic(reply);
     return reply.send({ sleeves });
   });
 }

@@ -24,7 +24,7 @@ export const metadata = {
   },
 };
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 // The list leads with the interesting shelves; the scenes everyone already
 // knows sit further down.
@@ -49,7 +49,7 @@ function formatEra(start: number | null, end: number | null): string | null {
 export default async function ScenesIndexPage() {
   let data: ListScenesResponse;
   try {
-    data = await digFetch<ListScenesResponse>("/v1/scenes", { revalidate: 600 });
+    data = await digFetch<ListScenesResponse>("/v1/scenes", { revalidate: 3600 });
   } catch (err) {
     if (err instanceof ApiRequestError) {
       return <ErrorMessage code={err.code} message={err.message} />;

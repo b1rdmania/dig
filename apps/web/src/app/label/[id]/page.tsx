@@ -47,7 +47,7 @@ interface Props {
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
   try {
-    const data = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 });
+    const data = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 3600 });
     if (!isLabelResponse(data)) return { title: "Label — dig" };
     const l = data.label;
     const ed = l.editorial;
@@ -73,7 +73,7 @@ export default async function LabelPage({ params }: Props) {
 async function LabelContent({ id }: { id: string }) {
   let labelData: LabelResponse;
   try {
-    labelData = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 300 });
+    labelData = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 3600 });
   } catch (err) {
     if (err instanceof ApiRequestError && err.code === "NOT_FOUND") notFound();
     return (
@@ -121,16 +121,16 @@ async function LabelContent({ id }: { id: string }) {
   const labelIdsToResolve = [...new Set(profileRefs.labels)].slice(0, 5);
 
   const [releasesData, rosterData, linkoutsData, stylesData, playlistData, sleeves, ...nameResults] = await Promise.all([
-    digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=200&sort=chronological`, { revalidate: 300 })
+    digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=200&sort=chronological`, { revalidate: 3600 })
       .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
       .catch(() => defaultTraversal),
-    digFetch<LabelRosterResponse>(`/v1/labels/${id}/roster?limit=12`, { revalidate: 600 })
+    digFetch<LabelRosterResponse>(`/v1/labels/${id}/roster?limit=12`, { revalidate: 3600 })
       .then((d) => (isLabelRosterResponse(d) ? d : defaultRoster))
       .catch(() => defaultRoster),
     digFetch<LabelLinkoutsResponse>(`/v1/labels/${id}/linkouts?include_enrichment=true`, { revalidate: 3600 })
       .then((d) => (isLinkoutsResponse(d) ? d : defaultLinkouts))
       .catch(() => defaultLinkouts),
-    digFetch<LabelStylesResponse>(`/v1/labels/${id}/styles?limit=8`, { revalidate: 600 })
+    digFetch<LabelStylesResponse>(`/v1/labels/${id}/styles?limit=8`, { revalidate: 3600 })
       .then((d) => (isLabelStylesResponse(d) ? d : defaultStyles))
       .catch(() => defaultStyles),
     digFetch<LabelPlaylistResponse>(`/v1/labels/${id}/playlist`, { revalidate: 3600 })

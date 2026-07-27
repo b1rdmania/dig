@@ -21,7 +21,7 @@ import {
   getEntityImages,
 } from "@dig/domain";
 
-import { parseDiscogsId, isPgTimeout } from "./util.js";
+import { parseDiscogsId, isPgTimeout, cachePublic } from "./util.js";
 
 // Scene-scoped DB no longer stores full release rows. Public consumers that hit
 // /v1/releases/:id should fall back to:
@@ -95,6 +95,7 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
           error: { code: "NOT_FOUND", message: `Label ${discogsId} not found`, details: null },
         });
       }
+      cachePublic(reply);
       return reply.send(result);
     } catch (err) {
       if (isPgTimeout(err)) {
@@ -118,6 +119,7 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
         await sql`SET LOCAL statement_timeout = '8000'`.execute(trx);
         return getLabelCoreRunPlaylist(trx, discogsId);
       });
+      cachePublic(reply);
       return reply.send({ playlist });
     } catch (err) {
       if (isPgTimeout(err)) {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { digFetch, ApiRequestError } from "@/lib/api";
 import type {
+  ListScenesResponse,
   SceneDetailResponse,
   ScenePlaylistResponse,
   SceneWallResponse,
@@ -17,13 +18,24 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export const revalidate = 600;
+export const revalidate = 3600;
+
+// All scenes are prebuilt at deploy — 15 curated slugs, static HTML from
+// the first request. New scenes appear via ISR without a redeploy.
+export async function generateStaticParams() {
+  try {
+    const data = await digFetch<ListScenesResponse>("/v1/scenes", { revalidate: 3600 });
+    return data.scenes.map((s) => ({ slug: s.slug }));
+  } catch {
+    return [];
+  }
+}
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   try {
     const data = await digFetch<SceneDetailResponse>(`/v1/scenes/${slug}`, {
-      revalidate: 600,
+      revalidate: 3600,
     });
     const s = data.scene;
     const era = s.era_start && s.era_end ? `${s.era_start}–${s.era_end}` : null;
@@ -88,11 +100,11 @@ export default async function ScenePage({ params }: Props) {
 
   const [wallResult, detailResult, playlistResult] = await Promise.all([
     digFetch<SceneWallResponse>(`/v1/scenes/${slug}/wall?density=medium`, {
-      revalidate: 600,
+      revalidate: 3600,
     })
       .then((d) => ({ ok: true as const, data: d }))
       .catch((err: unknown) => ({ ok: false as const, err })),
-    digFetch<SceneDetailResponse>(`/v1/scenes/${slug}`, { revalidate: 600 })
+    digFetch<SceneDetailResponse>(`/v1/scenes/${slug}`, { revalidate: 3600 })
       .then((d) => ({ ok: true as const, data: d }))
       .catch(() => ({ ok: false as const, err: null })),
     digFetch<ScenePlaylistResponse>(`/v1/scenes/${slug}/playlist`, { revalidate: 3600 })
