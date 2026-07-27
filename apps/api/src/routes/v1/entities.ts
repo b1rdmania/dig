@@ -9,6 +9,7 @@ import {
   getReleaseShadow,
   getBatchForTable,
   getLabelCoreRun,
+  getLabelCoreRunPlaylist,
   getLabelRelated,
   getArtistRuleACredits,
   getArtistCrossScopeCredits,
@@ -99,6 +100,29 @@ export function registerEntityRoutes(app: FastifyInstance, db: Kysely<Database>)
       if (isPgTimeout(err)) {
         return reply.status(504).send({
           error: { code: "QUERY_TIMEOUT", message: "Label lookup exceeded timeout", details: null },
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.get("/v1/labels/:discogs_id/playlist", async (req, reply) => {
+    const discogsId = parseDiscogsId((req.params as any).discogs_id);
+    if (!discogsId) {
+      return reply.status(400).send({
+        error: { code: "INVALID_REQUEST", message: "Invalid discogs_id", details: null },
+      });
+    }
+    try {
+      const playlist = await db.transaction().execute(async (trx) => {
+        await sql`SET LOCAL statement_timeout = '8000'`.execute(trx);
+        return getLabelCoreRunPlaylist(trx, discogsId);
+      });
+      return reply.send({ playlist });
+    } catch (err) {
+      if (isPgTimeout(err)) {
+        return reply.status(504).send({
+          error: { code: "QUERY_TIMEOUT", message: "Label playlist exceeded timeout", details: null },
         });
       }
       throw err;

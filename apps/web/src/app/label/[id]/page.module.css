@@ -250,3 +250,13 @@
     gap: var(--sp-6);
   }
 }
+
+.coreRunPlayer {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--rule);
+  background: var(--ink);
+  margin: var(--sp-3) 0 var(--sp-4);
+}

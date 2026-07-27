@@ -1,5 +1,6 @@
 import { sql, type Kysely } from "kysely";
 import type { Database, LabelRelatedDirection } from "@dig/db";
+import { YOUTUBE_ID_RE } from "./scenes.js";
 
 export type RelatedDirection = LabelRelatedDirection;
 
@@ -130,4 +131,77 @@ export async function getLabelRelated(
       to_label_master_count: Number(r.master_count) || 0,
       palette: r.palette,
     }));
+}
+
+// ---------------------------------------------------------------------------
+// getLabelCoreRunPlaylist — the core run as a playable strip
+// ---------------------------------------------------------------------------
+
+export interface LabelPlaylistRecord {
+  master_discogs_id: number;
+  title: string;
+  primary_artist_name: string | null;
+  year: number | null;
+  video_id: string;
+}
+
+export interface LabelPlaylist {
+  label_discogs_id: number;
+  video_count: number;
+  /** YouTube anonymous playlist over the run, in curated rank order. */
+  playlist_url: string | null;
+  records: LabelPlaylistRecord[];
+}
+
+/**
+ * The label's core run paired with each master's first YouTube video, kept
+ * in curated rank order (the run IS the sequencing — no shuffle here).
+ * Masters without a video simply drop out of the strip.
+ */
+export async function getLabelCoreRunPlaylist(
+  db: Kysely<Database>,
+  labelId: number,
+  limit: number = 10,
+): Promise<LabelPlaylist> {
+  const run = await getLabelCoreRun(db, labelId, limit);
+  if (run.length === 0) {
+    return { label_discogs_id: labelId, video_count: 0, playlist_url: null, records: [] };
+  }
+
+  const ids = run.map((m) => m.master_discogs_id);
+  const vids = await sql<{ master_discogs_id: number; url: string }>`
+    SELECT DISTINCT ON (v.master_discogs_id)
+      v.master_discogs_id,
+      v.url
+    FROM catalog.master_videos_unified v
+    WHERE v.master_discogs_id = ANY(${ids}::int[])
+      AND (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
+    ORDER BY v.master_discogs_id, v.id ASC
+  `.execute(db);
+  const urlById = new Map(vids.rows.map((r) => [r.master_discogs_id, r.url]));
+
+  const records: LabelPlaylistRecord[] = [];
+  for (const m of run) {
+    const url = urlById.get(m.master_discogs_id);
+    if (!url) continue;
+    const match = YOUTUBE_ID_RE.exec(url);
+    if (!match) continue;
+    records.push({
+      master_discogs_id: m.master_discogs_id,
+      title: m.title,
+      primary_artist_name: m.primary_artist_name,
+      year: m.year,
+      video_id: match[1],
+    });
+  }
+
+  return {
+    label_discogs_id: labelId,
+    video_count: records.length,
+    playlist_url:
+      records.length > 0
+        ? `https://www.youtube.com/watch_videos?video_ids=${records.map((r) => r.video_id).join(",")}`
+        : null,
+    records,
+  };
 }

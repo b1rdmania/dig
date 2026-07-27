@@ -14,6 +14,7 @@ import {
   type LabelLinkoutsResponse,
   type LabelRosterResponse,
   type LabelStylesResponse,
+  type LabelPlaylistResponse,
   type ArtistResponse,
 } from "@/lib/types";
 import { discogsUrl, urlLabel } from "@/lib/format";
@@ -126,7 +127,7 @@ async function LabelContent({ id }: { id: string }) {
   const artistIdsToResolve = [...new Set(profileRefs.artists)].slice(0, 10);
   const labelIdsToResolve = [...new Set(profileRefs.labels)].slice(0, 5);
 
-  const [releasesData, rosterData, linkoutsData, stylesData, ...nameResults] = await Promise.all([
+  const [releasesData, rosterData, linkoutsData, stylesData, playlistData, ...nameResults] = await Promise.all([
     digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=200&sort=chronological`, { revalidate: 300 })
       .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
       .catch(() => defaultTraversal),
@@ -139,6 +140,9 @@ async function LabelContent({ id }: { id: string }) {
     digFetch<LabelStylesResponse>(`/v1/labels/${id}/styles?limit=8`, { revalidate: 600 })
       .then((d) => (isLabelStylesResponse(d) ? d : defaultStyles))
       .catch(() => defaultStyles),
+    digFetch<LabelPlaylistResponse>(`/v1/labels/${id}/playlist`, { revalidate: 3600 })
+      .then((d) => d.playlist ?? null)
+      .catch(() => null),
     ...artistIdsToResolve.map((aid) =>
       digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 })
         .then((d) => (isArtistResponse(d) ? [`a${aid}`, d.artist.name] as [string, string] : null))
@@ -282,6 +286,19 @@ async function LabelContent({ id }: { id: string }) {
                   essential listening · {coreRun.length} {coreRun.length === 1 ? "master" : "masters"}
                 </span>
               </header>
+              {playlistData && playlistData.video_count > 1 && (
+                <iframe
+                  className={styles.coreRunPlayer}
+                  src={`https://www.youtube-nocookie.com/embed/${playlistData.records[0].video_id}?playlist=${playlistData.records
+                    .slice(1)
+                    .map((r) => r.video_id)
+                    .join(",")}&rel=0`}
+                  title={`Core run, ${playlistData.video_count} records`}
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              )}
               <CoreRun rows={coreRun} />
             </section>
           )}

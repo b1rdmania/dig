@@ -94,8 +94,11 @@ export {
 } from "./scenes.js";
 export {
   getLabelCoreRun,
+  getLabelCoreRunPlaylist,
   getLabelRelated,
   type CoreRunMaster,
+  type LabelPlaylist,
+  type LabelPlaylistRecord,
   type RelatedLabel,
   type RelatedDirection,
 } from "./label-essentials.js";
