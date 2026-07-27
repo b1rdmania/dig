@@ -1,12 +1,5 @@
 import Link from "next/link";
-import { digFetch } from "@/lib/api";
-import { isTraversalResponse, type TraversalResponse } from "@/lib/types";
 import styles from "./ReleaseNav.module.css";
-
-interface Props {
-  artistId: number;
-  currentMasterId: number | null;
-}
 
 type NavLink = { discogs_id: number; year?: number | null; title?: string | null };
 
@@ -45,24 +38,3 @@ export function ReleaseNavRenderer({
   );
 }
 
-/** Async version — fetches its own data. Use only when a nested Suspense is acceptable. */
-export async function ReleaseNav({ artistId, currentMasterId }: Props) {
-  if (!currentMasterId) return null;
-
-  const fallback: TraversalResponse = {
-    links: [],
-    pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "artist", source_discogs_id: artistId, link_type: "masters", elapsed_ms: 0 },
-  };
-
-  const data = await digFetch<TraversalResponse>(
-    // Chronological so the prev/next arrows read left=earlier, right=later
-    // — matches the timeline mental model on the artist page itself.
-    `/v1/artists/${artistId}/masters?sort=oldest&limit=500`,
-    { revalidate: 300 },
-  )
-    .then((d) => (isTraversalResponse(d) ? d : fallback))
-    .catch(() => fallback);
-
-  return <ReleaseNavRenderer masters={data.links} currentMasterId={currentMasterId} />;
-}

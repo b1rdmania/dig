@@ -22,18 +22,15 @@ export const revalidate = 600;
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   try {
-    const data = await digFetch<SceneWallResponse>(`/v1/scenes/${slug}/wall?density=compact`, {
+    const data = await digFetch<SceneDetailResponse>(`/v1/scenes/${slug}`, {
       revalidate: 600,
     });
-    const era =
-      data.wall.era_start && data.wall.era_end
-        ? `${data.wall.era_start}–${data.wall.era_end}`
-        : null;
+    const s = data.scene;
+    const era = s.era_start && s.era_end ? `${s.era_start}–${s.era_end}` : null;
     const titleEra = era ? `, ${era}` : "";
-    const title = `${data.wall.name}${titleEra} — dig`;
+    const title = `${s.name}${titleEra} — dig`;
     const description =
-      data.wall.blurb ??
-      `${data.wall.name}: ${data.wall.label_count} labels in the dig catalog wall.`;
+      s.blurb ?? `${s.name}: ${s.label_count} labels in the dig catalog wall.`;
     const ogUrl = `/api/og?kind=scene&slug=${encodeURIComponent(slug)}`;
     return {
       title,
