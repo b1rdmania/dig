@@ -1,5 +1,4 @@
 .page {
-  --scene-accent: var(--ink);
   max-width: var(--container-max);
   margin: 0 auto 0 0;
   padding-bottom: var(--sp-9);
@@ -19,7 +18,7 @@
   bottom: -1px;
   width: 96px;
   height: 3px;
-  background: var(--scene-accent);
+  background: var(--ink);
 }
 
 .heading {
@@ -96,7 +95,7 @@
 
 .bridgeArrow {
   font-size: 14px;
-  color: var(--scene-accent);
+  color: var(--ink);
   font-weight: 700;
 }
 
@@ -137,7 +136,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: var(--sp-3);
-  border-top: 3px solid var(--scene-accent, var(--ink));
+  border-top: 3px solid var(--ink);
   padding: var(--sp-4) 0;
   color: var(--ink);
 }

@@ -352,8 +352,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
     <Page
       entityType="master"
       entityId={master.discogs_id}
-      accent={palette?.accent}
-      accentInk={palette?.accent_ink}
     >
       <PageViewTracker type="release" entityId={master.discogs_id} title={master.title} />
       <TrailRecorder
@@ -364,7 +362,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
       />
 
       <section className={styles.hero}>
-        {palette && <div className={styles.accentRule} aria-hidden />}
         <div className={styles.heroBody}>
           <div className={styles.cover}>
             <CoverRenderer coverUrl={coverUrl} title={master.title} videos={master.videos} />

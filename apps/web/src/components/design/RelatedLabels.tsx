@@ -42,12 +42,10 @@ export function RelatedLabels({ rows, maxVisible }: Props) {
   return (
     <ul className={styles.list} aria-label="Related labels">
       {visible.map((r) => {
-        const accent = r.palette?.accent;
         return (
           <li
             key={`${r.to_label_id}-${r.direction}`}
             className={styles.item}
-            style={accent ? ({ "--card-accent": accent } as React.CSSProperties) : undefined}
           >
             <Link href={`/label/${r.to_label_id}`} className={styles.link}>
               <div className={styles.tag}>

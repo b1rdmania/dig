@@ -51,14 +51,6 @@
   color: var(--ink);
 }
 
-.rowAccent {
-  width: 10px;
-  height: 10px;
-  margin-top: 7px;
-  background: var(--card-accent, var(--ink));
-  flex: 0 0 auto;
-}
-
 .rowMain {
   flex: 1;
   min-width: 0;
@@ -93,7 +85,6 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
 
 .asideFoot {
   margin-top: var(--sp-7);

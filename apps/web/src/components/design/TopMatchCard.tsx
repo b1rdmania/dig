@@ -20,22 +20,12 @@ interface Props {
  */
 export function TopMatchCard({ match, onClick }: Props) {
   const href = match.type === "label" ? `/label/${match.discogs_id}` : `/artist/${match.discogs_id}`;
-  const isTinted = match.type === "label" && !!match.palette;
-
-  const cardStyle =
-    isTinted && match.palette
-      ? ({
-          ["--label-accent" as string]: match.palette.accent,
-          ["--label-accent-ink" as string]: match.palette.accent_ink,
-        } as React.CSSProperties)
-      : undefined;
 
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={`${styles.card} ${isTinted ? styles.cardWithPalette : ""}`}
-      style={cardStyle}
+      className={styles.card}
       aria-label={`Open ${match.type} page for ${match.name}`}
     >
       <div className={styles.eyebrow}>

@@ -73,8 +73,6 @@ export function LabelStrip({
   const overflow = Math.max(0, total - releases.length);
 
   const styleVars = {
-    "--strip-accent": p.accent,
-    "--strip-accent-ink": p.accent_ink,
   } as React.CSSProperties;
 
   return (

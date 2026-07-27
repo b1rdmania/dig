@@ -25,15 +25,6 @@
 }
 
 /* Tier-1 palette — accent fills the left rail and the eyebrow stripe. */
-.cardWithPalette {
-  border-color: var(--ink);
-  background: var(--label-accent);
-  color: var(--label-accent-ink);
-}
-
-.cardWithPalette:hover {
-  box-shadow: 2px 2px 0 var(--label-accent-ink);
-}
 
 .eyebrow {
   display: flex;

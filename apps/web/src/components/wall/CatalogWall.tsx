@@ -111,9 +111,7 @@ export function CatalogWall({
 
       <div className={styles.wall}>
         {scenes.map((scene) => {
-          const accent = scene.palette?.accent ?? "#1a1a1a";
           const sceneStyle = {
-            "--scene-accent": accent,
           } as React.CSSProperties;
           const era = formatEra(scene.era_start, scene.era_end);
 

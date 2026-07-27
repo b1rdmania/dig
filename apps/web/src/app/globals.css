@@ -21,8 +21,8 @@
   --ink-inverse:  #f4f1e8;
 
   /* Color — editorial tones */
-  --tier1-accent:     #c8431f;
-  --tier1-accent-ink: #f4f1e8;
+  --tier1-accent:     var(--ink);
+  --tier1-accent-ink: var(--paper);
   --scope-out:        #b8b3a4;
   --link-underline:   #1a1a1a;
 

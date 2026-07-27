@@ -34,8 +34,6 @@ import {
   LinerNotes,
   GenreBar,
   SublabelTree,
-  LabelWordmark,
-  hasCuratedWordmark,
   CoreRun,
   RelatedLabels,
   type SpineRow,
@@ -198,12 +196,7 @@ async function LabelContent({ id }: { id: string }) {
   const totalSpine = releasesData.pagination.total_estimate ?? releasesData.links.length;
 
   return (
-    <Page
-      entityType="label"
-      entityId={label.discogs_id}
-      accent={palette?.accent}
-      accentInk={palette?.accent_ink}
-    >
+    <Page entityType="label" entityId={label.discogs_id}>
       <TrailRecorder
         kind="label"
         id={label.discogs_id}
@@ -211,22 +204,12 @@ async function LabelContent({ id }: { id: string }) {
         subtitle={ed?.location ?? undefined}
       />
       <div className={styles.identity}>
-        {palette && <div className={styles.accentRule} aria-hidden />}
         <Suspense fallback={null}>
           <LabelHeroImage discogsId={label.discogs_id} labelName={label.name} mode="mark" />
         </Suspense>
         {ed?.location && <div className={styles.eyebrow}>{ed.location}</div>}
         <h1 className={styles.title}>
-          {hasCuratedWordmark(label.discogs_id) || (tier === "tier1" && palette) ? (
-            <LabelWordmark
-              discogsId={label.discogs_id}
-              name={label.name}
-              palette={palette}
-              size="md"
-            />
-          ) : (
-            <span>{label.name}</span>
-          )}
+          <span>{label.name}</span>
           {tier === "tier1" && (
             <span className={styles.tier1Sticker}>
               <Sticker tone="tier1" size="md" title="Canonical scene label (editorial tier 1)">

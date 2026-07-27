@@ -117,12 +117,11 @@ export default async function ScenePage({ params }: Props) {
   const playlist = playlistResult.ok ? playlistResult.data.playlist : null;
 
   const wall = wallData.wall;
-  const accent = wall.palette?.accent ?? "#1a1a1a";
 
   const scene: WallScene = sceneWallToWallScene(wall);
 
   return (
-    <div className={styles.page} style={{ "--scene-accent": accent } as React.CSSProperties}>
+    <div className={styles.page}>
       <TrailRecorder
         kind="scene"
         id={wall.slug}

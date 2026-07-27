@@ -18,12 +18,6 @@
   padding: var(--sp-5) 0 var(--sp-5);
 }
 
-.accentRule {
-  height: 4px;
-  background: var(--label-accent);
-  margin-bottom: var(--sp-4);
-}
-
 .heroBody {
   display: grid;
   grid-template-columns: 220px 1fr;

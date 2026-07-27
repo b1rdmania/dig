@@ -14,7 +14,6 @@ export { Stamp } from "./Stamp";
 export { Rule } from "./Rule";
 export { MetaRow } from "./MetaRow";
 export { Wordmark } from "./Wordmark";
-export { LabelWordmark, hasCuratedWordmark } from "./LabelWordmark";
 export { CatalogSpine, type SpineRow } from "./CatalogSpine";
 export { RosterColumn, type RosterRow } from "./RosterColumn";
 export { LinerNotes } from "./LinerNotes";

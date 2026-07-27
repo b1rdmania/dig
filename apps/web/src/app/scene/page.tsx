@@ -76,15 +76,8 @@ export default async function ScenesIndexPage() {
       <div className={styles.rows}>
         {demoteObvious(order.flatMap((axis) => grouped[axis] ?? [])).map((s) => {
           const era = formatEra(s.era_start, s.era_end);
-          const accent = s.palette?.accent ?? "#1a1a1a";
           return (
-            <Link
-              key={s.slug}
-              href={`/scene/${s.slug}`}
-              className={styles.row}
-              style={{ "--card-accent": accent } as React.CSSProperties}
-            >
-              <span className={styles.rowAccent} aria-hidden />
+            <Link key={s.slug} href={`/scene/${s.slug}`} className={styles.row}>
               <span className={styles.rowMain}>
                 <span className={styles.rowTitle}>{s.name}</span>
                 <span className={styles.rowMeta}>
