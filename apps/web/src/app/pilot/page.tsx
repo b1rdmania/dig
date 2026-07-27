@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Dig. Pilot.",
+  title: "Dig. Beta Access.",
   description: "Three ways to try it.",
   robots: { index: false, follow: false },
   openGraph: {
-    title: "Dig. Pilot.",
+    title: "Dig. Beta Access.",
     description: "Three ways to try it.",
-    images: [{ url: "/api/og?kind=home&v=3", width: 1200, height: 630, alt: "Dig. Pilot." }],
+    images: [{ url: "/api/og?kind=home&v=3", width: 1200, height: 630, alt: "Dig. Beta Access." }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dig. Pilot.",
+    title: "Dig. Beta Access.",
     description: "Three ways to try it.",
     images: ["/api/og?kind=home&v=3"],
   },
@@ -23,10 +23,13 @@ const ACCESS_KEY = "dig-beta-1504eb2560f5b76b991e472b";
 export default function RussPage() {
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Dig. Pilot.</h1>
+      <h1 className={styles.title}>Dig. Beta Access.</h1>
       <p className={styles.lede}>
         80,000 house and techno records, 1985–2008, built on Discogs open data.
         Three ways to try it.
+      </p>
+      <p className={styles.ledeAside}>
+        For more about Dig, check the <a href="/faq">FAQ</a>.
       </p>
 
       <section className={styles.section}>

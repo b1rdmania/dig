@@ -59,3 +59,15 @@
   margin-top: 0.5rem;
   display: block;
 }
+
+.ledeAside {
+  margin: 0.4rem 0 0;
+  font-size: 0.9rem;
+  color: var(--ink-muted, var(--fg-muted));
+}
+
+.ledeAside a {
+  color: var(--ink, var(--fg));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
