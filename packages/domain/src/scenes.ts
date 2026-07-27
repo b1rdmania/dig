@@ -409,12 +409,17 @@ export async function getSceneWall(
     }
   }
 
-  const wallLabels: WallStripLabel[] = scene.labels.map((l) => ({
-    ...l,
-    era: eraByLabel.get(l.discogs_id) ?? { start: null, end: null },
-    total_masters: l.master_count,
-    releases: byLabel.get(l.discogs_id) ?? [],
-  }));
+  const wallLabels: WallStripLabel[] = scene.labels
+    .map((l) => ({
+      ...l,
+      era: eraByLabel.get(l.discogs_id) ?? { start: null, end: null },
+      total_masters: l.master_count,
+      releases: byLabel.get(l.discogs_id) ?? [],
+    }))
+    // A member label with nothing playable renders as an empty strip —
+    // worse than absent. Usually a seed id pointing at the wrong Discogs
+    // label variant (Mute/Tresor/Apollo) or output entirely out of era.
+    .filter((l) => l.releases.length > 0);
 
   return {
     ...scene,
