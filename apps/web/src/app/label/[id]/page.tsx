@@ -40,7 +40,6 @@ import {
   type RosterRow,
 } from "@/components/design";
 import { TopCreditsBlock } from "@/components/TopCreditsBlock";
-import { LabelHeroImage } from "@/components/LabelHeroImage";
 import styles from "./page.module.css";
 
 interface Props {
@@ -203,9 +202,6 @@ async function LabelContent({ id }: { id: string }) {
         subtitle={ed?.location ?? undefined}
       />
       <div className={styles.identity}>
-        <Suspense fallback={null}>
-          <LabelHeroImage discogsId={label.discogs_id} labelName={label.name} mode="mark" />
-        </Suspense>
         {ed?.location && <div className={styles.eyebrow}>{ed.location}</div>}
         <h1 className={styles.title}>
           <span>{label.name}</span>
