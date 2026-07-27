@@ -411,8 +411,24 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
 
             {(master.genres.length > 0 || master.styles.length > 0) && (
               <div className={styles.tags}>
-                {master.genres.map((g) => <span className={styles.tag} key={`g-${g}`}>{g}</span>)}
-                {master.styles.map((s) => <span className={styles.tag} key={`s-${s}`}>{s}</span>)}
+                {master.genres.map((g) => (
+                  <Link
+                    href={`/search?type=master&genre=${encodeURIComponent(g)}`}
+                    className={styles.tag}
+                    key={`g-${g}`}
+                  >
+                    {g}
+                  </Link>
+                ))}
+                {master.styles.map((s) => (
+                  <Link
+                    href={`/search?type=master&style=${encodeURIComponent(s)}`}
+                    className={styles.tag}
+                    key={`s-${s}`}
+                  >
+                    {s}
+                  </Link>
+                ))}
               </div>
             )}
 

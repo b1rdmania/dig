@@ -139,6 +139,13 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.tag:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .tag + .tag::before {
