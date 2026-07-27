@@ -67,10 +67,10 @@
       "era_start": 1991,
       "era_end": 2008,
       "axis": "geography",
-      "hero_label_name": "Tresor Records",
+      "hero_label_name": "Tresor",
       "blurb": "The bunker, the wall coming down, and the labels that turned post-reunification Berlin into the centre of European techno. Tresor as the mothership; Hard Wax as the curator; Basic Channel and friends as the harmonic underground.",
       "labels": [
-        { "name": "Tresor Records", "role": "core", "rank": 1 },
+        { "name": "Tresor", "role": "core", "rank": 1 },
         { "name": "Hard Wax", "role": "core", "rank": 2 },
         { "name": "Basic Channel", "role": "core", "rank": 3 },
         { "name": "Chain Reaction", "role": "core", "rank": 4 },
@@ -133,7 +133,7 @@
       "labels": [
         { "name": "Junior Boy's Own", "role": "core", "rank": 1 },
         { "name": "XL Recordings", "role": "core", "rank": 2 },
-        { "name": "Mute Records", "role": "core", "rank": 3 },
+        { "name": "Mute", "role": "core", "rank": 3 },
         { "name": "NovaMute", "role": "adjacent", "rank": 4 },
         { "name": "Defected", "role": "core", "rank": 5 },
         { "name": "Azuli Records", "role": "core", "rank": 6 },
@@ -256,7 +256,7 @@
       "blurb": "Renaat Vandepapeliere's R&S as the door between Detroit and Sheffield. Apollo as the ambient subsidiary that holds Selected Ambient Works II. Music Man as the harder Belgian counterweight.",
       "labels": [
         { "name": "R & S Records", "role": "core", "rank": 1 },
-        { "name": "Apollo Records (2)", "role": "core", "rank": 2 },
+        { "name": "Apollo", "role": "core", "rank": 2 },
         { "name": "Music Man Records", "role": "core", "rank": 3 },
         { "name": "Global Cuts", "role": "adjacent", "rank": 4 },
         { "name": "Bonzai Records", "role": "adjacent", "rank": 5 }
