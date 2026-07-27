@@ -42,11 +42,7 @@ const FAQS: Array<{ q: string; a: React.ReactNode }> = [
         I slimmed this idea down to house and techno, with an LLM layer on
         top: query the Discogs catalog directly, chat about your collection
         and the artists you like, get recommendations with YouTube links. It
-        works pretty well and runs on a Kimi backend.
-        <span className={styles.block}>
-          The search database needs a bit of tweaking (some tracks and artists
-          are missing), but as a beta demo I&apos;m happy.
-        </span>
+        works pretty well.
         <span className={styles.block}>
           Take it as an open experiment in what Discogs could be. They own an
           impressive dataset and can commoditise it in fun ways.
