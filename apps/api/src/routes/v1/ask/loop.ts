@@ -15,7 +15,11 @@ import { TOOLS, executeTool } from "./tools.js";
 const MAX_TOOL_ROUNDS = 5;
 const ANTHROPIC_CALL_TIMEOUT_MS = 30_000;
 const TOOL_EXEC_TIMEOUT_MS = 15_000;
-const LOOP_DEADLINE_MS = 90_000;
+// Backstop only. Per-call timeouts above bound the worst honest run to
+// ~225s (5 rounds × 30s call + 15s tools), so this should never cut off
+// a real dig — it exists to kill a pathological one. The 90s version was
+// truncating legitimate credit-graph digs ("Retrieval partial").
+const LOOP_DEADLINE_MS = 240_000;
 
 // ---------------------------------------------------------------------------
 // Personality — Dig v2: scene-scoped catalog (1988–2008 house & techno)
