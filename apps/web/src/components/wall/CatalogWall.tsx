@@ -151,7 +151,6 @@ export function CatalogWall({
                       founded_year={l.founded_year}
                       closed_year={l.closed_year}
                       is_active={l.is_active}
-                      palette={l.palette}
                       releases={l.releases}
                       total={l.total_masters}
                       density={density}

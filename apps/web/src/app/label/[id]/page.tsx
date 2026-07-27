@@ -99,7 +99,6 @@ async function LabelContent({ id }: { id: string }) {
   const label = labelData.label;
   const ed = label.editorial;
   const tier = ed?.tier ?? label.tier;
-  const palette = ed?.palette ?? null;
   const coreRun = labelData.core_run ?? [];
   const relatedLabels = labelData.related ?? [];
 

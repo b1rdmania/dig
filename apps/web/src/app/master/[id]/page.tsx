@@ -346,7 +346,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
   }
 
   const isTier1 = labelMeta?.tier === "tier1";
-  const palette = labelMeta?.editorial?.palette ?? null;
 
   return (
     <Page

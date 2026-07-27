@@ -24,7 +24,6 @@ export interface LabelStripProps {
   founded_year?: number | null;
   closed_year?: number | null;
   is_active?: boolean;
-  palette?: StripPalette | null;
   releases: StripRelease[];
   total: number;
   density?: StripDensity;
@@ -32,7 +31,6 @@ export interface LabelStripProps {
   role?: "core" | "adjacent" | "bridge" | null;
 }
 
-const PALETTE_DEFAULT: StripPalette = { accent: "#1a1a1a", accent_ink: "#f4f1e8" };
 
 function eraString(founded: number | null | undefined, closed: number | null | undefined, isActive: boolean | undefined): string | null {
   if (founded == null && closed == null) return null;
@@ -62,13 +60,11 @@ export function LabelStrip({
   founded_year,
   closed_year,
   is_active,
-  palette,
   releases,
   total,
   density = "compact",
   role,
 }: LabelStripProps) {
-  const p = palette ?? PALETTE_DEFAULT;
   const era = eraString(founded_year, closed_year, is_active);
   const overflow = Math.max(0, total - releases.length);
 
