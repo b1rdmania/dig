@@ -14,7 +14,7 @@
 }
 
 .sub {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
   color: var(--ink-muted);
   margin-bottom: var(--sp-5);
@@ -37,7 +37,7 @@
 }
 
 .tryLabel {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   color: var(--ink-muted);
   letter-spacing: 0.06em;
@@ -45,7 +45,7 @@
 }
 
 .chip {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   color: var(--ink);
   border: 1px solid var(--rule);

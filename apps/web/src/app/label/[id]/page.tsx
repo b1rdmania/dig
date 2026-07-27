@@ -24,7 +24,6 @@ import { Provenance } from "@/components/Provenance";
 import { TrailRecorder } from "@/components/TrailRecorder";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
-import { ShareBar } from "@/components/ShareBar";
 import {
   Page,
   Sticker,
@@ -271,14 +270,6 @@ async function LabelContent({ id }: { id: string }) {
           </>
         )}
 
-        <div className={styles.shareWrap}>
-          <ShareBar
-            url={`${BASE_URL}/label/${label.discogs_id}`}
-            title={label.name}
-            entityType="label"
-            entityId={label.discogs_id}
-          />
-        </div>
       </div>
 
       <div className={styles.body}>

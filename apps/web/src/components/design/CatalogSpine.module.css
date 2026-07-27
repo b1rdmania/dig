@@ -15,7 +15,7 @@
   align-items: baseline;
   gap: var(--sp-3);
   padding: var(--sp-2) 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
   line-height: 1.5;
 }
@@ -109,7 +109,7 @@
 }
 
 .decadeLabel {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;

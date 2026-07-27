@@ -9,7 +9,7 @@
 }
 
 .eyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 0.78rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -48,7 +48,7 @@
 
 .label {
   margin: 0 0 0.45rem;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.72rem;
@@ -103,7 +103,7 @@
 .row dd {
   margin: 0;
   color: var(--off-white);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
 }
 
 .note {
@@ -148,7 +148,7 @@
 .tdNum {
   text-align: right;
   padding: 0.45rem 0 0.45rem 1rem;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   color: var(--off-white);
   white-space: nowrap;
 }
@@ -156,7 +156,7 @@
 .table thead .thLabel,
 .table thead .thNum {
   color: var(--warm-mid);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.72rem;

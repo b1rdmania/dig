@@ -14,7 +14,7 @@
 }
 
 .eyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -58,7 +58,7 @@
   gap: var(--sp-3);
   padding: 6px 0;
   border-bottom: 1px solid var(--rule);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   line-height: 1.4;
   flex-wrap: wrap;
@@ -89,7 +89,7 @@
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.04em;
 }
@@ -112,7 +112,7 @@
 }
 
 .foot {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;

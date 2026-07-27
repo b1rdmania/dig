@@ -35,7 +35,7 @@
 }
 
 .eyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -46,7 +46,7 @@
 
 .kicker {
   max-width: 34rem;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   line-height: 1.6;
   letter-spacing: 0.08em;
@@ -87,7 +87,7 @@
 }
 
 .panelLabel {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -102,7 +102,7 @@
   gap: var(--sp-3);
   padding: 0.85rem 0;
   border-top: 1px solid var(--rule);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -135,7 +135,7 @@
   min-height: 44px;
   padding: 0.8rem 1rem;
   text-decoration: none;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -193,7 +193,7 @@
 }
 
 .cardLabel {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -221,7 +221,7 @@
 .cardLink {
   margin-top: var(--sp-5);
   align-self: flex-start;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;

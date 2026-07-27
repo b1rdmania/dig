@@ -25,7 +25,6 @@ import { TrailRecorder } from "@/components/TrailRecorder";
 import { CollapsibleList } from "@/components/CollapsibleList";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
-import { ShareBar } from "@/components/ShareBar";
 import { hrefForTraversalLink } from "@/lib/routes";
 import { Labelmates, SeeAlso } from "@/components/design";
 import { CreditsTab } from "@/components/CreditsTab";
@@ -431,14 +430,6 @@ async function ArtistContent({
                     {urlLabel(url)}
                   </a>
                 ))}
-              </div>
-              <div style={{ marginTop: "var(--sp-3)" }}>
-                <ShareBar
-                  url={`${BASE_URL}/artist/${artist.discogs_id}`}
-                  title={artist.name}
-                  entityType="artist"
-                  entityId={artist.discogs_id}
-                />
               </div>
             </div>
           </div>

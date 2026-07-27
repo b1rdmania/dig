@@ -36,7 +36,7 @@
 }
 
 .eyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -70,7 +70,7 @@
 }
 
 .link {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -93,7 +93,7 @@
 }
 
 .heading {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -115,7 +115,7 @@
 }
 
 .expandToggle {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   color: var(--ink-soft);
   cursor: pointer;
@@ -129,7 +129,7 @@
 }
 
 .pill {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   border: 1px solid var(--rule);
   color: var(--ink-soft);
@@ -138,7 +138,7 @@
 }
 
 .pillLink {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -176,7 +176,7 @@
 }
 
 .relatedType {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   color: var(--ink-muted);
   text-transform: uppercase;
@@ -185,7 +185,7 @@
 
 .contextSource {
   margin-top: var(--sp-2);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   color: var(--ink-faint);
   letter-spacing: 0.04em;
@@ -199,7 +199,7 @@
 }
 
 .chip {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   border: 1px solid var(--rule);
   color: var(--ink-soft);
@@ -215,7 +215,7 @@
 }
 
 .chipActive {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   border: 1px solid var(--ink);
   background: var(--ink);
@@ -227,7 +227,7 @@
 }
 
 .badge {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   color: var(--ink-soft);
   border: 1px solid var(--rule);
@@ -264,7 +264,7 @@
 }
 
 .small {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   color: var(--ink-muted);
   letter-spacing: 0.04em;

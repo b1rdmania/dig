@@ -24,7 +24,6 @@ import { Provenance } from "@/components/Provenance";
 import { PageViewTracker } from "@/components/PageViewTracker";
 import { TrailRecorder } from "@/components/TrailRecorder";
 import { OutboundLink } from "@/components/OutboundLink";
-import { ShareBar } from "@/components/ShareBar";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { ReleaseNavRenderer } from "@/components/ReleaseNav";
 import { Page, Sticker, Stamp, LinerNotes } from "@/components/design";
@@ -451,12 +450,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
               >
                 Open on Discogs
               </OutboundLink>
-              <ShareBar
-                url={`${BASE_URL}/master/${master.discogs_id}`}
-                title={master.title}
-                entityType="release"
-                entityId={master.discogs_id}
-              />
             </div>
           </div>
         </div>

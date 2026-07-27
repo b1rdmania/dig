@@ -6,7 +6,7 @@
   margin: 0 auto 0 0;
   padding: var(--sp-2) var(--sp-4);
   border-bottom: 1px solid var(--rule);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.04em;
   color: var(--ink-soft);

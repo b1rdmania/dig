@@ -43,7 +43,7 @@
 }
 
 .link {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
   color: var(--ink-soft);
   text-decoration: none;
@@ -58,7 +58,7 @@
 }
 
 .attribution {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   color: var(--ink-muted);
   line-height: 1.6;

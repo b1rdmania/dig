@@ -1,7 +1,7 @@
 .listing {
   display: flex;
   flex-direction: column;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
   line-height: 1.5;
 }
@@ -48,7 +48,7 @@
 }
 
 .colType {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -87,7 +87,7 @@
 
 .colConfidence {
   text-align: right;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
   letter-spacing: 0.05em;
   color: var(--ink-faint);

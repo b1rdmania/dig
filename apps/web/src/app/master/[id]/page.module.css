@@ -109,7 +109,7 @@
   align-items: baseline;
   gap: var(--sp-3) var(--sp-4);
   margin-top: var(--sp-3);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
   color: var(--ink-soft);
 }
@@ -140,7 +140,7 @@
 }
 
 .tag {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -188,7 +188,7 @@
 }
 
 .sectionTitle {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -198,7 +198,7 @@
 }
 
 .sectionMeta {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   color: var(--ink-muted);
 }
@@ -206,7 +206,7 @@
 /* ── Tracklist ────────────────────────────────────────────────────── */
 
 .sideHeading {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -233,7 +233,7 @@
 }
 
 .position {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
@@ -252,7 +252,7 @@
 }
 
 .duration {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
@@ -288,7 +288,7 @@
   display: flex;
   align-items: baseline;
   gap: var(--sp-3);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   color: var(--ink-soft);
   flex-shrink: 0;
@@ -335,7 +335,7 @@
 }
 
 .mainTag {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;

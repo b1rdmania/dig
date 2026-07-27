@@ -31,12 +31,10 @@
   --label-accent-ink: var(--paper);
 
   /* Type stack.
-   * Rationalised 2026-07: --font-mono resolves to the sans stack — the old
-   * mono-everywhere chrome read as terminal cosplay. True monospace survives
+   * One family: IBM Plex Sans. The micro-caps "terminal" treatment is
+   * letter-spacing + uppercase, not a typeface. True monospace survives
    * only as --font-mono-data, for genuinely tabular/terminal content
    * (catalog numbers, the Ask Dig workings log). */
-  --font-mono: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Söhne",
-               "Inter", system-ui, sans-serif;
   --font-mono-data: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Söhne",
                "Inter", system-ui, sans-serif;

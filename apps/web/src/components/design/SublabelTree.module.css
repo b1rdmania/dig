@@ -3,7 +3,7 @@
    tree visibly aligns even with long names. */
 
 .tree {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
   line-height: 1.7;
   color: var(--ink);
@@ -69,7 +69,7 @@
 }
 
 .eyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -79,7 +79,7 @@
 }
 
 .empty {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   color: var(--ink-muted);
 }

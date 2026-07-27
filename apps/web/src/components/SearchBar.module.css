@@ -10,7 +10,7 @@
 }
 
 .prompt {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-weight: 600;
   color: var(--ink);
   font-size: var(--fs-md);
@@ -25,7 +25,7 @@
   background: transparent;
   color: var(--ink);
   border: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-md);
   outline: none;
   -webkit-appearance: none;

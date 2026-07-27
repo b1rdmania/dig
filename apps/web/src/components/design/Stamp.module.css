@@ -2,7 +2,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-xs);
   font-weight: 400;
   letter-spacing: 0.06em;

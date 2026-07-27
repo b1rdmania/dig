@@ -4,7 +4,7 @@
 }
 
 .heading {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -52,7 +52,7 @@
   display: inline-flex;
   align-items: baseline;
   gap: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
@@ -72,7 +72,7 @@
 }
 
 .overflow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   color: var(--ink-muted);
   margin-top: var(--sp-3);

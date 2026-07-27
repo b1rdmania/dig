@@ -5,7 +5,7 @@
 }
 
 .eyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -21,7 +21,7 @@
 }
 
 .wallEyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -54,7 +54,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-2);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -77,7 +77,7 @@
 }
 
 .loading {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   color: var(--ink-soft);
   text-align: center;
   padding: var(--sp-9) 0;

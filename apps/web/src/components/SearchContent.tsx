@@ -72,7 +72,7 @@ function DidYouMean({
         display: "flex",
         flexDirection: "column",
         gap: "var(--sp-2)",
-        fontFamily: "var(--font-mono)",
+        fontFamily: "var(--font-sans)",
       }}
     >
       <p

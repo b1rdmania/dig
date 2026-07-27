@@ -59,8 +59,6 @@ export default function RootLayout({
         // Dig workings log. No serif, no mono webfonts.
         ["--font-sans" as string]:
           `var(--font-sans-body), -apple-system, BlinkMacSystemFont, "Söhne", Inter, system-ui, sans-serif`,
-        ["--font-mono" as string]:
-          `var(--font-sans-body), -apple-system, BlinkMacSystemFont, "Söhne", Inter, system-ui, sans-serif`,
         ["--font-mono-data" as string]:
           `ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace`,
         ["--font-serif" as string]:

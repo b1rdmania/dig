@@ -3,7 +3,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--fs-sm);
   color: var(--ink-soft);
   letter-spacing: 0.04em;
