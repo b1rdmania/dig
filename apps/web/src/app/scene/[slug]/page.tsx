@@ -130,11 +130,6 @@ export default async function ScenePage({ params }: Props) {
         subtitle={wall.city ?? undefined}
       />
       <header className={styles.pageHeader}>
-        <div className={styles.crumbs}>
-          <Link href="/scene" className={styles.crumbLink}>
-            ← all scenes
-          </Link>
-        </div>
         <h1 className={styles.heading}>{wall.name}</h1>
         {wall.blurb && <p className={styles.lede}>{wall.blurb}</p>}
       </header>

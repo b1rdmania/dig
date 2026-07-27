@@ -1,16 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import styles from "./HomeLink.module.css";
 
 /**
- * The site has no header — this is the one piece of wayfinding chrome:
- * a small "← home" at the top of every page except home itself.
+ * The site has no header — this is the one piece of wayfinding chrome at
+ * the top of every page except home itself.
+ *
+ * Top-level pages get "← home". Dug-in entity pages (label, artist,
+ * master, a scene) get "← back" instead, so the loop out of a dig
+ * returns to wherever you came from — the list, search results, another
+ * record — rather than ejecting to the homepage.
  */
+const DEEP_RE = /^\/(label|artist|master|release)\/.|^\/scene\/./;
+
 export function HomeLink() {
   const pathname = usePathname();
+  const router = useRouter();
   if (pathname === "/") return null;
+
+  if (DEEP_RE.test(pathname)) {
+    return (
+      <div className={styles.wrap}>
+        <button
+          type="button"
+          className={styles.link}
+          onClick={() => {
+            if (window.history.length > 1) router.back();
+            else router.push("/");
+          }}
+        >
+          ← back
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.wrap}>
       <Link href="/" className={styles.link}>← home</Link>

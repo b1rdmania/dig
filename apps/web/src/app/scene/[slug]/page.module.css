@@ -22,24 +22,6 @@
   background: var(--scene-accent);
 }
 
-.crumbs {
-  margin-bottom: var(--sp-4);
-}
-
-.crumbLink {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  text-decoration: none;
-}
-
-.crumbLink:hover {
-  color: var(--ink);
-  text-decoration: underline;
-}
-
 .heading {
   font-family: var(--font-sans);
   font-size: clamp(2.2rem, 6vw, 4rem);

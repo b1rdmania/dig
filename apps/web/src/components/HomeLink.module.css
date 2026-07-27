@@ -4,8 +4,13 @@
 
 .link {
   font-size: var(--fs-sm, 13px);
+  font-family: inherit;
   color: var(--ink-soft, var(--ink));
   text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
 }
 
 .link:hover {
