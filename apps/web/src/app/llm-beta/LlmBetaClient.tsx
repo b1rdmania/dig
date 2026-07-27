@@ -16,6 +16,18 @@ const KEY_STORAGE = "dig.llm_beta.access_key";
 // shop business so it never sits still. In persona, never technical.
 // Picked at random; each phrase holds for a while — a shopkeeper doesn't
 // change activity every two seconds.
+// The instant the customer asks, the shopkeeper acknowledges it — one of
+// these shows immediately on submit, before the first server event. The
+// filler rotation takes over from there.
+const ACK_PHRASES = [
+  "Leave it with me…",
+  "Right, hold on…",
+  "Give me a minute…",
+  "I know where that is…",
+  "Hang about…",
+  "Right then…",
+];
+
 const FILLER_PHRASES = [
   "Riffling the crates…",
   "Checking the back room…",
@@ -229,7 +241,7 @@ export function LlmBetaClient() {
     const nextMessages: Message[] = [...messages, { role: "user", content: q }];
     setMessages(nextMessages);
     setInput("");
-    setActivityLine(FILLER_PHRASES[Math.floor(Math.random() * FILLER_PHRASES.length)]);
+    setActivityLine(ACK_PHRASES[Math.floor(Math.random() * ACK_PHRASES.length)]);
     setLoading(true);
 
     try {
