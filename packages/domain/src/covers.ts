@@ -13,6 +13,7 @@
 
 import { type Kysely, sql } from "kysely";
 import type { Database } from "@dig/db";
+import { YOUTUBE_ID_RE } from "./scenes.js";
 
 const CAA_BASE = "https://coverartarchive.org";
 const CACHE_PREFIX = "cover:";
@@ -120,9 +121,10 @@ type RedisLike = {
 /**
  * Resolve up to `want` sleeve images for a label's top masters — core-run
  * entries first, then by scene weight. Covers come from the Cover Art
- * Archive via the existing per-release resolver (Redis-cached), NOT from
- * Discogs, so the sleeve wall stays inside their ToS. Masters without a
- * resolvable cover simply don't make the wall.
+ * Archive via the existing per-release resolver (Redis-cached), falling
+ * back to the master's first YouTube still (vinyl rips are almost always
+ * shot of the sleeve). Nothing comes from Discogs, so the wall stays
+ * inside their ToS. Masters with neither drop out.
  */
 export async function getLabelSleeves(
   db: Kysely<Database>,
@@ -147,6 +149,22 @@ export async function getLabelSleeves(
     LIMIT ${Math.max(want * 3, 24)}
   `.execute(db);
 
+  // Video-still fallbacks for every candidate in one query.
+  const thumbById = new Map<number, string>();
+  if (candidates.rows.length > 0) {
+    const vids = await sql<{ master_discogs_id: number; url: string }>`
+      SELECT DISTINCT ON (v.master_discogs_id) v.master_discogs_id, v.url
+      FROM catalog.master_videos_unified v
+      WHERE v.master_discogs_id = ANY(${candidates.rows.map((c) => c.discogs_id)}::int[])
+        AND (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
+      ORDER BY v.master_discogs_id, v.id ASC
+    `.execute(db);
+    for (const v of vids.rows) {
+      const m = YOUTUBE_ID_RE.exec(v.url);
+      if (m) thumbById.set(v.master_discogs_id, `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg`);
+    }
+  }
+
   const sleeves: LabelSleeve[] = [];
   const BATCH = 8;
   for (let i = 0; i < candidates.rows.length && sleeves.length < want; i += BATCH) {
@@ -158,11 +176,10 @@ export async function getLabelSleeves(
       })),
     );
     for (const r of results) {
-      if (r.status === "fulfilled" && r.value.cover.url && sleeves.length < want) {
-        sleeves.push({
-          master_discogs_id: r.value.master_discogs_id,
-          cover_url: r.value.cover.url,
-        });
+      if (r.status !== "fulfilled" || sleeves.length >= want) continue;
+      const url = r.value.cover.url ?? thumbById.get(r.value.master_discogs_id) ?? null;
+      if (url) {
+        sleeves.push({ master_discogs_id: r.value.master_discogs_id, cover_url: url });
       }
     }
   }

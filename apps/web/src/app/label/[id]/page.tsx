@@ -29,7 +29,6 @@ import { SectionSkeleton } from "@/components/SectionSkeleton";
 import {
   Page,
   Sticker,
-  Stamp,
   CatalogSpine,
   RosterColumn,
   LinerNotes,
@@ -161,7 +160,6 @@ async function LabelContent({ id }: { id: string }) {
     if (entry) resolvedNames[entry[0]] = entry[1];
   }
 
-  const yearLine = formatYearLine(ed?.founded_year ?? null, ed?.closed_year ?? null, ed?.is_active ?? true);
   const spineRows: SpineRow[] = releasesData.links.map((link, idx) => ({
     position: idx + 1,
     // For type="master" links the API now sets master_discogs_id explicitly
@@ -195,8 +193,6 @@ async function LabelContent({ id }: { id: string }) {
     first_year: r.first_year,
     last_year: r.last_year,
   }));
-
-  const totalSpine = releasesData.pagination.total_estimate ?? releasesData.links.length;
 
   return (
     <Page entityType="label" entityId={label.discogs_id}>
@@ -233,32 +229,7 @@ async function LabelContent({ id }: { id: string }) {
           </div>
         )}
 
-        <div className={styles.metaStrip}>
-          {yearLine && (
-            <span className={styles.item}>
-              <span className={styles.key}>Active</span>
-              <span className={styles.val}>{yearLine}</span>
-            </span>
-          )}
-          <span className={styles.item}>
-            <span className={styles.key}>Catalog</span>
-            <span className={styles.val}>{totalSpine.toLocaleString()} masters</span>
-          </span>
-          {label.aliases.length > 0 && (
-            <span className={styles.item}>
-              <span className={styles.key}>Aliases</span>
-              <span className={styles.val}>{label.aliases.length}</span>
-            </span>
-          )}
-          {ed && !ed.is_active && <Stamp title="Label is dormant or defunct">Inactive</Stamp>}
-        </div>
-
-        {ed?.blurb && (
-          <>
-            <div className={styles.blurb}>“{ed.blurb}”</div>
-            <div className={styles.blurbAttrib}>editorial · dig</div>
-          </>
-        )}
+        {ed?.blurb && <div className={styles.blurb}>{ed.blurb}</div>}
 
       </div>
 
@@ -451,18 +422,6 @@ async function LabelContent({ id }: { id: string }) {
   );
 }
 
-function formatYearLine(founded: number | null, closed: number | null, isActive: boolean): string | null {
-  if (founded == null && closed == null) {
-    return isActive ? null : "Inactive";
-  }
-  if (founded != null && closed != null) {
-    return `${founded}–${String(closed).slice(-2)}`;
-  }
-  if (founded != null) {
-    return isActive ? `${founded}–` : `${founded}–?`;
-  }
-  return `?–${closed}`;
-}
 
 /**
  * The traversal endpoint returns catalog_number on the chronological label
