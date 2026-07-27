@@ -39,8 +39,8 @@ export function CatalogSpine({ rows, emptyMessage = "No in-scope releases for th
   return (
     <div className={styles.spine}>
       <div className={styles.headerRow}>
-        <span className={styles.colNum}>#</span>
-        <span className={styles.colYear}>Year</span>
+        <span className={styles.colNum} />
+        <span className={styles.colYear} />
         <span className={styles.colTitle}>Title</span>
         <span className={styles.colArtist}>Artist</span>
       </div>
