@@ -373,6 +373,7 @@ export async function getSceneWall(
       FROM catalog.masters m
       WHERE m.primary_label_discogs_id = ANY(${labelIds}::int[])
         AND m.batch_id = ${batchId}
+        AND (m.year IS NULL OR (m.year >= ${scene.era_start ?? 0} AND m.year <= ${scene.era_end ?? 9999}))
     )
     SELECT
       primary_label_discogs_id,
@@ -452,6 +453,10 @@ const YOUTUBE_ID_RE =
  * with its first YouTube video. Per-label capped so one prolific label can't
  * own the playlist, globally capped at `cap` (YouTube's anonymous
  * watch_videos playlists silently truncate around 50 entries).
+ *
+ * Clamped to the scene's era bounds, and unlike the wall a known in-era
+ * year is required — a tier-1 label's back catalog (West End's disco
+ * years) must not front a scene billed 1988-2008.
  */
 export async function getScenePlaylist(
   db: Kysely<Database>,
@@ -490,6 +495,7 @@ export async function getScenePlaylist(
       FROM catalog.masters m
       WHERE m.primary_label_discogs_id = ANY(${labelIds}::int[])
         AND m.batch_id = ${batchId}
+        AND m.year >= ${scene.era_start ?? 0} AND m.year <= ${scene.era_end ?? 9999}
     ),
     vids AS (
       SELECT DISTINCT ON (v.master_discogs_id)
