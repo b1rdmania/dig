@@ -13,7 +13,7 @@
 
 .link {
   display: grid;
-  grid-template-columns: 36px 1fr;
+  grid-template-columns: 1fr;
   gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-2);
   text-decoration: none;
@@ -24,17 +24,6 @@
 .link:hover .title {
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-
-.rank {
-  font-family: var(--font-sans);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--ink-faint);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  padding-top: 2px;
-  font-weight: 600;
 }
 
 .body {

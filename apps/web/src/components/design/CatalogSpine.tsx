@@ -43,7 +43,6 @@ export function CatalogSpine({ rows, emptyMessage = "No in-scope releases for th
         <span className={styles.colYear}>Year</span>
         <span className={styles.colTitle}>Title</span>
         <span className={styles.colArtist}>Artist</span>
-        <span className={styles.colMeta}>Format</span>
       </div>
       <div className={styles.rule} aria-hidden />
       {rows.map((row) => {
@@ -81,13 +80,6 @@ export function CatalogSpine({ rows, emptyMessage = "No in-scope releases for th
               </span>
               <span className={styles.colArtist}>
                 {row.artist ?? <span className={styles.dim}>—</span>}
-              </span>
-              <span className={styles.colMeta}>
-                {row.format ? (
-                  <Sticker tone="ghost" size="sm">{row.format}</Sticker>
-                ) : (
-                  <span className={styles.dim}>—</span>
-                )}
               </span>
             </div>
           </div>

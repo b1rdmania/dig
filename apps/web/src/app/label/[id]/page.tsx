@@ -272,11 +272,6 @@ async function LabelContent({ id }: { id: string }) {
           )}
           <header className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>Catalog Spine</h2>
-            <span className={styles.sectionMeta}>
-              {spineRows.length === 0
-                ? "no in-scope masters"
-                : `${spineRows.length} master${spineRows.length === 1 ? "" : "s"} · chronological`}
-            </span>
           </header>
           <CatalogSpine
             rows={spineRows}

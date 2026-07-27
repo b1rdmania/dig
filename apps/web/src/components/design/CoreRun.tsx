@@ -20,12 +20,9 @@ export function CoreRun({ rows, maxVisible }: Props) {
 
   return (
     <ol className={styles.list} aria-label="Core run — essential listening">
-      {visible.map((r, idx) => (
+      {visible.map((r) => (
         <li key={r.master_discogs_id} className={styles.item}>
           <Link href={`/master/${r.master_discogs_id}`} className={styles.link}>
-            <span className={styles.rank}>
-              {String(idx + 1).padStart(2, "0")}
-            </span>
             <div className={styles.body}>
               <div className={styles.titleRow}>
                 <span className={styles.title}>{r.title}</span>

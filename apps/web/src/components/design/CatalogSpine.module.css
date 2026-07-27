@@ -10,8 +10,7 @@
     32px              /* # */
     52px              /* Year */
     1fr               /* Title */
-    minmax(120px, 200px)  /* Artist */
-    72px;             /* Format */
+    minmax(120px, 200px);  /* Artist */
   align-items: baseline;
   gap: var(--sp-3);
   padding: var(--sp-2) 0;
@@ -92,11 +91,6 @@
   text-overflow: ellipsis;
 }
 
-.colMeta {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .dim {
   color: var(--ink-faint);
 }
@@ -134,7 +128,7 @@
 @media (max-width: 720px) {
   .headerRow,
   .row {
-    grid-template-columns: 28px 48px 1fr 60px;
+    grid-template-columns: 28px 48px 1fr;
     gap: var(--sp-2);
   }
   .colArtist {
@@ -146,9 +140,5 @@
   }
   .colTitle {
     font-size: var(--fs-sm);
-  }
-  .colMeta {
-    grid-column: 4;
-    grid-row: 1;
   }
 }
