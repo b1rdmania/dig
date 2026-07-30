@@ -2,7 +2,7 @@ import { SkeletonHeading, SkeletonLine, SkeletonBlock } from "@/components/Skele
 
 export default function MasterLoading() {
   return (
-    <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
+    <div style={{ maxWidth: "var(--max-width)", margin: "0 auto 0 0" }}>
       <div style={{ display: "flex", gap: "1.5rem", padding: "1.5rem 0", borderBottom: "1px solid var(--line)" }}>
         <div
           style={{

@@ -23,7 +23,7 @@ export default function Error({
   }, [error]);
 
   return (
-    <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "2rem 1rem" }}>
+    <div style={{ maxWidth: "var(--max-width)", margin: "0 auto 0 0", padding: "2rem 1rem" }}>
       <ErrorMessage message={error.message || "Something went wrong"} />
       <div style={{ textAlign: "center", marginTop: "1rem" }}>
         <button

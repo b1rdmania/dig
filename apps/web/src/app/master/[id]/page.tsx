@@ -21,7 +21,6 @@ import { PageViewTracker } from "@/components/PageViewTracker";
 import { TrailRecorder } from "@/components/TrailRecorder";
 import { OutboundLink } from "@/components/OutboundLink";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
-import { ReleaseNavRenderer } from "@/components/ReleaseNav";
 import { Page, Stamp, LinerNotes } from "@/components/design";
 import { MasterCreditsSection } from "@/components/MasterCreditsSection";
 import styles from "./page.module.css";
@@ -297,8 +296,8 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
     meta: { source_type: "master", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
   };
 
-  // Phase 2: parallel — cover art, notable versions, artist nav rail.
-  const [coverUrl, versionsData, navData] = await Promise.all([
+  // Phase 2: parallel — cover art, notable versions.
+  const [coverUrl, versionsData] = await Promise.all([
     mainReleaseId
       ? digFetch<{ cover: { url: string | null } | null }>(`/v1/releases/${mainReleaseId}/cover`, {
           revalidate: 3600,
@@ -309,13 +308,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
     digFetch<TraversalResponse>(`/v1/masters/${id}/releases?limit=40`, { revalidate: 300 })
       .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
       .catch(() => defaultTraversal),
-    primaryArtistId
-      ? digFetch<TraversalResponse>(`/v1/artists/${primaryArtistId}/masters?sort=oldest&limit=500`, {
-          revalidate: 300,
-        })
-          .then((d) => (isTraversalResponse(d) ? d.links : []))
-          .catch(() => [])
-      : Promise.resolve<TraversalResponse["links"]>([]),
   ]);
 
   // Build a map: release_id → first YouTube video for that pressing.
@@ -445,8 +437,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
           </div>
         </div>
       </section>
-
-      <ReleaseNavRenderer masters={navData} currentMasterId={master.discogs_id} />
 
       <MediaSection
         videos={master.videos.map((v) => ({
