@@ -246,14 +246,6 @@ tight bracket. Used for inline tags inside metadata rows.
 
 A hairline separator. Variants: `default`, `bold`, `accent`.
 
-### `<MetaRow>`
-
-A row of mono key:value pairs, separated by `·`, e.g.:
-
-```
-1995 · 12" · BE · 6 tracks · 28:14
-```
-
 ### `<CatalogSpine>`
 
 The defining component of the redesign. A vertical timeline of releases for
@@ -286,11 +278,6 @@ name (link), `mono · n masters · first–last year`. Capped at top 12 with a
 A bordered block (1px `--ink`) styled to look like the back-cover credits
 panel of an LP. Inside: tighter type, mono headings (`PROFILE`, `URLS`,
 `ALSO KNOWN AS`), serif body for the editorial blurb.
-
-### `<MonoTable>`
-
-Tabular row component. All children align on column gutters using CSS
-subgrid. Used by tracklists, catalog spine, version lists.
 
 ### `<TerminalListing>`
 
