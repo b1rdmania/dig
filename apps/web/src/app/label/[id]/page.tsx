@@ -22,7 +22,6 @@ import { discogsUrl, urlLabel } from "@/lib/format";
 import { entityMetadata, BASE_URL } from "@/lib/seo";
 import { labelJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "@/components/JsonLd";
-import { TrailRecorder } from "@/components/TrailRecorder";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import {
@@ -192,12 +191,6 @@ async function LabelContent({ id }: { id: string }) {
 
   return (
     <Page entityType="label" entityId={label.discogs_id}>
-      <TrailRecorder
-        kind="label"
-        id={label.discogs_id}
-        name={label.name}
-        subtitle={ed?.location ?? undefined}
-      />
       <div className={styles.identity}>
         {ed?.location && <div className={styles.eyebrow}>{ed.location}</div>}
         <h1 className={styles.title}>

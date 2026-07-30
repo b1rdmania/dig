@@ -10,7 +10,6 @@ import type {
 } from "@/lib/types";
 import { CatalogWall, type WallScene } from "@/components/wall";
 import { ErrorMessage } from "@/components/ErrorMessage";
-import { TrailRecorder } from "@/components/TrailRecorder";
 import { ScenePlaylistPlayer } from "./ScenePlaylistPlayer";
 import styles from "./page.module.css";
 
@@ -131,12 +130,6 @@ export default async function ScenePage({ params }: Props) {
 
   return (
     <div className={styles.page}>
-      <TrailRecorder
-        kind="scene"
-        id={wall.slug}
-        name={wall.name}
-        subtitle={wall.city ?? undefined}
-      />
       <header className={styles.pageHeader}>
         <h1 className={styles.heading}>{wall.name}</h1>
         {wall.blurb && <p className={styles.lede}>{wall.blurb}</p>}

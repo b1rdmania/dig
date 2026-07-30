@@ -20,7 +20,6 @@ import { entityMetadata, BASE_URL } from "@/lib/seo";
 import { musicGroupJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "@/components/JsonLd";
 import { ErrorMessage } from "@/components/ErrorMessage";
-import { TrailRecorder } from "@/components/TrailRecorder";
 import { CollapsibleList } from "@/components/CollapsibleList";
 import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
@@ -404,12 +403,6 @@ async function ArtistContent({
 
     return (
       <>
-        <TrailRecorder
-          kind="artist"
-          id={artist.discogs_id}
-          name={artist.name}
-          subtitle={artist.real_name ?? undefined}
-        />
         <section className={styles.hero}>
           <div className={styles.heroLayout}>
             <div className={styles.heroPhoto}>

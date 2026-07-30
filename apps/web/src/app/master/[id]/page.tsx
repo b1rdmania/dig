@@ -18,7 +18,6 @@ import { firstYoutubeThumb } from "@/lib/media";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { MediaSection } from "@/components/MediaSection";
 import { PageViewTracker } from "@/components/PageViewTracker";
-import { TrailRecorder } from "@/components/TrailRecorder";
 import { OutboundLink } from "@/components/OutboundLink";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { Page, Stamp, LinerNotes } from "@/components/design";
@@ -329,12 +328,6 @@ async function MasterContent({ id, masterData }: { id: string; masterData: Maste
       entityId={master.discogs_id}
     >
       <PageViewTracker type="release" entityId={master.discogs_id} title={master.title} />
-      <TrailRecorder
-        kind="master"
-        id={master.discogs_id}
-        name={master.title}
-        subtitle={primaryArtistName ?? undefined}
-      />
 
       <section className={styles.hero}>
         <div className={styles.heroBody}>
