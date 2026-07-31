@@ -6,11 +6,26 @@ Operational reference for the Fly.io staging deployment. For API/MCP usage, see 
 
 | Resource | Name | Region | Spec |
 |----------|------|--------|------|
-| API | dig-api | iad | shared-cpu-1x, 512MB, on-demand (0 min / 1 active / 2 warm burst) |
-| MCP | dig-mcp | iad | ARCHIVED — app shell retained, 0 machines, 0 volumes |
+| API | dig-api | **lhr** | shared-cpu-1x, 512MB, 1 machine, `auto_stop = off` / min 1 |
+| MCP | dig-mcp | **lhr** | shared-cpu-1x, 512MB, scale-to-zero (`auto_stop = stop` / min 0) — LIVE since 2026-07-26 |
 | **Postgres (active)** | **dig-db-scene** | **lhr** | **shared-cpu-2x, 2GB, 10GB disk — scene-scoped slim DB (~3GB)** |
 | Redis | dig-redis | iad | Upstash pay-per-use |
-| Frontend | dig-web | iad | shared-cpu-1x, 1GB, 1 machine (Fly) |
+| Frontend | dig-web | **lhr** | shared-cpu-1x, 1GB, 1 machine, min 1 (no cold start) |
+
+**Note (2026-07-31):** everything except Upstash Redis now runs in **lhr**, co-located
+with `dig-db-scene`. Previously `dig-api`/`dig-web`/`dig-mcp` sat in `iad` while the DB
+was in `lhr`, so every query crossed the Atlantic — `/v1/scenes/:slug` measured 0.68s
+from iad vs 0.14s from lhr. Region is set by `primary_region` in the fly configs, but
+that only governs **new** machine placement: moving an existing app means
+`fly machine clone <id> --region lhr` then destroying the old machine, not a redeploy.
+
+**Note (2026-07-31) — `dig-api` must not auto-stop while anything reaches it over
+`.internal`.** Private Fly networking bypasses the fly-proxy and will not wake a
+stopped or suspended machine, but `.internal` DNS still returns its IP, so callers
+hang until they time out. This caused 26–90s label pages. `dig-web` now uses the
+public `https://dig-api.fly.dev` URL, so the proxy handles waking; `auto_stop = off`
+on `dig-api` is retained as belt-and-braces. Do not re-enable auto-stop on `dig-api`
+without first confirming no caller uses `dig-api.internal`.
 
 **Note (2026-06-11):** `dig-db` (the legacy 300GB full-catalog Postgres, iad) was **destroyed**. `dig-db-scene` is the only production database. There is no live rollback target: recovering the full catalog means re-downloading the public Discogs dumps and re-running the local ingest pipeline (`apps/ingest` against local Docker PG), then `scripts/build-scoped-db.ts`. Historical sections below that reference `dig-db` commands are retained as run logs only — the app no longer exists.
 
