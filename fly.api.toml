@@ -2,7 +2,9 @@
 # Deploy: fly deploy --config fly.api.toml
 
 app = "dig-api"
-primary_region = "iad"
+# Co-located with dig-db-scene (lhr). When the API ran in iad every query
+# crossed the Atlantic: /v1/health (no DB) 0.20s vs /v1/scenes/:slug 0.68s.
+primary_region = "lhr"
 
 [build]
   dockerfile = "Dockerfile"
@@ -17,9 +19,15 @@ primary_region = "iad"
 [http_service]
   internal_port = 3000
   force_https = true
-  # Pin one machine always-on so the site is snappy (no 5–10s cold starts).
-  # Spillover machines suspend on idle (faster wake than full stop).
-  auto_stop_machines = "suspend"
+  # MUST stay "off" while dig-web reaches this app over Fly private
+  # networking (dig-api.internal). Private .internal traffic bypasses the Fly
+  # proxy, so it does NOT wake stopped or suspended machines — .internal DNS
+  # still returns their IPs, the connection hangs, and the caller eats
+  # digFetch's 12s timeout + retry. That is what made label pages take
+  # 26-90s. Set by 0cf1747; regressed to "stop" by cb04c88 and to "suspend"
+  # by 872eb59. Do not re-enable auto-stop without first moving dig-web back
+  # to the public https://dig-api.fly.dev URL.
+  auto_stop_machines = "off"
   auto_start_machines = true
   min_machines_running = 1
 

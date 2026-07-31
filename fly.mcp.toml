@@ -2,7 +2,8 @@
 # Deploy: fly deploy --config fly.mcp.toml
 
 app = "dig-mcp"
-primary_region = "iad"
+# Co-located with dig-db-scene (lhr), same as dig-api and dig-web.
+primary_region = "lhr"
 
 [build]
   dockerfile = "Dockerfile"
@@ -25,12 +26,15 @@ primary_region = "iad"
   protocol = "tcp"
   internal_port = 3001
   processes = ["app"]
-  auto_stop_machines = "off"
-  auto_start_machines = true
-  min_machines_running = 1
   # MCP SSE requires sticky sessions — single machine for now.
-  # When idle, allow the lone machine to stop completely.
+  # When idle, allow the lone machine to stop completely. This previously
+  # read "off" / min 1, which contradicted the comment and billed 24/7.
+  # Safe to stop here (unlike dig-api) because clients reach this app over
+  # its public hostname, so the Fly proxy wakes the machine on connect.
   # TODO: Add Fly-Force-Instance-Id header support for multi-machine.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
 
   [services.concurrency]
     type = "connections"

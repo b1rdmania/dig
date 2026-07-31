@@ -70,6 +70,47 @@ export default async function LabelPage({ params }: Props) {
 }
 
 async function LabelContent({ id }: { id: string }) {
+  const defaultTraversal: TraversalResponse = {
+    links: [],
+    pagination: { cursor: null, has_more: false, total_estimate: null },
+    meta: { source_type: "label", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
+  };
+  const defaultLinkouts: LabelLinkoutsResponse = {
+    linkouts: [],
+    meta: { source_type: "label", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [] },
+  };
+  const defaultRoster: LabelRosterResponse = {
+    roster: [],
+    meta: { source_type: "label", source_discogs_id: Number(id), link_type: "roster", elapsed_ms: 0, total_artists: 0 },
+  };
+  const defaultStyles: LabelStylesResponse = {
+    styles: [],
+    meta: { source_type: "label", source_discogs_id: Number(id), link_type: "styles", total_tagged_masters: 0, elapsed_ms: 0 },
+  };
+
+  // These six only need `id`, so start them now rather than after the label
+  // fetch resolves. Previously this page was a two-stage waterfall and paid
+  // two serial round-trips (and, on a bad call, two serial 12s timeouts).
+  // Only the profile name lookups genuinely depend on labelData.
+  const releasesPromise = digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=200&sort=chronological`, { revalidate: 3600 })
+    .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
+    .catch(() => defaultTraversal);
+  const rosterPromise = digFetch<LabelRosterResponse>(`/v1/labels/${id}/roster?limit=12`, { revalidate: 3600 })
+    .then((d) => (isLabelRosterResponse(d) ? d : defaultRoster))
+    .catch(() => defaultRoster);
+  const linkoutsPromise = digFetch<LabelLinkoutsResponse>(`/v1/labels/${id}/linkouts?include_enrichment=true`, { revalidate: 3600 })
+    .then((d) => (isLinkoutsResponse(d) ? d : defaultLinkouts))
+    .catch(() => defaultLinkouts);
+  const stylesPromise = digFetch<LabelStylesResponse>(`/v1/labels/${id}/styles?limit=8`, { revalidate: 3600 })
+    .then((d) => (isLabelStylesResponse(d) ? d : defaultStyles))
+    .catch(() => defaultStyles);
+  const playlistPromise = digFetch<LabelPlaylistResponse>(`/v1/labels/${id}/playlist`, { revalidate: 3600 })
+    .then((d) => d.playlist ?? null)
+    .catch(() => null);
+  const sleevesPromise = digFetch<LabelSleevesResponse>(`/v1/labels/${id}/sleeves`, { revalidate: 3600 })
+    .then((d) => d.sleeves ?? [])
+    .catch(() => [] as LabelSleevesResponse["sleeves"]);
+
   let labelData: LabelResponse;
   try {
     labelData = await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 3600 });
@@ -97,47 +138,17 @@ async function LabelContent({ id }: { id: string }) {
   const coreRun = labelData.core_run ?? [];
   const relatedLabels = labelData.related ?? [];
 
-  const defaultTraversal: TraversalResponse = {
-    links: [],
-    pagination: { cursor: null, has_more: false, total_estimate: null },
-    meta: { source_type: "label", source_discogs_id: Number(id), link_type: "releases", elapsed_ms: 0 },
-  };
-  const defaultLinkouts: LabelLinkoutsResponse = {
-    linkouts: [],
-    meta: { source_type: "label", source_discogs_id: Number(id), elapsed_ms: 0, enrichment_included: false, enrichment_sources: [] },
-  };
-  const defaultRoster: LabelRosterResponse = {
-    roster: [],
-    meta: { source_type: "label", source_discogs_id: Number(id), link_type: "roster", elapsed_ms: 0, total_artists: 0 },
-  };
-  const defaultStyles: LabelStylesResponse = {
-    styles: [],
-    meta: { source_type: "label", source_discogs_id: Number(id), link_type: "styles", total_tagged_masters: 0, elapsed_ms: 0 },
-  };
-
   const profileRefs = label.profile ? extractProfileRefs(label.profile) : { artists: [], labels: [] };
   const artistIdsToResolve = [...new Set(profileRefs.artists)].slice(0, 10);
   const labelIdsToResolve = [...new Set(profileRefs.labels)].slice(0, 5);
 
   const [releasesData, rosterData, linkoutsData, stylesData, playlistData, sleeves, ...nameResults] = await Promise.all([
-    digFetch<TraversalResponse>(`/v1/labels/${id}/releases?limit=200&sort=chronological`, { revalidate: 3600 })
-      .then((d) => (isTraversalResponse(d) ? d : defaultTraversal))
-      .catch(() => defaultTraversal),
-    digFetch<LabelRosterResponse>(`/v1/labels/${id}/roster?limit=12`, { revalidate: 3600 })
-      .then((d) => (isLabelRosterResponse(d) ? d : defaultRoster))
-      .catch(() => defaultRoster),
-    digFetch<LabelLinkoutsResponse>(`/v1/labels/${id}/linkouts?include_enrichment=true`, { revalidate: 3600 })
-      .then((d) => (isLinkoutsResponse(d) ? d : defaultLinkouts))
-      .catch(() => defaultLinkouts),
-    digFetch<LabelStylesResponse>(`/v1/labels/${id}/styles?limit=8`, { revalidate: 3600 })
-      .then((d) => (isLabelStylesResponse(d) ? d : defaultStyles))
-      .catch(() => defaultStyles),
-    digFetch<LabelPlaylistResponse>(`/v1/labels/${id}/playlist`, { revalidate: 3600 })
-      .then((d) => d.playlist ?? null)
-      .catch(() => null),
-    digFetch<LabelSleevesResponse>(`/v1/labels/${id}/sleeves`, { revalidate: 3600 })
-      .then((d) => d.sleeves ?? [])
-      .catch(() => [] as LabelSleevesResponse["sleeves"]),
+    releasesPromise,
+    rosterPromise,
+    linkoutsPromise,
+    stylesPromise,
+    playlistPromise,
+    sleevesPromise,
     ...artistIdsToResolve.map((aid) =>
       digFetch<ArtistResponse>(`/v1/artists/${aid}`, { revalidate: 3600 })
         .then((d) => (isArtistResponse(d) ? [`a${aid}`, d.artist.name] as [string, string] : null))

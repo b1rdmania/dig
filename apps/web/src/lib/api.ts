@@ -1,7 +1,11 @@
 import { isApiError } from "./types";
 import { API_URL, apiKeyHeaders } from "./server-env";
 
-const TIMEOUT_MS = 12000;
+// 5s, not 12s. A healthy same-region call returns in well under 1s, so 12s
+// only ever bought a longer hang: with one retry it put a 24.25s ceiling on a
+// single fetch, and a page that fans out over two stages could sit for ~48s
+// before rendering. Fail fast and fall back to the defaults instead.
+const TIMEOUT_MS = 5000;
 const RETRY_DELAY_MS = 250;
 
 export class ApiRequestError extends Error {

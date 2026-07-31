@@ -2,7 +2,9 @@
 # Deploy: fly deploy --config fly.web.toml --remote-only
 
 app = "dig-web"
-primary_region = "iad"
+# Follows dig-api and dig-db-scene into lhr. Moving the API alone would only
+# relocate the transatlantic hop from api->db to web->api.
+primary_region = "lhr"
 
 [build]
   dockerfile = "Dockerfile.web"
@@ -13,18 +15,22 @@ primary_region = "iad"
 [env]
   PORT = "3002"
   NODE_ENV = "production"
-  # Internal Fly networking — ~1ms to API instead of internet round-trip
-  DIG_API_URL = "http://dig-api.internal:3000"
+  # Public URL, not dig-api.internal. The Fly proxy wakes stopped/suspended
+  # API machines; private .internal networking does not, so a request that
+  # lands on an idle machine hangs until digFetch times out. The ~200ms
+  # proxy hop is far cheaper than a 12s timeout + retry. Both apps now run
+  # in lhr, so this stays a same-region round-trip.
+  DIG_API_URL = "https://dig-api.fly.dev"
 
 [http_service]
   internal_port = 3002
   force_https = true
-  # Idle cost optimisation: let the lone web machine stop when there's no
-  # traffic and wake on demand. First hit after an idle period takes ~3-5s
-  # while the VM boots and Next.js cold-starts. Acceptable for soft alpha.
+  # Keep one machine warm. With min 0 the first hit after idle measured
+  # 10.9s (vs 1.3s warm) while the VM booted and Next.js cold-started.
+  # Spillover machines may still stop; the pinned one carries idle traffic.
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
 
   [http_service.concurrency]
     type = "requests"
