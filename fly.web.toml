@@ -37,6 +37,18 @@ primary_region = "lhr"
     hard_limit = 120
     soft_limit = 90
 
+# Liveness probe. Without this Fly cannot tell a wedged Next.js process from a
+# healthy one — the process stays alive, the port stays open, and traffic keeps
+# being routed to a machine that answers nothing. /api/health is deliberately
+# shallow (no dig-api or DB call) so an API outage cannot cascade into Fly
+# restarting healthy web machines.
+[[http_service.checks]]
+  grace_period = "15s"
+  interval = "30s"
+  method = "GET"
+  path = "/api/health"
+  timeout = "5s"
+
 [[vm]]
   size = "shared-cpu-1x"
   memory = "1024mb"

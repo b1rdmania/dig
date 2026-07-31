@@ -37,12 +37,13 @@ Entity model: `artist | label | master` are the only public entities. `release_s
 - Search: Postgres FTS + pg_trgm (weighted tsvectors; master-first ranking in `packages/domain/src/search.ts`)
 - XML parsing: saxes (SAX streaming, memory-bounded)
 - Test: Vitest · Lint: ESLint flat config at root (`pnpm lint`) · Package manager: pnpm v10.27+
-- Hosting: Fly.io (`dig-api`, `dig-web`, `dig-db-scene`), Upstash Redis
+- Hosting: Fly.io (`dig-api`, `dig-web`, `dig-mcp`, `dig-db-scene`) — **all in `lhr`**, co-located so queries don't cross the Atlantic. Upstash Redis
+- Prod process: `pnpm --filter <app> serve` (`tsx`), NOT `dev` (`tsx watch`). There is no compiled `dist/` — `@dig/db` and `@dig/domain` export raw `src/*.ts`
 - Images: Cover Art Archive + harvested entity images + fallback placeholders
 
 ## Live URLs
-- **Frontend**: https://app.dig.baby (Fly `dig-web`) — currently in maintenance gate (`apps/web/src/lib/maintenance.ts`)
-- **API**: https://dig-api.fly.dev/ — suspended during maintenance
+- **Frontend**: https://app.dig.baby (Fly `dig-web`) — LIVE. `MAINTENANCE_MODE = false` in `apps/web/src/lib/maintenance.ts`
+- **API**: https://dig-api.fly.dev/ — LIVE
 - **Health**: https://dig-api.fly.dev/v1/health
 - **Marketing**: https://dig.baby (Vercel)
 - **GitHub**: https://github.com/b1rdmania/dig
@@ -56,6 +57,21 @@ Entity model: `artist | label | master` are the only public entities. `release_s
 - `DATABASE_URL=... pnpm --filter @dig/api test` — includes integration suite (skips without DATABASE_URL)
 - `pnpm exec tsx scripts/build-scoped-db.ts` — scoped artifact build (see script header for phases/resume)
 - `fly deploy --config fly.api.toml --remote-only` / `fly deploy --config fly.web.toml --remote-only`
+
+## Infra invariants (do not break these)
+- **`dig-web` calls the API over its PUBLIC url** (`https://dig-api.fly.dev`), not
+  `dig-api.internal`. Private Fly networking bypasses the fly-proxy and will not wake
+  a stopped/suspended machine, but `.internal` DNS still hands out its IP — so callers
+  hang until they time out. This produced 26–90s label pages (fixed 2026-07-31). If you
+  ever reintroduce `.internal`, `dig-api` must have `auto_stop_machines = "off"`.
+- **All apps live in `lhr`** with `dig-db-scene`. `primary_region` only governs NEW
+  machine placement; moving an app means `fly machine clone <id> --region lhr` then
+  destroying the old machine, not a redeploy.
+- **`digFetch` has a 5s timeout + one retry** (`apps/web/src/lib/api.ts`). Page fan-out
+  multiplies it, so raising it makes slow calls hang renders rather than fail fast.
+- Both `dig-api` and `dig-web` run a SINGLE machine — no redundancy. Each has a Fly
+  health check (`/v1/health` and `/api/health`); keep the web one shallow so an API
+  outage can't cascade into Fly restarting healthy web machines.
 
 ## Database
 - Schemas: `auth`, `ingest`, `catalog`, `enrich`

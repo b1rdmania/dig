@@ -33,4 +33,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
 
-CMD ["pnpm", "--filter", "@dig/api", "dev"]
+# "serve" (tsx), not "dev" (tsx watch). Production has no reason to run a
+# filesystem watcher: it costs memory on a 512MB machine and can reload the
+# server on a stray write. Still tsx rather than a compiled dist/ because
+# @dig/db and @dig/domain export raw src/*.ts — see packages/*/package.json.
+# Moving to a real build means building those packages first and flipping
+# their exports to dist/, which is a separate change.
+CMD ["pnpm", "--filter", "@dig/api", "serve"]

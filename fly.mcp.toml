@@ -20,7 +20,8 @@ primary_region = "lhr"
   MCP_BETA_CAPACITY_MODE = "off"
 
 [processes]
-  app = "pnpm --filter @dig/mcp dev"
+  # "serve" (tsx), not "dev" (tsx watch) — no filesystem watcher in production.
+  app = "pnpm --filter @dig/mcp serve"
 
 [[services]]
   protocol = "tcp"
