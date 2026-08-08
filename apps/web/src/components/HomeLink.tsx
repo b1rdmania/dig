@@ -9,9 +9,9 @@ import styles from "./HomeLink.module.css";
  * the top of every page except home itself.
  *
  * Top-level pages get "← home". Dug-in entity pages (label, artist,
- * master, a scene) get "← back" instead, so the loop out of a dig
- * returns to wherever you came from — the list, search results, another
- * record — rather than ejecting to the homepage.
+ * master, a scene) get "← back · home": back keeps the loop out of a dig
+ * returning to wherever you came from — the list, search results, another
+ * record — and home is the escape hatch when you've dug too deep to care.
  */
 const DEEP_RE = /^\/(label|artist|master|release)\/.|^\/scene\/./;
 
@@ -33,6 +33,8 @@ export function HomeLink() {
         >
           ← back
         </button>
+        <span className={styles.sep} aria-hidden>·</span>
+        <Link href="/" className={styles.link}>home</Link>
       </div>
     );
   }

@@ -5,7 +5,7 @@ import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "FAQ — dig",
-  description: "What dig is, what's in the catalog, and where the data comes from.",
+  description: "What dig is and what it is now.",
 };
 
 const FAQS: Array<{ q: string; a: React.ReactNode }> = [
@@ -13,10 +13,9 @@ const FAQS: Array<{ q: string; a: React.ReactNode }> = [
     q: "What is this?",
     a: (
       <>
-        Hi, I&apos;m Andy. I rebuilt Discogs in March because I was bored and
-        wanted the mobile site to work better: videos wired in, a fast API, and
-        a trial run as an MCP server. The full catalog cost about $2k in
-        database bills, so I parked it.
+        I&apos;m Andy. I rebuilt Discogs in March because I wanted the mobile
+        site to work better: video, a fast API and an MCP server. The full
+        catalogue cost about $2k in database bills, so I parked it.
         <span className={styles.follow}>
           <span>Follow me here:</span>
           <span className={styles.social}>
@@ -39,61 +38,23 @@ const FAQS: Array<{ q: string; a: React.ReactNode }> = [
     q: "What is Dig now?",
     a: (
       <>
-        I slimmed this idea down to house and techno, with an LLM layer on
-        top: query the Discogs catalog directly, chat about your collection
-        and the artists you like, get recommendations with YouTube links. It
-        works pretty well.
+        A smaller experiment focused on house and techno, with an LLM on top.
         <span className={styles.block}>
-          Take it as an open experiment in what Discogs could be. They own an
-          impressive dataset and can commoditise it in fun ways.
+          Search the catalogue conversationally, talk about artists and records
+          you like, and get recommendations with YouTube links.
         </span>
         <span className={styles.block}>
-          Dig is demo only. Deliberately light. No logins. Runs on my API
-          credits (Kimi 3).{" "}
+          Think of it as a demo of what Discogs could do with its dataset.
+        </span>
+        <span className={styles.block}>
+          No logins. No commercial product. It runs on my API credits.{" "}
           <a href={KEY_REQUEST_MAILTO}>Request access here</a>.
         </span>
         <span className={styles.block}>
-          The long version of the build is at <a href="/progress">how we built it</a>.
+          The longer build story is <a href="/progress">here</a>.
         </span>
       </>
     ),
-  },
-  {
-    q: "Where does the data come from?",
-    a: (
-      <>
-        The monthly{" "}
-        <a href="https://www.discogs.com/data/" target="_blank" rel="noreferrer">Discogs data dumps</a>{" "}
-        (CC0), cover art from the{" "}
-        <a href="https://coverartarchive.org/" target="_blank" rel="noreferrer">Cover Art Archive</a>,
-        crosswalks from{" "}
-        <a href="https://musicbrainz.org/" target="_blank" rel="noreferrer">MusicBrainz</a>{" "}
-        (CC0). The editorial layer is mine: the scenes, the core runs, the
-        related-label edges.
-        <span className={styles.block}>
-          The search database needs a bit of tweaking (some tracks and artists
-          are missing), but as a beta demo I&apos;m happy with it.
-        </span>
-      </>
-    ),
-  },
-  {
-    q: "Is this Discogs?",
-    a: (
-      <>
-        No. Independent, built on their openly licensed data. Pressing-level
-        detail (versions, matrix numbers, marketplace listings) lives on
-        Discogs, and every record here links straight to it.
-        <span className={styles.block}>
-          We stick to the Discogs ToS, so as yet we can&apos;t use their cover
-          art or integrate your collection and wantlist. Boo.
-        </span>
-      </>
-    ),
-  },
-  {
-    q: "Why is a record missing?",
-    a: "Either it's outside the scope (wrong genre or era, the catalog is deliberately narrow) or it landed since the last monthly dump. If it's in scope and still missing, tell me.",
   },
 ];
 
@@ -111,8 +72,8 @@ export default function FaqPage() {
       </dl>
 
       <p className={styles.aside}>
-        We also built a drum-pattern generator from some of these scenes —{" "}
-        <a href="https://ghost-pattern.pages.dev/" target="_blank" rel="noreferrer">try it</a>.
+        Also: we built a drum-pattern generator from some of these scenes.{" "}
+        <a href="https://ghost-pattern.pages.dev/" target="_blank" rel="noreferrer">Try it</a>.
       </p>
     </div>
   );

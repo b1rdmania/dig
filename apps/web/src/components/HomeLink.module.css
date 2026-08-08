@@ -1,5 +1,14 @@
 .wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
   margin-bottom: var(--sp-4, 1rem);
+}
+
+.sep {
+  font-size: var(--fs-sm, 13px);
+  color: var(--ink-soft, var(--ink));
+  opacity: 0.5;
 }
 
 .link {
