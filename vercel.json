@@ -8,6 +8,12 @@
       "has": [{ "type": "host", "value": "www.dig.baby" }],
       "destination": "https://app.dig.baby/$1",
       "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "dig.baby" }],
+      "destination": "https://app.dig.baby/$1",
+      "permanent": true
     }
   ]
 }
