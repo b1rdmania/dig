@@ -622,7 +622,129 @@ async function getTypeCounts(
 
 // --- Main entry point ------------------------------------------------------
 
+// --- In-process result memo ------------------------------------------------
+
+/**
+ * Search results are memoised in-process, keyed by batch_id + params.
+ *
+ * This works because the catalog is IMMUTABLE between Discogs dumps. It's a
+ * scoped artifact rebuilt offline, and every row carries a batch_id, so the
+ * same query returns the same answer until the catalog is rebuilt. That
+ * removes cache invalidation entirely — the batch id IS the version. When the
+ * catalog is rebuilt the keys change and stale entries age out of the LRU on
+ * their own. There is no TTL to tune and no way to serve a stale answer.
+ *
+ * Deliberately a plain Map, not Redis. Redis is already wired up for cover
+ * art, but a network hop to answer something this process just answered is
+ * slower and more machinery than the problem needs. A hit here is
+ * microseconds against ~123ms for a warm DB round-trip.
+ *
+ * What this actually buys at dig's traffic: typeahead and head queries repeat
+ * constantly ("t", "te", "tec", "tech" ...), and under 15 concurrent searches
+ * the median measured 1764ms against a 3s statement timeout — uncomfortably
+ * close to the cliff. Repeat searches now never reach Postgres at all.
+ */
+const SEARCH_CACHE_MAX = 2000;
+const searchCache = new Map<string, SearchResponse>();
+let cacheHits = 0;
+let cacheMisses = 0;
+
+function cacheGet(key: string): SearchResponse | null {
+  const hit = searchCache.get(key);
+  if (!hit) return null;
+  // Re-insert to mark as recently used — Map preserves insertion order, so
+  // the oldest key is simply the first one.
+  searchCache.delete(key);
+  searchCache.set(key, hit);
+  return hit;
+}
+
+function cacheSet(key: string, value: SearchResponse): void {
+  if (searchCache.has(key)) searchCache.delete(key);
+  searchCache.set(key, value);
+  while (searchCache.size > SEARCH_CACHE_MAX) {
+    const oldest = searchCache.keys().next().value;
+    if (oldest === undefined) break;
+    searchCache.delete(oldest);
+  }
+}
+
+export function getSearchCacheStats(): {
+  size: number;
+  max: number;
+  hits: number;
+  misses: number;
+  hitRate: number;
+} {
+  const total = cacheHits + cacheMisses;
+  return {
+    size: searchCache.size,
+    max: SEARCH_CACHE_MAX,
+    hits: cacheHits,
+    misses: cacheMisses,
+    hitRate: total === 0 ? 0 : +(cacheHits / total).toFixed(3),
+  };
+}
+
+/** Test/ops hook. Not needed in normal operation — keys are batch-scoped. */
+export function clearSearchCache(): void {
+  searchCache.clear();
+  cacheHits = 0;
+  cacheMisses = 0;
+}
+
 export async function search(
+  db: Kysely<Database>,
+  params: SearchParams,
+): Promise<SearchResponse> {
+  const start = Date.now();
+  const types: SearchEntityType[] = params.type ? [params.type] : ALL_TYPES;
+
+  // Batch ids go in the key, so a catalog rebuild silently invalidates
+  // everything without an explicit purge. getBatchMap has its own 60s memo,
+  // so this is not an extra round-trip per search.
+  const batchMap = await getBatchMap(db, types);
+  const batchKey = types
+    .map((t) => `${t}=${batchMap.get(t)?.batchId ?? "none"}`)
+    .join(",");
+
+  const key = JSON.stringify([
+    batchKey,
+    params.q ?? "",
+    params.type ?? "",
+    params.genre ?? "",
+    params.style ?? "",
+    params.year ?? "",
+    params.yearMin ?? "",
+    params.yearMax ?? "",
+    params.country ?? "",
+    params.limit ?? "",
+    params.cursor ?? "",
+    params.quality ?? "active",
+    params.rescue ?? false,
+  ]);
+
+  const hit = cacheGet(key);
+  if (hit) {
+    cacheHits++;
+    // Fresh meta so elapsed_ms reflects THIS request, not the one that
+    // populated the entry. Everything else is immutable per batch.
+    return { ...hit, meta: { ...hit.meta, elapsed_ms: Date.now() - start } };
+  }
+  cacheMisses++;
+
+  const response = await searchUncached(db, params);
+
+  // Never cache a degraded answer. A statement timeout or a partial result is
+  // a property of the machine at that moment, not of the query — pinning one
+  // would turn a transient blip into a permanently wrong answer for that
+  // search until the next catalog rebuild.
+  if (!response.meta.degraded) cacheSet(key, response);
+
+  return response;
+}
+
+async function searchUncached(
   db: Kysely<Database>,
   params: SearchParams,
 ): Promise<SearchResponse> {
