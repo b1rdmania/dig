@@ -28,7 +28,6 @@ const SRC = {
   parityAudit: `${BLOB}/scripts/migration-parity-audit.ts`,
   deadEnds: `${BLOB}/scripts/no-dead-ends-check.ts`,
   smoke: `${BLOB}/scripts/regression-smoke.ts`,
-  searchQuality: `${BLOB}/scripts/search-quality-report.ts`,
 };
 
 function Sources({ items }: { items: Array<{ label: string; href: string }> }) {
@@ -64,7 +63,7 @@ function PipelineDiagram() {
       <line x1="298" y1="42" x2="330" y2="42" {...arrow} />
       <rect x="332" y="20" width="128" height="44" {...box} />
       <text x="344" y="40" {...label}>Scoped artifact</text>
-      <text x="344" y="56" {...small}>~10 GB · scenes only</text>
+      <text x="344" y="56" {...small}>~10 GB · house + techno</text>
       <line x1="460" y1="42" x2="492" y2="42" {...arrow} />
       <rect x="494" y="20" width="100" height="44" {...box} />
       <text x="506" y="40" {...label}>Postgres</text>
@@ -129,7 +128,7 @@ function BatchFlipDiagram() {
   const small = { fontSize: 11, fill: "#6f6d68", fontFamily: "inherit" } as const;
   const arrow = { stroke: "#1a1a1a", strokeWidth: 1, markerEnd: "url(#c)" } as const;
   return (
-    <svg viewBox="0 0 720 130" className={styles.diagram} role="img" aria-label="A rebuild writes a fresh batch next to the live one, the gates run, and the product flips only when they pass">
+    <svg viewBox="0 0 720 130" className={styles.diagram} role="img" aria-label="A rebuild writes a fresh batch next to the live one, the checks run, and the product flips only when they pass">
       <defs>
         <marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="#1a1a1a" strokeWidth="1.5" />
@@ -146,7 +145,7 @@ function BatchFlipDiagram() {
       <text x="164" y="96" {...small}>batch N · still live</text>
       <line x1="282" y1="42" x2="314" y2="42" {...arrow} />
       <rect x="316" y="20" width="200" height="44" {...box} />
-      <text x="328" y="40" {...label}>Gates</text>
+      <text x="328" y="40" {...label}>Checks</text>
       <text x="328" y="56" {...small}>parity · dead-ends · smoke</text>
       <line x1="516" y1="42" x2="548" y2="42" {...arrow} />
       <rect x="550" y="20" width="110" height="44" {...box} />
@@ -162,17 +161,20 @@ export default function ProgressPage() {
       <h1 className={styles.title}>How we built it.</h1>
 
       <p className={styles.lede}>
-        In March I rebuilt Discogs: the full catalog, a fast API, videos wired
-        into every page, and a trial MCP server. It worked. It also cost about
-        $2,000 in database bills, because the full catalog is 300 GB of
-        Postgres that never sleeps. So I parked it, kept the ideas, and rebuilt
-        the whole thing around one trick: the database is a build artifact.
+        In March I rebuilt Discogs: the full catalog, a fast API, videos on
+        every page and a trial MCP server.
+      </p>
+
+      <p className={styles.lede}>
+        It worked. It also cost about $2,000 in database bills. The full
+        catalog is roughly 300 GB of Postgres, so I parked it and rebuilt
+        around one idea: <strong>the database is a build artifact.</strong>
       </p>
 
       <p className={styles.pullquote}>
-        ngl rebuilding the database was a cunt of a job. took 2 weeks running
-        locally, then we parsed, tidied and moved to a Fly host. i think it was
-        200m lines of data.
+        Rebuilding it was a cunt of a job. About two weeks locally, parsing and
+        cleaning roughly 200 million lines of data before shipping the result
+        to Fly.
       </p>
 
       <PipelineDiagram />
@@ -180,34 +182,40 @@ export default function ProgressPage() {
       <section className={styles.section}>
         <h2 className={styles.heading}>The pipeline</h2>
         <p>
-          Discogs publishes its whole catalog every month as CC0 XML. Each
-          cycle, a local machine ingests the full dump, streams it through SAX
-          parsers into a staging Postgres, and then cuts it down with scope
-          manifests: style allowlists, era bounds, and a tier-one label list.
-          What ships to production is the result, a ~10 GB database of house
-          and techno, 1985 to 2008, with everything cross-linked. No always-on
-          big-data infrastructure, no $2,000 bills. When the scope changes,
-          you rebuild the artifact, not the product.
+          Discogs publishes its catalog monthly as CC0 XML.
+        </p>
+        <p>
+          A local machine ingests the full dump, then cuts it down by style,
+          era and label. Production gets the result: about 10 GB of house and
+          techno from 1985 to 2008.
+        </p>
+        <p>
+          No permanent big-data infrastructure. Change the scope, rebuild the
+          artifact.
         </p>
         <Sources items={[
           { label: "apps/ingest", href: SRC.ingest },
           { label: "build-scoped-db.ts", href: SRC.buildScoped },
-          { label: "scope-manifests", href: SRC.manifests },
+          { label: "scope manifests", href: SRC.manifests },
         ]} />
       </section>
 
       <section className={styles.section}>
         <h2 className={styles.heading}>The catalog</h2>
         <p>
-          Three public entities: artists, labels, masters. Search is Postgres
-          full-text with trigram fuzzing, ranked master-first, with filters
-          for style, country, and year. Underneath sits the part most catalogs
-          throw away: a full credit and remix graph, so the data knows who
-          remixed what, who engineered what, and which names keep appearing on
-          the same records. On top sits the editorial layer, which is ours:
-          fifteen curated scenes, a core run of essential records per label,
-          and directional edges between labels. Deeper, harder, rawer, weirder.
+          Artists, labels and masters, searchable with Postgres full-text and
+          fuzzy matching.
         </p>
+        <p>
+          Underneath is the useful bit: the credit and remix graph, so the
+          system knows who remixed, engineered and repeatedly worked with whom.
+        </p>
+        <p>
+          Then there&apos;s the editorial layer: fifteen curated scenes,
+          essential records for each label and directional relationships
+          between labels.
+        </p>
+        <p>Deeper, harder, rawer, weirder.</p>
         <Sources items={[
           { label: "search.ts", href: SRC.search },
           { label: "credits.ts", href: SRC.credits },
@@ -219,15 +227,19 @@ export default function ProgressPage() {
       <section className={styles.section}>
         <h2 className={styles.heading}>The AI chat</h2>
         <p>
-          The chat is an agentic loop: the model gets tools over the same
-          domain layer as the site, and hard rules. Every record it names must
-          come from a tool call in that turn, every one must link to its page,
-          and videos render only for records actually cited in the answer. No
-          tool result, no claim. The model is Moonshot&apos;s Kimi, routed
-          through OpenRouter; swap one environment variable and it runs on
-          Anthropic instead. Progress streams to the page while it digs, and a
-          session can be bagged up into one YouTube playlist plus a Discogs
-          marketplace link per record.
+          The model gets tools over the same catalog as the site.
+        </p>
+        <p>
+          Every record it names must come from a tool call in that turn and
+          link back to its page. Videos only render for records actually cited.
+        </p>
+        <p>
+          <strong>No tool result, no claim.</strong>
+        </p>
+        <p>
+          It currently runs on Kimi through OpenRouter, but the model is
+          swappable. A session can also become one YouTube playlist plus
+          Discogs marketplace links.
         </p>
         <AskLoopDiagram />
         <img src="/build/chat-bag.png" alt="A chat session bagged up: the video rail, one play-the-lot YouTube link, and each record with listen, buy, and dig links" className={styles.shot} />
@@ -241,12 +253,11 @@ export default function ProgressPage() {
       <section className={styles.section}>
         <h2 className={styles.heading}>The MCP server</h2>
         <p>
-          The same catalog, served to any AI client that speaks the Model
-          Context Protocol. Add one URL in Claude&apos;s settings and Claude
-          can search the catalog, walk the credit graph, pull label essentials,
-          and build session playlists, with no code and no API key. The server
-          ships its own instructions at connect time, so a client knows how to
-          talk about the records and where the catalog&apos;s edges are.
+          The same catalog is available to any AI client that speaks MCP.
+        </p>
+        <p>
+          Claude can search records, follow the credit graph, pull label
+          essentials and build playlists directly from the catalog.
         </p>
         <img src="/build/claude-mcp.png" alt="Claude using the dig connector: loading the tools, finding the Italo House style tag, and pulling recommendations" className={styles.shot} />
         <Sources items={[
@@ -256,48 +267,38 @@ export default function ProgressPage() {
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.heading}>The database, properly</h2>
+        <h2 className={styles.heading}>The database</h2>
         <p>
-          Four schemas: ingest for the raw load, catalog for what the product
-          serves, enrich for the layers on top, auth for keys. Thirty-three
-          migrations, and a CI gate that fails the build if the migration
-          chain and the live schema ever disagree. Every catalog row carries a
-          batch id: a re-ingest writes a fresh batch alongside the old one and
-          the product flips over when it&apos;s ready, so a bad dump can never
-          half-overwrite a good one.
+          New monthly dumps are written as a fresh batch alongside the live
+          one.
         </p>
         <p>
-          Ingest is the ugly part. The monthly dump is around 200 million
-          lines of XML, streamed through SAX parsers so memory stays flat,
-          profiled and normalised before anything touches the catalog schema.
-          Crashed batches get marked failed, not resumed. After every rebuild,
-          the gates run: a no-dead-ends audit that walks canary entities and
-          fails if any public page links to a missing one, a regression smoke
-          suite that hits the live API in CI, and a search-quality report fed
-          by real usage telemetry (zero-result rate, click-through) so ranking
-          changes are argued with numbers.
+          Before anything flips over, automated checks test schema parity,
+          broken links, API regressions and search quality. If the new build
+          fails, the old one stays live.
         </p>
         <BatchFlipDiagram />
         <Sources items={[
           { label: "schema.ts", href: SRC.schema },
           { label: "migrations", href: SRC.migrations },
-          { label: "migration-parity-audit.ts", href: SRC.parityAudit },
-          { label: "no-dead-ends-check.ts", href: SRC.deadEnds },
-          { label: "regression-smoke.ts", href: SRC.smoke },
-          { label: "search-quality-report.ts", href: SRC.searchQuality },
+          { label: "migration parity", href: SRC.parityAudit },
+          { label: "dead-end check", href: SRC.deadEnds },
+          { label: "smoke tests", href: SRC.smoke },
         ]} />
       </section>
 
       <section className={styles.section}>
         <h2 className={styles.heading}>What it runs on</h2>
         <p>
-          Four small machines on Fly.io: the web app, the API, the MCP server,
-          and one Postgres box holding the artifact. Redis for caching. The
-          LLM spend is pennies per conversation. The point of the whole
-          architecture is that a catalog of eighty thousand records, with an
-          AI layer on top, runs for about the price of two coffees a month.
+          Four small Fly.io machines: web, API, MCP and Postgres, plus Redis
+          for caching.
         </p>
-        <Sources items={[{ label: "the repository", href: REPO }]} />
+        <p>The LLM costs pennies per conversation.</p>
+        <p>
+          The point is that a catalog of roughly 80,000 records with an AI
+          layer on top can run for about the price of two coffees a month.
+        </p>
+        <Sources items={[{ label: "GitHub", href: REPO }]} />
       </section>
     </div>
   );
