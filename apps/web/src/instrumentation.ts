@@ -1,5 +1,10 @@
 export async function register() {
-  // No-op: placeholder for future OpenTelemetry or other SDK init
+  // No-op: placeholder for future OpenTelemetry or other SDK init.
+  // Outbound concurrency is bounded in lib/api.ts, not here — configuring an
+  // undici Agent from instrumentation means importing the `undici` package,
+  // whose index pulls in the mock/snapshot agent and breaks `next build` with
+  // "UnhandledSchemeError: Reading from node:fs/promises". serverExternalPackages
+  // does not cover the instrumentation bundle.
 }
 
 /**

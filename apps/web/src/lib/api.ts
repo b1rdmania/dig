@@ -8,6 +8,63 @@ import { API_URL, apiKeyHeaders } from "./server-env";
 const TIMEOUT_MS = 5000;
 const RETRY_DELAY_MS = 250;
 
+/**
+ * Ceiling on API calls in flight from this process at any moment.
+ *
+ * Why this exists: Node's global fetch is undici, and undici's default Agent
+ * allows UNLIMITED connections per origin. A render that can't get an idle
+ * socket simply opens another one, so socket demand was bounded only by how
+ * many requests Fly admitted — 120 concurrent, each fanning out several calls.
+ * On 2026-08-07 and again on 08-08 dig-web ran out of outbound sockets:
+ *
+ *   TypeError: fetch failed
+ *     cause: Client network socket disconnected before secure TLS connection
+ *            was established (ECONNRESET, localAddress: null)
+ *
+ * That is a process unable to ESTABLISH sockets, not an API refusing them —
+ * dig-api stayed healthy and externally reachable through both outages, and
+ * from a freshly restarted machine both the public and .internal paths answer
+ * 8/8. Every failure then got retried, doubling the work, until the machine
+ * had no event loop left to serve a static /api/health inside its 5s check
+ * budget. Fly pulled it from the proxy and the site went dark.
+ *
+ * Capping in-flight calls caps sockets: undici never needs more connections
+ * than we allow concurrent requests. Excess renders queue here instead of
+ * exhausting the machine — slower under burst, which is the right trade. The
+ * failure mode was never "too slow", it was "wedged and removed from the
+ * load balancer".
+ *
+ * Chosen over configuring an undici Agent directly because importing the
+ * `undici` package breaks `next build` (its index pulls in the mock/snapshot
+ * agent, which imports `node:fs/promises`; serverExternalPackages does not
+ * cover the instrumentation bundle).
+ */
+const MAX_IN_FLIGHT = 32;
+
+let inFlight = 0;
+const waiting: (() => void)[] = [];
+
+async function acquireSlot(): Promise<void> {
+  if (inFlight < MAX_IN_FLIGHT) {
+    inFlight++;
+    return;
+  }
+  // No increment on this path: releaseSlot HANDS OVER its slot rather than
+  // freeing it, so the count never dips and no third caller can slip into the
+  // gap between the waiter being resolved and the waiter resuming.
+  await new Promise<void>((resolve) => waiting.push(resolve));
+}
+
+function releaseSlot(): void {
+  const next = waiting.shift();
+  if (next) {
+    // Slot transferred, not released — inFlight deliberately unchanged.
+    next();
+    return;
+  }
+  inFlight--;
+}
+
 export class ApiRequestError extends Error {
   constructor(
     public code: string,
@@ -61,6 +118,12 @@ async function digFetchOnce<T>(
   options: FetchOptions = {},
 ): Promise<T> {
   const url = `${API_URL}${path}`;
+
+  // Queue for a slot BEFORE starting the timeout clock — time spent waiting
+  // for a slot is not time the API is being slow, and charging it against the
+  // 5s budget would make a busy machine time out requests that never left it.
+  await acquireSlot();
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -95,6 +158,7 @@ async function digFetchOnce<T>(
     throw new ApiRequestError("NETWORK_ERROR", String(err), 0);
   } finally {
     clearTimeout(timeout);
+    releaseSlot();
   }
 }
 

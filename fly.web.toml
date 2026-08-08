@@ -38,8 +38,15 @@ primary_region = "lhr"
 
   [http_service.concurrency]
     type = "requests"
-    hard_limit = 120
-    soft_limit = 90
+    # 120 was not capacity, it was a queue that melted. Each concurrent SSR
+    # render fans out several fetches to dig-api on ONE shared vCPU; at 120 the
+    # machine ran out of outbound sockets (ECONNRESET on TLS establish) and had
+    # no event loop left to answer a static /api/health inside its 5s budget,
+    # so Fly pulled it from the proxy. Twice, on 08-07 and 08-08.
+    # Lower limits push the queue up to the Fly proxy, where waiting is cheap
+    # and doesn't take the machine down with it.
+    hard_limit = 40
+    soft_limit = 25
 
 # Liveness probe. Without this Fly cannot tell a wedged Next.js process from a
 # healthy one — the process stays alive, the port stays open, and traffic keeps

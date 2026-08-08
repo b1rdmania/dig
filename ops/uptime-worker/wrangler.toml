@@ -1,0 +1,19 @@
+name = "dig-uptime-watchdog"
+main = "src/index.ts"
+compatibility_date = "2026-08-07"
+
+# Every 2 minutes. With FAILURES_BEFORE_RESTART = 3 that is ~6 minutes of
+# sustained failure before anything restarts — fast next to the 4-hour outage
+# on 2026-08-07, slow enough that a single slow response never acts.
+[triggers]
+crons = ["*/2 * * * *"]
+
+# Consecutive-failure counts and the restart ledger. Must survive between
+# invocations or the caps mean nothing — a stateless watchdog restarts forever.
+# Create with:  wrangler kv namespace create STATE
+[[kv_namespaces]]
+binding = "STATE"
+id = "7a16a4990d4b4cccaca06534918fac80"
+
+[observability]
+enabled = true

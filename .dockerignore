@@ -1,6 +1,10 @@
 node_modules/
 dist/
 build/
+# Local Next build output. The image builds its own inside the container, so
+# shipping this only inflates the upload — a local `next build` leaves ~290MB
+# here and turned a deploy into a 7-minute context transfer on 2026-08-08.
+.next/
 coverage/
 .turbo/
 .git/
