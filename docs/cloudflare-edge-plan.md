@@ -1,6 +1,35 @@
 # Putting dig behind Cloudflare — scope
 
-Status: proposed, not built. Written 2026-08-08 after two outages (08-07, 08-08).
+Status: **Phase 1 SHIPPED** (cea2807, dig-web v271). Phase 2 proposed, not built.
+Written 2026-08-08 after two outages (08-07, 08-08).
+
+## Update after Phase 1 shipped — read this first
+
+Phase 1 landed and it needed more than this doc originally said. Recording the
+correction because the same trap will catch the next person:
+
+**`export const revalidate` ALONE does nothing.** With only that export the
+routes still built as `ƒ (Dynamic)` and still served `no-store`. Next needs an
+explicit static opt-in alongside it. Both routes now carry:
+
+```ts
+export const revalidate = 3600;
+export const dynamic = "error";
+```
+
+`"error"` rather than `"force-static"`: both force static rendering, but
+`"error"` fails the BUILD if a dynamic API is later introduced, whereas
+`"force-static"` silently hands that code empty values at runtime.
+
+Measured on production: `/label/*` and `/master/*` serve in **47ms** from cache
+(`x-nextjs-cache: HIT`), no dig-api or Postgres touch. Effective TTLs are 600s
+and 300s, not 3600 — nested components (Labelmates, SeeAlso, TopCreditsBlock)
+fetch with shorter revalidates and Next takes the minimum across the tree.
+
+**So the urgency is gone.** The crawler load that wedged the site twice is now
+served from cache. Phase 2 is a genuine improvement, not a rescue. What is
+still outstanding and only Cloudflare fixes: `artist/[id]` (below), geography,
+and rate limiting as actual enforcement.
 
 ## The prize
 
@@ -101,6 +130,57 @@ A WAF rate rule on `/artist/*`, `/label/*`, `/master/*` — say 60 req/min per I
 — is enforcement rather than etiquette. This is the belt to robots.txt's
 braces, and it is the only measure that would have stopped the 08-07 pattern
 regardless of the cache.
+
+## artist/[id] — the one route Phase 1 could not fix
+
+`artist/[id]` still renders per request (`no-store`, 80-370ms) because it reads
+`searchParams` for tab and filter state, which forces dynamic rendering. Label
+and master have no such state, which is why they cached cleanly.
+
+It matters: artist pages were a visible share of the crawler traffic in the Fly
+proxy logs during both outages (`/artist/143267`, `/artist/339337`,
+`/artist/338924`).
+
+**The scope is smaller than it looks.** Of the 9 `digFetch` calls on that page,
+exactly ONE depends on the params — the masters list, via
+`/v1/artists/${id}/masters?...&release_type=${releaseType}`. The other eight are
+param-independent. The params otherwise only decide which component renders
+(`activeFilter === "remixes"`).
+
+### Option A — do nothing, let Cloudflare handle it (recommended if Phase 2 happens)
+
+Cloudflare caches by full URL, so `/artist/143267` and
+`/artist/143267?tab=remixes` are separate cache entries. The bare URL — what
+crawlers hammer and what nearly every visitor lands on — gets cached like any
+other page, regardless of Next calling the route dynamic.
+
+Zero code. If Phase 2 is happening, **do not refactor this route** — it is work
+the edge does for free.
+
+Caveat: the origin still renders on a miss, so an unbounded set of query-string
+variants is uncached. Not a real risk — the variants are a closed set (`tab`,
+`release_type` ∈ 4 values, `credits_role`).
+
+### Option B — move filter state client-side (do this only if Phase 2 is NOT happening)
+
+1. Delete `searchParams` from the page's `Props` and from `ArtistPage`.
+2. Keep all eight param-independent fetches server-side, exactly as they are.
+3. Move the masters strip into a client component that reads `tab` /
+   `release_type` / `credits_role` via `useSearchParams`, wrapped in a
+   `<Suspense>` boundary — `useSearchParams` is client-side and does NOT force
+   the route dynamic when suspended.
+4. That component fetches its filtered list from a route handler. Precedent
+   already exists: `apps/web/src/app/api/search/route.ts` is a client-callable
+   handler in this app.
+5. Add `export const revalidate = 3600` + `export const dynamic = "error"` as
+   per label/master. The build failing is the signal that step 1 was incomplete
+   — that is why `"error"` is the right choice here.
+
+Roughly an hour. Side benefit: tab switches become instant client-side state
+instead of a full server round-trip.
+
+Verify exactly as for label/master: two consecutive requests, second shows
+`x-nextjs-cache: HIT`; the `?tab=remixes` variant still renders correctly.
 
 ## What NOT to do
 
