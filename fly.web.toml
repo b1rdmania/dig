@@ -25,12 +25,16 @@ primary_region = "lhr"
 [http_service]
   internal_port = 3002
   force_https = true
-  # Keep one machine warm. With min 0 the first hit after idle measured
+  # Keep two machines warm. With min 0 the first hit after idle measured
   # 10.9s (vs 1.3s warm) while the VM booted and Next.js cold-started.
-  # Spillover machines may still stop; the pinned one carries idle traffic.
+  # Two, not one: on 2026-08-07 the single machine wedged (shallow
+  # /api/health timing out at 5s while digFetch calls to dig-api threw
+  # ECONNRESET), the check went critical, and the proxy had nothing left to
+  # route to — PR01, four hours of full outage. With a second machine the
+  # proxy sheds the wedged one and the site stays up.
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 1
+  min_machines_running = 2
 
   [http_service.concurrency]
     type = "requests"
@@ -51,4 +55,6 @@ primary_region = "lhr"
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "1024mb"
+  # 2GB, not 1GB: the 1GB machine was OOM-killed (exit 137) on 2026-08-05
+  # under catalog crawler traffic.
+  memory = "2048mb"

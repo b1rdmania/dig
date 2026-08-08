@@ -69,9 +69,25 @@ Entity model: `artist | label | master` are the only public entities. `release_s
   destroying the old machine, not a redeploy.
 - **`digFetch` has a 5s timeout + one retry** (`apps/web/src/lib/api.ts`). Page fan-out
   multiplies it, so raising it makes slow calls hang renders rather than fail fast.
-- Both `dig-api` and `dig-web` run a SINGLE machine — no redundancy. Each has a Fly
-  health check (`/v1/health` and `/api/health`); keep the web one shallow so an API
-  outage can't cascade into Fly restarting healthy web machines.
+- **`dig-web` runs TWO machines at 2GB each** (`min_machines_running = 2`). It ran one
+  1GB machine until 2026-08-07, which produced a four-hour full outage: the machine
+  wedged, its shallow `/api/health` started timing out at 5s, the check went critical,
+  and the proxy had nothing else to route to (`PR01 no known healthy instances`). The
+  same machine had already been OOM-killed (exit 137) on 2026-08-05. Two machines mean
+  the proxy sheds a wedged one instead of the site going down; do not scale back to one.
+- **`dig-api` still runs a SINGLE machine** — that redundancy gap is open. Each app has
+  a Fly health check (`/v1/health` and `/api/health`); keep the web one shallow so an
+  API outage can't cascade into Fly restarting healthy web machines. Note Fly does NOT
+  auto-restart on a failing service check — a wedged machine stays wedged until someone
+  runs `fly machine restart`.
+- **`robots.ts` is load-bearing, not just SEO.** ~80k master pages plus artist and label
+  pages are server-rendered per request, so an unthrottled crawler walking entity IDs is
+  the cheapest way to take dig-web down. Search and assistant crawlers are allowed (with
+  crawl-delay where honoured), bulk extractors are disallowed, everything else is
+  throttled. The sitemaps exist so crawlers read the canonical list instead of guessing
+  IDs. Caveat: crawler traffic was never confirmed as the 2026-08-07 trigger — Fly proxy
+  logs carry no user-agent and the app doesn't log requests. Log user-agents before
+  treating the bot theory as diagnosed.
 
 ## Database
 - Schemas: `auth`, `ingest`, `catalog`, `enrich`
