@@ -39,6 +39,36 @@ import {
 import { TopCreditsBlock } from "@/components/TopCreditsBlock";
 import styles from "./page.module.css";
 
+/**
+ * ISR. Without these two exports the route is fully dynamic and Next emits
+ * `cache-control: private, no-cache, no-store` — so every crawler hit on any
+ * of ~80k catalog pages was a fresh render plus several dig-api round-trips
+ * on one shared vCPU. That load is what wedged dig-web on 2026-08-07 and
+ * 08-08.
+ *
+ * `revalidate` ALONE does nothing here — verified: with only that export the
+ * route still built as `ƒ (Dynamic)` and still served `no-store`. Next needs
+ * the explicit static opt-in as well. The pair together produce
+ * `x-nextjs-cache: HIT` on the second request.
+ *
+ * `dynamic = "error"` rather than "force-static" deliberately: both force
+ * static rendering, but "error" FAILS THE BUILD if someone later introduces a
+ * dynamic API here, while "force-static" would silently hand that code empty
+ * values at runtime. A loud build break beats a quiet wrong page. (This route
+ * uses no dynamic APIs today — the build passes, which is how the diagnosis
+ * above was confirmed.)
+ *
+ * Effective TTL is 600s, not 3600: nested components (Labelmates, SeeAlso,
+ * TopCreditsBlock) fetch with `revalidate: 600` and Next takes the minimum
+ * across the tree. Correct behaviour, and 10 minutes is conservative for a
+ * catalog that only changes on a monthly scoped-artifact rebuild.
+ *
+ * Also emits a real `s-maxage`, which is the precondition for putting a CDN
+ * in front — see docs/cloudflare-edge-plan.md.
+ */
+export const revalidate = 3600;
+export const dynamic = "error";
+
 interface Props {
   params: Promise<{ id: string }>;
 }

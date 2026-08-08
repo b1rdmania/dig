@@ -24,6 +24,18 @@ import { Page, Stamp, LinerNotes } from "@/components/design";
 import { MasterCreditsSection } from "@/components/MasterCreditsSection";
 import styles from "./page.module.css";
 
+/**
+ * ISR — see the fuller note on the label route. Both exports are required;
+ * `revalidate` alone leaves the route dynamic and still serving `no-store`.
+ * `dynamic = "error"` breaks the build if a dynamic API is ever added here,
+ * which is preferable to "force-static" silently returning empty values.
+ *
+ * Without this, every one of ~80k master pages re-rendered from scratch on
+ * each crawler hit — the load that wedged dig-web twice.
+ */
+export const revalidate = 3600;
+export const dynamic = "error";
+
 interface Props {
   params: Promise<{ id: string }>;
 }
