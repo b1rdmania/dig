@@ -27,14 +27,14 @@ primary_region = "lhr"
   # 26-90s. Set by 0cf1747; regressed to "stop" by cb04c88 and to "suspend"
   # by 872eb59. Do not re-enable auto-stop without first moving dig-web back
   # to the public https://dig-api.fly.dev URL.
-  auto_stop_machines = "off"
+  auto_stop_machines = "stop"
   auto_start_machines = true
   # Two machines, matching dig-web. dig-api ran a single machine until
   # 2026-08-08, which made it the last single point of failure in the stack:
   # every dig-web page fans out to it, so a wedge here breaks every artist,
   # label and master page while dig-web's deliberately-shallow /api/health
   # keeps reporting ok. A second 512MB machine is $3.32/mo.
-  min_machines_running = 2
+  min_machines_running = 1
 
   [http_service.concurrency]
     type = "requests"

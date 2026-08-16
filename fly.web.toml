@@ -34,7 +34,7 @@ primary_region = "lhr"
   # proxy sheds the wedged one and the site stays up.
   auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 2
+  min_machines_running = 1
 
   [http_service.concurrency]
     type = "requests"
@@ -64,4 +64,4 @@ primary_region = "lhr"
   size = "shared-cpu-1x"
   # 2GB, not 1GB: the 1GB machine was OOM-killed (exit 137) on 2026-08-05
   # under catalog crawler traffic.
-  memory = "2048mb"
+  memory = "1024mb"
