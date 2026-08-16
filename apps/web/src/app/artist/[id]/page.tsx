@@ -21,7 +21,8 @@ import { musicGroupJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "@/components/JsonLd";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { CollapsibleList } from "@/components/CollapsibleList";
-import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
+import { DiscogsProfile, extractProfileRefs, profileToPlainText } from "@/components/DiscogsProfile";
+import { resolveProfileNames } from "@/lib/profile-names";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { hrefForTraversalLink } from "@/lib/routes";
 import { Labelmates, SeeAlso } from "@/components/design";
@@ -144,7 +145,9 @@ function AboutSection({
 
   if (!hasContent) return null;
 
-  const combined = [bioSummary, profile].filter(Boolean).join("\n\n");
+  const combined = [bioSummary, profile ? profileToPlainText(profile, resolvedNames) : null]
+    .filter(Boolean)
+    .join("\n\n");
   const shouldCollapse = combined.length > 520;
   const preview = shouldCollapse ? `${combined.slice(0, 520).trimEnd()}…` : combined;
 
@@ -275,10 +278,16 @@ export async function generateMetadata({ params }: Props) {
     if (!isArtistResponse(data)) return { title: "Artist — dig" };
     const a = data.artist;
     const namePart = a.real_name ? `${a.name} (${a.real_name})` : a.name;
-    const profileSnippet = a.profile ? a.profile.replace(/\[.*?\]/g, "").trim().slice(0, 120) : null;
+    // Resolve [a123]-style refs so "Members are RZA, GZA…" survives into the
+    // snippet instead of "Members are , , ,". Deduped with the body's lookups.
+    const names = await resolveProfileNames(a.profile);
+    const profileSnippet = a.profile ? profileToPlainText(a.profile, names).replace(/\s+/g, " ").slice(0, 150) : null;
     const desc = profileSnippet ? `${namePart}. ${profileSnippet}` : namePart;
     return entityMetadata({ title: a.name, description: desc, path: `/artist/${id}`, type: "artist" });
-  } catch {
+  } catch (err) {
+    // Out-of-scope / unknown ID: 404 from metadata too, so the status is
+    // decided before any streaming starts.
+    if (err instanceof ApiRequestError && err.code === "NOT_FOUND") notFound();
     return { title: "Artist — dig" };
   }
 }
@@ -298,6 +307,17 @@ export default async function ArtistPage({ params, searchParams }: Props) {
   const creditsRole = typeof sp.credits_role === "string" && sp.credits_role.trim() !== ""
     ? sp.credits_role.trim()
     : null;
+
+  // Resolve existence BEFORE the Suspense boundary. notFound() thrown inside
+  // Suspense (or under a segment loading.tsx) lands after the 200 shell has
+  // streamed, so out-of-scope IDs were served as soft-404s and stayed indexed.
+  // Next dedupes this fetch with generateMetadata's, so it costs no extra call.
+  try {
+    await digFetch<ArtistResponse>(`/v1/artists/${id}`, { revalidate: 300 });
+  } catch (err) {
+    if (err instanceof ApiRequestError && err.code === "NOT_FOUND") notFound();
+    // Any other failure falls through to ArtistContent's own error rendering.
+  }
 
   return (
     <div className={styles.page} data-dig-entity="artist" data-dig-id={id}>

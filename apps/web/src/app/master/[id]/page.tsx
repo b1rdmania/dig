@@ -82,7 +82,10 @@ export async function generateMetadata({ params }: Props) {
       coverUrl,
       videos: m.videos,
     });
-  } catch {
+  } catch (err) {
+    // Out-of-scope / unknown ID: 404 from metadata too, so the status is
+    // decided before any streaming starts.
+    if (err instanceof ApiRequestError && err.code === "NOT_FOUND") notFound();
     return { title: "Master — dig" };
   }
 }

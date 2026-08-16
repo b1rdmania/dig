@@ -22,7 +22,8 @@ import { discogsUrl, urlLabel } from "@/lib/format";
 import { entityMetadata, BASE_URL } from "@/lib/seo";
 import { labelJsonLd, breadcrumbJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "@/components/JsonLd";
-import { DiscogsProfile, extractProfileRefs } from "@/components/DiscogsProfile";
+import { DiscogsProfile, extractProfileRefs, profileToPlainText } from "@/components/DiscogsProfile";
+import { resolveProfileNames } from "@/lib/profile-names";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
 import {
   Page,
@@ -82,16 +83,27 @@ export async function generateMetadata({ params }: Props) {
     const ed = l.editorial;
     const tierTag = (ed?.tier ?? l.tier) === "tier1" ? "Canonical scene label. " : "";
     const blurb = ed?.blurb?.trim();
-    const profileSnippet = l.profile ? l.profile.replace(/\[.*?\]/g, "").trim().slice(0, 120) : null;
+    const names = await resolveProfileNames(l.profile);
+    const profileSnippet = l.profile ? profileToPlainText(l.profile, names).replace(/\s+/g, " ").slice(0, 150) : null;
     const desc = blurb ?? (profileSnippet ? `${tierTag}${l.name}. ${profileSnippet}` : `${tierTag}${l.name} — record label on dig`);
     return entityMetadata({ title: l.name, description: desc, path: `/label/${id}`, type: "label" });
-  } catch {
+  } catch (err) {
+    // Out-of-scope / unknown ID: 404 from metadata too, so the status is
+    // decided before any streaming starts.
+    if (err instanceof ApiRequestError && err.code === "NOT_FOUND") notFound();
     return { title: "Label — dig" };
   }
 }
 
 export default async function LabelPage({ params }: Props) {
   const { id } = await params;
+  // Existence check before Suspense so notFound() yields a real 404 (see
+  // artist page for the why). Deduped with the fetch inside LabelContent.
+  try {
+    await digFetch<LabelResponse>(`/v1/labels/${id}`, { revalidate: 3600 });
+  } catch (err) {
+    if (err instanceof ApiRequestError && err.code === "NOT_FOUND") notFound();
+  }
   return (
     <Suspense fallback={<SectionSkeleton lines={6} />}>
       <LabelContent id={id} />

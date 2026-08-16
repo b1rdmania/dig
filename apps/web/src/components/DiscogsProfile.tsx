@@ -207,3 +207,37 @@ function renderWithLineBreaks(text: string, keyBase: string): ReactNode {
   const pieces = text.split("\n");
   return pieces.flatMap((p, i) => (i === 0 ? [p] : [<br key={`${keyBase}-br${i}`} />, p]));
 }
+
+/**
+ * Plain-text rendering of Discogs profile markup — for <meta description>,
+ * collapsed previews, anything that isn't React. Mirrors parseInline:
+ * formatting tags unwrap, named refs become the name, numeric refs become
+ * the resolved name when we have one. Unresolved numeric refs are dropped
+ * (and the punctuation around them tidied) rather than left as `[a123]` or
+ * replaced with the word "artist" — either reads as broken in a snippet.
+ */
+export function profileToPlainText(text: string, names?: Record<string, string>): string {
+  const pattern = new RegExp(INLINE_PATTERN.source, INLINE_PATTERN.flags);
+  let out = text.replace(/\r\n/g, "\n").replace(pattern, (...m: string[]) => {
+    const [, b, i, u, s, nkind, nname, kind, id, , urlBody, urlBare] = m;
+    if (b !== undefined) return profileToPlainText(b, names);
+    if (i !== undefined) return profileToPlainText(i, names);
+    if (u !== undefined) return profileToPlainText(u, names);
+    if (s !== undefined) return profileToPlainText(s, names);
+    if (nkind && nname) return nname;
+    if (kind && id) return names?.[`${kind}${id}`] ?? "";
+    if (urlBody !== undefined) return profileToPlainText(urlBody, names);
+    if (urlBare) return urlBare;
+    return "";
+  });
+  // Tidy the holes left by dropped refs: ", , ," → ", " ; " and ." → "." etc.
+  out = out
+    .replace(/(,\s*){2,}/g, ", ")
+    .replace(/\s+,/g, ",")
+    .replace(/,\s*(and|&)\s*(?=[.,;)]|$)/g, "")
+    .replace(/\b(and|&)\s+(?=[.,;])/g, "")
+    .replace(/\(\s*\)/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([.;])/g, "$1");
+  return out.trim();
+}
