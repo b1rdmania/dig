@@ -1,9 +1,28 @@
 # Putting dig behind Cloudflare — scope
 
-Status: **Phase 1 SHIPPED** (cea2807, dig-web v271). Phase 2 proposed, not built.
+Status: **Phase 1 SHIPPED** (cea2807). **Phase 2 LIVE 2026-08-16** — see "As built" below.
 Written 2026-08-08 after two outages (08-07, 08-08).
 
-## Update after Phase 1 shipped — read this first
+## As built (2026-08-16)
+
+- dig.baby on Cloudflare (Free), `app` proxied to Fly, SSL Full (strict).
+- Cache Rules (order matters — **last matching rule wins**, so the bypass is LAST):
+  1. `/artist/* /master/* /label/* /scene*` → cache, edge TTL **30 days** (catalog is
+     frozen; no rebuilds scheduled), non-200s 60s.
+  2. `/ /about /faq /pilot /progress /robots.txt /sitemap*` → 1h.
+  3. BYPASS: any of headers `rsc`, `next-router-prefetch`, `next-router-state-tree`,
+     `next-router-segment-prefetch`; paths `/api/* /account* /usage* /admin* /llm-beta*
+     /feedback* /search*`; non-GET. Uses `any(http.request.headers.names[*] in {...})` —
+     `len(http.request.headers["rsc"])` validates but never fires.
+- Rate limit: catalog paths >10 req / 10s / IP → block 10s. Bot Fight Mode on, AI bots blocked.
+- **Purge on deploy**: `ops/deploy-web.sh` = fly deploy + `ops/cf-purge.sh`. Use it instead of
+  bare `fly deploy` for dig-web. Run `ops/cf-purge.sh` after any catalog rebuild too.
+- Fly side: web 1 always-on machine @1GB (+1 autostop), api 1 (+1 autostop), Redis removed
+  (in-process cache), `RATE_LIMIT_EXEMPT_KEYS=*` so the web's own key skips the API limiter.
+- Not done, by decision: Email Routing (unused), flycast for web→api (force_https makes
+  plain-HTTP flycast fail — tried, reverted, 4 min outage), Workers migration (see "What NOT to do").
+
+## Update after Phase 1 shipped
 
 Phase 1 landed and it needed more than this doc originally said. Recording the
 correction because the same trap will catch the next person:
