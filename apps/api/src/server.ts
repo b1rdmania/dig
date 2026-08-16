@@ -36,8 +36,8 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-// Rate limiting is always enabled in production. Without REDIS_URL the app
-// falls back to a per-process in-memory store (buildApp logs a warning).
+// Rate limiting is always enabled. Without REDIS_URL the app uses a
+// per-process in-memory store — fine, the hard limit lives at Cloudflare.
 const { app } = await buildApp({
   databaseUrl,
   redisUrl,

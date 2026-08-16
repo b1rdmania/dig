@@ -18,6 +18,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply }
 import rateLimit from "@fastify/rate-limit";
 import cors from "@fastify/cors";
 import Redis from "ioredis";
+import { MemoryCache } from "./memory-cache.js";
 import { randomUUID } from "node:crypto";
 import { createDb } from "@dig/db";
 import { healthCheck, getTimeoutStats } from "@dig/domain";
@@ -83,8 +84,11 @@ export async function buildApp(deps: AppDeps): Promise<{
     ],
   });
 
-  // --- Redis (shared by rate limiter + cover cache) ---
+  // --- Cache (cover + market). Redis only if REDIS_URL is set; otherwise a
+  // bounded in-process cache. Redis is no longer required in production —
+  // rate limiting is enforced at the Cloudflare edge (2026-08-16).
   const redis = deps.redisUrl ? new Redis(deps.redisUrl) : null;
+  const cache = redis ?? new MemoryCache();
 
   // --- Rate limiting ---
   // Always registered (unless explicitly disabled for tests). Without Redis we
@@ -95,8 +99,8 @@ export async function buildApp(deps: AppDeps): Promise<{
       console.warn(JSON.stringify({
         ts: new Date().toISOString(),
         level: "warn",
-        code: "RATE_LIMIT_MEMORY_FALLBACK",
-        message: "REDIS_URL not set — rate limiting uses per-process in-memory store",
+        code: "RATE_LIMIT_MEMORY_STORE",
+        message: "REDIS_URL not set — rate limiting uses per-process in-memory store (edge limit is Cloudflare)",
       }));
     }
     if (!hasConfiguredKeys()) {
@@ -247,13 +251,13 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerSearchRoutes(app, db);
   registerEntityRoutes(app, db);
   registerTraversalRoutes(app, db);
-  registerCoverRoutes(app, db, redis);
+  registerCoverRoutes(app, db, cache);
   registerEventRoutes(app);
   registerEnrichmentRoutes(app, db);
   registerSeoRoutes(app, db);
   registerUsageRoutes(app, db);
   registerAskRoutes(app, db);
-  registerMarketRoutes(app, redis);
+  registerMarketRoutes(app, cache);
   registerScenesRoutes(app, db);
 
   app.addHook("onClose", async () => {
