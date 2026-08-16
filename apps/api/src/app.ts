@@ -21,7 +21,7 @@ import Redis from "ioredis";
 import { randomUUID } from "node:crypto";
 import { createDb } from "@dig/db";
 import { healthCheck, getTimeoutStats } from "@dig/domain";
-import { validApiKey, rawApiKey, hasConfiguredKeys } from "./auth.js";
+import { validApiKey, rawApiKey, hasConfiguredKeys, isRateLimitExempt } from "./auth.js";
 import { registerSearchRoutes } from "./routes/v1/search.js";
 import { registerEntityRoutes } from "./routes/v1/entities.js";
 import { registerTraversalRoutes } from "./routes/v1/traversal.js";
@@ -112,6 +112,8 @@ export async function buildApp(deps: AppDeps): Promise<{
         validApiKey(req) ? RATE_LIMITS.keyed : RATE_LIMITS.anonymous,
       timeWindow: RATE_WINDOW,
       ...(redis ? { redis } : {}),
+      // Exempt keys (RATE_LIMIT_EXEMPT_KEYS) skip the store entirely — see auth.ts.
+      allowList: (req: FastifyRequest) => isRateLimitExempt(req),
       // Unknown/absent keys bucket by IP — otherwise an attacker could mint a
       // fresh bucket per request by rotating bogus key values.
       keyGenerator: (req: FastifyRequest) => validApiKey(req) ?? req.ip,

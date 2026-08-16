@@ -51,6 +51,37 @@ export function validApiKey(req: FastifyRequest): string | undefined {
   return key && configuredKeys().has(key) ? key : undefined;
 }
 
+/**
+ * Keys exempt from the rate limiter entirely (no Redis INCR per request).
+ *
+ * RATE_LIMIT_EXEMPT_KEYS is comma-separated; "*" means every *valid* key.
+ * Motivation (2026-08-16): dig-web's SSR fan-out (~8 API calls per entity
+ * page) was paying two Upstash commands per request under a crawl, projecting
+ * $150/mo of Redis for traffic that only ever originates from our own app.
+ * Throttling that traffic belongs at the web edge, not here.
+ */
+let cachedExempt: Set<string> | null = null;
+
+function exemptKeys(): Set<string> {
+  if (cachedExempt === null) {
+    cachedExempt = parseKeys(process.env.RATE_LIMIT_EXEMPT_KEYS);
+  }
+  return cachedExempt;
+}
+
+/** Test hook: re-read RATE_LIMIT_EXEMPT_KEYS from the environment. */
+export function resetExemptKeysCache(): void {
+  cachedExempt = null;
+}
+
+/** True when the request carries a valid key that is exempt from rate limiting. */
+export function isRateLimitExempt(req: FastifyRequest): boolean {
+  const key = validApiKey(req);
+  if (!key) return false;
+  const exempt = exemptKeys();
+  return exempt.has("*") || exempt.has(key);
+}
+
 export const unauthorizedBody = {
   error: {
     code: "UNAUTHORIZED",

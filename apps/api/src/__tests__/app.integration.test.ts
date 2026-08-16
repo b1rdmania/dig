@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { FastifyInstance } from "fastify";
-import { resetApiKeysCache } from "../auth.js";
+import { resetApiKeysCache, resetExemptKeysCache } from "../auth.js";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -129,5 +129,29 @@ describe.skipIf(!DATABASE_URL)("app integration", () => {
       headers: { "x-api-key": TEST_KEY },
     });
     expect(res.headers["x-ratelimit-limit"]).toBe("1000");
+  });
+
+  it("keys listed in RATE_LIMIT_EXEMPT_KEYS bypass the limiter (no headers)", async () => {
+    process.env.RATE_LIMIT_EXEMPT_KEYS = "*";
+    resetExemptKeysCache();
+    try {
+      const res = await app.inject({
+        method: "GET",
+        url: "/v1/health",
+        headers: { "x-api-key": TEST_KEY },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["x-ratelimit-limit"]).toBeUndefined();
+      // Bogus keys are never exempt, even with "*".
+      const anon = await app.inject({
+        method: "GET",
+        url: "/v1/health",
+        headers: { "x-api-key": "totally-bogus" },
+      });
+      expect(anon.headers["x-ratelimit-limit"]).toBeDefined();
+    } finally {
+      delete process.env.RATE_LIMIT_EXEMPT_KEYS;
+      resetExemptKeysCache();
+    }
   });
 });
