@@ -183,7 +183,13 @@ async function checkTarget(env: Env, target: Target, now: number): Promise<void>
   const health = await isHealthy(target);
 
   if (health.ok) {
-    if (state.consecutiveFailures > 0 || state.escalated) {
+    // Steady-state health is the overwhelmingly common case, so it must not write.
+    // An unconditional put here cost 2 writes every 2 minutes = 1,440/day against a
+    // 1,000/day free-tier cap: the watchdog exhausted its own quota by lunchtime and
+    // then couldn't record failures for the rest of the day. Only persist a change.
+    const wasDown = state.consecutiveFailures > 0 || state.escalated;
+    const staleRestarts = state.restarts.some((t) => now - t >= 60 * 60 * 1000);
+    if (wasDown) {
       await notify(env, {
         event: "recovered",
         app,
@@ -191,7 +197,14 @@ async function checkTarget(env: Env, target: Target, now: number): Promise<void>
         detail: health.detail,
       });
     }
-    await writeState(env, app, { ...state, consecutiveFailures: 0, escalated: false });
+    if (wasDown || staleRestarts) {
+      await writeState(env, app, {
+        ...state,
+        consecutiveFailures: 0,
+        escalated: false,
+        restarts: state.restarts.filter((t) => now - t < 60 * 60 * 1000),
+      });
+    }
     return;
   }
 
