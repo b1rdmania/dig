@@ -19,7 +19,7 @@ const KEY_STORAGE = "dig.llm_beta.access_key";
 // The instant the customer asks, the shopkeeper acknowledges it — one of
 // these shows immediately on submit, before the first server event. The
 // filler rotation takes over from there.
-const ACK_PHRASES = [
+export const ACK_PHRASES = [
   "Leave it with me…",
   "Right, hold on…",
   "Give me a minute…",
@@ -28,7 +28,7 @@ const ACK_PHRASES = [
   "Right then…",
 ];
 
-const FILLER_PHRASES = [
+export const FILLER_PHRASES = [
   "Riffling the crates…",
   "Checking the back room…",
   "Blowing dust off a sleeve…",
@@ -93,23 +93,23 @@ const FILLER_PHRASES = [
   "Reaching for the top shelf…",
 ];
 
-interface MediaItem {
+export interface MediaItem {
   discogs_id: number;
   title: string;
   artist: string;
   youtube_url: string;
 }
 
-type ResponseMode = "grounded_success" | "grounded_empty" | "timeout_degraded" | "upstream_error";
+export type ResponseMode = "grounded_success" | "grounded_empty" | "timeout_degraded" | "upstream_error";
 
-interface EvidenceItem {
+export interface EvidenceItem {
   type: "artist" | "label" | "master" | "release";
   discogs_id: number;
   title: string;
   dig_url: string;
 }
 
-interface Message {
+export interface Message {
   role: "user" | "assistant";
   content: string;
   media?: MediaItem[];
@@ -119,7 +119,7 @@ interface Message {
   tool_calls?: number;
 }
 
-function linkifyPlainUrls(text: string): string {
+export function linkifyPlainUrls(text: string): string {
   return text.replace(/(^|\s)(https?:\/\/[^\s]+)/g, (_m, prefix: string, url: string) => {
     return `${prefix}[${url}](${url})`;
   });
@@ -166,7 +166,7 @@ function VideoCard({ item }: { item: MediaItem }) {
   );
 }
 
-function VideoRail({ media }: { media: MediaItem[] }) {
+export function VideoRail({ media }: { media: MediaItem[] }) {
   const validMedia = media.filter((m) => extractYouTubeId(m.youtube_url));
   if (validMedia.length === 0) return null;
   return (

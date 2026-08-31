@@ -9,7 +9,7 @@
  * No catalog data is assumed — assertions cover envelopes, auth gating, and
  * rate-limit tiers, not query results.
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { resetApiKeysCache, resetExemptKeysCache } from "../auth.js";
 
@@ -104,6 +104,43 @@ describe.skipIf(!DATABASE_URL)("app integration", () => {
     });
     expect(res.statusCode).toBe(503);
     expect(res.json().error.code).toBe("CONFIG_ERROR");
+  });
+
+  describe("public ask gate (Record Bore)", () => {
+    afterEach(async () => {
+      delete process.env.ASK_PUBLIC;
+      delete process.env.ASK_PUBLIC_DAILY_PER_IP;
+      const { __resetPublicAskState } = await import("../routes/v1/ask/public.js");
+      __resetPublicAskState();
+    });
+
+    it("keyless ask with ASK_PUBLIC=on clears auth and reaches provider config", async () => {
+      process.env.ASK_PUBLIC = "on";
+      const res = await app.inject({
+        method: "POST",
+        url: "/v1/ask",
+        payload: { question: "test" },
+      });
+      // No LLM provider in tests, so success here is the 503 from the
+      // provider check — NOT the beta-key 503 ("Private beta is not
+      // configured") or a 401.
+      expect(res.statusCode).toBe(503);
+      expect(res.json().error.message).not.toContain("Private beta");
+    });
+
+    it("asks beyond the per-visitor daily cap are refused in voice", async () => {
+      process.env.ASK_PUBLIC = "on";
+      process.env.ASK_PUBLIC_DAILY_PER_IP = "1";
+      await app.inject({ method: "POST", url: "/v1/ask", payload: { question: "one" } });
+      const res = await app.inject({
+        method: "POST",
+        url: "/v1/ask",
+        payload: { question: "two" },
+      });
+      expect(res.statusCode).toBe(429);
+      expect(res.json().error.code).toBe("RATE_LIMITED");
+      expect(res.json().error.message).toContain("come back tomorrow");
+    });
   });
 
   it("anonymous requests get the anonymous rate-limit tier", async () => {

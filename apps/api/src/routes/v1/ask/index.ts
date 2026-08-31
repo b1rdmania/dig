@@ -7,6 +7,7 @@ import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import type { AnthropicMessage, ResponseMode } from "./types.js";
 import { requirePrivateKey } from "./auth.js";
+import { checkPublicAsk, isPublicAskEnabled, recordPublicAsk } from "./public.js";
 import { runAgenticLoop, type LlmProvider, type AskProgressEvent } from "./loop.js";
 import { bindMediaToCitations, dedupeMedia, dedupeEvidence, extractCitedMasterIds } from "./binding.js";
 
@@ -60,8 +61,16 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       rateLimit: { max: 10, timeWindow: "1 minute" },
     },
   }, async (req: FastifyRequest<{ Body: AskBody }>, reply) => {
+    // Key holders pass as before; keyless visitors go through the public
+    // (Record Bore) gate, which is off unless ASK_PUBLIC=on.
+    let isPublic = false;
     const auth = requirePrivateKey(req);
-    if (!auth.ok) return reply.status(auth.status).send(auth.body);
+    if (!auth.ok) {
+      if (!isPublicAskEnabled()) return reply.status(auth.status).send(auth.body);
+      const pub = await checkPublicAsk(req, db);
+      if (!pub.ok) return reply.status(pub.status).send(pub.body);
+      isPublic = true;
+    }
 
     let apiKey: string;
     if (PROVIDER === "openrouter") {
@@ -94,12 +103,15 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       .slice(-MAX_HISTORY_TURNS)
       .map((m) => ({ role: m.role, content: m.content.slice(0, 3000) }));
 
-    const maxTokens = Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
-    const model = String(body.model ?? DEFAULT_MODEL);
+    // Public asks run on the house defaults only — letting a stranger pick
+    // the model or token budget on the shop's key is how the till empties.
+    const maxTokens = isPublic ? 1600 : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
+    const model = isPublic ? DEFAULT_MODEL : String(body.model ?? DEFAULT_MODEL);
     const started = Date.now();
     const log = (msg: string, extra?: Record<string, unknown>) =>
       req.log.info({ event: msg, ...extra });
 
+    if (isPublic) await recordPublicAsk(db);
     try {
       const { answer, model: usedModel, tool_calls, media, evidence, mode } = await runAgenticLoop({
         db,
@@ -171,8 +183,14 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       rateLimit: { max: 10, timeWindow: "1 minute" },
     },
   }, async (req: FastifyRequest<{ Body: AskBody }>, reply) => {
+    let isPublic = false;
     const auth = requirePrivateKey(req);
-    if (!auth.ok) return reply.status(auth.status).send(auth.body);
+    if (!auth.ok) {
+      if (!isPublicAskEnabled()) return reply.status(auth.status).send(auth.body);
+      const pub = await checkPublicAsk(req, db);
+      if (!pub.ok) return reply.status(pub.status).send(pub.body);
+      isPublic = true;
+    }
 
     let apiKey: string;
     if (PROVIDER === "openrouter") {
@@ -205,12 +223,13 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       .slice(-MAX_HISTORY_TURNS)
       .map((m) => ({ role: m.role, content: m.content.slice(0, 3000) }));
 
-    const maxTokens = Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
-    const model = String(body.model ?? DEFAULT_MODEL);
+    const maxTokens = isPublic ? 1600 : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
+    const model = isPublic ? DEFAULT_MODEL : String(body.model ?? DEFAULT_MODEL);
     const started = Date.now();
     const log = (msg: string, extra?: Record<string, unknown>) =>
       req.log.info({ event: msg, ...extra });
 
+    if (isPublic) await recordPublicAsk(db);
     reply.hijack();
     reply.raw.writeHead(200, {
       "content-type": "application/x-ndjson; charset=utf-8",
