@@ -3,8 +3,9 @@
 //
 // Enabled with ASK_PUBLIC=on. Visitors without a beta key get in, bounded two
 // ways so the till can't be drained:
-//   - per-visitor daily cap (ASK_PUBLIC_DAILY_PER_IP, default 20) — in-memory,
-//     which is sound only while dig-api runs a single machine
+//   - per-visitor daily cap (ASK_PUBLIC_DAILY_PER_IP, default 20) — in-memory
+//     and therefore per-machine: with dig-api's two machines a visitor can get
+//     up to 2x this. Approximate by design; the monthly cap is the hard wall
 //   - global monthly cap (ASK_PUBLIC_MONTHLY_MAX, default 400 asks) — durable,
 //     stored in enrich.usage_counters so restarts and deploys don't reset it
 // Refusals speak in voice; the shop is shut, not "rate limited".
