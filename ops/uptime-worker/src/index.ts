@@ -41,6 +41,8 @@ export interface Env {
   FLY_TOKEN_DIG_API?: string;
   /** Optional. POSTed a JSON summary whenever the watchdog acts or gives up. */
   NOTIFY_WEBHOOK?: string;
+  /** Optional. ntfy.sh topic — every notify() also lands as a push notification. */
+  NTFY_TOPIC?: string;
 }
 
 interface Target {
@@ -50,11 +52,26 @@ interface Target {
   healthUrl: string;
   /** Substring the body must contain for the response to count as healthy. */
   expect: string;
+  /**
+   * Watch and report, never restart. For the database: an automatic postgres
+   * restart is a bigger hammer than a watchdog should swing (2026-08-31: the
+   * DB was CPU-starved for 9+ hours and nobody knew — detection was the gap,
+   * not the fix, which was one human-approved restart command).
+   */
+  notifyOnly?: boolean;
 }
 
 const TARGETS: Target[] = [
   { app: "dig-web", healthUrl: "https://app.dig.baby/api/health", expect: '"status":"ok"' },
   { app: "dig-api", healthUrl: "https://dig-api.fly.dev/v1/health", expect: '"status":"ok"' },
+  // The api health body carries a live postgres probe; watching it here means
+  // DB trouble pages a human even while the api itself still answers.
+  {
+    app: "dig-db-scene",
+    healthUrl: "https://dig-api.fly.dev/v1/health",
+    expect: '"postgres":true',
+    notifyOnly: true,
+  },
 ];
 
 /** Consecutive failed polls before we act. At a 2-min cron: ~6 min of outage. */
@@ -163,6 +180,27 @@ async function restartMachine(env: Env, app: string, machine: FlyMachine): Promi
 
 async function notify(env: Env, payload: Record<string, unknown>): Promise<void> {
   console.log(JSON.stringify(payload));
+  if (env.NTFY_TOPIC) {
+    try {
+      // Plain text so the push notification reads like a sentence, not JSON.
+      const { event, app, ...rest } = payload;
+      await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+        method: "POST",
+        headers: {
+          Title: `dig watchdog: ${String(event)} ${String(app ?? "")}`.trim(),
+          Priority: event === "recovered" ? "default" : "high",
+          Tags: event === "recovered" ? "white_check_mark" : "rotating_light",
+        },
+        body: Object.entries(rest)
+          .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
+          .join("\n"),
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch (err) {
+      // Never let a broken notifier stop the watchdog doing its job.
+      console.error("ntfy failed", String(err));
+    }
+  }
   if (!env.NOTIFY_WEBHOOK) return;
   try {
     await fetch(env.NOTIFY_WEBHOOK, {
@@ -214,6 +252,22 @@ async function checkTarget(env: Env, target: Target, now: number): Promise<void>
     console.log(
       `${app} unhealthy (${state.consecutiveFailures}/${FAILURES_BEFORE_RESTART}): ${health.detail}`,
     );
+    await writeState(env, app, state);
+    return;
+  }
+
+  if (target.notifyOnly) {
+    // Page once per incident, then hold until recovery resets the flag.
+    if (!state.escalated) {
+      await notify(env, {
+        event: "unhealthy",
+        app,
+        consecutiveFailures: state.consecutiveFailures,
+        detail: health.detail,
+        message: "notify-only target — needs a human (no auto-restart)",
+      });
+      state.escalated = true;
+    }
     await writeState(env, app, state);
     return;
   }

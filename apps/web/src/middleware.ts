@@ -16,6 +16,20 @@ export function middleware(request: NextRequest) {
 
   if (isThrottledPath(pathname)) {
     const ip = clientIp(request);
+    // Sampled request log (1 in 20) so a crawl can be attributed by UA/IP.
+    // Both prior bot incidents (2026-08-07, 2026-08-31) stalled at "probably
+    // a crawler" because nothing on the request path recorded a user-agent.
+    if (Math.random() < 0.05) {
+      console.log(
+        JSON.stringify({
+          ts: new Date().toISOString(),
+          code: "ENTITY_REQ",
+          ip,
+          ua: request.headers.get("user-agent") ?? "",
+          path: pathname,
+        }),
+      );
+    }
     const result = hit(ip);
     if (!result.allowed) {
       console.warn(
