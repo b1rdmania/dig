@@ -321,6 +321,9 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
       <main className={s.col}>
         <p className={s.opener}>&ldquo;{opener}&rdquo;</p>
 
+        {/* Only mounted once there's a conversation — empty it just holds a
+            dead gap between the opener and the composer. */}
+        {(messages.length > 0 || loading) && (
         <div className={s.turns}>
           {messages.map((m, i) => (
             m.role === "user" ? (
@@ -366,6 +369,7 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
 
           <div ref={bottomRef} />
         </div>
+        )}
 
         <div className={s.composer}>
           <input
