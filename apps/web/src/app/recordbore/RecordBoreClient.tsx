@@ -244,10 +244,15 @@ export function RecordBoreClient({ opener }: { opener: string }) {
 
   return (
     <div className={styles.page}>
-      <PageHeading
-        title="Record Bore."
-        lede="House and techno, 1985–2008. He was talking before you walked in."
+      {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
+      <img
+        src="/recordbore-face.png"
+        alt=""
+        width={88}
+        height={96}
+        style={{ display: "block", marginBottom: "0.75rem" }}
       />
+      <PageHeading title="Record Bore." />
 
       <div className={styles.chatShell}>
         <div className={styles.thread}>
