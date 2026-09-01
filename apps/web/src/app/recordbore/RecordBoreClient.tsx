@@ -22,6 +22,73 @@ import s from "./recordbore.module.css";
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 const DAILY_ALLOWANCE = 20; // mirrors ASK_PUBLIC_DAILY_PER_IP; display only, server enforces
 
+// The Bore's own shop life, on top of the shared crate-digging fillers.
+// While he digs, the shop carries on: customers to argue with, biscuits,
+// Hard Wax stories. One line at a time, held long enough to read twice.
+const BORE_FILLERS = [
+  "Telling a new customer we haven't got any Nirvana…",
+  "Still explaining about the Nirvana. It's a house shop…",
+  "He's asking if we've got any Oasis now. Closing the shop…",
+  "Popped out for biscuits. Back…",
+  "Biscuit break. Earned…",
+  "Dunking a digestive…",
+  "Out of teabags. Serious situation…",
+  "Waiting for the kettle. It knows what it did…",
+  "Telling the Hard Wax story again. The long version…",
+  "Remembering the Hard Wax years. Nobody smiled. It was perfect…",
+  "Hard Wax would've had this filed by now. Standards…",
+  "Quoting Hard Wax rules at nobody…",
+  "On the phone to a man in Osaka about a test pressing…",
+  "Signing for a parcel from Berlin…",
+  "The postman's brought something I've waited months for. One sec…",
+  "Turning down a trade-in. All Ministry compilations…",
+  "Pricing up a box from a divorce…",
+  "Refusing to sell someone the shop copy…",
+  "Explaining why the good copy costs more. Because it's the good copy…",
+  "Explaining that 'rare' and 'good' aren't the same word…",
+  "Talking someone out of a picture disc…",
+  "Talking someone out of a bootleg. Slowly…",
+  "Explaining the difference between garage and garage…",
+  "Someone just said 'EDM' in my shop…",
+  "Recovering from someone saying 'EDM'…",
+  "Someone's asking if we buy CDs. We don't buy CDs…",
+  "Being asked if this is 'the vinyl shop'. It's a record shop…",
+  "Watching a customer file R&S under R…",
+  "Refiling everything a school trip touched…",
+  "A student's asking for 'anything Balearic'. Sitting them down…",
+  "Arguing about whether '92 was better than '93. It was '93…",
+  "Telling the story about the Basic Channel rep. Again…",
+  "Remembering what this sounded like at The End…",
+  "Remembering a night at Lost I never talk about…",
+  "Thinking about Detroit. Give me a minute…",
+  "Reading a run-out etching under the lamp…",
+  "Steaming a stubborn price sticker…",
+  "Peeling fifteen years of stickers off a sleeve…",
+  "Playing the intro again just to be sure…",
+  "Checking the ledger for who bought the last one. Won't say…",
+  "Ignoring an email from a streaming service…",
+  "Ignoring a man selling card machines…",
+  "The rep from the distributor's here. Hiding…",
+  "The cat's on the Chicago section again…",
+  "Moving the cat. She only likes electro…",
+  "Locking the door so I can think…",
+  "Turned the sign round. It lies…",
+  "Someone's whistling in the shop. Dealing with it…",
+  "Confiscating a coffee from above the racks…",
+  "Moving a pint glass off the counter. Not mine…",
+  "Telling a customer the record they want is 'in the back'. It isn't…",
+  "In the cellar. If I'm not back in five, buy something…",
+  "Found a record I forgot I loved. Give me a moment…",
+  "Having a moment with a B-side…",
+  "Straightening the Theo Parrish divider. It earns it…",
+  "Arguing with the delivery man about where the boxes go…",
+  "Someone's parked a pram against the 12-inches…",
+  "Explaining we don't do requests. Taking the request…",
+  "Writing 'NOT FOR SALE' on something in biro…",
+];
+
+const FILLERS = [...FILLER_PHRASES, ...BORE_FILLERS];
+
 type RBMessage = Message & { shopShut?: boolean };
 
 interface RecMeta {
@@ -143,11 +210,11 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
       setActivityLine((prev) => {
         let next = prev;
         while (next === prev) {
-          next = FILLER_PHRASES[Math.floor(Math.random() * FILLER_PHRASES.length)];
+          next = FILLERS[Math.floor(Math.random() * FILLERS.length)];
         }
         return next;
       });
-    }, 13000);
+    }, 17000);
     return () => window.clearInterval(id);
   }, [loading]);
 
@@ -363,7 +430,7 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
 
           {loading && (
             <div className={s.bore}>
-              <p className={s.activity}>{activityLine || FILLER_PHRASES[0]}</p>
+              <p className={s.activity}>{activityLine || FILLERS[0]}</p>
             </div>
           )}
 
