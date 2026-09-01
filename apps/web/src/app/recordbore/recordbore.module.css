@@ -1,7 +1,7 @@
 /* Record Bore — design pass 2 (Andy's brief, 09-01): less UI, less art
-   direction, more Record Bore. One characterful serif for the Bore, mono for
-   metadata, warm ground, black/red only. The personality is the writing; the
-   wojak is the joke; the layout stays out of the way. */
+   direction, more Record Bore. dig's own type system (Plex Sans + system
+   mono — no route webfonts), warm ground, black/red only. The personality is
+   the writing; the wojak is the joke; the layout stays out of the way. */
 
 .wrap {
   --ground: #F2EDE3;
@@ -9,9 +9,11 @@
   --red: #C8321E;
   --grey: #6b6558;
   --hairline: rgba(0, 0, 0, .08);
-  --serif: var(--rb-serif), Georgia, serif;
-  --mono: var(--rb-mono), Menlo, monospace;
-  --sans: system-ui, -apple-system, sans-serif;
+  /* dig's own type system — Plex Sans (global --font-sans) for everything,
+     system mono (--font-mono-data) for data. No route webfonts. */
+  --voice: var(--font-sans);
+  --mono: var(--font-mono-data);
+  --sans: var(--font-sans);
 
   /* Full-bleed breakout from the dig layout's padded <main>. */
   width: 100vw;
@@ -63,13 +65,12 @@ main.col {
   flex-shrink: 0;
 }
 .title {
-  font-family: var(--serif);
-  font-weight: 700;
-  font-size: 52px;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 46px;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   margin: 0;
-  font-optical-sizing: auto;
 }
 .dot { color: var(--red); }
 .tagline {
@@ -117,18 +118,18 @@ main.col {
 }
 .bore p {
   margin: 0 0 12px;
-  font-family: var(--serif);
-  font-size: 19px;
-  line-height: 1.55;
+  font-family: var(--voice);
+  font-size: 17px;
+  line-height: 1.6;
 }
 .bore p:last-child { margin-bottom: 0; }
 .bore a { color: var(--red); }
 .bore a:hover { color: #a12717; }
 .activity {
   margin: 0;
-  font-family: var(--serif);
-  font-size: 19px;
-  line-height: 1.55;
+  font-family: var(--voice);
+  font-size: 17px;
+  line-height: 1.6;
   color: var(--grey);
 }
 .plain {
