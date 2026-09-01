@@ -361,7 +361,7 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
 
   return (
     <div className={s.wrap}>
-      <header className={`${s.col} ${s.header}`}>
+      <main className={s.col}>
         <a className={s.home} href="/">&larr; home</a>
         <div className={s.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
@@ -369,10 +369,8 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
           <h1 className={s.title}>Record Bore<span className={s.dot}>.</span></h1>
         </div>
         <p className={s.tagline}>Ask about records. I&rsquo;ll probably disagree.</p>
-      </header>
 
-      <main className={s.col}>
-        <p className={s.nowPlaying}><span className={s.dotlive} />{strip}</p>
+        <p className={s.nowPlaying}><span className={s.dotlive} /><span>{strip}</span></p>
 
         <div className={`${s.bore} ${s.openerBlock}`}><p>{opener}</p></div>
 

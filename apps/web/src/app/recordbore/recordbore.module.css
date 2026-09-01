@@ -9,10 +9,10 @@
   --red: #C8321E;
   --grey: #6b6558;
   --hairline: rgba(0, 0, 0, .08);
-  /* dig's own type system — Plex Sans (global --font-sans) for everything,
-     system mono (--font-mono-data) for data. No route webfonts. */
+  /* dig's own type system: Plex Sans for EVERYTHING (mono is reserved for
+     workings/keys sitewide, and this page has none). Three levels only:
+     wordmark 600, voice 17px ink, utility 13px grey. */
   --voice: var(--font-sans);
-  --mono: var(--font-mono-data);
   --sans: var(--font-sans);
 
   /* Full-bleed breakout from the dig layout's padded <main>. */
@@ -43,12 +43,10 @@ main.col {
 }
 
 /* header — tight; the wojak sits next to restrained type, which is the joke */
-.header {
-  padding: 26px 0 0;
-}
+.col { padding-top: 26px; }
 .home {
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--sans);
+  font-size: 13px;
   color: var(--grey);
   text-decoration: none;
 }
@@ -83,12 +81,17 @@ main.col {
 /* now playing — one plain line, no ticker theatre */
 .nowPlaying {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
-  margin: 20px 0 0;
-  font-family: var(--mono);
-  font-size: 12.5px;
+  margin: 16px 0 0;
+  font-family: var(--sans);
+  font-size: 13px;
   color: var(--grey);
+}
+.nowPlaying span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .dotlive {
   width: 6px;
@@ -96,14 +99,12 @@ main.col {
   border-radius: 50%;
   background: var(--red);
   flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 6px;
   animation: pulse 2s infinite;
 }
 @keyframes pulse { 50% { opacity: .35; } }
 
 /* conversation — normal well-set text, no bubbles, no labels */
-.openerBlock { margin-top: 26px; }
+.openerBlock { margin-top: 24px; }
 .turns {
   display: flex;
   flex-direction: column;
@@ -134,8 +135,8 @@ main.col {
 }
 .plain {
   margin: 0;
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--sans);
+  font-size: 13px;
   color: var(--grey);
 }
 .shutFace {
@@ -199,12 +200,12 @@ main.col {
   min-width: 0;
 }
 .recTitle {
-  font-family: var(--mono);
-  font-size: 13px;
+  font-family: var(--sans);
+  font-size: 14px;
   font-weight: 500;
 }
 .recSub {
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 12px;
   color: var(--grey);
 }
@@ -215,7 +216,7 @@ main.col {
   align-items: center;
 }
 .recAct {
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 12px;
   color: var(--red);
   text-decoration: none;
@@ -252,14 +253,15 @@ main.col {
   background: none;
   outline: none;
   font-family: var(--sans);
-  font-size: 16px;
+  font-size: 15px;
   color: var(--ink);
-  padding: 6px 0 10px;
+  padding: 6px 0 9px;
 }
 .input::placeholder { color: #a39b8a; }
 .send {
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 13px;
+  font-weight: 500;
   color: var(--red);
   background: none;
   border: 0;
@@ -274,9 +276,9 @@ main.col {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 10px;
-  margin-top: 12px;
-  font-family: var(--mono);
-  font-size: 12.5px;
+  margin-top: 14px;
+  font-family: var(--sans);
+  font-size: 13px;
   color: var(--grey);
 }
 .suggest button {
@@ -291,10 +293,10 @@ main.col {
 .suggestSep { color: var(--grey); }
 
 .cap {
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--sans);
+  font-size: 13px;
   color: var(--grey);
-  margin: 14px 0 56px;
+  margin: 12px 0 56px;
 }
 
 @media (max-width: 600px) {
