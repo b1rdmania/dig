@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { extractYouTubeId } from "@/lib/media";
 import {
   ACK_PHRASES,
   FILLER_PHRASES,
@@ -50,31 +51,68 @@ function todayKey(): string {
   return `rb.asks.${new Date().toISOString().slice(0, 10)}`;
 }
 
+// Media items are one-per-video; the crate is one-per-record. First video wins
+// (it's the one the answer's citation bound first).
+function dedupeByMaster(media: MediaItem[]): MediaItem[] {
+  const seen = new Set<number>();
+  return media.filter((m) => !seen.has(m.discogs_id) && seen.add(m.discogs_id));
+}
+
 function CrateRow({ item, meta }: { item: MediaItem; meta?: RecMeta }) {
+  const [playing, setPlaying] = useState(false);
   const artist = (meta?.artist ?? item.artist)?.replace(/\s+\(\d+\)$/, "");
   const title = meta?.title ?? item.title;
   const sub = [meta?.label, meta?.year].filter(Boolean).join(" · ");
+  const ytId = extractYouTubeId(item.youtube_url);
   return (
-    <div className={s.record}>
-      <div className={s.sleeve}>
-        {meta?.cover && (
-          // eslint-disable-next-line @next/next/no-img-element -- external CAA image, next/image can't optimise it
-          <img className={s.sleeveImg} src={meta.cover} alt="" loading="lazy" />
-        )}
+    <>
+      <div className={s.record}>
+        <button
+          type="button"
+          className={s.sleeveBtn}
+          onClick={() => ytId && setPlaying((p) => !p)}
+          aria-label={playing ? `Stop ${title}` : `Play ${title}`}
+          disabled={!ytId}
+        >
+          <span className={s.sleeve}>
+            {meta?.cover && (
+              // eslint-disable-next-line @next/next/no-img-element -- external CAA image, next/image can't optimise it
+              <img className={s.sleeveImg} src={meta.cover} alt="" loading="lazy" />
+            )}
+          </span>
+        </button>
+        <div className={s.recMeta}>
+          <span className={s.recTitle}>{artist ? `${artist} — ${title}` : title}</span>
+          {sub && <span className={s.recSub}>{sub}</span>}
+        </div>
+        <span className={s.recActs}>
+          {ytId && (
+            <button type="button" className={s.recAct} onClick={() => setPlaying((p) => !p)}>
+              {playing ? "stop ■" : "listen ▶"}
+            </button>
+          )}
+          <a
+            className={s.recAct}
+            href={`https://www.discogs.com/sell/list?master_id=${item.discogs_id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            on Discogs &rarr;
+          </a>
+        </span>
       </div>
-      <div className={s.recMeta}>
-        <span className={s.recTitle}>{artist ? `${artist} — ${title}` : title}</span>
-        {sub && <span className={s.recSub}>{sub}</span>}
-      </div>
-      <a
-        className={s.recAct}
-        href={`https://www.discogs.com/sell/list?master_id=${item.discogs_id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        on Discogs &rarr;
-      </a>
-    </div>
+      {playing && ytId && (
+        <div className={s.playerRow}>
+          <iframe
+            className={s.player}
+            src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1`}
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            title={title}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -309,7 +347,7 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
                 )}
                 {(m.media?.length ?? 0) > 0 && (
                   <div className={s.crate}>
-                    {m.media!.map((item) => (
+                    {dedupeByMaster(m.media!).map((item) => (
                       <CrateRow key={item.discogs_id} item={item} meta={recMeta[item.discogs_id]} />
                     ))}
                   </div>
