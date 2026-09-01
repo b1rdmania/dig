@@ -152,3 +152,5 @@ export {
   type RelationshipEdge,
   type ContextBlock,
 } from "./enrichment.js";
+
+export { loadRecordBorePersona } from "./persona.js";

@@ -1,0 +1,354 @@
+/* Record Bore — ported verbatim from the approved mock
+   (~/Documents/record-bore-mock/index.html, whitepaper §7 P4).
+   Values are the mock's; don't "improve" past it. */
+
+.wrap {
+  --ground: #F2EDE3;
+  --ink: #232019;
+  --red: #C8321E;
+  --grey: #6b6558;
+  --hairline: rgba(0, 0, 0, .08);
+  --serif: var(--rb-serif), Georgia, serif;
+  --cond: var(--rb-cond), "Arial Narrow", sans-serif;
+  --mono: var(--rb-mono), Menlo, monospace;
+  --sans: system-ui, -apple-system, sans-serif;
+
+  /* Full-bleed breakout: the root layout's <main> pads and centres every
+     dig page; the Bore's page owns the whole viewport (strip is edge to
+     edge in the mock). */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-top: calc(-1 * var(--sp-7));
+  margin-bottom: calc(-1 * var(--sp-8));
+  min-height: 100vh;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+@media (max-width: 768px) {
+  .wrap {
+    margin-top: calc(-1 * var(--sp-6));
+    margin-bottom: calc(-1 * var(--sp-7));
+  }
+}
+.wrap::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+.col {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+/* The content <main> inherits globals.css's tag styling (paper background,
+   page padding, min-height) — neutralise it; the Bore's ground is the wrap's. */
+main.col {
+  background: transparent;
+  padding: 0 24px;
+  min-height: 0;
+}
+
+/* masthead */
+.header {
+  padding: 40px 0 0;
+  text-align: center;
+}
+.home {
+  float: left;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--grey);
+  text-decoration: none;
+}
+.home:hover { color: var(--grey); }
+.masthead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  text-align: center;
+}
+.face {
+  width: 110px;
+  height: auto;
+  flex-shrink: 0;
+}
+.title {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 72px;
+  line-height: .95;
+  letter-spacing: -0.02em;
+  margin: 0;
+  font-optical-sizing: auto;
+}
+.dot { color: var(--red); }
+.tagline {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--grey);
+  margin: 2px 0 0;
+}
+
+/* NTS strip */
+.strip {
+  background: var(--ink);
+  color: var(--ground);
+  margin-top: 36px;
+}
+.stripInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+.dotlive {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse { 50% { opacity: .35; } }
+.stripText {
+  font-family: var(--cond);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* voice */
+.opener {
+  font-family: var(--serif);
+  font-size: 26px;
+  line-height: 1.45;
+  font-style: italic;
+  font-weight: 500;
+  margin: 40px 0 0;
+  text-align: center;
+}
+.turns {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin-top: 44px;
+}
+.you {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.youLabel {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .12em;
+  color: var(--grey);
+}
+.youText {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--grey);
+}
+.bore p {
+  margin: 0 0 14px;
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.6;
+}
+.bore a { color: var(--red); }
+.bore a:hover { color: #a12717; }
+.activity {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.6;
+  font-style: italic;
+  color: var(--grey);
+}
+.plain {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--grey);
+}
+.shutFace {
+  width: 56px;
+  height: auto;
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* record furniture */
+.crate {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid var(--hairline);
+  margin: 22px 0 8px;
+}
+.record {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.sleeve {
+  width: 64px;
+  height: 64px;
+  background: var(--ink);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.sleeve::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1.5px solid rgba(242, 237, 227, .55);
+  border-radius: 50%;
+}
+.sleeveImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+.recMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--mono);
+  min-width: 0;
+}
+.recTitle {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.recSub {
+  font-size: 12px;
+  color: var(--grey);
+}
+.recAct {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--red);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.recAct:hover { text-decoration: underline; color: var(--red); }
+
+/* composer */
+.composer {
+  margin: 48px 0 10px;
+  background: rgba(255, 255, 255, .55);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .04);
+  padding: 14px 14px 10px;
+}
+.input {
+  width: 100%;
+  border: 0;
+  background: none;
+  outline: none;
+  font-family: var(--sans);
+  font-size: 16px;
+  color: var(--ink);
+  padding: 4px 2px 14px;
+}
+.input::placeholder { color: #a39b8a; }
+.cRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.counter {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--grey);
+}
+.send {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.send:hover { background: var(--red); }
+.send:disabled { cursor: default; opacity: .55; }
+.send:disabled:hover { background: var(--ink); }
+.send svg {
+  width: 15px;
+  height: 15px;
+  stroke: var(--ground);
+}
+
+.suggest {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+.suggest button {
+  flex: 1;
+  background: rgba(0, 0, 0, .03);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-decoration: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.suggest button:hover { background: rgba(0, 0, 0, .055); }
+.sT {
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 600;
+  display: block;
+}
+.sD {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--grey);
+  display: block;
+  margin-top: 3px;
+}
+
+.cap {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--grey);
+  margin: 18px 0 64px;
+}
+
+@media (max-width: 600px) {
+  .title { font-size: 48px; }
+  .face { width: 84px; }
+  .suggest { flex-direction: column; }
+}

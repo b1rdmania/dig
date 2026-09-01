@@ -232,8 +232,8 @@ function rateLimitMiddleware(req: express.Request, res: express.Response, next: 
 function buildServer(): McpServer {
 const server = new McpServer(
   {
-    name: "dig-catalog",
-    version: "0.5.0",
+    name: "record-bore",
+    version: "0.7.0",
   },
   // Served to clients at initialize time — the connector's CLAUDE.md.
   { instructions: SERVER_INSTRUCTIONS },

@@ -8,6 +8,8 @@ export function Footer() {
   const pathname = usePathname();
   // The pilot page is instructions only — no chrome at all.
   if (pathname === "/pilot") return null;
+  // Record Bore owns his whole page (mock is the design truth) — no dig chrome.
+  if (pathname === "/recordbore") return null;
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>

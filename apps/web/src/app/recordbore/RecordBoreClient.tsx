@@ -1,34 +1,101 @@
 "use client";
 
-// Record Bore — the shop chat with the counter facing the street. Same thread
-// as /llm-beta (shared pieces imported from there) minus the key screen: the
-// API's public gate does the bouncing, and its 429s arrive in voice, so they
-// render as the Bore talking, not as errors.
+// Record Bore — built to the approved mock (~/Documents/record-bore-mock/
+// index.html, whitepaper §7 P4). One centred column; the Bore's text sits on
+// the page ground, no bubbles, no per-message avatars. The API's public gate
+// does the bouncing and its 429s arrive in voice, so they render as the Bore
+// talking (with the face — a punctuation moment per P1), not as errors.
 
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { extractYouTubeId } from "@/lib/media";
-
 import {
   ACK_PHRASES,
   FILLER_PHRASES,
-  VideoRail,
   linkifyPlainUrls,
-  type EvidenceItem,
   type MediaItem,
   type Message,
   type ResponseMode,
 } from "../llm-beta/LlmBetaClient";
-import styles from "../llm-beta/page.module.css";
+import s from "./recordbore.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
+const DAILY_ALLOWANCE = 20; // mirrors ASK_PUBLIC_DAILY_PER_IP; display only, server enforces
 
-export function RecordBoreClient({ opener, media }: { opener: string; media?: MediaItem[] }) {
-  const openerMessage: Message = { role: "assistant", content: opener, media };
+type RBMessage = Message & { shopShut?: boolean };
+
+interface RecMeta {
+  // Canonical record name — media items arrive titled by their YouTube
+  // caption ("Substance - Relish (Dub Edit)"), not the record.
+  title: string | null;
+  artist: string | null;
+  label: string | null;
+  year: number | null;
+  cover: string | null;
+}
+
+const SUGGESTIONS = [
+  {
+    t: "UK garage, 1997, the good year",
+    d: "Tuff Jam, Dem 2, and what the reissues missed",
+    q: "UK garage, 1997 — the good year. Tuff Jam, Dem 2, what did the reissues miss?",
+  },
+  {
+    t: "What's actually on Peacefrog?",
+    d: "Beyond the two records everyone owns",
+    q: "What's actually on Peacefrog beyond the two records everyone owns?",
+  },
+];
+
+function todayKey(): string {
+  return `rb.asks.${new Date().toISOString().slice(0, 10)}`;
+}
+
+function CrateRow({ item, meta }: { item: MediaItem; meta?: RecMeta }) {
+  const artist = (meta?.artist ?? item.artist)?.replace(/\s+\(\d+\)$/, "");
+  const title = meta?.title ?? item.title;
+  const sub = [meta?.label, meta?.year].filter(Boolean).join(" · ");
+  return (
+    <div className={s.record}>
+      <div className={s.sleeve}>
+        {meta?.cover && (
+          // eslint-disable-next-line @next/next/no-img-element -- external CAA image, next/image can't optimise it
+          <img className={s.sleeveImg} src={meta.cover} alt="" loading="lazy" />
+        )}
+      </div>
+      <div className={s.recMeta}>
+        <span className={s.recTitle}>{artist ? `${artist} — ${title}` : title}</span>
+        {sub && <span className={s.recSub}>{sub}</span>}
+      </div>
+      <a
+        className={s.recAct}
+        href={`https://www.discogs.com/sell/list?master_id=${item.discogs_id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        on Discogs &rarr;
+      </a>
+    </div>
+  );
+}
+
+export function RecordBoreClient({ strip, opener }: { strip: string; opener: string }) {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([openerMessage]);
+  const [messages, setMessages] = useState<RBMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [activityLine, setActivityLine] = useState<string>("");
+  const [left, setLeft] = useState(DAILY_ALLOWANCE);
+  const [recMeta, setRecMeta] = useState<Record<number, RecMeta>>({});
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fetchedIds = useRef(new Set<number>());
+
+  useEffect(() => {
+    try {
+      const used = Number(window.localStorage.getItem(todayKey()) ?? 0);
+      setLeft(Math.max(0, DAILY_ALLOWANCE - used));
+    } catch { /* no-op */ }
+  }, []);
 
   useEffect(() => {
     if (!loading) return;
@@ -43,41 +110,72 @@ export function RecordBoreClient({ opener, media }: { opener: string; media?: Me
     }, 13000);
     return () => window.clearInterval(id);
   }, [loading]);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  function resizeComposer() {
-    const el = inputRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
-  }
 
   useEffect(() => {
-    // Don't scroll the opener into view on load — only follow the thread once
-    // a conversation exists.
-    if (messages.length > 1) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 0) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Crate rows want label · year · sleeve; media items carry none of it.
+  // Backfill from the master detail + cover endpoints as answers arrive.
   useEffect(() => {
-    resizeComposer();
-  }, [input]);
+    for (const m of messages) {
+      for (const item of m.media ?? []) {
+        const id = item.discogs_id;
+        if (fetchedIds.current.has(id)) continue;
+        fetchedIds.current.add(id);
+        (async () => {
+          try {
+            const detail = await fetch(`${API_URL}/v1/masters/${id}`).then((r) => (r.ok ? r.json() : null)) as
+              { master?: { title?: string; year?: number; main_release_discogs_id?: number; primary_artist?: { name?: string }; primary_label?: { name?: string } } } | null;
+            const master = detail?.master;
+            let cover: string | null = null;
+            if (master?.main_release_discogs_id) {
+              const c = await fetch(`${API_URL}/v1/releases/${master.main_release_discogs_id}/cover`)
+                .then((r) => (r.ok ? r.json() : null)) as { cover?: { url?: string | null } | null } | null;
+              cover = c?.cover?.url ?? null;
+            }
+            setRecMeta((prev) => ({
+              ...prev,
+              [id]: {
+                title: master?.title ?? null,
+                artist: master?.primary_artist?.name ?? null,
+                label: master?.primary_label?.name ?? null,
+                year: master?.year ?? null,
+                cover,
+              },
+            }));
+          } catch { /* black sleeve block stays — the mock's own fallback */ }
+        })();
+      }
+    }
+  }, [messages]);
 
-  async function ask() {
-    const q = input.trim();
+  function countAsk() {
+    setLeft((prev) => Math.max(0, prev - 1));
+    try {
+      const key = todayKey();
+      window.localStorage.setItem(key, String(Number(window.localStorage.getItem(key) ?? 0) + 1));
+    } catch { /* no-op */ }
+  }
+
+  async function ask(question?: string) {
+    const q = (question ?? input).trim();
     if (!q || loading) return;
 
-    const nextMessages: Message[] = [...messages, { role: "user", content: q }];
+    const nextMessages: RBMessage[] = [...messages, { role: "user", content: q }];
     setMessages(nextMessages);
     setInput("");
     setActivityLine(ACK_PHRASES[Math.floor(Math.random() * ACK_PHRASES.length)]);
     setLoading(true);
+    countAsk();
 
     try {
-      const history = nextMessages.slice(0, -1).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      // The opener is a real turn of the conversation — the model should know
+      // it already spoke first.
+      const history = [
+        { role: "assistant" as const, content: opener },
+        ...nextMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
+      ];
 
       const res = await fetch(`${API_URL}/v1/ask/stream`, {
         method: "POST",
@@ -87,13 +185,13 @@ export function RecordBoreClient({ opener, media }: { opener: string; media?: Me
 
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => null) as { error?: { message: string }; mode?: ResponseMode } | null;
-        // The gate's refusals ("Shop's shut…") are the Bore speaking, not a
-        // fault — plain message, no error styling.
-        const shopShut = res.status === 429 && data?.error?.message;
+        const shopShut = res.status === 429 && !!data?.error?.message;
+        if (shopShut && /come back tomorrow/i.test(data!.error!.message)) setLeft(0);
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: data?.error?.message ?? "Till's jammed. Try again in a minute.",
           error: !shopShut,
+          shopShut,
           mode: data?.mode,
         }]);
         return;
@@ -112,8 +210,6 @@ export function RecordBoreClient({ opener, media }: { opener: string; media?: Me
           answer?: string;
           media?: MediaItem[];
           mode?: ResponseMode;
-          evidence?: EvidenceItem[];
-          meta?: { tool_calls?: number };
           error?: { code: string; message: string };
         };
         try {
@@ -130,8 +226,6 @@ export function RecordBoreClient({ opener, media }: { opener: string; media?: Me
             content: evt.answer ?? "",
             media: evt.media ?? [],
             mode: evt.mode,
-            evidence: evt.evidence ?? [],
-            tool_calls: evt.meta?.tool_calls ?? 0,
           }]);
         } else if (evt.type === "error") {
           sawTerminal = true;
@@ -162,182 +256,112 @@ export function RecordBoreClient({ opener, media }: { opener: string; media?: Me
       setLoading(false);
       setActivityLine("");
       inputRef.current?.focus();
-      resizeComposer();
-    }
-  }
-
-  async function bagItUp() {
-    const seen = new Set<number>();
-    const rows: Array<{ id: number; title: string; artist: string | null; ytId: string | null }> = [];
-    // Skip the opener (always index 0): the Bore put that record on the
-    // counter unasked — the bag holds what the customer actually dug for.
-    for (const m of messages.slice(1)) {
-      for (const item of m.media ?? []) {
-        if (seen.has(item.discogs_id)) continue;
-        seen.add(item.discogs_id);
-        rows.push({ id: item.discogs_id, title: item.title, artist: item.artist, ytId: extractYouTubeId(item.youtube_url) });
-      }
-      if (m.role !== "assistant" || m.error) continue;
-      const citedIds = [...m.content.matchAll(/app\.dig\.baby\/master\/(\d+)/g)].map((match) => Number(match[1]));
-      for (const id of citedIds) {
-        if (seen.has(id)) continue;
-        seen.add(id);
-        const ev = (m.evidence ?? []).find((e) => e.type === "master" && e.discogs_id === id);
-        rows.push({ id, title: ev?.title ?? `Master ${id}`, artist: null, ytId: null });
-      }
-    }
-    if (rows.length === 0) {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Nothing to bag yet — get me to actually recommend some records first.", error: true }]);
-      return;
-    }
-
-    await Promise.all(rows.map(async (r) => {
-      const needsVideo = !r.ytId;
-      try {
-        const [detailRes, videoRes] = await Promise.all([
-          fetch(`${API_URL}/v1/masters/${r.id}`),
-          needsVideo ? fetch(`${API_URL}/v1/masters/${r.id}/videos?limit=3`) : Promise.resolve(null),
-        ]);
-        if (detailRes?.ok) {
-          const d = await detailRes.json() as { master?: { title?: string; primary_artist?: { name?: string } } };
-          if (d.master?.title) r.title = d.master.title;
-          if (d.master?.primary_artist?.name) r.artist = d.master.primary_artist.name;
-        }
-        if (videoRes?.ok) {
-          const data = await videoRes.json() as { videos?: Array<{ url?: string }> };
-          for (const v of data.videos ?? []) {
-            const vid = extractYouTubeId(String(v.url ?? ""));
-            if (vid) { r.ytId = vid; break; }
-          }
-        }
-      } catch { /* leave the fallback label */ }
-    }));
-
-    const videoIds = rows.map((r) => r.ytId).filter(Boolean) as string[];
-    const lines: string[] = [];
-    lines.push(`Right — bagged up, ${rows.length} record${rows.length === 1 ? "" : "s"} from this session.`);
-    if (videoIds.length > 0) {
-      lines.push("");
-      lines.push(`▶ [Play the lot on YouTube](https://www.youtube.com/watch_videos?video_ids=${videoIds.join(",")})`);
-    }
-    lines.push("");
-    for (const r of rows) {
-      const artist = r.artist?.replace(/\s+\(\d+\)$/, "") ?? null;
-      const name = artist ? `${artist} — ${r.title}` : r.title;
-      const links = [
-        r.ytId ? `[listen](https://www.youtube.com/watch?v=${r.ytId})` : null,
-        `[buy](https://www.discogs.com/sell/list?master_id=${r.id})`,
-        `[dig](https://app.dig.baby/master/${r.id})`,
-      ].filter(Boolean).join(" · ");
-      lines.push(`${name} — ${links}`);
-      lines.push("");
-    }
-    setMessages((prev) => [...prev, { role: "assistant", content: lines.join("\n") }]);
-  }
-
-  const hasBaggableRecords = messages.slice(1).some((m) => (m.media?.length ?? 0) > 0 || (m.evidence ?? []).some((e) => e.type === "master"));
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      ask();
     }
   }
 
   return (
-    <div className={styles.page}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.9rem", margin: "0.5rem 0 1.5rem" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
-        <img src="/recordbore-face.png" alt="" width={56} height={61} style={{ display: "block" }} />
-        <span style={{ fontWeight: 600, fontSize: "1.3rem" }}>Record Bore.</span>
+    <div className={s.wrap}>
+      <header className={`${s.col} ${s.header}`}>
+        <a className={s.home} href="/">&larr; home</a>
+        <div className={s.masthead}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
+          <img className={s.face} src="/recordbore-face.png" alt="" width={110} height={120} />
+          <h1 className={s.title}>Record Bore<span className={s.dot}>.</span></h1>
+          <p className={s.tagline}>Ask me anything. I&rsquo;ll answer something better.</p>
+        </div>
+      </header>
+
+      <div className={s.strip}>
+        <div className={`${s.col} ${s.stripInner}`}>
+          <div className={s.dotlive} />
+          <span className={s.stripText}>{strip}</span>
+        </div>
       </div>
 
-      <div className={styles.chatShell}>
-        <div className={styles.thread}>
+      <main className={s.col}>
+        <p className={s.opener}>&ldquo;{opener}&rdquo;</p>
+
+        <div className={s.turns}>
           {messages.map((m, i) => (
-            <div key={i} className={m.role === "user" ? styles.userMsg : styles.assistantMsg}>
-              {m.role === "user" ? (
-                <p className={styles.userText}>{m.content}</p>
-              ) : (
-                <div className={styles.assistantContent}>
-                  {m.error ? (
-                    <p className={styles.errorText}>{m.content}</p>
-                  ) : (
-                    <>
-                      {m.mode === "grounded_empty" && (m.tool_calls ?? 0) > 0 && (
-                        <p className={styles.modeNote}>Nothing found in Dig for this query.</p>
-                      )}
-                      {m.mode === "timeout_degraded" && (
-                        <p className={styles.modeDegraded}>⚠ Retrieval partial — some data may be missing.</p>
-                      )}
-                      <div className={styles.markdown}>
-                        <ReactMarkdown
-                          components={{
-                            a: ({ href, children }) => (
-                              <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-                            ),
-                          }}
-                        >
-                          {linkifyPlainUrls(m.content)}
-                        </ReactMarkdown>
-                      </div>
-                    </>
-                  )}
-                  {m.media && m.media.length > 0 && <VideoRail media={m.media} />}
-                </div>
-              )}
-            </div>
+            m.role === "user" ? (
+              <div key={i} className={s.you}>
+                <span className={s.youLabel}>YOU</span>
+                <p className={s.youText}>{m.content}</p>
+              </div>
+            ) : (
+              <div key={i} className={s.bore}>
+                {m.shopShut && (
+                  // eslint-disable-next-line @next/next/no-img-element -- punctuation-moment face per whitepaper §7 P1
+                  <img className={s.shutFace} src="/recordbore-face.png" alt="" width={56} height={61} />
+                )}
+                {m.error ? (
+                  <p className={s.plain}>{m.content}</p>
+                ) : (
+                  <ReactMarkdown
+                    components={{
+                      a: ({ href, children }) => (
+                        <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                      ),
+                    }}
+                  >
+                    {linkifyPlainUrls(m.content)}
+                  </ReactMarkdown>
+                )}
+                {(m.media?.length ?? 0) > 0 && (
+                  <div className={s.crate}>
+                    {m.media!.map((item) => (
+                      <CrateRow key={item.discogs_id} item={item} meta={recMeta[item.discogs_id]} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
           ))}
 
           {loading && (
-            <div className={styles.assistantMsg}>
-              <p className={styles.activityLine}>{activityLine || FILLER_PHRASES[0]}</p>
+            <div className={s.bore}>
+              <p className={s.activity}>{activityLine || FILLER_PHRASES[0]}</p>
             </div>
           )}
 
           <div ref={bottomRef} />
         </div>
 
-        <div className={styles.inputBar}>
-          <textarea
+        <div className={s.composer}>
+          <input
             ref={inputRef}
-            className={styles.chatInput}
+            className={s.input}
+            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onFocus={() => {
-              window.setTimeout(() => {
-                inputRef.current?.scrollIntoView({ block: "nearest" });
-              }, 80);
-            }}
-            placeholder="What are you after?"
-            rows={1}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ask(); } }}
+            placeholder="Go on then."
             disabled={loading}
             autoCapitalize="sentences"
             autoCorrect="off"
             spellCheck={false}
           />
-          <button
-            className={styles.sendBtn}
-            onClick={ask}
-            disabled={loading || !input.trim()}
-            type="button"
-          >
-            {loading ? "..." : "→"}
-          </button>
+          <div className={s.cRow}>
+            <span className={s.counter}>{left} LEFT TODAY</span>
+            <button className={s.send} onClick={() => ask()} disabled={loading || !input.trim()} aria-label="Ask" type="button">
+              <svg viewBox="0 0 16 16" fill="none" strokeWidth="2" strokeLinecap="round"><path d="M8 13 V3 M3.5 7.5 L8 3 l4.5 4.5" /></svg>
+            </button>
+          </div>
         </div>
 
-        <div className={styles.inputMeta}>
-          {hasBaggableRecords && (
-            <button className={styles.clearKey} type="button" onClick={bagItUp} disabled={loading}>
-              Bag it up ▶
-            </button>
-          )}
-          <button className={styles.clearKey} type="button" onClick={() => setMessages([openerMessage])}>
-            Clear
-          </button>
-        </div>
-      </div>
+        {messages.length === 0 && (
+          <div className={s.suggest}>
+            {SUGGESTIONS.map((sug) => (
+              <button key={sug.t} type="button" onClick={() => ask(sug.q)}>
+                <span className={s.sT}>{sug.t}</span>
+                <span className={s.sD}>{sug.d}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <p className={s.cap}>You&rsquo;ve got {left} questions today. I lose interest after that.</p>
+      </main>
     </div>
   );
 }

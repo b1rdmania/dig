@@ -6,35 +6,47 @@ import { RecordBoreClient } from "./RecordBoreClient";
 export const metadata: Metadata = {
   title: "Record Bore.",
   description:
-    "A record shop bore with 80,000 house and techno records behind the counter. 1985–2008. He has opinions.",
+    "Ask me anything. I’ll answer something better. House and techno, 1985–2008, and opinions to match.",
 };
 
-// The Bore speaks first, about a real record. Regenerated every 5 minutes so
-// the opener rotates without costing an API call per visitor.
+// The strip and opener regenerate every 5 minutes so he's always mid-record
+// without costing an API call per visitor.
 export const revalidate = 300;
 
-// Rule 1 of the format: never introduces himself — he's mid-sentence when you
-// walk in. Every template is grounded in a record pulled from the corpus.
-const OPENER_TEMPLATES = [
-  "Mind the boxes. Someone was in earlier asking for {artist} and couldn't name a single record — [{title}]({url}), {year}, since you're wondering. What are you after?",
-  "That's not for sale, it's mine. If you want something decent off the shelf: {artist}, [{title}]({url}), {year}. Or tell me what you're actually after.",
-  "Just had [{title}]({url}) on — {artist}, {year}. Nobody buys it because nobody asks. Anyway. What do you want?",
-  "Don't lean on that rack. I've been refiling the {year}s all morning — {artist}'s [{title}]({url}) was in the wrong section, which tells you everything about the last customer. Go on then.",
-  "You've just missed the good copy of [{title}]({url}) — {artist}, {year}. There's another one about if you know how to ask. So?",
-  "Kettle's just gone on, so make it quick or make it interesting. Interesting looks like {artist}, [{title}]({url}), {year} — that sort of thing. Quick looks like the door.",
-  "I know the sleeve's ringworn, it's {year}, what do you expect. [{title}]({url}), {artist} — priced for someone who knows what it is. Are you that someone or are you browsing?",
-  "Phone's been going all day about records I haven't got. What I have got is [{title}]({url}) — {artist}, {year} — and no one's asked. Typical. What are you after?",
+// The now-playing strip carries the record (whitepaper §7 P3); the quip is
+// the tail of the strip line. Grounded: record comes from the corpus.
+const STRIP_QUIPS = [
+  "nobody buys it because nobody asks",
+  "the good copy went on Tuesday",
+  "wasted on the lot of you",
+  "filed wrong for a decade, found it this morning",
+  "louder than it needs to be, exactly right",
+  "don’t ask what it’s worth, ask why it matters",
+  "better than whatever you came in for",
+  "shop copy — not for sale, obviously",
 ];
 
-interface OpenerRecord {
+// Rule 1 of the constitution: he never introduces himself — the page opens on
+// a centred quote, mid-conversation. Pure voice; the record lives in the strip.
+const OPENER_QUOTES = [
+  "Anyway. What do you want? And don’t say Daft Punk — the answer’s Roulé and we both know it.",
+  "Mind the boxes. Browsing is fine, buying is better, asking is best.",
+  "Don’t lean on that rack. Ask me something worth dropping the needle for.",
+  "You’ve got the look of someone about to say ‘deep house’. Be more specific.",
+  "Kettle’s just gone on. Make it quick or make it interesting.",
+  "The good stuff isn’t in the window. It never is. Go on then.",
+  "I was in the middle of refiling the 12-inches, so this had better be good.",
+  "If you heard it on an advert, the door’s behind you. Otherwise — speak.",
+];
+
+interface StripRecord {
   id: number;
   title: string;
   artist: string;
   year: number;
-  video_id: string;
 }
 
-async function pickOpenerRecord(): Promise<OpenerRecord | null> {
+async function pickStripRecord(): Promise<StripRecord | null> {
   try {
     const { scenes } = await digFetch<ListScenesResponse>("/v1/scenes", { revalidate: 300 });
     if (scenes.length === 0) return null;
@@ -43,7 +55,6 @@ async function pickOpenerRecord(): Promise<OpenerRecord | null> {
       `/v1/scenes/${scene.slug}/playlist`,
       { revalidate: 300 },
     );
-    // Full records only — a template with a hole in it breaks the bit.
     const pool = playlist.records.filter((r) => r.primary_artist_name && r.year);
     if (pool.length === 0) return null;
     const r = pool[Math.floor(Math.random() * pool.length)];
@@ -52,7 +63,6 @@ async function pickOpenerRecord(): Promise<OpenerRecord | null> {
       title: r.title,
       artist: (r.primary_artist_name as string).replace(/\s+\(\d+\)$/, ""),
       year: r.year as number,
-      video_id: r.video_id,
     };
   } catch {
     return null;
@@ -60,24 +70,12 @@ async function pickOpenerRecord(): Promise<OpenerRecord | null> {
 }
 
 export default async function RecordBorePage() {
-  const record = await pickOpenerRecord();
-  if (!record) {
-    // Corpus unreachable — stay in voice, skip the record rather than fake one.
-    return <RecordBoreClient opener="Racks are half-sorted, don't touch anything. What are you after?" />;
-  }
-  const template = OPENER_TEMPLATES[Math.floor(Math.random() * OPENER_TEMPLATES.length)];
-  const opener = template
-    .replaceAll("{artist}", record.artist)
-    .replaceAll("{title}", record.title)
-    .replaceAll("{year}", String(record.year))
-    .replaceAll("{url}", `/master/${record.id}`);
-  // The record goes on the counter as a playable card, same shape as a real
-  // answer's media rail — dig link in the card meta, video behind the thumb.
-  const media = [{
-    discogs_id: record.id,
-    title: record.title,
-    artist: record.artist,
-    youtube_url: `https://www.youtube.com/watch?v=${record.video_id}`,
-  }];
-  return <RecordBoreClient opener={opener} media={media} />;
+  const record = await pickStripRecord();
+  const quip = STRIP_QUIPS[Math.floor(Math.random() * STRIP_QUIPS.length)];
+  // Corpus unreachable — strip stays in voice without inventing a record.
+  const strip = record
+    ? `Just had on — ${record.artist} · ${record.title} · ${record.year} · ${quip}`
+    : "Just had something on — you missed it";
+  const opener = OPENER_QUOTES[Math.floor(Math.random() * OPENER_QUOTES.length)];
+  return <RecordBoreClient strip={strip} opener={opener} />;
 }
