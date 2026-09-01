@@ -46,7 +46,7 @@ main.col {
 .col { padding-top: 26px; }
 .home {
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 13px;
   color: var(--grey);
   text-decoration: none;
 }
@@ -73,9 +73,9 @@ main.col {
 .dot { color: var(--red); }
 .tagline {
   font-family: var(--sans);
-  font-size: 17px;
+  font-size: 15px;
   color: var(--grey);
-  margin: 8px 0 0;
+  margin: 6px 0 0;
 }
 
 /* now playing — one plain line, no ticker theatre */
@@ -83,9 +83,9 @@ main.col {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 16px 0 0;
+  margin: 10px 0 0;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 13px;
   color: var(--grey);
 }
 .nowPlaying span:last-child {
@@ -104,7 +104,7 @@ main.col {
 @keyframes pulse { 50% { opacity: .35; } }
 
 /* conversation — normal well-set text, no bubbles, no labels */
-.openerBlock { margin-top: 24px; }
+.openerBlock { margin-top: 34px; }
 .turns {
   display: flex;
   flex-direction: column;
@@ -114,13 +114,13 @@ main.col {
 .youText {
   margin: 0;
   font-family: var(--sans);
-  font-size: 16px;
+  font-size: 15px;
   color: var(--grey);
 }
 .bore p {
   margin: 0 0 12px;
   font-family: var(--voice);
-  font-size: 19px;
+  font-size: 20px;
   line-height: 1.5;
 }
 .bore p:last-child { margin-bottom: 0; }
@@ -129,14 +129,14 @@ main.col {
 .activity {
   margin: 0;
   font-family: var(--voice);
-  font-size: 19px;
+  font-size: 20px;
   line-height: 1.5;
   color: var(--grey);
 }
 .plain {
   margin: 0;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 13px;
   color: var(--grey);
 }
 .shutFace {
@@ -206,7 +206,7 @@ main.col {
 }
 .recSub {
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 13px;
   color: var(--grey);
 }
 .recActs {
@@ -217,7 +217,8 @@ main.col {
 }
 .recAct {
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--red);
   text-decoration: none;
   white-space: nowrap;
@@ -253,14 +254,14 @@ main.col {
   background: none;
   outline: none;
   font-family: var(--sans);
-  font-size: 17px;
+  font-size: 16px;
   color: var(--ink);
   padding: 6px 0 9px;
 }
 .input::placeholder { color: #a39b8a; }
 .send {
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--red);
   background: none;
@@ -276,9 +277,9 @@ main.col {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 10px;
-  margin-top: 14px;
+  margin-top: 12px;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 13px;
   color: var(--grey);
 }
 .suggest button {
@@ -294,9 +295,9 @@ main.col {
 
 .cap {
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 13px;
   color: var(--grey);
-  margin: 12px 0 56px;
+  margin: 8px 0 56px;
 }
 
 @media (max-width: 600px) {
