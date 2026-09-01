@@ -101,19 +101,12 @@ interface RecMeta {
   cover: string | null;
 }
 
-// A card either asks (q) or hands the counter to the customer (fill — the
-// challenge only works if they name the record themselves).
-const SUGGESTIONS: Array<{ t: string; d: string; q?: string; fill?: string }> = [
-  {
-    t: "Name your favourite record",
-    d: "Go on. I'll tell you what you should have said",
-    fill: "My favourite record is ",
-  },
-  {
-    t: "UK garage, 1997, the good year",
-    d: "Tuff Jam, Dem 2, and what the reissues missed",
-    q: "UK garage, 1997 — the good year. Tuff Jam, Dem 2, what did the reissues miss?",
-  },
+// A suggestion either asks (q) or hands the counter to the customer (fill —
+// the challenge only works if they name the record themselves).
+const SUGGESTIONS: Array<{ t: string; q?: string; fill?: string }> = [
+  { t: "Name your favourite record", fill: "My favourite record is " },
+  { t: "Give me an overrated record", q: "Give me an overrated record." },
+  { t: "UK garage, 1997", q: "UK garage, 1997 — the good year. Tuff Jam, Dem 2, what did the reissues miss?" },
 ];
 
 function todayKey(): string {
@@ -372,21 +365,16 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
         <a className={s.home} href="/">&larr; home</a>
         <div className={s.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
-          <img className={s.face} src="/recordbore-face.png" alt="" width={110} height={120} />
+          <img className={s.face} src="/recordbore-face.png" alt="" width={54} height={59} />
           <h1 className={s.title}>Record Bore<span className={s.dot}>.</span></h1>
-          <p className={s.tagline}>Ask me anything. I&rsquo;ll answer something better.</p>
         </div>
+        <p className={s.tagline}>Ask about records. I&rsquo;ll probably disagree.</p>
       </header>
 
-      <div className={s.strip}>
-        <div className={`${s.col} ${s.stripInner}`}>
-          <div className={s.dotlive} />
-          <span className={s.stripText}>{strip}</span>
-        </div>
-      </div>
-
       <main className={s.col}>
-        <p className={s.opener}>&ldquo;{opener}&rdquo;</p>
+        <p className={s.nowPlaying}><span className={s.dotlive} />{strip}</p>
+
+        <div className={`${s.bore} ${s.openerBlock}`}><p>{opener}</p></div>
 
         {/* Only mounted once there's a conversation — empty it just holds a
             dead gap between the opener and the composer. */}
@@ -394,10 +382,7 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
         <div className={s.turns}>
           {messages.map((m, i) => (
             m.role === "user" ? (
-              <div key={i} className={s.you}>
-                <span className={s.youLabel}>YOU</span>
-                <p className={s.youText}>{m.content}</p>
-              </div>
+              <p key={i} className={s.youText}>{m.content}</p>
             ) : (
               <div key={i} className={s.bore}>
                 {m.shopShut && (
@@ -446,43 +431,47 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ask(); } }}
-            placeholder="Go on then."
+            placeholder={messages.length > 0 ? "Ask another stupid question." : "Go on then."}
             disabled={loading}
             autoCapitalize="sentences"
             autoCorrect="off"
             spellCheck={false}
           />
-          <div className={s.cRow}>
-            <span className={s.counter}>{left} LEFT TODAY</span>
-            <button className={s.send} onClick={() => ask()} disabled={loading || !input.trim()} aria-label="Ask" type="button">
-              <svg viewBox="0 0 16 16" fill="none" strokeWidth="2" strokeLinecap="round"><path d="M8 13 V3 M3.5 7.5 L8 3 l4.5 4.5" /></svg>
-            </button>
-          </div>
+          <button className={s.send} onClick={() => ask()} disabled={loading || !input.trim()} type="button">
+            ask &rarr;
+          </button>
         </div>
 
         {messages.length === 0 && (
           <div className={s.suggest}>
-            {SUGGESTIONS.map((sug) => (
-              <button
-                key={sug.t}
-                type="button"
-                onClick={() => {
-                  if (sug.fill) {
-                    setInput(sug.fill);
-                    inputRef.current?.focus();
-                  } else {
-                    ask(sug.q);
-                  }
-                }}
-              >
-                <span className={s.sT}>{sug.t}</span>
-                <span className={s.sD}>{sug.d}</span>
-              </button>
+            {SUGGESTIONS.map((sug, i) => (
+              <span key={sug.t}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (sug.fill) {
+                      setInput(sug.fill);
+                      inputRef.current?.focus();
+                    } else {
+                      ask(sug.q);
+                    }
+                  }}
+                >
+                  {sug.t}
+                </button>
+                {i < SUGGESTIONS.length - 1 && <span className={s.suggestSep}> &middot;</span>}
+              </span>
             ))}
           </div>
         )}
 
-        <p className={s.cap}>You&rsquo;ve got {left} questions today. I lose interest after that.</p>
+        <p className={s.cap}>
+          {left <= 0
+            ? "That's your lot. Come back tomorrow."
+            : left <= 5
+              ? `You are becoming demanding. ${left} left.`
+              : `You've got ${left} questions today. I lose interest after that.`}
+        </p>
       </main>
     </div>
   );
