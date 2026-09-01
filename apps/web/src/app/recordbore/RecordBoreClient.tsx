@@ -34,16 +34,18 @@ interface RecMeta {
   cover: string | null;
 }
 
-const SUGGESTIONS = [
+// A card either asks (q) or hands the counter to the customer (fill — the
+// challenge only works if they name the record themselves).
+const SUGGESTIONS: Array<{ t: string; d: string; q?: string; fill?: string }> = [
+  {
+    t: "Name your favourite record",
+    d: "Go on. I'll tell you what you should have said",
+    fill: "My favourite record is ",
+  },
   {
     t: "UK garage, 1997, the good year",
     d: "Tuff Jam, Dem 2, and what the reissues missed",
     q: "UK garage, 1997 — the good year. Tuff Jam, Dem 2, what did the reissues miss?",
-  },
-  {
-    t: "What's actually on Peacefrog?",
-    d: "Beyond the two records everyone owns",
-    q: "What's actually on Peacefrog beyond the two records everyone owns?",
   },
 ];
 
@@ -390,7 +392,18 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
         {messages.length === 0 && (
           <div className={s.suggest}>
             {SUGGESTIONS.map((sug) => (
-              <button key={sug.t} type="button" onClick={() => ask(sug.q)}>
+              <button
+                key={sug.t}
+                type="button"
+                onClick={() => {
+                  if (sug.fill) {
+                    setInput(sug.fill);
+                    inputRef.current?.focus();
+                  } else {
+                    ask(sug.q);
+                  }
+                }}
+              >
                 <span className={s.sT}>{sug.t}</span>
                 <span className={s.sD}>{sug.d}</span>
               </button>
