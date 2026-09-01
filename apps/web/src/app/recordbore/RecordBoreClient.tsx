@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { extractYouTubeId } from "@/lib/media";
-import { PageHeading } from "@/components/design";
+
 import {
   ACK_PHRASES,
   FILLER_PHRASES,
@@ -23,8 +23,8 @@ import styles from "../llm-beta/page.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 
-export function RecordBoreClient({ opener }: { opener: string }) {
-  const openerMessage: Message = { role: "assistant", content: opener };
+export function RecordBoreClient({ opener, media }: { opener: string; media?: MediaItem[] }) {
+  const openerMessage: Message = { role: "assistant", content: opener, media };
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([openerMessage]);
   const [loading, setLoading] = useState(false);
@@ -169,7 +169,9 @@ export function RecordBoreClient({ opener }: { opener: string }) {
   async function bagItUp() {
     const seen = new Set<number>();
     const rows: Array<{ id: number; title: string; artist: string | null; ytId: string | null }> = [];
-    for (const m of messages) {
+    // Skip the opener (always index 0): the Bore put that record on the
+    // counter unasked — the bag holds what the customer actually dug for.
+    for (const m of messages.slice(1)) {
       for (const item of m.media ?? []) {
         if (seen.has(item.discogs_id)) continue;
         seen.add(item.discogs_id);
@@ -233,7 +235,7 @@ export function RecordBoreClient({ opener }: { opener: string }) {
     setMessages((prev) => [...prev, { role: "assistant", content: lines.join("\n") }]);
   }
 
-  const hasBaggableRecords = messages.some((m) => (m.media?.length ?? 0) > 0 || (m.evidence ?? []).some((e) => e.type === "master"));
+  const hasBaggableRecords = messages.slice(1).some((m) => (m.media?.length ?? 0) > 0 || (m.evidence ?? []).some((e) => e.type === "master"));
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -244,15 +246,11 @@ export function RecordBoreClient({ opener }: { opener: string }) {
 
   return (
     <div className={styles.page}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
-      <img
-        src="/recordbore-face.png"
-        alt=""
-        width={88}
-        height={96}
-        style={{ display: "block", marginBottom: "0.75rem" }}
-      />
-      <PageHeading title="Record Bore." />
+      <div style={{ display: "flex", alignItems: "center", gap: "0.9rem", margin: "0.5rem 0 1.5rem" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
+        <img src="/recordbore-face.png" alt="" width={56} height={61} style={{ display: "block" }} />
+        <span style={{ fontWeight: 600, fontSize: "1.3rem" }}>Record Bore.</span>
+      </div>
 
       <div className={styles.chatShell}>
         <div className={styles.thread}>

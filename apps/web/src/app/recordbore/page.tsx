@@ -31,6 +31,7 @@ interface OpenerRecord {
   title: string;
   artist: string;
   year: number;
+  video_id: string;
 }
 
 async function pickOpenerRecord(): Promise<OpenerRecord | null> {
@@ -51,26 +52,32 @@ async function pickOpenerRecord(): Promise<OpenerRecord | null> {
       title: r.title,
       artist: (r.primary_artist_name as string).replace(/\s+\(\d+\)$/, ""),
       year: r.year as number,
+      video_id: r.video_id,
     };
   } catch {
     return null;
   }
 }
 
-function buildOpener(record: OpenerRecord | null): string {
+export default async function RecordBorePage() {
+  const record = await pickOpenerRecord();
   if (!record) {
     // Corpus unreachable — stay in voice, skip the record rather than fake one.
-    return "Racks are half-sorted, don't touch anything. What are you after?";
+    return <RecordBoreClient opener="Racks are half-sorted, don't touch anything. What are you after?" />;
   }
   const template = OPENER_TEMPLATES[Math.floor(Math.random() * OPENER_TEMPLATES.length)];
-  return template
+  const opener = template
     .replaceAll("{artist}", record.artist)
     .replaceAll("{title}", record.title)
     .replaceAll("{year}", String(record.year))
     .replaceAll("{url}", `/master/${record.id}`);
-}
-
-export default async function RecordBorePage() {
-  const opener = buildOpener(await pickOpenerRecord());
-  return <RecordBoreClient opener={opener} />;
+  // The record goes on the counter as a playable card, same shape as a real
+  // answer's media rail — dig link in the card meta, video behind the thumb.
+  const media = [{
+    discogs_id: record.id,
+    title: record.title,
+    artist: record.artist,
+    youtube_url: `https://www.youtube.com/watch?v=${record.video_id}`,
+  }];
+  return <RecordBoreClient opener={opener} media={media} />;
 }
