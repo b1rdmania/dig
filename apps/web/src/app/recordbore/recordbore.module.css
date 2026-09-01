@@ -9,11 +9,11 @@
   --red: #C8321E;
   --grey: #6b6558;
   --hairline: rgba(0, 0, 0, .08);
-  /* dig's own type system: Plex Sans for EVERYTHING (mono is reserved for
-     workings/keys sitewide, and this page has none). Three levels only:
-     wordmark 600, voice 17px ink, utility 13px grey. */
-  --voice: var(--font-sans);
-  --sans: var(--font-sans);
+  /* Times New Roman for everything (Andy, 09-01). Default-font brutalism:
+     the character carries the page, the typeface refuses to help. Hierarchy
+     from size and weight only. */
+  --voice: "Times New Roman", Times, serif;
+  --sans: "Times New Roman", Times, serif;
 
   /* Full-bleed breakout from the dig layout's padded <main>. */
   width: 100vw;
@@ -46,7 +46,7 @@ main.col {
 .col { padding-top: 26px; }
 .home {
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--grey);
   text-decoration: none;
 }
@@ -64,8 +64,8 @@ main.col {
 }
 .title {
   font-family: var(--sans);
-  font-weight: 600;
-  font-size: 46px;
+  font-weight: 700;
+  font-size: 50px;
   line-height: 1;
   letter-spacing: -0.01em;
   margin: 0;
@@ -73,7 +73,7 @@ main.col {
 .dot { color: var(--red); }
 .tagline {
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 17px;
   color: var(--grey);
   margin: 8px 0 0;
 }
@@ -85,7 +85,7 @@ main.col {
   gap: 8px;
   margin: 16px 0 0;
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--grey);
 }
 .nowPlaying span:last-child {
@@ -114,14 +114,14 @@ main.col {
 .youText {
   margin: 0;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--grey);
 }
 .bore p {
   margin: 0 0 12px;
   font-family: var(--voice);
-  font-size: 17px;
-  line-height: 1.6;
+  font-size: 19px;
+  line-height: 1.5;
 }
 .bore p:last-child { margin-bottom: 0; }
 .bore a { color: var(--red); }
@@ -129,14 +129,14 @@ main.col {
 .activity {
   margin: 0;
   font-family: var(--voice);
-  font-size: 17px;
-  line-height: 1.6;
+  font-size: 19px;
+  line-height: 1.5;
   color: var(--grey);
 }
 .plain {
   margin: 0;
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--grey);
 }
 .shutFace {
@@ -201,12 +201,12 @@ main.col {
 }
 .recTitle {
   font-family: var(--sans);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 700;
 }
 .recSub {
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--grey);
 }
 .recActs {
@@ -217,7 +217,7 @@ main.col {
 }
 .recAct {
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--red);
   text-decoration: none;
   white-space: nowrap;
@@ -253,15 +253,15 @@ main.col {
   background: none;
   outline: none;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 17px;
   color: var(--ink);
   padding: 6px 0 9px;
 }
 .input::placeholder { color: #a39b8a; }
 .send {
   font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--red);
   background: none;
   border: 0;
@@ -278,7 +278,7 @@ main.col {
   gap: 6px 10px;
   margin-top: 14px;
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--grey);
 }
 .suggest button {
@@ -294,7 +294,7 @@ main.col {
 
 .cap {
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--grey);
   margin: 12px 0 56px;
 }
