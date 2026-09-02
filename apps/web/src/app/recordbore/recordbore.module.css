@@ -114,14 +114,15 @@ main.col {
 .youText {
   margin: 0;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 17px;
+  line-height: 1.55;
   color: var(--grey);
 }
 .bore p {
   margin: 0 0 12px;
   font-family: var(--voice);
-  font-size: 20px;
-  line-height: 1.5;
+  font-size: 17px;
+  line-height: 1.55;
 }
 .bore p:last-child { margin-bottom: 0; }
 .bore a { color: var(--red); }
@@ -129,8 +130,8 @@ main.col {
 .activity {
   margin: 0;
   font-family: var(--voice);
-  font-size: 20px;
-  line-height: 1.5;
+  font-size: 17px;
+  line-height: 1.55;
   color: var(--grey);
 }
 .plain {
