@@ -42,6 +42,7 @@ import {
   getArtistCollaborators,
   getArtistGroupsAndMembers,
   type SearchEntityType,
+  getArtistIdentity,
 } from "@dig/domain";
 import { toolError, toolResult } from "./contracts.js";
 import { SERVER_INSTRUCTIONS } from "./instructions.js";
@@ -332,10 +333,11 @@ server.tool(
 
 server.tool(
   "get_artist",
-  "Get full details for an artist by Discogs ID. Returns name, real name, " +
-  "profile, aliases (denormalized text), genres/styles inferred from their " +
-  "in-scope catalog, URLs, and provenance. Slim shape: members, groups, and " +
-  "name_variations are no longer populated.",
+  "Get full details for an artist by Discogs ID: name, real name, profile, " +
+  "URLs, provenance, and the identity card - every alias resolved to its own " +
+  "in-scope ID with record count and years (names), aliases with no in-scope " +
+  "records (names_out_of_scope), groups, members, and credit roles held " +
+  "(credit_roles). Use alias IDs directly with get_artist_masters.",
   {
     discogs_id: z.number().int().min(1).describe("Discogs artist ID"),
   },
@@ -346,13 +348,27 @@ server.tool(
     let errorCode: string | null = null;
     try {
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.artists");
-      const artist = await getArtist(db, discogs_id, batchId, dumpDate);
+      const [artist, identity] = await Promise.all([
+        getArtist(db, discogs_id, batchId, dumpDate),
+        getArtistIdentity(db, discogs_id, batchId).catch(() => null),
+      ]);
       if (!artist) {
         status = "error";
         errorCode = "NOT_FOUND";
         return toolError("NOT_FOUND", `Artist ${discogs_id} not found`, { tool: "get_artist", requestId });
       }
-      return toolResult({ artist }, { tool: "get_artist", requestId });
+      return toolResult({
+        artist: {
+          ...artist,
+          aliases: (identity?.names ?? artist.aliases.map((a) => ({ discogs_id: a.discogs_id, name: a.name })))
+            .filter((n: any) => n.discogs_id !== artist.discogs_id),
+          names: identity?.names ?? [],
+          names_out_of_scope: identity?.names_out_of_scope ?? [],
+          groups: identity?.groups ?? artist.groups,
+          members: identity?.members ?? artist.members,
+          credit_roles: identity?.roles ?? [],
+        },
+      }, { tool: "get_artist", requestId });
     } catch (err: any) {
       console.error("[mcp] get_artist error:", err);
       status = "error";

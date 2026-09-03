@@ -47,6 +47,12 @@ export interface TraversalLink {
    * `link.master_discogs_id` regardless of link kind without a fallback.
    */
   master_discogs_id?: number | null;
+  /**
+   * The name this master was credited to (master_artists.artist_name). Set on
+   * artist → masters links so an alias-merged discography still says which
+   * name each record wore.
+   */
+  credited_as?: string | null;
   provenance: { source: "discogs"; dump_date: string; discogs_id: number };
 }
 
@@ -265,8 +271,9 @@ export async function getArtistMasters(
   cursor?: string,
   // Default chronological (oldest → newest). A producer's catalog tells a
   // story in time — watching it unfold matches how DJs/collectors narrate
-  // it. Callers can still pass `sort=newest` to get the reverse.
-  sort: "newest" | "oldest" = "oldest",
+  // it. Callers can still pass `sort=newest` to get the reverse, or
+  // `sort=curated` (scene_weight desc, then oldest) for "the good ones first".
+  sort: "newest" | "oldest" | "curated" = "oldest",
   releaseType: ReleaseType | "all" = "all",
   opts?: { includeAliases?: boolean },
 ): Promise<TraversalResponse> {
@@ -300,6 +307,8 @@ export async function getArtistMasters(
       "catalog.masters.primary_format",
       "catalog.masters.primary_artist_name",
       "catalog.masters.scene_weight",
+      "catalog.master_artists.artist_name",
+      "catalog.master_artists.artist_discogs_id",
       sql<number>`(
         SELECT COUNT(*)::int FROM catalog.master_tracks mt
         WHERE mt.master_discogs_id = catalog.masters.discogs_id
@@ -312,8 +321,12 @@ export async function getArtistMasters(
 
   // A master can have the same person credited under multiple aliases (e.g.
   // Larry Heard + Mr. Fingers both on one release) — dedupe on master id.
+  // When the same master carries several of the person's names, prefer the
+  // row credited to the name that was asked for.
   const seen = new Set<number>();
-  const classified = rows
+  const ordered = [...rows].sort((a, b) =>
+    Number(b.artist_discogs_id === artistDiscogsId) - Number(a.artist_discogs_id === artistDiscogsId));
+  const classified = ordered
     .filter((r) => {
       if (seen.has(r.discogs_id)) return false;
       seen.add(r.discogs_id);
@@ -330,6 +343,7 @@ export async function getArtistMasters(
         title: r.title,
         year: r.year,
         scene_weight: r.scene_weight,
+        credited_as: r.artist_name ?? null,
         release_type,
         release_type_label,
       };
@@ -340,6 +354,11 @@ export async function getArtistMasters(
     : classified.filter((r) => r.release_type === releaseType);
 
   filtered.sort((a, b) => {
+    if (sort === "curated") {
+      const wa = a.scene_weight ?? -1;
+      const wb = b.scene_weight ?? -1;
+      if (wa !== wb) return wb - wa;
+    }
     const dir = sort === "newest" ? -1 : 1;
     const ya = a.year ?? (sort === "newest" ? -Infinity : Infinity);
     const yb = b.year ?? (sort === "newest" ? -Infinity : Infinity);
@@ -366,6 +385,7 @@ export async function getArtistMasters(
       release_type: r.release_type,
       release_type_label: r.release_type_label,
       scene_weight: r.scene_weight,
+      credited_as: r.credited_as,
       provenance: { source: "discogs" as const, dump_date: dumpDate, discogs_id: r.discogs_id },
     })),
     pagination: {

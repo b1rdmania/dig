@@ -19,6 +19,7 @@ import {
   getArtistRuleACredits,
   getArtistCollaborators,
   getArtistGroupsAndMembers,
+  getArtistIdentity,
 } from "@dig/domain";
 import type { MediaItem, EvidenceItem } from "./types.js";
 import { isAllowedMasterId, INVALID_MASTER_ID_ERROR } from "./binding.js";
@@ -46,7 +47,7 @@ export const TOOLS = [
   {
     name: "get_artist",
     description:
-      "Get full details for an artist by Discogs ID: name, aliases, genres, styles, biography. Use after search_catalog returns an artist ID.",
+      "The whole person behind an artist ID. Returns the identity card: real name, every alias resolved to its own ID with how many records it made and when, groups and members, and the credit roles they hold (remix, produce, engineer, mix, master, write, vocal) with counts. One call replaces searching each alias by name. Use the alias IDs directly with get_artist_masters and the role names with get_artist_credits.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -82,7 +83,7 @@ export const TOOLS = [
   {
     name: "get_artist_masters",
     description:
-      "Get an artist's catalog of masters in the scene - albums, EPs, singles. Always try this first for any artist catalog query. Returns titles, years, and Dig URLs you should link.",
+      "Records credited to an artist ID, best first (curation weight), each row saying which name it was credited to. By default an alias ID returns that alias alone (Loosefingers = only the Loosefingers records). Pass include_aliases=true to get the whole person's catalogue merged across every alias. The tool for discographies and the video rail.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -93,6 +94,7 @@ export const TOOLS = [
           description: "Filter by type. Use 'album' for main studio releases, 'all' for everything. Default: 'all'.",
         },
         limit: { type: "number", description: "Number of masters to return (1-20, default 12)" },
+        include_aliases: { type: "boolean", description: "true = merge every alias of this person into one list. Default false = only records credited to this exact name." },
       },
       required: ["discogs_id"],
     },
@@ -237,16 +239,36 @@ export async function executeTool(
     if (name === "get_artist") {
       const id = Number(input.discogs_id);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.artists");
-      const d = await getArtist(db, id, batchId, dumpDate) as any;
+      const [d, identity] = await Promise.all([
+        getArtist(db, id, batchId, dumpDate) as Promise<any>,
+        getArtistIdentity(db, id, batchId).catch(() => null),
+      ]);
       if (!d) { errorRef.count++; return { error: "Artist not found" }; }
       evidenceCollector.push({ type: "artist", discogs_id: d.discogs_id, title: d.name, dig_url: `https://app.dig.baby/artist/${d.discogs_id}` });
+      // Every resolved alias is a real in-scope artist the model may now link.
+      for (const n of identity?.names ?? []) {
+        if (n.discogs_id !== d.discogs_id) {
+          evidenceCollector.push({ type: "artist", discogs_id: n.discogs_id, title: n.name, dig_url: `https://app.dig.baby/artist/${n.discogs_id}` });
+        }
+      }
       return {
         discogs_id: d.discogs_id,
         name: d.name,
         real_name: d.real_name ?? null,
         genres: d.genres ?? [],
         styles: d.styles ?? [],
-        aliases: d.aliases?.map((a: any) => a.name) ?? [],
+        // Identity card: each name with its own ID, record count and years.
+        names: (identity?.names ?? []).map((n) => ({
+          discogs_id: n.discogs_id,
+          name: n.name,
+          records: n.masters,
+          years: n.year_min ? `${n.year_min}-${n.year_max ?? n.year_min}` : null,
+          dig_url: `https://app.dig.baby/artist/${n.discogs_id}`,
+        })),
+        names_out_of_scope: identity?.names_out_of_scope ?? d.aliases?.map((a: any) => a.name) ?? [],
+        groups: (identity?.groups ?? []).map((g) => ({ discogs_id: g.discogs_id, name: g.name, records: g.master_count })),
+        members: (identity?.members ?? []).map((g) => ({ discogs_id: g.discogs_id, name: g.name, records: g.master_count })),
+        credit_roles: (identity?.roles ?? []).map((r) => ({ role: r.role, records: r.masters })),
         profile: d.profile ? String(d.profile).slice(0, 600) : null,
         dig_url: `https://app.dig.baby/artist/${d.discogs_id}`,
       };
@@ -320,10 +342,12 @@ export async function executeTool(
       const releaseType = (input.release_type as any) ?? "all";
       const limit = Math.min(Math.max(Number(input.limit ?? 12), 1), 20);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.master_artists");
-      const result = await getArtistMasters(db, id, batchId, dumpDate, limit, undefined, "oldest", releaseType);
+      const includeAliases = input.include_aliases === true;
+      const result = await getArtistMasters(db, id, batchId, dumpDate, limit, undefined, "curated", releaseType, { includeAliases });
       const masters = result.links.map((l: any) => ({
         discogs_id: l.discogs_id,
         title: l.title,
+        credited_as: l.credited_as ?? null,
         year: l.year ?? null,
         type: l.release_type_label ?? l.release_type ?? null,
         dig_url: `https://app.dig.baby/master/${l.discogs_id}`,
@@ -351,10 +375,13 @@ export async function executeTool(
 
       return {
         masters,
+        scope: includeAliases ? "whole person, every alias merged" : "this name only",
         total: result.pagination.total_estimate ?? result.links.length,
         has_more: result.pagination.has_more,
         note: masters.length === 0
-          ? "No masters found in scope. Try searching by label name, or check if this artist falls outside the 1988-2008 house/techno scene."
+          ? (includeAliases
+              ? "No masters found in scope. Try searching by label name, or check if this artist falls outside the 1988-2008 house/techno scene."
+              : "Nothing credited to this exact name in scope. get_artist lists the person's other names with their IDs; or pass include_aliases=true.")
           : undefined,
       };
     }

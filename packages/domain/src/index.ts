@@ -67,6 +67,14 @@ export {
   type ArtistCreditsResponse,
 } from "./traversal.js";
 export {
+  getArtistIdentity,
+  creditRoleFamily,
+  type ArtistIdentity,
+  type ArtistIdentityAlias,
+  type ArtistIdentityRole,
+  type CreditRoleFamily,
+} from "./identity.js";
+export {
   classifyEntityQuality,
   getSuppressedEntityKeys,
   QUALITY_VERSION,

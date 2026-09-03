@@ -126,7 +126,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
 
     if (isPublic) await recordPublicAsk(db);
     try {
-      const { answer, model: usedModel, tool_calls, media, evidence, mode } = await runAgenticLoop({
+      const { answer, model: usedModel, tool_calls, media, evidence, mode, rounds } = await runAgenticLoop({
         db,
         question,
         history,
@@ -160,6 +160,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
           model: usedModel,
           elapsed_ms: Date.now() - started,
           tool_calls,
+          rounds,
         },
       });
     } catch (err: any) {
@@ -261,7 +262,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     };
 
     try {
-      const { answer, model: usedModel, tool_calls, media, evidence, mode } = await runAgenticLoop({
+      const { answer, model: usedModel, tool_calls, media, evidence, mode, rounds } = await runAgenticLoop({
         db,
         question,
         history,
@@ -300,7 +301,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         media: boundMedia,
         mode,
         evidence: dedupeEvidence(evidence).slice(0, 20),
-        meta: { model: usedModel, elapsed_ms: Date.now() - started, tool_calls },
+        meta: { model: usedModel, elapsed_ms: Date.now() - started, tool_calls, rounds },
       });
     } catch (err: any) {
       log("ask:request_failed", { elapsed_ms: Date.now() - started, error: String(err?.message ?? err), status: err?.status, stream: true });

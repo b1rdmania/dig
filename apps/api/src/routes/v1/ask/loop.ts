@@ -55,6 +55,8 @@ Match the digging to the question. A simple ask - "best records on X", one named
 When they ask to go DEEPER on an artist - allied stuff, engineers, the weird end - you have two sources and you should use both. The credit graph (get_artist_credits, get_artist_collaborators, get_artist_groups) gives you the documented connections: aliases, remix work, who's actually on the records. And your own knowledge of the scene gives you the leaps a real shop owner makes - the protégé, the label that carried the torch, the record that answers the itch from a different city. Leaps are welcome and encouraged WHEN they're connected: say why this record follows from where the conversation is ("same lineage, pushed further out"), not just that it's canon from the same decade. A list of famous records with no thread back to what the customer asked is the failure mode - not the leap itself.
 
 - Named artist/label/release → search_catalog to resolve the ID, then get_artist / get_label / get_master.
+- get_artist is the whole person: every alias with its own ID, record count and years, plus the credit roles they hold. Read it before you dig. An alias ID in get_artist_masters gives that alias alone; include_aliases=true gives the whole person. Never search an alias by name when the card already has its ID.
+- "Who engineered / produced / remixed X" → get_artist_credits with role=engineer / produce / remix; the card's credit_roles tells you which roles exist before you ask.
 - Era/region/sound asks ("Italian proto-trance around '95") → search_catalog with FILTERS, not keyword guesses: style + country + year_min/year_max, empty or minimal query. One filtered search beats five keyword stabs. Results come back curation-weighted - the top ones are the good ones.
 - "Recommend music by X" / discography → get_artist_masters. Always - the video rail depends on it.
 - "What's good on label Y" → get_label_essentials FIRST (core run + related-label directions). get_label_releases only if essentials is empty.
@@ -121,6 +123,8 @@ async function callAnthropic(params: {
 interface LlmResponse {
   id?: string;
   model: string;
+  /** Upstream host that served the call (OpenRouter reports it per chunk). */
+  provider?: string;
   stop_reason: "end_turn" | "tool_use" | "max_tokens";
   content: AnthropicContentBlock[];
 }
@@ -134,6 +138,14 @@ export type AskProgressEvent =
   // Streamed answer text as it is generated. A later "round"/"tool" event
   // means the text so far was pre-tool chatter, not the answer - discard it.
   | { type: "delta"; text: string };
+
+/** One model call, as it happened: how long, which host, what it asked for. */
+export interface AskRoundTrace {
+  round: number;
+  ms: number;
+  provider: string | null;
+  tools: string[];
+}
 
 // ---------------------------------------------------------------------------
 // OpenRouter - OpenAI chat-completions wire format, translated to and from
@@ -200,14 +212,20 @@ function toOpenAiMessages(system: string, messages: AnthropicMessage[]) {
 // otherwise anthropic/* models go straight to Anthropic and everything else
 // takes OpenRouter's throughput sort. The 2026-09-03 timing showed the same
 // Kimi call bouncing between 1s and 23s hosts under "throughput" alone.
+// LLM_PROVIDER_IGNORE lists hosts a fallback may never land on. The round
+// trace (meta.rounds) is how you find them: on 2026-09-03 every 10-23s
+// answer-writing round was Makora; Parasail wrote the same in 2-3s.
 function providerPreference(model: string): Record<string, unknown> {
-  const pinned = String(process.env.LLM_PROVIDER_ORDER ?? "")
+  const list = (name: string) => String(process.env[name] ?? "")
     .split(",")
     .map((x) => x.trim())
     .filter(Boolean);
-  if (pinned.length > 0) return { order: pinned, allow_fallbacks: true };
-  if (model.startsWith("anthropic/")) return { order: ["anthropic"], allow_fallbacks: true };
-  return { sort: "throughput" };
+  const pinned = list("LLM_PROVIDER_ORDER");
+  const ignored = list("LLM_PROVIDER_IGNORE");
+  const ignore = ignored.length > 0 ? { ignore: ignored } : {};
+  if (pinned.length > 0) return { order: pinned, allow_fallbacks: true, ...ignore };
+  if (model.startsWith("anthropic/")) return { order: ["anthropic"], allow_fallbacks: true, ...ignore };
+  return { sort: "throughput", ...ignore };
 }
 
 async function callOpenRouter(params: {
@@ -274,6 +292,7 @@ async function callOpenRouter(params: {
   // deltas go straight to the caller; tool calls arrive as fragments keyed
   // by index and are stitched back together here.
   let model = params.model;
+  let provider: string | undefined;
   let text = "";
   let finish = "stop";
   const toolCalls = new Map<number, { id: string; name: string; args: string }>();
@@ -282,6 +301,7 @@ async function callOpenRouter(params: {
   const handleChunk = (raw: string) => {
     let data: {
       model?: string;
+      provider?: string;
       error?: { message?: string; code?: number };
       choices?: Array<{
         finish_reason?: string | null;
@@ -301,6 +321,7 @@ async function callOpenRouter(params: {
       return;
     }
     if (data.model) model = String(data.model);
+    if (data.provider) provider = String(data.provider);
     const choice = data.choices?.[0];
     if (!choice) return;
     const delta = choice.delta ?? {};
@@ -364,7 +385,7 @@ async function callOpenRouter(params: {
   const stop_reason: LlmResponse["stop_reason"] =
     finish === "tool_calls" || toolCalls.size > 0 ? "tool_use" : finish === "length" ? "max_tokens" : "end_turn";
 
-  return { model, stop_reason, content };
+  return { model, provider, stop_reason, content };
 }
 
 export async function runAgenticLoop(params: {
@@ -379,8 +400,9 @@ export async function runAgenticLoop(params: {
   maxRounds?: number;
   log: (msg: string, extra?: Record<string, unknown>) => void;
   onEvent?: (e: AskProgressEvent) => void;
-}): Promise<{ answer: string; model: string; tool_calls: number; media: MediaItem[]; evidence: EvidenceItem[]; mode: ResponseMode }> {
+}): Promise<{ answer: string; model: string; tool_calls: number; media: MediaItem[]; evidence: EvidenceItem[]; mode: ResponseMode; rounds: AskRoundTrace[] }> {
   const { log } = params;
+  const rounds: AskRoundTrace[] = [];
   const maxRounds = Math.max(2, params.maxRounds ?? DEFAULT_MAX_ROUNDS);
 
   const callModel = (messages: AnthropicMessage[], tools: typeof TOOLS): Promise<LlmResponse> =>
@@ -435,7 +457,7 @@ export async function runAgenticLoop(params: {
     if (Date.now() > deadline) {
       log("ask:deadline_exceeded", { round, tool_calls: toolCallCount });
       const mode: ResponseMode = evidenceCollector.length > 0 ? "timeout_degraded" : "grounded_empty";
-      return { answer: evidenceHandover(), model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode };
+      return { answer: evidenceHandover(), model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode, rounds };
     }
 
     // Last round in the budget: no tools, and a nudge if we got here via a
@@ -459,7 +481,9 @@ export async function runAgenticLoop(params: {
     }
 
     const callMs = Date.now() - callStart;
-    log("ask:llm_response", { round, elapsed_ms: callMs, stop_reason: response.stop_reason, model: response.model });
+    const roundTools = response.content.filter((b) => b.type === "tool_use").map((b) => String(b.name ?? ""));
+    rounds.push({ round, ms: callMs, provider: response.provider ?? null, tools: roundTools });
+    log("ask:llm_response", { round, elapsed_ms: callMs, stop_reason: response.stop_reason, model: response.model, provider: response.provider ?? null, tools: roundTools });
 
     usedModel = response.model ?? params.model;
 
@@ -468,7 +492,7 @@ export async function runAgenticLoop(params: {
       const answer = String(textBlock?.text ?? "").trim() || "Go on - say that again for me. What is it you're actually chasing?";
       const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : errorRef.count > 0 ? "timeout_degraded" : "grounded_empty";
       log("ask:loop_end", { rounds: round + 1, tool_calls: toolCallCount, mode, answer_len: answer.length });
-      return { answer, model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode };
+      return { answer, model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode, rounds };
     }
 
     if (response.stop_reason === "tool_use") {
@@ -515,6 +539,7 @@ export async function runAgenticLoop(params: {
       media: mediaCollector,
       evidence: evidenceCollector,
       mode,
+      rounds,
     };
   }
 
@@ -529,5 +554,6 @@ export async function runAgenticLoop(params: {
     media: mediaCollector,
     evidence: evidenceCollector,
     mode,
+    rounds,
   };
 }
