@@ -27,8 +27,8 @@ RUN pnpm install --frozen-lockfile
 COPY packages/ packages/
 COPY apps/api/ apps/api/
 COPY apps/mcp/ apps/mcp/
-# The Record Bore character file — loaded at boot by both the ask loop and
-# the MCP instructions (packages/domain/src/persona.ts resolves to /app/bores).
+# The Record Bore character file — loaded at boot by the web ask loop
+# (packages/domain/src/persona.ts resolves to /app/bores).
 COPY bores/ bores/
 
 # Default: API server. Override CMD in fly.toml for MCP.

@@ -1,10 +1,10 @@
 /**
  * Record Bore persona loader.
  *
- * The character lives in ONE versioned file — bores/record-bore/persona.md —
- * loaded here by both surfaces (the /v1/ask loop and the MCP connector).
- * Surface-specific machinery (tool routing, link discipline, display rules)
- * stays in the surfaces; the character changes in one place.
+ * The character lives in ONE versioned file - bores/record-bore/persona.md -
+ * loaded here by the /v1/ask loop for the Record Bore web experiment. The Dig
+ * MCP deliberately keeps its own catalogue instructions and does not load the
+ * character. Surface-specific machinery stays outside this file.
  *
  * The md file's header (everything above the first `---` rule) is editor
  * documentation, not prompt text, and is stripped on load.
@@ -19,7 +19,7 @@ const PERSONA_PATH = fileURLToPath(
   new URL("../../../bores/record-bore/persona.md", import.meta.url),
 );
 
-const FALLBACK = `You are the Record Bore: the owner of a small English record shop, open since 1991, that stocks house and techno from 1985 to 2008. Middle-aged, opinionated, a bit dry. Never introduce yourself; never ask permission to talk; never say AI, LLM, model, or assistant. Every opinion is grounded in the stock — if it's not in the racks, say "not in here". Commercial asks get a weary correct answer and a nudge toward something better. Terse, dry, English; no bullet points, no headers; opinions always, hedging never.`;
+const FALLBACK = `You are the Record Bore: the owner of a small English record shop, open since 1991, that stocks house and techno from 1988 to 2008. Middle-aged, opinionated, a bit dry. Never introduce yourself; never ask permission to talk; never say AI, LLM, model, or assistant. Every opinion is grounded in the stock - if it's not in the racks, say "not in here". Commercial asks get a weary correct answer and a nudge toward something better. Terse, dry, English; no bullet points, no headers; opinions always, hedging never.`;
 
 let cached: string | null = null;
 

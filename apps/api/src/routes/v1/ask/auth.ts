@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Auth — private beta key gate for /v1/ask
+// Auth - private beta key gate for /v1/ask
 // ---------------------------------------------------------------------------
 
 import type { FastifyRequest } from "fastify";

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Tool definitions + executor — wired to @dig/domain
+// Tool definitions + executor - wired to @dig/domain
 // ---------------------------------------------------------------------------
 
 import type { Kysely } from "@dig/db";
@@ -27,18 +27,18 @@ export const TOOLS = [
   {
     name: "search_catalog",
     description:
-      "Search the Dig scene-scoped catalog (house/techno masters 1988–2008, plus their artists and labels). Use to find artists, labels, or masters by name, genre, style, or keywords. Returns matching entities with IDs you can use in follow-up calls.",
+      "Search the Dig scene-scoped catalog (house/techno masters 1988-2008, plus their artists and labels). Use to find artists, labels, or masters by name, genre, style, or keywords. Returns matching entities with IDs you can use in follow-up calls.",
     input_schema: {
       type: "object" as const,
       properties: {
-        q: { type: "string", description: "Search query — artist name, master title, label, genre term, etc." },
+        q: { type: "string", description: "Search query - artist name, master title, label, genre term, etc." },
         type: {
           type: "string",
           enum: ["artist", "label", "master"],
           description: "Filter to a specific entity type. Omit to search masters (the default).",
         },
         genre: { type: "string", description: "Filter by genre (e.g. 'House', 'Techno', 'Electronic')" },
-        limit: { type: "number", description: "Results to return (1–10, default 8)" },
+        limit: { type: "number", description: "Results to return (1-10, default 8)" },
       },
       required: ["q"],
     },
@@ -82,7 +82,7 @@ export const TOOLS = [
   {
     name: "get_artist_masters",
     description:
-      "Get an artist's catalog of masters in the scene — albums, EPs, singles. Always try this first for any artist catalog query. Returns titles, years, and Dig URLs you should link.",
+      "Get an artist's catalog of masters in the scene - albums, EPs, singles. Always try this first for any artist catalog query. Returns titles, years, and Dig URLs you should link.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -92,7 +92,7 @@ export const TOOLS = [
           enum: ["album", "single_ep", "compilation", "all"],
           description: "Filter by type. Use 'album' for main studio releases, 'all' for everything. Default: 'all'.",
         },
-        limit: { type: "number", description: "Number of masters to return (1–20, default 12)" },
+        limit: { type: "number", description: "Number of masters to return (1-20, default 12)" },
       },
       required: ["discogs_id"],
     },
@@ -100,12 +100,12 @@ export const TOOLS = [
   {
     name: "get_label_releases",
     description:
-      "Get masters released on a specific label — useful for 'what's on Warp Records' or 'show me the Tresor catalog'. Returns titles, primary artists, years. Prefer get_label_essentials first; fall back here if essentials are empty or you need the wider catalog.",
+      "Get masters released on a specific label - useful for 'what's on Warp Records' or 'show me the Tresor catalog'. Returns titles, primary artists, years. Prefer get_label_essentials first; fall back here if essentials are empty or you need the wider catalog.",
     input_schema: {
       type: "object" as const,
       properties: {
         discogs_id: { type: "number", description: "Discogs label ID" },
-        limit: { type: "number", description: "Number of masters (1–20, default 15)" },
+        limit: { type: "number", description: "Number of masters (1-20, default 15)" },
       },
       required: ["discogs_id"],
     },
@@ -146,13 +146,13 @@ export const TOOLS = [
   {
     name: "get_artist_credits",
     description:
-      "An artist's credit work on in-scope masters — remixes, production, mixing, writing, engineering — including credits under their aliases. One row per master with roles and per-track lines. role accepts a family (remix, produce, mix, master, write, vocal, engineer) or an exact role. With role=remix, masters where the artist is the headline act are excluded, so the result is 'remixes they did for OTHERS'. The tool for 'what did X remix' and for going deeper on an artist's fingerprints.",
+      "An artist's credit work on in-scope masters - remixes, production, mixing, writing, engineering - including credits under their aliases. One row per master with roles and per-track lines. role accepts a family (remix, produce, mix, master, write, vocal, engineer) or an exact role. With role=remix, masters where the artist is the headline act are excluded, so the result is 'remixes they did for OTHERS'. The tool for 'what did X remix' and for going deeper on an artist's fingerprints.",
     input_schema: {
       type: "object" as const,
       properties: {
         discogs_id: { type: "number", description: "Discogs artist ID" },
         role: { type: "string", description: "Role family (remix, produce, mix, master, write, vocal, engineer) or exact role. Omit for all." },
-        limit: { type: "number", description: "Max masters (1–50, default 20)" },
+        limit: { type: "number", description: "Max masters (1-50, default 20)" },
       },
       required: ["discogs_id"],
     },
@@ -165,7 +165,7 @@ export const TOOLS = [
       type: "object" as const,
       properties: {
         discogs_id: { type: "number", description: "Discogs artist ID" },
-        limit: { type: "number", description: "Max collaborators (1–30, default 10)" },
+        limit: { type: "number", description: "Max collaborators (1-30, default 10)" },
       },
       required: ["discogs_id"],
     },
@@ -173,7 +173,7 @@ export const TOOLS = [
   {
     name: "get_artist_groups",
     description:
-      "An artist's group/member edges: groups they belong to, members (if the artist IS a group), and bandmates — each with in-scope master counts. The tool for aliases and 'is X part of Y' (e.g. Fingers Inc. ↔ Larry Heard).",
+      "An artist's group/member edges: groups they belong to, members (if the artist IS a group), and bandmates - each with in-scope master counts. The tool for aliases and 'is X part of Y' (e.g. Fingers Inc. ↔ Larry Heard).",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -354,7 +354,7 @@ export async function executeTool(
         total: result.pagination.total_estimate ?? result.links.length,
         has_more: result.pagination.has_more,
         note: masters.length === 0
-          ? "No masters found in scope. Try searching by label name, or check if this artist falls outside the 1988–2008 house/techno scene."
+          ? "No masters found in scope. Try searching by label name, or check if this artist falls outside the 1988-2008 house/techno scene."
           : undefined,
       };
     }
@@ -440,7 +440,7 @@ export async function executeTool(
           dig_url: `https://app.dig.baby/label/${r.to_label_id}`,
         })),
         note: coreRun.length === 0
-          ? "No curated core run for this label yet — fall back to get_label_releases."
+          ? "No curated core run for this label yet - fall back to get_label_releases."
           : undefined,
       };
     }

@@ -3,39 +3,35 @@ import Link from "next/link";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "MCP — archived — dig",
+  title: "MCP — dig",
   description:
-    "The Dig MCP server is archived. Use the in-app chat or the REST API. Source remains open on GitHub for self-hosters.",
+    "Connect Dig’s house and techno catalogue to an MCP-compatible client.",
 };
 
 export default function McpPage() {
   return (
     <div className={styles.page}>
       <section className={styles.hero}>
-        <p className={styles.eyebrow}>MCP · Archived</p>
+        <p className={styles.eyebrow}>MCP · Live</p>
         <h1 className={styles.title}>
-          The MCP server<br />
-          <em>is archived.</em>
+          Dig in<br />
+          <em>your own client.</em>
         </h1>
         <p className={styles.lede}>
-          Dig&rsquo;s public MCP endpoint at <code>dig-mcp.fly.dev</code> is offline.
-          The hosted instance saw negligible traffic; the chat at{" "}
-          <Link href="/llm-beta">/llm-beta</Link> now talks to the catalog directly
-          via internal routing, so the MCP layer was redundant for the only consumer
-          we had.
+          Dig&rsquo;s public MCP endpoint is live at <code>https://dig-mcp.fly.dev/mcp</code>.
+          It exposes the same scoped catalogue, credits, scenes and label relationships
+          as the site, and scales to zero when nobody is using it.
         </p>
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.heading}>Where to go instead</h2>
+        <h2 className={styles.heading}>Ways in</h2>
         <div className={styles.list}>
           <div className={styles.item}>
-            <strong>Want to chat with the catalog?</strong>
+            <strong>Want the existing private chat?</strong>
             <span>
-              Use <Link href="/llm-beta">the in-app chat</Link>. It runs Claude
-              against the same six tools the MCP exposed (plus three new v2 tools
-              for scenes and label essentials), with citation-bound video
-              rendering. Bring your own Anthropic key.
+              Use <Link href="/llm-beta">the in-app chat</Link>. It runs the same
+              grounded Dig ask loop with citation-bound video rendering.
             </span>
           </div>
           <div className={styles.item}>
@@ -58,7 +54,7 @@ export default function McpPage() {
             </span>
           </div>
           <div className={styles.item}>
-            <strong>Want to run an MCP yourself?</strong>
+            <strong>Want to inspect or self-host it?</strong>
             <span>
               The MCP server source lives in{" "}
               <a
@@ -68,25 +64,20 @@ export default function McpPage() {
               >
                 apps/mcp
               </a>{" "}
-              of the repo. It&rsquo;s a Fastify + MCP SDK SSE server that wraps the
-              same domain layer the REST API uses. Clone, point it at the public
-              API, and run wherever you like.
+              of the repo. It wraps the same domain layer as the REST API and supports
+              both Streamable HTTP and the legacy SSE transport.
             </span>
           </div>
         </div>
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.heading}>Why we retired it</h2>
+        <h2 className={styles.heading}>What it is</h2>
         <p className={styles.copy}>
-          The MCP was built before the in-product chat existed and aimed at
-          external agents (Claude Desktop, IDE plugins). With the chat now
-          serving the same retrieval needs through internal routing, the public
-          MCP became dead infrastructure with no consumers. Rather than leave it
-          running at low utilisation, we&rsquo;ve archived it. The Fly app remains
-          parked (zero machines, zero cost) so the name doesn&rsquo;t get squatted;
-          the source remains in the repo for anyone who wants to revive or
-          self-host it.
+          The connector identifies as <code>dig-catalog</code> and stays focused on
+          clean catalogue retrieval. Its instructions describe the collection,
+          grounding rules and useful routes through the stock without tying the
+          catalogue to one particular client or workflow.
         </p>
       </section>
 

@@ -7,8 +7,9 @@
  * Clients treat it as advisory system guidance, so keep it short enough
  * to be read whole and concrete enough to be followed.
  *
- * The in-app /v1/ask prompt (apps/api/src/routes/v1/ask/loop.ts) shares
- * the grounding rules here; the persona is connector-specific.
+ * The Record Bore web ask loop shares some grounding principles, but its
+ * character lives in bores/record-bore/persona.md. This connector remains
+ * Dig and deliberately does not load that persona file.
  */
 
 export const SERVER_INSTRUCTIONS = `Dig is a curated catalog of house and techno, 1985-2008, built from the Discogs CC0 dataset: ~80,000 master releases, their artists and labels, fifteen hand-curated scenes, label "core runs" (essential listening per label), a full credit/remix graph, and directional related-label edges (deeper, harder, rawer, cleaner, weirder, poppier, earlier, later). Scope: Detroit techno, Chicago house, NYC garage, UK rave / hardcore / jungle, Berlin techno, dub techno, IDM, Italo, electro, ambient techno, microhouse, minimal.

@@ -1,12 +1,12 @@
 // ---------------------------------------------------------------------------
-// Public access gate for /v1/ask — the Record Bore shop window.
+// Public access gate for /v1/ask - the Record Bore shop window.
 //
 // Enabled with ASK_PUBLIC=on. Visitors without a beta key get in, bounded two
 // ways so the till can't be drained:
-//   - per-visitor daily cap (ASK_PUBLIC_DAILY_PER_IP, default 20) — in-memory
+//   - per-visitor daily cap (ASK_PUBLIC_DAILY_PER_IP, default 20) - in-memory
 //     and therefore per-machine: with dig-api's two machines a visitor can get
 //     up to 2x this. Approximate by design; the monthly cap is the hard wall
-//   - global monthly cap (ASK_PUBLIC_MONTHLY_MAX, default 400 asks) — durable,
+//   - global monthly cap (ASK_PUBLIC_MONTHLY_MAX, default 400 asks) - durable,
 //     stored in enrich.usage_counters so restarts and deploys don't reset it
 // Refusals speak in voice; the shop is shut, not "rate limited".
 // ---------------------------------------------------------------------------
@@ -57,6 +57,15 @@ export function isPublicAskEnabled(): boolean {
   return publicEnabled();
 }
 
+/** Remaining asks for this visitor on the current API machine. The daily
+ * gate is deliberately approximate across the two Fly machines; this exposes
+ * the same counter the gate actually uses rather than inventing a web count. */
+export function publicAskRemaining(req: FastifyRequest): number {
+  const entry = dailyCounts.get(clientIp(req));
+  const count = entry?.day === today() ? entry.count : 0;
+  return Math.max(0, dailyPerIp() - count);
+}
+
 /**
  * Admit or refuse a keyless ask. Call only after the private-key check has
  * failed; on admit the caller MUST follow with recordPublicAsk().
@@ -83,7 +92,7 @@ export async function checkPublicAsk(
   const entry = dailyCounts.get(ip);
   const count = entry && entry.day === day ? entry.count : 0;
   if (count >= dailyPerIp()) {
-    return shut("That's your lot for today. Shop's shut to you — come back tomorrow.");
+    return shut("That's your lot for today. Shop's shut to you - come back tomorrow.");
   }
 
   let spent: number;
@@ -93,12 +102,12 @@ export async function checkPublicAsk(
     `.execute(db);
     spent = Number(row.rows[0]?.counter_value ?? 0);
   } catch {
-    // Counter table unreachable — fail closed rather than run an unmetered
+    // Counter table unreachable - fail closed rather than run an unmetered
     // month on the shop's key.
-    return shut("Till's playing up. Shop's shut for a bit — come back later.");
+    return shut("Till's playing up. Shop's shut for a bit - come back later.");
   }
   if (spent >= monthlyMax()) {
-    return shut("Shop's shut — till's empty for the month. Come back on the 1st.");
+    return shut("Shop's shut - till's empty for the month. Come back on the 1st.");
   }
 
   dailyCounts.set(ip, { day, count: count + 1 });

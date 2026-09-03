@@ -1,8 +1,8 @@
-# The Bore format — one page
+# The Bore format - one page
 
 **A character with your archive behind it.** Every business is about to get an
 AI interface, and nearly all of them will be the same polite beige assistant.
-The scarce thing is a voice worth talking to — a character whose opinions are
+The scarce thing is a voice worth talking to - a character whose opinions are
 grounded in a real corpus, so it recommends like an expert, not a search box.
 Record Bore (recordbore at app.dig.baby) is the live demonstration: a record
 shop bore over an 80,000-record house and techno catalogue. The format is
@@ -24,7 +24,7 @@ copywriting suggestions:
    correct answer and a nudge toward something better.
 6. **He gets you off the sofa.** Every conversation ends somewhere real: a
    record to buy, a screening to attend, a show to hear. The corpus must
-   include an "act" surface — buy links, listings, tickets.
+   include an "act" surface - buy links, listings, tickets.
 7. **He's nobody's mascot.** A Bore has opinions, including about other Bores.
 
 ## What a Bore needs from your archive
@@ -32,11 +32,11 @@ copywriting suggestions:
 The engine talks to any corpus through four calls. If your archive can answer
 these, it can carry a Bore:
 
-- **search(query)** — find things by name, era, style, free text.
-- **entity(id)** — everything you hold on one thing: a record, a film, a show.
-- **related(id, edge)** — how things connect: credits, collaborators, labels,
+- **search(query)** - find things by name, era, style, free text.
+- **entity(id)** - everything you hold on one thing: a record, a film, a show.
+- **related(id, edge)** - how things connect: credits, collaborators, labels,
   directions ("deeper", "rawer", "earlier").
-- **act(id)** — the real-world handoff: a buy link, a listing, a ticket, a
+- **act(id)** - the real-world handoff: a buy link, a listing, a ticket, a
   stream.
 
 That's the whole integration contract. Record Bore maps these onto a Discogs-
@@ -46,13 +46,14 @@ versioned persona file; the corpus adapter is the only new code per Bore.
 
 Depth matters more than breadth: a rude bot is funny for ten minutes; people
 come back because the archive keeps answering. If there's no real archive
-underneath, we won't build it — that's a prompt wearing a costume.
+underneath, we won't build it - that's a prompt wearing a costume.
 
 ## How it ships
 
-- **An MCP connector** (the primary surface): your Bore inside your users' own
-  AI apps — their subscription pays the inference, your marginal cost is
-  hosting the corpus.
+- **An MCP connector**: a licensed Bore can live inside users' existing AI
+  apps, where their subscription pays the inference and the archive owner
+  hosts the corpus. The current Dig connector remains branded as Dig; Record
+  Bore itself is presently the standalone web experiment.
 - **A capped public page** (the shop window): the Bore talking on your domain,
   budget-capped so costs can't run away.
 - Your archive stays yours; read-only; no accounts, no personal data
@@ -60,8 +61,8 @@ underneath, we won't build it — that's a prompt wearing a costume.
 
 ## The deal shape
 
-The studio's own Bores are free and public — they're the advertisement.
+The studio's own Bores are free and public - they're the advertisement.
 Archive-owners license the format: build fee plus monthly licence, or a
-revenue share on what the Bore sells. Inference runs on your key at cost —
+revenue share on what the Bore sells. Inference runs on your key at cost -
 it's the smallest line on the bill (well under a penny per answer at current
 rates).

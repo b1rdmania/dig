@@ -251,8 +251,8 @@ export default async function UsagePage() {
       </section>
 
       <p className={styles.note}>
-        Data source: Dig API persistent counters + process diagnostics. MCP server is{" "}
-        <a href="/mcp">archived</a>.
+        Data source: Dig API persistent counters + process diagnostics. The{" "}
+        <a href="/mcp">Dig MCP</a> runs separately and scales to zero.
       </p>
     </div>
   );

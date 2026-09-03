@@ -1,12 +1,12 @@
 // ---------------------------------------------------------------------------
-// Evidence / citation binding — pure functions, no I/O.
+// Evidence / citation binding - pure functions, no I/O.
 //
 // Citation-bound media: only return videos for masters whose dig.baby URL
 // appears in the assistant's answer text. The system prompt tells the
 // model to link every entity it mentions; this binding ensures the rail
 // only ever surfaces videos for records the model actually wrote about.
 // Strict empty is the right behaviour when the model didn't cite anything
-// — better than dumping generic videos for masters it merely fetched.
+// - better than dumping generic videos for masters it merely fetched.
 // ---------------------------------------------------------------------------
 
 import type { MediaItem, EvidenceItem } from "./types.js";
@@ -26,7 +26,7 @@ export function extractCitedMasterIds(answer: string): Set<number> {
 }
 
 /**
- * Keeps only media whose master ID is cited in the answer text. No fallback —
+ * Keeps only media whose master ID is cited in the answer text. No fallback -
  * if the model didn't link a master, no video renders for it.
  */
 export function bindMediaToCitations(media: MediaItem[], answer: string): MediaItem[] {
@@ -55,13 +55,13 @@ export function dedupeEvidence(evidence: EvidenceItem[]): EvidenceItem[] {
 }
 
 // ---------------------------------------------------------------------------
-// allowedMasterIds guard — server-side defence against the model calling
+// allowedMasterIds guard - server-side defence against the model calling
 // get_master with an ID that was never established as a master in this
 // conversation (e.g. a release ID). Separate concern from citation binding.
 // ---------------------------------------------------------------------------
 
 export const INVALID_MASTER_ID_ERROR =
-  "Invalid master ID — this ID was not established as a master in this conversation. Search first, then use the resulting master IDs.";
+  "Invalid master ID - this ID was not established as a master in this conversation. Search first, then use the resulting master IDs.";
 
 export function isAllowedMasterId(allowedMasterIds: ReadonlySet<number>, discogsId: number): boolean {
   return allowedMasterIds.has(discogsId);

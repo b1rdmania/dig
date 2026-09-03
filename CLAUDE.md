@@ -12,7 +12,7 @@ Execution authority:
 
 ## Architecture
 - **Monorepo** (pnpm workspaces): `apps/` and `packages/`
-- **Apps**: `apps/api` (Fastify REST), `apps/web` (Next.js frontend), `apps/ingest` (Discogs XML import CLI), `apps/mcp` (MCP SSE server — ARCHIVED, source frozen)
+- **Apps**: `apps/api` (Fastify REST), `apps/web` (Next.js frontend), `apps/ingest` (Discogs XML import CLI), `apps/mcp` (live Dig MCP, scale-to-zero)
 - **Packages**: `packages/db` (Kysely + migrations), `packages/domain` (shared retrieval services)
 - All apps import from `@dig/domain` for business logic — no framework code in domain
 
@@ -109,7 +109,7 @@ Entity model: `artist | label | master` are the only public entities. `release_s
 - No LLM inference in the retrieval path — structured data only
 - Workspace packages export from `src/` directly (not `dist/`) during development
 - Rate limits: anonymous 180/min (IP), keyed 1000/min — `apps/api/src/app.ts` `RATE_LIMITS` is the source of truth; keys validated against the `API_KEYS` env (unknown keys silently downgrade to anonymous)
-- Ops endpoints (`/v1/usage/internal`, `/v1/seo/cohort`) require a valid API key; `/v1/ask` requires `LLM_BETA_KEYS` and fails closed
+- Ops endpoints (`/v1/usage/internal`, `/v1/seo/cohort`) require a valid API key; `/v1/ask` accepts private beta keys and admits capped keyless Record Bore traffic only when `ASK_PUBLIC=on`
 - Shared route helpers (parseDiscogsId, withTimeout, timeout replies): `apps/api/src/routes/v1/util.ts`
 
 ## File Layout
@@ -117,17 +117,17 @@ Entity model: `artist | label | master` are the only public entities. `release_s
 apps/api/                  — Fastify REST API server (port 3000)
 apps/api/src/app.ts        — app factory (rate-limit, CORS, logging, routes)
 apps/api/src/auth.ts       — API key validation (API_KEYS env)
-apps/api/src/routes/v1/ask/ — in-product Claude chat (auth/tools/binding/loop)
+apps/api/src/routes/v1/ask/ — provider-switchable grounded chat (auth/tools/binding/loop)
 apps/web/                  — Next.js frontend (maintenance gate in src/lib/maintenance.ts)
 apps/ingest/               — Discogs XML import pipeline (CLI, local staging only)
-apps/mcp/                  — MCP SSE server (ARCHIVED)
+apps/mcp/                  — live Dig MCP (Streamable HTTP + legacy SSE)
 packages/db/               — Kysely DB layer, migrations, schema, scope manifests, seeds
 packages/domain/           — Shared domain services (search, retrieval, traversal, credits, scenes)
 scripts/build-scoped-db.ts — scoped artifact builder (the real production pipeline)
 scripts/                   — CI gates (migration parity, regression smoke, no-dead-ends), harvesters
 docs/                      — strategy, runbooks, gate closeouts (see canonical-docs.md)
 eslint.config.mjs          — workspace lint config
-fly.api.toml / fly.web.toml — Fly configs (fly.mcp.toml retained but archived)
+fly.api.toml / fly.web.toml / fly.mcp.toml — Fly configs
 docker-compose.yml         — local Postgres + Redis
 ```
 
