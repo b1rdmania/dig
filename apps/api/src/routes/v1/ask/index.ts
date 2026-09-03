@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// /v1/ask — Fastify route registration
+// /v1/ask - Fastify route registration
 // ---------------------------------------------------------------------------
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -7,7 +7,7 @@ import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import type { AnthropicMessage, ResponseMode } from "./types.js";
 import { requirePrivateKey } from "./auth.js";
-import { checkPublicAsk, isPublicAskEnabled, recordPublicAsk } from "./public.js";
+import { checkPublicAsk, isPublicAskEnabled, publicAskRemaining, recordPublicAsk } from "./public.js";
 import { runAgenticLoop, type LlmProvider, type AskProgressEvent } from "./loop.js";
 import { bindMediaToCitations, dedupeMedia, dedupeEvidence, extractCitedMasterIds } from "./binding.js";
 
@@ -21,6 +21,10 @@ const PROVIDER: LlmProvider =
 const DEFAULT_MODEL =
   process.env.LLM_MODEL ?? (PROVIDER === "openrouter" ? "moonshotai/kimi-k3" : "claude-sonnet-4-6");
 const MAX_HISTORY_TURNS = 6;
+// Public (Record Bore page) budgets. Two lookup rounds then an answer, and an
+// answer that fits on the counter: 1600 tokens let Kimi write for 43s.
+const PUBLIC_MAX_ROUNDS = 3;
+const PUBLIC_MAX_TOKENS = 600;
 
 interface AskBody {
   question?: string;
@@ -32,6 +36,7 @@ interface AskBody {
 // Shop-owner-voiced labels for the live activity feed. Keyed on tool name;
 // some labels pull the query/role out of the input for specificity.
 function progressLabel(e: AskProgressEvent): string {
+  if (e.type === "delta") return "";
   if (e.type === "round") {
     return e.round === 0 ? "Reading the question…" : "Connecting the dots…";
   }
@@ -54,6 +59,13 @@ function progressLabel(e: AskProgressEvent): string {
 }
 
 export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
+  app.get("/v1/ask/quota", async (req, reply) => {
+    if (!isPublicAskEnabled()) {
+      return reply.status(404).send({ error: { code: "NOT_FOUND", message: "Not found", details: null } });
+    }
+    return reply.send({ remaining: publicAskRemaining(req) });
+  });
+
   app.post("/v1/ask", {
     config: {
       // Ask is expensive (LLM + DB). 10 req/min per IP regardless of key.
@@ -93,7 +105,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     const question = String(body.question ?? "").trim();
     if (question.length < 1 || question.length > 1000) {
       return reply.status(400).send({
-        error: { code: "INVALID_REQUEST", message: "question must be 1–1000 characters", details: null },
+        error: { code: "INVALID_REQUEST", message: "question must be 1-1000 characters", details: null },
       });
     }
 
@@ -103,9 +115,10 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       .slice(-MAX_HISTORY_TURNS)
       .map((m) => ({ role: m.role, content: m.content.slice(0, 3000) }));
 
-    // Public asks run on the house defaults only — letting a stranger pick
+    // Public asks run on the house defaults only - letting a stranger pick
     // the model or token budget on the shop's key is how the till empties.
-    const maxTokens = isPublic ? 1600 : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
+    const maxTokens = isPublic ? PUBLIC_MAX_TOKENS : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
+    const maxRounds = isPublic ? PUBLIC_MAX_ROUNDS : undefined;
     const model = isPublic ? DEFAULT_MODEL : String(body.model ?? DEFAULT_MODEL);
     const started = Date.now();
     const log = (msg: string, extra?: Record<string, unknown>) =>
@@ -119,6 +132,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         history,
         model,
         maxTokens,
+        maxRounds,
         provider: PROVIDER,
         apiKey,
         log,
@@ -162,7 +176,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
             ? "Invalid Anthropic API key"
             : "Failed to generate response",
           // Upstream error detail goes to the structured log above, not to
-          // clients — provider messages can leak internals.
+          // clients - provider messages can leak internals.
           details: null,
         },
         mode: "upstream_error" as ResponseMode,
@@ -171,12 +185,14 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
   });
 
   // -------------------------------------------------------------------------
-  // /v1/ask/stream — same contract as /v1/ask but responds as NDJSON:
+  // /v1/ask/stream - same contract as /v1/ask but responds as NDJSON:
   //   {type:"status", label}   one per loop round / tool call, as they happen
+  //   {type:"delta", text}     answer text as it streams; a status event after
+  //                            deltas means that text was pre-tool chatter
   //   {type:"result", ...}     the final /v1/ask response body
   //   {type:"error", error, mode}  terminal error, same shape as /v1/ask errors
   // The reply is hijacked, so CORS + rate-limit headers from the plugins
-  // don't apply — CORS is set manually (API is open-CORS by design).
+  // don't apply - CORS is set manually (API is open-CORS by design).
   // -------------------------------------------------------------------------
   app.post("/v1/ask/stream", {
     config: {
@@ -213,7 +229,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     const question = String(body.question ?? "").trim();
     if (question.length < 1 || question.length > 1000) {
       return reply.status(400).send({
-        error: { code: "INVALID_REQUEST", message: "question must be 1–1000 characters", details: null },
+        error: { code: "INVALID_REQUEST", message: "question must be 1-1000 characters", details: null },
       });
     }
 
@@ -223,7 +239,8 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       .slice(-MAX_HISTORY_TURNS)
       .map((m) => ({ role: m.role, content: m.content.slice(0, 3000) }));
 
-    const maxTokens = isPublic ? 1600 : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
+    const maxTokens = isPublic ? PUBLIC_MAX_TOKENS : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
+    const maxRounds = isPublic ? PUBLIC_MAX_ROUNDS : undefined;
     const model = isPublic ? DEFAULT_MODEL : String(body.model ?? DEFAULT_MODEL);
     const started = Date.now();
     const log = (msg: string, extra?: Record<string, unknown>) =>
@@ -240,7 +257,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     const write = (obj: unknown) => {
       try {
         reply.raw.write(`${JSON.stringify(obj)}\n`);
-      } catch { /* client gone — loop result is discarded below */ }
+      } catch { /* client gone - loop result is discarded below */ }
     };
 
     try {
@@ -250,17 +267,24 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         history,
         model,
         maxTokens,
+        maxRounds,
         provider: PROVIDER,
         apiKey,
         log,
-        onEvent: (e) => write({
-          type: "status",
-          label: progressLabel(e),
-          // Raw workings for the UI's drop-down — actual tool + args.
-          detail: e.type === "round"
-            ? `round ${e.round + 1}`
-            : `${e.name} ${JSON.stringify(e.input ?? {})}`.slice(0, 160),
-        }),
+        onEvent: (e) => {
+          if (e.type === "delta") {
+            write({ type: "delta", text: e.text });
+            return;
+          }
+          write({
+            type: "status",
+            label: progressLabel(e),
+            // Raw workings for the UI's drop-down - actual tool + args.
+            detail: e.type === "round"
+              ? `round ${e.round + 1}`
+              : `${e.name} ${JSON.stringify(e.input ?? {})}`.slice(0, 160),
+          });
+        },
       });
 
       const boundMedia = bindMediaToCitations(dedupeMedia(media), answer);

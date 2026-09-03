@@ -1,17 +1,14 @@
 "use client";
 
-// Record Bore — built to the approved mock (~/Documents/record-bore-mock/
-// index.html, whitepaper §7 P4). One centred column; the Bore's text sits on
-// the page ground, no bubbles, no per-message avatars. The API's public gate
-// does the bouncing and its 429s arrive in voice, so they render as the Bore
-// talking (with the face — a punctuation moment per P1), not as errors.
+// Record Bore is a small, standalone counter conversation. The UI keeps four
+// states distinct: prompt, working, answer, and records. Personality belongs
+// in the writing; interface state should never have to pretend to be dialogue.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { extractYouTubeId } from "@/lib/media";
 import {
-  ACK_PHRASES,
-  FILLER_PHRASES,
   linkifyPlainUrls,
   type MediaItem,
   type Message,
@@ -20,9 +17,34 @@ import {
 import s from "./recordbore.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
-const DAILY_ALLOWANCE = 20; // mirrors ASK_PUBLIC_DAILY_PER_IP; display only, server enforces
 
-// The Bore's own shop life, on top of the shared crate-digging fillers.
+function normalDashes(value: string): string {
+  return value.replace(/[\u2013\u2014]/g, "-");
+}
+
+function recordNameDashes(value: string): string {
+  return normalDashes(value).replace(/ - /g, " – ");
+}
+
+function recordLinkDashes(children: ReactNode): ReactNode {
+  if (typeof children === "string") return recordNameDashes(children);
+  if (Array.isArray(children)) return children.map(recordLinkDashes);
+  return children;
+}
+
+async function getQuestionsLeft(): Promise<number | null> {
+  try {
+    const res = await fetch(`${API_URL}/v1/ask/quota`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json() as { remaining?: number };
+    return Number.isFinite(data.remaining) ? Math.max(0, Number(data.remaining)) : null;
+  } catch {
+    return null;
+  }
+}
+
+// The Bore's own shop life. Keep this separate from the generic LLM fillers:
+// backend progress is functional, but this line belongs to the character.
 // While he digs, the shop carries on: customers to argue with, biscuits,
 // Hard Wax stories. One line at a time, held long enough to read twice.
 const BORE_FILLERS = [
@@ -87,12 +109,18 @@ const BORE_FILLERS = [
   "Writing 'NOT FOR SALE' on something in biro…",
 ];
 
-const FILLERS = [...FILLER_PHRASES, ...BORE_FILLERS];
+function randomBoreFiller(previous = ""): string {
+  let next = previous;
+  while (next === previous) {
+    next = BORE_FILLERS[Math.floor(Math.random() * BORE_FILLERS.length)];
+  }
+  return next;
+}
 
 type RBMessage = Message & { shopShut?: boolean };
 
 interface RecMeta {
-  // Canonical record name — media items arrive titled by their YouTube
+  // Canonical record name - media items arrive titled by their YouTube
   // caption ("Substance - Relish (Dub Edit)"), not the record.
   title: string | null;
   artist: string | null;
@@ -101,17 +129,13 @@ interface RecMeta {
   cover: string | null;
 }
 
-// A suggestion either asks (q) or hands the counter to the customer (fill —
+// A suggestion either asks (q) or hands the counter to the customer (fill -
 // the challenge only works if they name the record themselves).
 const SUGGESTIONS: Array<{ t: string; q?: string; fill?: string }> = [
-  { t: "Name your favourite record", fill: "My favourite record is " },
-  { t: "Give me an overrated record", q: "Give me an overrated record." },
-  { t: "UK garage, 1997", q: "UK garage, 1997 — the good year. Tuff Jam, Dem 2, what did the reissues miss?" },
+  { t: "Chicago house, 1988", q: "Chicago house, 1988 - what still sounds dangerous?" },
+  { t: "Detroit techno, 1992", q: "Detroit techno, 1992 - what belongs in the front rack?" },
+  { t: "UK garage, 1997", q: "UK garage, 1997 - the good year. Tuff Jam, Dem 2, what did the reissues miss?" },
 ];
-
-function todayKey(): string {
-  return `rb.asks.${new Date().toISOString().slice(0, 10)}`;
-}
 
 // Media items are one-per-video; the crate is one-per-record. First video wins
 // (it's the one the answer's citation bound first).
@@ -144,13 +168,13 @@ function CrateRow({ item, meta }: { item: MediaItem; meta?: RecMeta }) {
           </span>
         </button>
         <div className={s.recMeta}>
-          <span className={s.recTitle}>{artist ? `${artist} — ${title}` : title}</span>
+          <span className={s.recTitle}>{recordNameDashes(artist ? `${artist} - ${title}` : title)}</span>
           {sub && <span className={s.recSub}>{sub}</span>}
         </div>
         <span className={s.recActs}>
           {ytId && (
             <button type="button" className={s.recAct} onClick={() => setPlaying((p) => !p)}>
-              {playing ? "stop ■" : "listen ▶"}
+              {playing ? "stop" : "listen"}
             </button>
           )}
           <a
@@ -178,42 +202,37 @@ function CrateRow({ item, meta }: { item: MediaItem; meta?: RecMeta }) {
   );
 }
 
-export function RecordBoreClient({ strip, opener }: { strip: string; opener: string }) {
+export function RecordBoreClient({ opener }: { opener: string }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<RBMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [activityLine, setActivityLine] = useState<string>("");
-  const [left, setLeft] = useState(DAILY_ALLOWANCE);
+  // Answer text as it streams in. Reset whenever a status event follows it:
+  // that text was the model talking before a lookup, not the answer.
+  const [draft, setDraft] = useState<string>("");
+  const [bagOpen, setBagOpen] = useState(false);
   const [recMeta, setRecMeta] = useState<Record<number, RecMeta>>({});
+  const [questionsLeft, setQuestionsLeft] = useState<number | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fetchedIds = useRef(new Set<number>());
 
   useEffect(() => {
-    try {
-      const used = Number(window.localStorage.getItem(todayKey()) ?? 0);
-      setLeft(Math.max(0, DAILY_ALLOWANCE - used));
-    } catch { /* no-op */ }
+    void getQuestionsLeft().then(setQuestionsLeft);
   }, []);
 
   useEffect(() => {
     if (!loading) return;
     const id = window.setInterval(() => {
-      setActivityLine((prev) => {
-        let next = prev;
-        while (next === prev) {
-          next = FILLERS[Math.floor(Math.random() * FILLERS.length)];
-        }
-        return next;
-      });
-    }, 17000);
+      setActivityLine((prev) => randomBoreFiller(prev));
+    }, 7000);
     return () => window.clearInterval(id);
   }, [loading]);
 
   useEffect(() => {
     if (messages.length > 0) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, draft]);
 
   // Crate rows want label · year · sleeve; media items carry none of it.
   // Backfill from the master detail + cover endpoints as answers arrive.
@@ -244,19 +263,11 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
                 cover,
               },
             }));
-          } catch { /* black sleeve block stays — the mock's own fallback */ }
+          } catch { /* black sleeve block stays - the mock's own fallback */ }
         })();
       }
     }
   }, [messages]);
-
-  function countAsk() {
-    setLeft((prev) => Math.max(0, prev - 1));
-    try {
-      const key = todayKey();
-      window.localStorage.setItem(key, String(Number(window.localStorage.getItem(key) ?? 0) + 1));
-    } catch { /* no-op */ }
-  }
 
   async function ask(question?: string) {
     const q = (question ?? input).trim();
@@ -265,12 +276,11 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
     const nextMessages: RBMessage[] = [...messages, { role: "user", content: q }];
     setMessages(nextMessages);
     setInput("");
-    setActivityLine(ACK_PHRASES[Math.floor(Math.random() * ACK_PHRASES.length)]);
+    setActivityLine(randomBoreFiller());
     setLoading(true);
-    countAsk();
 
     try {
-      // The opener is a real turn of the conversation — the model should know
+      // The opener is a real turn of the conversation - the model should know
       // it already spoke first.
       const history = [
         { role: "assistant" as const, content: opener },
@@ -286,7 +296,6 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => null) as { error?: { message: string }; mode?: ResponseMode } | null;
         const shopShut = res.status === 429 && !!data?.error?.message;
-        if (shopShut && /come back tomorrow/i.test(data!.error!.message)) setLeft(0);
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: data?.error?.message ?? "Till's jammed. Try again in a minute.",
@@ -305,8 +314,9 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
       const handleLine = (line: string) => {
         if (!line.trim()) return;
         let evt: {
-          type: "status" | "result" | "error";
+          type: "status" | "delta" | "result" | "error";
           label?: string;
+          text?: string;
           answer?: string;
           media?: MediaItem[];
           mode?: ResponseMode;
@@ -317,8 +327,10 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
         } catch {
           return;
         }
-        if (evt.type === "status" && evt.label) {
-          setActivityLine(evt.label);
+        if (evt.type === "delta") {
+          setDraft((prev) => prev + (evt.text ?? ""));
+        } else if (evt.type === "status") {
+          setDraft("");
         } else if (evt.type === "result") {
           sawTerminal = true;
           setMessages((prev) => [...prev, {
@@ -344,62 +356,76 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
       if (buffer.trim()) handleLine(buffer);
 
       if (!sawTerminal) {
-        setMessages((prev) => [...prev, { role: "assistant", content: "The connection dropped mid-answer — try again.", error: true }]);
+        setMessages((prev) => [...prev, { role: "assistant", content: "The connection dropped mid-answer - try again.", error: true }]);
       }
     } catch {
       setMessages((prev) => [...prev, {
         role: "assistant",
-        content: "Request failed — check your network.",
+        content: "Request failed - check your network.",
         error: true,
       }]);
     } finally {
       setLoading(false);
+      setDraft("");
       setActivityLine("");
+      setQuestionsLeft(await getQuestionsLeft());
       inputRef.current?.focus();
     }
   }
 
+  const bagItems = dedupeByMaster(messages.flatMap((m) => m.media ?? []));
+  const bagVideoIds = bagItems
+    .map((item) => extractYouTubeId(item.youtube_url))
+    .filter((id): id is string => Boolean(id));
+  const playlistUrl = bagVideoIds.length > 0
+    ? `https://www.youtube.com/watch_videos?video_ids=${bagVideoIds.join(",")}`
+    : null;
   return (
     <div className={s.wrap}>
       <main className={s.col}>
-        <a className={s.home} href="/">&larr; home</a>
+        <div className={s.topline}>
+          <Link className={s.home} href="/">&larr; home</Link>
+        </div>
         <div className={s.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
           <img className={s.face} src="/recordbore-face.png" alt="" width={54} height={59} />
           <h1 className={s.title}>Record Bore<span className={s.dot}>.</span></h1>
         </div>
-        <p className={s.tagline}>Ask about records. I&rsquo;ll probably disagree.</p>
+        <p className={s.tagline}>Ask about records. I&rsquo;ll probably disagree. In stock: house &amp; techno, 1988-2008.</p>
 
-        <p className={s.nowPlaying}><span className={s.dotlive} /><span>{strip}</span></p>
+        <div className={`${s.bore} ${s.openerBlock}`}><p>{normalDashes(opener)}</p></div>
 
-        <div className={`${s.bore} ${s.openerBlock}`}><p>{opener}</p></div>
-
-        {/* Only mounted once there's a conversation — empty it just holds a
-            dead gap between the opener and the composer. */}
+        {/* Only mount the transcript once a real turn exists. */}
         {(messages.length > 0 || loading) && (
-        <div className={s.turns}>
+        <section className={s.turns} aria-label="Conversation">
           {messages.map((m, i) => (
             m.role === "user" ? (
-              <p key={i} className={s.youText}>{m.content}</p>
+              <div key={i} className={`${s.turn} ${s.userTurn}`}>
+                <p className={s.turnLabel}>You</p>
+                <p className={s.youText}>{normalDashes(m.content)}</p>
+              </div>
             ) : (
-              <div key={i} className={s.bore}>
+              <article key={i} className={`${s.turn} ${s.boreTurn}`}>
+                <p className={s.turnLabel}>Record Bore</p>
                 {m.shopShut && (
-                  // eslint-disable-next-line @next/next/no-img-element -- punctuation-moment face per whitepaper §7 P1
+                  // eslint-disable-next-line @next/next/no-img-element -- the face punctuates the daily-limit response
                   <img className={s.shutFace} src="/recordbore-face.png" alt="" width={56} height={61} />
                 )}
+                <div className={s.bore}>
                 {m.error ? (
-                  <p className={s.plain}>{m.content}</p>
+                  <p className={s.plain}>{normalDashes(m.content)}</p>
                 ) : (
                   <ReactMarkdown
                     components={{
                       a: ({ href, children }) => (
-                        <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                        <a href={href} target="_blank" rel="noopener noreferrer">{recordLinkDashes(children)}</a>
                       ),
                     }}
                   >
-                    {linkifyPlainUrls(m.content)}
+                    {linkifyPlainUrls(normalDashes(m.content))}
                   </ReactMarkdown>
                 )}
+                </div>
                 {(m.media?.length ?? 0) > 0 && (
                   <div className={s.crate}>
                     {dedupeByMaster(m.media!).map((item) => (
@@ -407,69 +433,153 @@ export function RecordBoreClient({ strip, opener }: { strip: string; opener: str
                     ))}
                   </div>
                 )}
-              </div>
+              </article>
             )
           ))}
 
-          {loading && (
-            <div className={s.bore}>
-              <p className={s.activity}>{activityLine || FILLERS[0]}</p>
+          {loading && draft && (
+            <article className={`${s.turn} ${s.boreTurn}`} aria-live="polite">
+              <p className={s.turnLabel}>Record Bore</p>
+              <div className={s.bore}>
+                <ReactMarkdown
+                  components={{
+                    a: ({ href, children }) => (
+                      <a href={href} target="_blank" rel="noopener noreferrer">{recordLinkDashes(children)}</a>
+                    ),
+                  }}
+                >
+                  {linkifyPlainUrls(normalDashes(draft))}
+                </ReactMarkdown>
+              </div>
+            </article>
+          )}
+
+          {loading && !draft && (
+            <div className={`${s.turn} ${s.working}`} role="status" aria-live="polite">
+              <div className={s.workingHead}>
+                <span className={s.workingMark} aria-hidden="true" />
+                <span>Looking through the racks</span>
+              </div>
+              <p className={s.activity}>{normalDashes((activityLine || BORE_FILLERS[0]).replace(/[.…]+$/, ""))}</p>
             </div>
           )}
 
           <div ref={bottomRef} />
-        </div>
+        </section>
         )}
 
-        <div className={s.composer}>
-          <input
-            ref={inputRef}
-            className={s.input}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ask(); } }}
-            placeholder={messages.length > 0 ? "Ask another stupid question." : "Go on then."}
-            disabled={loading}
-            autoCapitalize="sentences"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-          <button className={s.send} onClick={() => ask()} disabled={loading || !input.trim()} type="button">
-            ask &rarr;
-          </button>
-        </div>
-
-        {messages.length === 0 && (
-          <div className={s.suggest}>
-            {SUGGESTIONS.map((sug, i) => (
-              <span key={sug.t}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (sug.fill) {
-                      setInput(sug.fill);
-                      inputRef.current?.focus();
-                    } else {
-                      ask(sug.q);
-                    }
-                  }}
-                >
-                  {sug.t}
-                </button>
-                {i < SUGGESTIONS.length - 1 && <span className={s.suggestSep}> &middot;</span>}
-              </span>
-            ))}
+        {bagItems.length > 0 && (
+          <div className={s.bagWrap}>
+            <button
+              type="button"
+              className={s.bagToggle}
+              onClick={() => setBagOpen((open) => !open)}
+              aria-expanded={bagOpen}
+              aria-controls="record-bore-bag"
+            >
+              {bagOpen ? "Put the bag away" : `Bag it up - ${bagItems.length} record${bagItems.length === 1 ? "" : "s"}`}
+            </button>
+            {bagOpen && (
+              <section id="record-bore-bag" className={s.bag} aria-label="Records from this conversation">
+                <div className={s.bagHead}>
+                  <span>Records / {String(bagItems.length).padStart(2, "0")}</span>
+                  {playlistUrl && (
+                    <a href={playlistUrl} target="_blank" rel="noopener noreferrer">
+                      play the lot
+                    </a>
+                  )}
+                </div>
+                <div className={s.bagList}>
+                  {bagItems.map((item, index) => {
+                    const meta = recMeta[item.discogs_id];
+                    const artist = (meta?.artist ?? item.artist)?.replace(/\s+\(\d+\)$/, "");
+                    const title = meta?.title ?? item.title;
+                    const ytId = extractYouTubeId(item.youtube_url);
+                    return (
+                      <p key={item.discogs_id}>
+                        <span className={s.bagName}>
+                          <span className={s.bagIndex}>{String(index + 1).padStart(2, "0")}</span>
+                          <a href={`/master/${item.discogs_id}`} target="_blank" rel="noopener noreferrer">
+                            {recordNameDashes(artist ? `${artist} - ${title}` : title)}
+                          </a>
+                        </span>
+                        <span>
+                          {ytId && (
+                            <a href={`https://www.youtube.com/watch?v=${ytId}`} target="_blank" rel="noopener noreferrer">
+                              listen
+                            </a>
+                          )}
+                          <a
+                            href={`https://www.discogs.com/sell/list?master_id=${item.discogs_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            buy
+                          </a>
+                        </span>
+                      </p>
+                    );
+                  })}
+                </div>
+                <p className={s.bagFoot}>No returns. Obviously.</p>
+              </section>
+            )}
           </div>
         )}
 
-        <p className={s.cap}>
-          {left <= 0
-            ? "That's your lot. Come back tomorrow."
-            : left <= 5
-              ? `You are becoming demanding. ${left} left.`
-              : `You've got ${left} questions today. I lose interest after that.`}
-        </p>
+        <section className={s.askPanel} aria-labelledby="record-bore-ask-label">
+          <label id="record-bore-ask-label" className={s.srOnly} htmlFor="record-bore-question">Ask</label>
+          <div className={s.composer}>
+            <input
+              id="record-bore-question"
+              ref={inputRef}
+              className={s.input}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ask(); } }}
+              placeholder={messages.length > 0 ? "Ask another stupid question." : "Go on then."}
+              disabled={loading}
+              autoCapitalize="sentences"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            <button className={s.send} onClick={() => ask()} disabled={loading || !input.trim()} type="button">
+              <span className={s.srOnly}>Ask</span><span aria-hidden="true">&rarr;</span>
+            </button>
+          </div>
+
+          {messages.length === 0 && (
+            <div className={s.suggest}>
+              <span className={s.suggestLead}>Try:</span>
+              {SUGGESTIONS.map((sug, index) => (
+                <span key={sug.t}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (sug.fill) {
+                        setInput(sug.fill);
+                        inputRef.current?.focus();
+                      } else {
+                        ask(sug.q);
+                      }
+                    }}
+                  >
+                    {sug.t}
+                  </button>
+                  {index < SUGGESTIONS.length - 1 && <span aria-hidden="true"> · </span>}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <p className={s.cap}>
+            {questionsLeft === null
+              ? "Limited questions. I lose interest after that."
+              : `${questionsLeft} question${questionsLeft === 1 ? "" : "s"} left. I lose interest after that.`}
+          </p>
+        </section>
+
       </main>
     </div>
   );
