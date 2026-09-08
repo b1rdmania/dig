@@ -39,6 +39,10 @@ export const TOOLS = [
           description: "Filter to a specific entity type. Omit to search masters (the default).",
         },
         genre: { type: "string", description: "Filter by genre (e.g. 'House', 'Techno', 'Electronic')" },
+        style: { type: "string", description: "Filter by Discogs style (e.g. 'Deep House', 'Acid', 'Jungle')" },
+        country: { type: "string", description: "Filter by release country (e.g. 'US', 'UK', 'Germany')" },
+        year_min: { type: "number", description: "Earliest year (inclusive)" },
+        year_max: { type: "number", description: "Latest year (inclusive)" },
         limit: { type: "number", description: "Results to return (1-10, default 8)" },
       },
       required: ["q"],
@@ -217,7 +221,11 @@ export async function executeTool(
       const type = input.type as any;
       const genre = input.genre ? String(input.genre) : undefined;
       const limit = Math.min(Math.max(Number(input.limit ?? 8), 1), 10);
-      const sr = await search(db, { q, type, genre, limit, quality: "all" });
+      const style = input.style ? String(input.style) : undefined;
+      const country = input.country ? String(input.country) : undefined;
+      const yearMin = input.year_min ? Number(input.year_min) : undefined;
+      const yearMax = input.year_max ? Number(input.year_max) : undefined;
+      const sr = await search(db, { q, type, genre, style, country, yearMin, yearMax, limit, quality: "all" });
       for (const r of sr.results.slice(0, 3)) {
         const entityType = r.type === "master" ? "master" : r.type === "artist" ? "artist" : "label";
         const path = r.type === "master" ? "master" : r.type === "artist" ? "artist" : "label";

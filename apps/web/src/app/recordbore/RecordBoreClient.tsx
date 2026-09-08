@@ -577,6 +577,8 @@ export function RecordBoreClient({ opener }: { opener: string }) {
             {questionsLeft === null
               ? "Limited questions. I lose interest after that."
               : `${questionsLeft} question${questionsLeft === 1 ? "" : "s"} left. I lose interest after that.`}
+            <br />
+            (this is a demo concept so may be slow or erratic)
           </p>
         </section>
 

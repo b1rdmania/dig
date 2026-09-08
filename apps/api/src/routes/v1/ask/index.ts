@@ -21,9 +21,10 @@ const PROVIDER: LlmProvider =
 const DEFAULT_MODEL =
   process.env.LLM_MODEL ?? (PROVIDER === "openrouter" ? "moonshotai/kimi-k3" : "claude-sonnet-4-6");
 const MAX_HISTORY_TURNS = 6;
-// Public (Record Bore page) budgets. Two lookup rounds then an answer, and an
+// Public (Record Bore page) budgets. Three lookup rounds then an answer (a scene
+// ask is get_scene, then batched label essentials, then write), and an
 // answer that fits on the counter: 1600 tokens let Kimi write for 43s.
-const PUBLIC_MAX_ROUNDS = 3;
+const PUBLIC_MAX_ROUNDS = 4;
 const PUBLIC_MAX_TOKENS = 600;
 
 interface AskBody {
