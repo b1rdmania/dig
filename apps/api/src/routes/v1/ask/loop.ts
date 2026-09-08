@@ -24,6 +24,25 @@ const TOOL_EXEC_TIMEOUT_MS = 15_000;
 // ~225s (5 rounds × 30s call + 15s tools), so this should never cut off
 // a real dig - it exists to kill a pathological one. The 90s version was
 // truncating legitimate credit-graph digs ("Retrieval partial").
+// Kimi reasoning effort on OpenRouter. LOW = 1-2s a round and still calls
+// tools; OFF skips tools and invents IDs; MEDIUM costs seconds but follows the
+// check-the-stock rule more reliably. Env-switchable so it can be measured.
+const REASONING_EFFORT = (["low", "medium", "high"].includes(String(process.env.LLM_REASONING_EFFORT))
+  ? String(process.env.LLM_REASONING_EFFORT)
+  : "low") as "low" | "medium" | "high";
+// A recommendation written without a single lookup this turn is the one
+// failure the prompt cannot prevent on its own: the model answers a follow-up
+// ("send me more X") from memory, unlinked, sometimes wrong. Its signature is
+// cheap to spot - no tool calls, and a year in the text. When it appears the
+// loop sends the model back to the racks once; a clarifying question or a bit
+// of counter chat carries no year and passes straight through.
+const YEAR_RE = /\b(19[89]\d|200\d)\b/;
+export function looksLikeUncheckedRecommendation(text: string, toolCallsThisTurn: number): boolean {
+  return toolCallsThisTurn === 0 && YEAR_RE.test(text);
+}
+const BACK_TO_THE_RACKS =
+  "You named records without checking the stock. Search each name with search_catalog first, then get_artist_masters on what comes back, and write the answer with links. Same voice, same opinions. Do not mention checking, correcting, or a second attempt - the customer only sees this answer.";
+
 const LOOP_DEADLINE_MS = 240_000;
 
 // ---------------------------------------------------------------------------
@@ -278,7 +297,7 @@ async function callOpenRouter(params: {
         // invented IDs (0/3 grounded in the probe). LOW keeps the lookups
         // (3/3, 12-70 thinking tokens, 1-2s a round). Reasoning tokens count
         // toward max_tokens, so keep this LOW whenever the budget is small.
-        reasoning: { effort: "low" },
+        reasoning: { effort: REASONING_EFFORT },
       }),
       signal: controller.signal,
     });
@@ -431,6 +450,7 @@ export async function runAgenticLoop(params: {
 
   let usedModel = params.model;
   let toolCallCount = 0;
+  let sentBack = false;
   const mediaCollector: MediaItem[] = [];
   const evidenceCollector: EvidenceItem[] = [];
   const errorRef = { count: 0 };
@@ -496,6 +516,14 @@ export async function runAgenticLoop(params: {
 
     if (response.stop_reason === "end_turn" || response.stop_reason === "max_tokens") {
       const textBlock = response.content.find((b) => b.type === "text");
+      if (!sentBack && !lastRound && looksLikeUncheckedRecommendation(String(textBlock?.text ?? ""), toolCallCount)) {
+        sentBack = true;
+        log("ask:unchecked_recommendation", { round });
+        params.onEvent?.({ type: "round", round: round + 1 });
+        messages.push({ role: "assistant", content: response.content });
+        messages.push({ role: "user", content: BACK_TO_THE_RACKS });
+        continue;
+      }
       const answer = unlinkUncited(String(textBlock?.text ?? "").trim(), evidenceCollector) || "Go on - say that again for me. What is it you're actually chasing?";
       const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : errorRef.count > 0 ? "timeout_degraded" : "grounded_empty";
       log("ask:loop_end", { rounds: round + 1, tool_calls: toolCallCount, mode, answer_len: answer.length });

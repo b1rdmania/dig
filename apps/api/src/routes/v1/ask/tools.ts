@@ -230,6 +230,10 @@ async function collectVideos(
   }));
 }
 
+// Invariant: every entity a tool returns to the model is registered as
+// evidence. The answer scrubber (binding.unlinkUncited) removes links to
+// anything NOT in evidence, so a partial registration would strip links to
+// real results. Video pre-fetch is the only thing that stays capped.
 export async function executeTool(
   db: Kysely<Database>,
   name: string,
@@ -250,7 +254,7 @@ export async function executeTool(
       const yearMin = input.year_min ? Number(input.year_min) : undefined;
       const yearMax = input.year_max ? Number(input.year_max) : undefined;
       const sr = await search(db, { q, type, genre, style, country, yearMin, yearMax, limit, quality: "all" });
-      for (const r of sr.results.slice(0, 3)) {
+      for (const r of sr.results) {
         const entityType = r.type === "master" ? "master" : r.type === "artist" ? "artist" : "label";
         const path = r.type === "master" ? "master" : r.type === "artist" ? "artist" : "label";
         evidenceCollector.push({ type: entityType as any, discogs_id: r.discogs_id, title: r.name ?? r.title ?? "", dig_url: `https://app.dig.baby/${path}/${r.discogs_id}` });
@@ -389,26 +393,13 @@ export async function executeTool(
         type: l.release_type_label ?? l.release_type ?? null,
         dig_url: `https://app.dig.baby/master/${l.discogs_id}`,
       }));
-      for (const m of masters.slice(0, 5)) {
+      for (const m of masters) {
         evidenceCollector.push({ type: "master", discogs_id: m.discogs_id, title: m.title, dig_url: m.dig_url });
         allowedMasterIds.add(m.discogs_id);
       }
 
-      // Auto-collect videos from top masters so videos appear without requiring an explicit get_master call
-      const top = masters.slice(0, 3);
-      await Promise.all(top.map(async (m) => {
-        try {
-          const { batchId: mb, dumpDate: md } = await getBatchForTable(db, "catalog.masters");
-          const detail = await getMaster(db, m.discogs_id, mb, md) as any;
-          if (!detail) return;
-          const artistName = detail.primary_artist?.name ?? detail.artists?.[0]?.name ?? m.title;
-          for (const v of (detail.videos ?? []).slice(0, 2)) {
-            if (v?.url && extractYouTubeId(v.url)) {
-              mediaCollector.push({ discogs_id: m.discogs_id, title: v.title ?? m.title, artist: artistName, youtube_url: v.url });
-            }
-          }
-        } catch { /* fail open */ }
-      }));
+      // Videos for the top masters so the rail renders without a get_master round.
+      await collectVideos(db, masters, mediaCollector, 6);
 
       return {
         masters,
@@ -435,7 +426,7 @@ export async function executeTool(
         artist: l.artist ?? null,
         dig_url: `https://app.dig.baby/master/${l.discogs_id}`,
       }));
-      for (const r of labelMasters.slice(0, 3)) {
+      for (const r of labelMasters) {
         evidenceCollector.push({ type: "master", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
         allowedMasterIds.add(r.discogs_id);
       }
@@ -540,7 +531,7 @@ export async function executeTool(
       if (!scene) { errorRef.count++; return { error: `Scene not found: ${slug}` }; }
 
       // Register member labels as cite-able evidence so the model's links validate.
-      for (const l of scene.labels.slice(0, 12)) {
+      for (const l of scene.labels) {
         evidenceCollector.push({
           type: "label",
           discogs_id: l.discogs_id,
@@ -596,7 +587,7 @@ export async function executeTool(
         includeAliases: true,
         excludeSelfPrimary: isRemixRole,
       });
-      for (const l of result.links.slice(0, 20)) {
+      for (const l of result.links) {
         allowedMasterIds.add(l.master_discogs_id);
         evidenceCollector.push({
           type: "master",
