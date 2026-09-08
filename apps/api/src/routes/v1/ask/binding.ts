@@ -34,6 +34,21 @@ export function bindMediaToCitations(media: MediaItem[], answer: string): MediaI
   return media.filter((m) => citedMasterIds.has(m.discogs_id));
 }
 
+/**
+ * Grounding, enforced. The prompt says every linked entity must come from a
+ * tool result this turn; the model sometimes links from memory anyway (a
+ * master ID that does not exist, or the wrong one). Any dig.baby link whose
+ * entity was not returned by a tool is unlinked - the text stays, the dead
+ * URL goes. Videos then bind only to what survives.
+ */
+export function unlinkUncited(answer: string, evidence: readonly EvidenceItem[]): string {
+  const known = new Set(evidence.map((e) => `${e.type}/${e.discogs_id}`));
+  const linkRe = /\[([^\]]+)\]\(https?:\/\/app\.dig\.baby\/(master|artist|label)\/(\d+)\/?\)/g;
+  return answer.replace(linkRe, (whole, text: string, type: string, id: string) =>
+    known.has(`${type}/${Number(id)}`) ? whole : text,
+  );
+}
+
 /** Dedupe media by YouTube URL, keeping first occurrence. */
 export function dedupeMedia(media: MediaItem[]): MediaItem[] {
   const seenUrls = new Set<string>();

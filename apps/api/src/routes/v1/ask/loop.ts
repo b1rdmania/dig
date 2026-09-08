@@ -9,6 +9,7 @@ import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import { loadRecordBorePersona } from "@dig/domain";
 import type { AnthropicMessage, AnthropicContentBlock, MediaItem, EvidenceItem, ResponseMode } from "./types.js";
+import { unlinkUncited } from "./binding.js";
 import { TOOLS, executeTool } from "./tools.js";
 
 // Default round budget for private (BYO-key / llm-beta) asks. The public
@@ -57,16 +58,16 @@ When they ask to go DEEPER on an artist - allied stuff, engineers, the weird end
 - Named artist/label/release → search_catalog to resolve the ID, then get_artist / get_label / get_master.
 - get_artist is the whole person: every alias with its own ID, record count and years, plus the credit roles they hold. Read it before you dig. An alias ID in get_artist_masters gives that alias alone; include_aliases=true gives the whole person. Never search an alias by name when the card already has its ID.
 - "Who engineered / produced / remixed X" → get_artist_credits with role=engineer / produce / remix; the card's credit_roles tells you which roles exist before you ask.
-- Scene + era asks ("Detroit techno, 1992", "Chicago house, 1988", "UK garage, 1997") → the scene is the shelf. Round one: get_scene with the slug from the SCENE MAP below (no list_scenes - the map is here). Round two: get_label_essentials on the two or three core labels that fit the year, all in the same round. Then write from the core runs. Never keyword-search the scene name: "Detroit techno" as a query finds compilations with those words in the title, not the records.
-- Other era/region/sound asks ("Italian proto-trance around '95") → search_catalog with a real query word PLUS filters (style, country, year_min/year_max). Filters narrow; they don't rank. An empty query with filters returns unweighted noise, so always give it a word to bite on.
+- Scene + era asks ("Detroit techno, 1992") → get_scene (slugs below), then get_label_essentials on the core labels that fit the year. Don't keyword-search a scene name; it finds compilations called that, not the records.
+- Era/region/sound asks → search_catalog with a query word plus filters (style, country, year_min/year_max). Filters narrow, they don't rank; never send an empty query.
 - "Recommend music by X" / discography → get_artist_masters. Always - the video rail depends on it.
 - "What's good on label Y" → get_label_essentials FIRST (core run + related-label directions). get_label_releases only if essentials is empty.
 - Orienting yourself in a sound or era → get_scene, silently, using the map below.
-- You have few lookup rounds. Inside a round, call every tool you need at once - three get_label_essentials in one round is normal. A round spent on one lookup you could have batched is a round you don't get back.
+- Rounds are few. Batch lookups: several tool calls in one round is normal.
 
-SCENE MAP (slug - name - city). Use these slugs directly:
+SCENES (slug - name - city):
 chicago-house - Chicago House - Chicago · detroit-core - Detroit Core - Detroit · uk-london-house - London House - London · nyc-garage-house - NYC Garage & House - New York · uk-warp-bleep - Warp & UK Bleep - Sheffield · berlin-techno - Berlin Techno - Berlin · frankfurt-idm - Frankfurt IDM / Glitch - Frankfurt · cologne-minimal - Cologne Minimal - Köln · scandinavia-helsinki - Helsinki Minimal - Helsinki · belgium-r-and-s - Belgium / R&S - Ghent · us-philly-glasgow - Glasgow & Philadelphia - Glasgow / Philadelphia · europe-acid - European Acid - Eindhoven · uk-jungle-dnb - UK Jungle / D&B - London · uk-trip-hop - UK Trip-Hop & Leftfield - London · dub-techno - Dub Techno - Berlin.
-UK garage lives between nyc-garage-house and uk-london-house; check both.
+UK garage sits across uk-london-house and nyc-garage-house.
 - "What's similar to label Z" → get_label_essentials on Z and follow the directional edges (deeper, harder, rawer...) - but present the destination labels and records, not the mechanism.
 
 LINKS - NON-NEGOTIABLE, THE WHOLE SHOP RUNS ON THEM:
@@ -495,7 +496,7 @@ export async function runAgenticLoop(params: {
 
     if (response.stop_reason === "end_turn" || response.stop_reason === "max_tokens") {
       const textBlock = response.content.find((b) => b.type === "text");
-      const answer = String(textBlock?.text ?? "").trim() || "Go on - say that again for me. What is it you're actually chasing?";
+      const answer = unlinkUncited(String(textBlock?.text ?? "").trim(), evidenceCollector) || "Go on - say that again for me. What is it you're actually chasing?";
       const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : errorRef.count > 0 ? "timeout_degraded" : "grounded_empty";
       log("ask:loop_end", { rounds: round + 1, tool_calls: toolCallCount, mode, answer_len: answer.length });
       return { answer, model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode, rounds };
@@ -539,7 +540,7 @@ export async function runAgenticLoop(params: {
     const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : "timeout_degraded";
     log("ask:loop_end_unexpected", { round, stop_reason: response.stop_reason, mode });
     return {
-      answer: String(textBlock?.text ?? "Something went wrong.").trim(),
+      answer: unlinkUncited(String(textBlock?.text ?? "Something went wrong.").trim(), evidenceCollector),
       model: usedModel,
       tool_calls: toolCallCount,
       media: mediaCollector,

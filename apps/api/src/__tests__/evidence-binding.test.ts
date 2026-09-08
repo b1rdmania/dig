@@ -5,6 +5,7 @@ import {
   dedupeMedia,
   dedupeEvidence,
   isAllowedMasterId,
+  unlinkUncited,
   type MediaItem,
   type EvidenceItem,
 } from "../routes/v1/ask/binding.js";
@@ -238,5 +239,32 @@ describe("binding invariant — media ⊆ answer-cited masters", () => {
     const bound = bindMediaToCitations(media, answer);
     expect(bound).toHaveLength(2);
     expect(bound.map((m) => m.discogs_id).sort()).toEqual([100, 200]);
+  });
+});
+
+describe("unlinkUncited — links to entities never fetched this turn", () => {
+  const evidence: EvidenceItem[] = [
+    { type: "master", discogs_id: 1369, title: "Phylyps Trak", dig_url: "https://app.dig.baby/master/1369" },
+    { type: "label", discogs_id: 267, title: "Trax", dig_url: "https://app.dig.baby/label/267" },
+  ];
+
+  it("keeps links whose entity a tool returned", () => {
+    const a = "Try [Phylyps Trak](https://app.dig.baby/master/1369) on [Trax](https://app.dig.baby/label/267).";
+    expect(unlinkUncited(a, evidence)).toBe(a);
+  });
+
+  it("unlinks a master the model wrote from memory, keeping the text", () => {
+    const a = "Try [Phylyps Trak](https://app.dig.baby/master/3075) - nine minutes of fog.";
+    expect(unlinkUncited(a, evidence)).toBe("Try Phylyps Trak - nine minutes of fog.");
+  });
+
+  it("checks type as well as id", () => {
+    const a = "[Trax](https://app.dig.baby/artist/267)";
+    expect(unlinkUncited(a, evidence)).toBe("Trax");
+  });
+
+  it("with no evidence at all, every dig link becomes plain text", () => {
+    const a = "[A](https://app.dig.baby/master/1) and [B](https://app.dig.baby/label/2/)";
+    expect(unlinkUncited(a, [])).toBe("A and B");
   });
 });

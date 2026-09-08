@@ -206,6 +206,30 @@ function extractYouTubeId(url: string): string | null {
   } catch { return null; }
 }
 
+// Videos for a handful of masters, so the rail can render without the model
+// spending a round on get_master. Fail open: a missing detail costs a video,
+// never the answer.
+async function collectVideos(
+  db: Kysely<Database>,
+  masters: Array<{ discogs_id: number; title: string }>,
+  mediaCollector: MediaItem[],
+  take = 3,
+): Promise<void> {
+  const { batchId, dumpDate } = await getBatchForTable(db, "catalog.masters");
+  await Promise.all(masters.slice(0, take).map(async (m) => {
+    try {
+      const detail = await getMaster(db, m.discogs_id, batchId, dumpDate) as any;
+      if (!detail) return;
+      const artistName = detail.primary_artist?.name ?? detail.artists?.[0]?.name ?? m.title;
+      for (const v of (detail.videos ?? []).slice(0, 2)) {
+        if (v?.url && extractYouTubeId(v.url)) {
+          mediaCollector.push({ discogs_id: m.discogs_id, title: v.title ?? m.title, artist: artistName, youtube_url: v.url });
+        }
+      }
+    } catch { /* fail open */ }
+  }));
+}
+
 export async function executeTool(
   db: Kysely<Database>,
   name: string,
@@ -232,6 +256,11 @@ export async function executeTool(
         evidenceCollector.push({ type: entityType as any, discogs_id: r.discogs_id, title: r.name ?? r.title ?? "", dig_url: `https://app.dig.baby/${path}/${r.discogs_id}` });
         if (r.type === "master") allowedMasterIds.add(r.discogs_id);
       }
+      await collectVideos(
+        db,
+        sr.results.filter((r) => r.type === "master").map((r) => ({ discogs_id: r.discogs_id, title: r.title ?? r.name ?? "" })),
+        mediaCollector,
+      );
       return {
         results: sr.results.map((r) => ({
           type: r.type,
@@ -576,6 +605,12 @@ export async function executeTool(
           dig_url: `https://app.dig.baby/master/${l.master_discogs_id}`,
         });
       }
+      await collectVideos(
+        db,
+        result.links.map((l) => ({ discogs_id: l.master_discogs_id, title: l.master_title ?? `Master ${l.master_discogs_id}` })),
+        mediaCollector,
+        6,
+      );
       return {
         credits: result.links.map((l) => ({
           master_discogs_id: l.master_discogs_id,
