@@ -1,0 +1,1829 @@
+{
+  "_comment": "Wine Bore curation pack, first cut. Draft until Andy cuts it. Every id is a live wine.* primary key, queried not guessed: producer -> wine.producers.id, appellation -> wine.appellations.id, wine -> wine.wines.lwin, grape -> wine.grapes.id. Notes are the shop's opinion and are loaded with status='draft'. Shelves are a private map, never a menu.",
+  "shelves": [
+    {
+      "slug": "jura",
+      "name": "Jura",
+      "blurb": "Six hundred hectares of cold clay doing things nobody else dares, and half of it still cheaper than village Burgundy.",
+      "rank": 1,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 1689,
+          "name": "Arbois",
+          "rank": 1,
+          "note": "The working appellation. Pupillin is the bit that matters and the label barely says so."
+        },
+        {
+          "type": "appellation",
+          "id": 1783,
+          "name": "Côtes du Jura",
+          "rank": 2,
+          "note": "Catch-all, which means the grower matters more here than the name does."
+        },
+        {
+          "type": "appellation",
+          "id": 1782,
+          "name": "Château-Chalon",
+          "rank": 3,
+          "note": "Vin jaune only, six years and three months under the veil, and no way to fudge it."
+        },
+        {
+          "type": "appellation",
+          "id": 1838,
+          "name": "L'Etoile",
+          "rank": 4,
+          "note": "Tiny, white, chalky. Under-bought because nobody can pronounce it with confidence."
+        },
+        {
+          "type": "producer",
+          "id": 49252,
+          "name": "Maison Pierre Overnoy",
+          "rank": 5,
+          "note": "The house everyone copies. Nothing added, nothing removed, and it still outlives the imitators."
+        },
+        {
+          "type": "producer",
+          "id": 46403,
+          "name": "Anne et Jean-Francois Ganevat",
+          "rank": 6,
+          "note": "Sixty-odd cuvées and a genius rate of about eighty percent. Buy the Savagnin, skip the wilder end."
+        },
+        {
+          "type": "producer",
+          "id": 41788,
+          "name": "Benedicte & Stephane Tissot",
+          "rank": 7,
+          "note": "The range you can actually find. Biodynamic, precise, and the Vin Jaune is a bargain nobody clocked."
+        },
+        {
+          "type": "producer",
+          "id": 43726,
+          "name": "Jean Macle",
+          "rank": 8,
+          "note": "Four wines. Château-Chalon done as the rule intends and nothing else attempted."
+        },
+        {
+          "type": "producer",
+          "id": 43730,
+          "name": "Jacques Puffeney",
+          "rank": 9,
+          "note": "Retired, so it's a library buy now. The Trousseau was the best argument the grape ever had."
+        },
+        {
+          "type": "producer",
+          "id": 43733,
+          "name": "Domaine Labet",
+          "rank": 10,
+          "note": "Single-parcel Chardonnay from limestone. Burgundy prices from the eighties, roughly."
+        },
+        {
+          "type": "producer",
+          "id": 49635,
+          "name": "Bornard",
+          "rank": 11,
+          "note": "Ploussard with the brakes off. Volatile in both senses; when it lands it's the best in the region."
+        },
+        {
+          "type": "producer",
+          "id": 49942,
+          "name": "Domaine Pignier",
+          "rank": 12,
+          "note": "Old Carthusian cellar, straight winemaking. The one to start a sceptic on."
+        },
+        {
+          "type": "producer",
+          "id": 45815,
+          "name": "Domaine Berthet-Bondet",
+          "rank": 13,
+          "note": "Château-Chalon without the collector tax."
+        },
+        {
+          "type": "producer",
+          "id": 40592,
+          "name": "Jean Bourdy",
+          "rank": 14,
+          "note": "Fifteen generations. They release old vintages because they can, not as a gimmick."
+        },
+        {
+          "type": "grape",
+          "id": 5755,
+          "name": "Savagnin",
+          "rank": 15,
+          "note": "Traminer under another name. Give it air and six years and it does something Chardonnay cannot."
+        },
+        {
+          "type": "grape",
+          "id": 5482,
+          "name": "Poulsard",
+          "rank": 16,
+          "note": "Pale enough that people send it back. Their loss."
+        },
+        {
+          "type": "grape",
+          "id": 6386,
+          "name": "Trousseau",
+          "rank": 17,
+          "note": "The serious Jura red. Needs a warm slope, gets one rarely."
+        },
+        {
+          "type": "wine",
+          "id": 1713864,
+          "name": "Maison Pierre Overnoy, Poulsard, Arbois Pupillin",
+          "rank": 18,
+          "note": "The bottle that started the whole natural argument, and it was never about the argument."
+        },
+        {
+          "type": "wine",
+          "id": 1352373,
+          "name": "Jean Macle, Chateau-Chalon",
+          "rank": 19,
+          "note": "Vin jaune as a reference point. Open it, forget it for a week, it improves."
+        }
+      ],
+      "edges": [
+        {
+          "to": "loire-chenin",
+          "direction": "cleaner",
+          "note": "Same oxidative instinct, lid on: Chenin ages without the veil."
+        },
+        {
+          "to": "sherry",
+          "direction": "deeper",
+          "note": "Flor taken to its logical end, and with centuries more practice."
+        },
+        {
+          "to": "beaujolais-crus",
+          "direction": "cheaper",
+          "note": "The same people drink both; one of them still costs sensible money."
+        },
+        {
+          "to": "swartland",
+          "direction": "wilder",
+          "note": "Overnoy's method exported to granite and heat, with less rulebook."
+        }
+      ]
+    },
+    {
+      "slug": "beaujolais-crus",
+      "name": "Beaujolais crus",
+      "blurb": "Ten named hills that spent forty years paying for what Nouveau did to the region's name.",
+      "rank": 2,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 2085,
+          "name": "Morgon",
+          "rank": 1,
+          "note": "Côte du Py is the one you want; the rest of Morgon trades on it."
+        },
+        {
+          "type": "appellation",
+          "id": 2074,
+          "name": "Fleurie",
+          "rank": 2,
+          "note": "Named for perfume and mostly delivers, which is rarer than it sounds."
+        },
+        {
+          "type": "appellation",
+          "id": 2086,
+          "name": "Moulin-à-Vent",
+          "rank": 3,
+          "note": "Manganese soils, tannin, ten years in the bottle. The cru that embarrasses Côte de Beaune."
+        },
+        {
+          "type": "appellation",
+          "id": 2067,
+          "name": "Côte de Brouilly",
+          "rank": 4,
+          "note": "Blue volcanic rock on the cone. Not the same wine as Brouilly and priced as if it were."
+        },
+        {
+          "type": "producer",
+          "id": 41043,
+          "name": "Jean Foillard",
+          "rank": 5,
+          "note": "Whole bunch, no sulphur to speak of, and still the most polished thing in the region."
+        },
+        {
+          "type": "producer",
+          "id": 41017,
+          "name": "M. et C. Lapierre",
+          "rank": 6,
+          "note": "Marcel's cellar, run straight by the children. The Morgon is the benchmark and they know it."
+        },
+        {
+          "type": "producer",
+          "id": 43175,
+          "name": "Coudert",
+          "rank": 7,
+          "note": "Clos de la Roilette. Fleurie on the Moulin-à-Vent side of the fence, and it tastes like it."
+        },
+        {
+          "type": "producer",
+          "id": 38265,
+          "name": "Yvon Metras",
+          "rank": 8,
+          "note": "Tiny, expensive, occasionally faulty, and worth the gamble twice a decade."
+        },
+        {
+          "type": "producer",
+          "id": 43779,
+          "name": "Domaine de la Grand Cour (Dutraive)",
+          "rank": 9,
+          "note": "Fleurie with real flesh. The most consistent of the natural set."
+        },
+        {
+          "type": "producer",
+          "id": 37246,
+          "name": "Jean-Marc Burgaud",
+          "rank": 10,
+          "note": "Not fashionable, never faulty. Côte du Py at trade price."
+        },
+        {
+          "type": "producer",
+          "id": 38686,
+          "name": "Louis Claude Desvignes",
+          "rank": 11,
+          "note": "Morgon lieux-dits held apart since before anyone cared. Javernières is the cellar's argument."
+        },
+        {
+          "type": "producer",
+          "id": 46160,
+          "name": "Guy Breton",
+          "rank": 12,
+          "note": "Le Petit Max. Gamay drunk cold with something fatty, which is the whole point."
+        },
+        {
+          "type": "producer",
+          "id": 41014,
+          "name": "Chateau Thivin",
+          "rank": 13,
+          "note": "Côte de Brouilly's oldest estate and the reason the cru still has a reputation."
+        },
+        {
+          "type": "producer",
+          "id": 52459,
+          "name": "Domaine J. Chamonard",
+          "rank": 14,
+          "note": "Long macerations, no additions, Morgon that smells of the cellar. Thin on the ground now."
+        },
+        {
+          "type": "grape",
+          "id": 6628,
+          "name": "Gamay",
+          "rank": 15,
+          "note": "Banned from Burgundy in 1395 for being too good at ripening. Still being punished for it."
+        },
+        {
+          "type": "wine",
+          "id": 1248117,
+          "name": "Jean Foillard, Morgon, Cote du Py",
+          "rank": 16,
+          "note": "The bottle that made everyone take the region seriously again. Keep it five years."
+        },
+        {
+          "type": "wine",
+          "id": 1906329,
+          "name": "Coudert, Clos de la Roilette, Fleurie",
+          "rank": 17,
+          "note": "The horse on the label is there because the Fleurie growers wouldn't have them. Read that as a compliment."
+        }
+      ],
+      "edges": [
+        {
+          "to": "jura",
+          "direction": "deeper",
+          "note": "Same cellar habits, colder clay, and a grape nobody has heard of."
+        },
+        {
+          "to": "piedmont-beyond-barolo",
+          "direction": "grander",
+          "note": "Where a thin-skinned red on granite is allowed to cost money."
+        },
+        {
+          "to": "loire-chenin",
+          "direction": "cleaner",
+          "note": "The white half of the same natural-wine address book."
+        }
+      ]
+    },
+    {
+      "slug": "loire-chenin",
+      "name": "Loire Chenin",
+      "blurb": "One grape, tuffeau, and four degrees of sweetness that the label will not reliably tell you about.",
+      "rank": 3,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 1845,
+          "name": "Vouvray",
+          "rank": 1,
+          "note": "Sec to moelleux to sparkling under one name, which is why you buy the grower not the appellation."
+        },
+        {
+          "type": "appellation",
+          "id": 1815,
+          "name": "Montlouis-sur-Loire",
+          "rank": 2,
+          "note": "Vouvray's south-bank twin, sandier, quicker, and about thirty percent less money."
+        },
+        {
+          "type": "appellation",
+          "id": 1693,
+          "name": "Savennières",
+          "rank": 3,
+          "note": "Schist, dry, austere for a decade. The least forgiving white in France."
+        },
+        {
+          "type": "appellation",
+          "id": 1791,
+          "name": "Saumur",
+          "rank": 4,
+          "note": "Chenin on chalk. Underpriced because the name says fizz to most people."
+        },
+        {
+          "type": "producer",
+          "id": 36678,
+          "name": "Domaine Huet",
+          "rank": 5,
+          "note": "Three vineyards, one grape, sixty years of proof. The reference and not a nostalgic one."
+        },
+        {
+          "type": "producer",
+          "id": 39463,
+          "name": "Domaine de Clos Naudin (Foreau)",
+          "rank": 6,
+          "note": "Huet's opposite number in Vouvray, tighter and slower. The Pétillant is the best value in the Loire."
+        },
+        {
+          "type": "producer",
+          "id": 41938,
+          "name": "Francois Chidaine",
+          "rank": 7,
+          "note": "Montlouis grower who bought into Vouvray and got told off for blending across the river. He was right."
+        },
+        {
+          "type": "producer",
+          "id": 37990,
+          "name": "Domaine de la Taille Aux Loups",
+          "rank": 8,
+          "note": "Blot makes Chenin taste expensive without oak tricks. The sparkling is serious."
+        },
+        {
+          "type": "producer",
+          "id": 40296,
+          "name": "Nicolas Joly",
+          "rank": 9,
+          "note": "Insufferable about biodynamics, correct about the vineyard. Decant it hours ahead or don't bother."
+        },
+        {
+          "type": "producer",
+          "id": 37667,
+          "name": "Domaine du Closel",
+          "rank": 10,
+          "note": "Savennières without the lecture. Clos du Papillon is the one."
+        },
+        {
+          "type": "producer",
+          "id": 41757,
+          "name": "Domaine Ogereau",
+          "rank": 11,
+          "note": "Layon sweet wines that stay drinkable past one glass, which is the hard part."
+        },
+        {
+          "type": "producer",
+          "id": 44144,
+          "name": "Domaine de Belliviere",
+          "rank": 12,
+          "note": "Jasnières, the forgotten north edge. Chenin grown where it barely ripens, and better for it."
+        },
+        {
+          "type": "producer",
+          "id": 42834,
+          "name": "Domaine Guiberteau",
+          "rank": 13,
+          "note": "Saumur whites on limestone that read as Burgundy to anyone tasting blind."
+        },
+        {
+          "type": "producer",
+          "id": 48296,
+          "name": "Agnes & Rene Mosse",
+          "rank": 14,
+          "note": "Anjou, low sulphur, occasionally cloudy, always intended."
+        },
+        {
+          "type": "grape",
+          "id": 4484,
+          "name": "Chenin blanc",
+          "rank": 15,
+          "note": "The most versatile white grape there is, and the most often ruined by a sugar decision."
+        },
+        {
+          "type": "wine",
+          "id": 1789180,
+          "name": "Domaine Huet, Vouvray, Clos Bourg Sec",
+          "rank": 16,
+          "note": "Dry Vouvray from the best parcel. Undrinkable for five years, then it runs for thirty."
+        },
+        {
+          "type": "wine",
+          "id": 1218792,
+          "name": "Nicolas Joly, Savennieres Coulee-de-Serrant",
+          "rank": 17,
+          "note": "A monopole since 1130 and still argued about. Worth having the argument once."
+        },
+        {
+          "type": "wine",
+          "id": 1195293,
+          "name": "Domaine de Clos Naudin (Foreau), Vouvray, Sec",
+          "rank": 18,
+          "note": "The quieter reference. Bone dry, and it will outlive the people who bought it."
+        }
+      ],
+      "edges": [
+        {
+          "to": "jura",
+          "direction": "deeper",
+          "note": "Chenin's patience taken past the point of oxygen control."
+        },
+        {
+          "to": "mosel-kabinett",
+          "direction": "cleaner",
+          "note": "The other acid-and-sugar balancing act, done with a rulebook that states the numbers."
+        },
+        {
+          "to": "champagne-growers",
+          "direction": "grander",
+          "note": "If the Pétillant landed, this is the same trick with a hundred and fifty years of money behind it."
+        }
+      ]
+    },
+    {
+      "slug": "mosel-kabinett",
+      "name": "Mosel Kabinett",
+      "blurb": "Slate, eight percent alcohol, and the only category in wine where lightness is the achievement.",
+      "rank": 4,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 2317,
+          "name": "Mosel",
+          "rank": 1,
+          "note": "The register protects one name for the whole river. Everything that matters happens below that line."
+        },
+        {
+          "type": "appellation",
+          "id": 2319,
+          "name": "Nahe",
+          "rank": 2,
+          "note": "Mosel tension with a degree more ripeness. Consistently the cheapest good Riesling in Germany."
+        },
+        {
+          "type": "appellation",
+          "id": 2322,
+          "name": "Rheingau",
+          "rank": 3,
+          "note": "Grander, drier, and the one that went chasing Burgundy when it should have stayed itself."
+        },
+        {
+          "type": "producer",
+          "id": 36259,
+          "name": "Egon Muller",
+          "rank": 4,
+          "note": "Scharzhofberg. The most expensive Riesling in the world and the argument holds up."
+        },
+        {
+          "type": "producer",
+          "id": 36265,
+          "name": "Joh. Jos. Prum",
+          "rank": 5,
+          "note": "Wehlener Sonnenuhr, reductive on release, glorious at twenty. People give up on it too early."
+        },
+        {
+          "type": "producer",
+          "id": 36273,
+          "name": "Willi Schaefer",
+          "rank": 6,
+          "note": "Four hectares in Graach. Domprobst Kabinett is the purest thing on this shelf."
+        },
+        {
+          "type": "producer",
+          "id": 41740,
+          "name": "Peter Lauer",
+          "rank": 7,
+          "note": "Saar, barrel-numbered cuvées, the Ayler Kupp Fass 6 as a house wine. Absurd value."
+        },
+        {
+          "type": "producer",
+          "id": 54150,
+          "name": "Hofgut Falkenstein",
+          "rank": 8,
+          "note": "Old-school Saar, spontaneous, no filtration. The Kabinetts are what the category was for."
+        },
+        {
+          "type": "producer",
+          "id": 36302,
+          "name": "Forstmeister Geltz Zilliken",
+          "rank": 9,
+          "note": "Saarburger Rausch. Cold cellar, slow wines, nothing hurried out of the door."
+        },
+        {
+          "type": "producer",
+          "id": 36280,
+          "name": "Selbach-Oster",
+          "rank": 10,
+          "note": "The pragmatist of the middle Mosel. Buys well, makes honestly, never overreaches."
+        },
+        {
+          "type": "producer",
+          "id": 36231,
+          "name": "Immich-Batterieberg",
+          "rank": 11,
+          "note": "Dry Mosel done properly, from a blasted-out cliff above Enkirch."
+        },
+        {
+          "type": "producer",
+          "id": 40291,
+          "name": "Clemens Busch",
+          "rank": 12,
+          "note": "Pündericher Marienburg split by slate colour. Biodynamic, dry, and it tastes like an argument won."
+        },
+        {
+          "type": "producer",
+          "id": 36299,
+          "name": "Weiser-Kunstler",
+          "rank": 13,
+          "note": "Trabener Gaispfad. The best new-ish name on the river, and still findable."
+        },
+        {
+          "type": "grape",
+          "id": 6249,
+          "name": "Riesling",
+          "rank": 14,
+          "note": "The only white grape that transmits a slope without translating it. Everything else interprets."
+        },
+        {
+          "type": "wine",
+          "id": 1089886,
+          "name": "Egon Muller, Scharzhofberger Riesling Kabinett, Mosel",
+          "rank": 15,
+          "note": "Eight percent, twenty grams of sugar, and it lasts longer than most first growths."
+        },
+        {
+          "type": "wine",
+          "id": 1091407,
+          "name": "Willi Schaefer, Graacher Domprobst Riesling Kabinett, Mosel",
+          "rank": 16,
+          "note": "The bottle to hand someone who says they don't like sweet wine. It ends the conversation."
+        }
+      ],
+      "edges": [
+        {
+          "to": "austrian-gruner",
+          "direction": "cleaner",
+          "note": "The same acid with the sugar taken out and the alcohol put back."
+        },
+        {
+          "to": "alsace",
+          "direction": "grander",
+          "note": "Same grapes, twice the weight, and a grand cru system that means something."
+        },
+        {
+          "to": "loire-chenin",
+          "direction": "cheaper",
+          "note": "Identical balancing act on tuffeau, and nobody is bidding at auction for it."
+        }
+      ]
+    },
+    {
+      "slug": "etna",
+      "name": "Etna",
+      "blurb": "An active volcano with contrade instead of climats, and a twenty-year-old fine wine industry on thousand-year-old vines.",
+      "rank": 5,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 2670,
+          "name": "Etna",
+          "rank": 1,
+          "note": "DOC since 1968, taken seriously since about 2002. The contrada on the label is the useful part."
+        },
+        {
+          "type": "appellation",
+          "id": 2673,
+          "name": "Faro",
+          "rank": 2,
+          "note": "Messina's forgotten Nerello. Three producers and a rule that still exists on paper."
+        },
+        {
+          "type": "appellation",
+          "id": 2790,
+          "name": "Sicilia",
+          "rank": 3,
+          "note": "The island-wide DOC. Useful for bulk, useless as a guide."
+        },
+        {
+          "type": "appellation",
+          "id": 2753,
+          "name": "Terre Siciliane",
+          "rank": 4,
+          "note": "Where the interesting Etna bottles go when the grower won't follow the disciplinare."
+        },
+        {
+          "type": "producer",
+          "id": 42581,
+          "name": "Benanti",
+          "rank": 5,
+          "note": "Started this, quietly, in the eighties. Pietra Marina is the best Carricante made."
+        },
+        {
+          "type": "producer",
+          "id": 36638,
+          "name": "Tenuta delle Terre Nere",
+          "rank": 6,
+          "note": "De Grazia mapped the contrade before anyone else bothered. The wines follow the map."
+        },
+        {
+          "type": "producer",
+          "id": 36535,
+          "name": "Passopisciaro",
+          "rank": 7,
+          "note": "Franchetti's altitude experiment. Contrada bottlings that read like a geology lecture, in a good way."
+        },
+        {
+          "type": "producer",
+          "id": 44378,
+          "name": "Azienda Agricola Frank Cornelissen",
+          "rank": 8,
+          "note": "Belgian, obsessive, started unfiltered and ended precise. The trajectory is the interesting part."
+        },
+        {
+          "type": "producer",
+          "id": 38487,
+          "name": "Girolamo Russo",
+          "rank": 9,
+          "note": "A pianist who took over the family plots. San Lorenzo is the one to buy."
+        },
+        {
+          "type": "producer",
+          "id": 42916,
+          "name": "Graci",
+          "rank": 10,
+          "note": "Nerello without make-up. The most straightforwardly likeable estate on the north face."
+        },
+        {
+          "type": "producer",
+          "id": 38392,
+          "name": "Azienda Vinicola Calabretta",
+          "rank": 11,
+          "note": "Releases at eight years old because that is when it's ready. Nobody else does this."
+        },
+        {
+          "type": "producer",
+          "id": 38590,
+          "name": "Pietradolce",
+          "rank": 12,
+          "note": "Pre-phylloxera vines on Rampante, modern cellar. It works."
+        },
+        {
+          "type": "producer",
+          "id": 44935,
+          "name": "I Vigneri (Salvo Foti)",
+          "rank": 13,
+          "note": "Alberello, mule-worked terraces, and a refusal to scale. The conscience of the mountain."
+        },
+        {
+          "type": "producer",
+          "id": 54171,
+          "name": "Palmento Costanzo",
+          "rank": 14,
+          "note": "Santo Spirito done cleanly. The house to hand a Burgundy drinker first."
+        },
+        {
+          "type": "grape",
+          "id": 5844,
+          "name": "Nerello Mascalese",
+          "rank": 15,
+          "note": "Pale, high-acid, tannic. People call it the Nebbiolo of the south; it's closer to old Pinot."
+        },
+        {
+          "type": "grape",
+          "id": 6483,
+          "name": "Nerello Cappuccio",
+          "rank": 16,
+          "note": "The blending partner nobody bottles alone, and it's better alone than they admit."
+        },
+        {
+          "type": "grape",
+          "id": 4457,
+          "name": "Carricante",
+          "rank": 17,
+          "note": "Salty, tight, malic. The only Italian white that ages like Riesling."
+        },
+        {
+          "type": "wine",
+          "id": 1139594,
+          "name": "Tenuta delle Terre Nere, Etna Rosso, Prephylloxera",
+          "rank": 18,
+          "note": "Ungrafted vines from the 1870s. The price is silly and the wine justifies about eighty percent of it."
+        },
+        {
+          "type": "wine",
+          "id": 1498293,
+          "name": "Azienda Agricola Frank Cornelissen, Magma, Terre Siciliane",
+          "rank": 19,
+          "note": "Barbabecchi at a thousand metres. Divisive, expensive, and not a gimmick."
+        }
+      ],
+      "edges": [
+        {
+          "to": "swartland",
+          "direction": "wilder",
+          "note": "Same bush-vine, low-intervention instinct on granite instead of lava."
+        },
+        {
+          "to": "piedmont-beyond-barolo",
+          "direction": "grander",
+          "note": "Where pale tannic reds have had a market for a century."
+        },
+        {
+          "to": "beaujolais-crus",
+          "direction": "cheaper",
+          "note": "Thin skins, volcanic rock, no oak. Half the money."
+        }
+      ]
+    },
+    {
+      "slug": "piedmont-beyond-barolo",
+      "name": "Piedmont beyond Barolo",
+      "blurb": "Nebbiolo grown where the tourists don't go, plus the one white grape the region nearly let die.",
+      "rank": 6,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 2436,
+          "name": "Barbaresco",
+          "rank": 1,
+          "note": "Barolo's shorter-aged sibling, thirty percent cheaper for no good reason."
+        },
+        {
+          "type": "appellation",
+          "id": 2647,
+          "name": "Carema",
+          "rank": 2,
+          "note": "Terraced Nebbiolo at seven hundred metres on the Aosta border. Sixteen hectares, total."
+        },
+        {
+          "type": "appellation",
+          "id": 2936,
+          "name": "Lessona",
+          "rank": 3,
+          "note": "Marine sand, not limestone. Alto Piemonte Nebbiolo tastes like a different grape and isn't."
+        },
+        {
+          "type": "appellation",
+          "id": 3013,
+          "name": "Colli Tortonesi",
+          "rank": 4,
+          "note": "Timorasso's home. A DOC that existed for decades before anyone found the point of it."
+        },
+        {
+          "type": "producer",
+          "id": 36564,
+          "name": "Produttori del Barbaresco",
+          "rank": 5,
+          "note": "A co-op that outperforms most estates. The Riserva crus are the best value in the Langhe."
+        },
+        {
+          "type": "producer",
+          "id": 36583,
+          "name": "Roagna",
+          "rank": 6,
+          "note": "Long macerations, old vines, no new oak, releases late. The most uncompromising house in Piedmont."
+        },
+        {
+          "type": "producer",
+          "id": 46366,
+          "name": "Ferrando",
+          "rank": 7,
+          "note": "Carema's keeper. Etichetta Nera in a good year is the whole argument for high-altitude Nebbiolo."
+        },
+        {
+          "type": "producer",
+          "id": 40984,
+          "name": "Proprieta Sperino",
+          "rank": 8,
+          "note": "De Marchi replanting Lessona from nothing. Patient, and the wines show it."
+        },
+        {
+          "type": "producer",
+          "id": 37851,
+          "name": "Azienda Agricola Antoniolo",
+          "rank": 9,
+          "note": "Gattinara's reference, held by three generations of women. Osso San Grato is the cru."
+        },
+        {
+          "type": "producer",
+          "id": 47057,
+          "name": "Nervi Conterno",
+          "rank": 10,
+          "note": "Gattinara bought by a Barolo name, which tells you where the smart money looked."
+        },
+        {
+          "type": "producer",
+          "id": 40520,
+          "name": "Le Piane",
+          "rank": 11,
+          "note": "Boca resurrected by a Swiss wine merchant. Volcanic porphyry, and it tastes it."
+        },
+        {
+          "type": "producer",
+          "id": 41834,
+          "name": "Vigneti Massa",
+          "rank": 12,
+          "note": "Walter Massa saved Timorasso single-handed. Everyone else in Derthona is following him."
+        },
+        {
+          "type": "producer",
+          "id": 38692,
+          "name": "Comm. G.B. Burlotto",
+          "rank": 13,
+          "note": "Verduno. Whole-cluster Barolo, and the Pelaverga is the best cheap red in the region."
+        },
+        {
+          "type": "producer",
+          "id": 36627,
+          "name": "Sottimano",
+          "rank": 14,
+          "note": "Neive crus held separate, no make-up. Cottà and Pajorè do different things and prove the point."
+        },
+        {
+          "type": "grape",
+          "id": 5853,
+          "name": "Nebbiolo",
+          "rank": 15,
+          "note": "Tannin and acid at the same extreme, and it needs a specific fog to get there."
+        },
+        {
+          "type": "grape",
+          "id": 4840,
+          "name": "Timorasso",
+          "rank": 16,
+          "note": "Down to a few hectares in the nineties. Ages ten years and smells of petrol, like a Riesling with a different passport."
+        },
+        {
+          "type": "grape",
+          "id": 6245,
+          "name": "Pelaverga",
+          "rank": 17,
+          "note": "Pepper and rose petal at twelve and a half percent. Grown on about twenty hectares and that's the whole world supply."
+        },
+        {
+          "type": "wine",
+          "id": 1195105,
+          "name": "Roagna, Barbaresco, Paje Crichet",
+          "rank": 18,
+          "note": "Old vines, years in cask, no shortcuts offered. The Barbaresco that answers Barolo directly."
+        },
+        {
+          "type": "wine",
+          "id": 1447738,
+          "name": "Ferrando, Etichetta Nera, Carema",
+          "rank": 19,
+          "note": "The black label only appears in vintages that deserve it. Which is the correct policy."
+        },
+        {
+          "type": "wine",
+          "id": 1270086,
+          "name": "Vigneti Massa, Colli Tortonesi, Costa del Vento Vigna Timorasso",
+          "rank": 20,
+          "note": "The bottle that made Timorasso a category instead of a footnote."
+        },
+        {
+          "type": "wine",
+          "id": 1246445,
+          "name": "Proprieta Sperino, Lessona",
+          "rank": 21,
+          "note": "Nebbiolo on sand. Perfumed where the Langhe is structural, and a third of the money."
+        }
+      ],
+      "edges": [
+        {
+          "to": "beaujolais-crus",
+          "direction": "cheaper",
+          "note": "Granite, thin skins, ten-year wines, sensible prices."
+        },
+        {
+          "to": "etna",
+          "direction": "wilder",
+          "note": "The same pale tannic profile with less history and more volcano."
+        },
+        {
+          "to": "rioja-traditionalists",
+          "direction": "earlier",
+          "note": "The other tradition built on releasing wine only when it is ready."
+        }
+      ]
+    },
+    {
+      "slug": "rioja-traditionalists",
+      "name": "Rioja traditionalists",
+      "blurb": "American oak, long ageing, and a handful of houses that never took the consultants' phone calls.",
+      "rank": 7,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 2145,
+          "name": "Rioja",
+          "rank": 1,
+          "note": "One protected name, three subzones the register doesn't recognise, and a quality ladder based on time in barrel rather than place."
+        },
+        {
+          "type": "appellation",
+          "id": 2416,
+          "name": "Navarra",
+          "rank": 2,
+          "note": "Next door, same grapes, none of the reputation. Which is the opportunity."
+        },
+        {
+          "type": "appellation",
+          "id": 2774,
+          "name": "Ribera del Duero",
+          "rank": 3,
+          "note": "Tempranillo at nine hundred metres in French oak. Grander, and it charges for it."
+        },
+        {
+          "type": "producer",
+          "id": 37484,
+          "name": "R. Lopez de Heredia",
+          "rank": 4,
+          "note": "Nothing has changed in the cellar since 1877 and nothing needs to. The white is the sleeper."
+        },
+        {
+          "type": "producer",
+          "id": 37053,
+          "name": "La Rioja Alta",
+          "rank": 5,
+          "note": "904 and 890, racked by hand, released at a decade. The most reliable old-school house going."
+        },
+        {
+          "type": "producer",
+          "id": 37015,
+          "name": "CVNE",
+          "rank": 6,
+          "note": "Imperial and Viña Real. Big, and still gets the Gran Reservas right."
+        },
+        {
+          "type": "producer",
+          "id": 37042,
+          "name": "Muga",
+          "rank": 7,
+          "note": "Egg whites, wooden vats, no filtration. Prado Enea is the traditional one; ignore the modern cuvées."
+        },
+        {
+          "type": "producer",
+          "id": 37033,
+          "name": "Marques de Murrieta",
+          "rank": 8,
+          "note": "Castillo Ygay is released when they feel like it, sometimes twenty years on. Correct."
+        },
+        {
+          "type": "producer",
+          "id": 37051,
+          "name": "Remelluri",
+          "rank": 9,
+          "note": "Single estate in Rioja Alavesa, which the region barely allows for. Telmo Rodríguez put the vineyard back together."
+        },
+        {
+          "type": "producer",
+          "id": 38285,
+          "name": "Bodegas Riojanas",
+          "rank": 10,
+          "note": "Monte Real Gran Reserva at supermarket-adjacent money. Nobody talks about it."
+        },
+        {
+          "type": "producer",
+          "id": 41062,
+          "name": "Federico Paternina",
+          "rank": 11,
+          "note": "Faded, and old vintages of Gran Reserva still turn up cheap. Worth the risk on a case."
+        },
+        {
+          "type": "producer",
+          "id": 41747,
+          "name": "Abel Mendoza",
+          "rank": 12,
+          "note": "Varietal Riojas made one grape at a time. An education, not a bottle to impress with."
+        },
+        {
+          "type": "producer",
+          "id": 45854,
+          "name": "Olivier Riviere",
+          "rank": 13,
+          "note": "A Frenchman farming old parcels nobody wanted. The new traditional, if that isn't a contradiction."
+        },
+        {
+          "type": "grape",
+          "id": 6319,
+          "name": "Tempranillo",
+          "rank": 14,
+          "note": "Low acid, early ripening, and completely dependent on altitude to stay interesting."
+        },
+        {
+          "type": "grape",
+          "id": 4671,
+          "name": "Graciano",
+          "rank": 15,
+          "note": "The acid and perfume in a traditional blend. Hard to grow, which is why it nearly vanished."
+        },
+        {
+          "type": "grape",
+          "id": 6036,
+          "name": "Garnacha Tinta",
+          "rank": 16,
+          "note": "The warmth in the blend and the grape doing the heavy lifting in old-vine Rioja Baja."
+        },
+        {
+          "type": "wine",
+          "id": 1135411,
+          "name": "R. Lopez de Heredia, Tondonia Tinto Gran Reserva, Rioja",
+          "rank": 17,
+          "note": "Six years in American oak, released after fifteen, and it still tastes like it was made yesterday by someone in 1920."
+        },
+        {
+          "type": "wine",
+          "id": 1152553,
+          "name": "R. Lopez de Heredia, Tondonia Blanco Reserva, Rioja",
+          "rank": 18,
+          "note": "Viura and Malvasía, six years in barrel. The most underpriced white wine in Europe."
+        }
+      ],
+      "edges": [
+        {
+          "to": "sherry",
+          "direction": "deeper",
+          "note": "The other Spanish tradition where oxygen and time do the work instead of fruit."
+        },
+        {
+          "to": "piedmont-beyond-barolo",
+          "direction": "grander",
+          "note": "Long ageing with a place-based hierarchy underneath it."
+        },
+        {
+          "to": "jura",
+          "direction": "wilder",
+          "note": "Oxidative handling taken past the point Rioja would permit."
+        }
+      ]
+    },
+    {
+      "slug": "sherry",
+      "name": "Sherry",
+      "blurb": "The most undervalued wine on earth, and the only category where the solera outranks the vintage.",
+      "rank": 8,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 3097,
+          "name": "Jerez-Xérès-Sherry",
+          "rank": 1,
+          "note": "Albariza chalk, flor, and a fractional blending system the register actually describes in detail."
+        },
+        {
+          "type": "appellation",
+          "id": 3131,
+          "name": "Manzanilla de Sanlúcar",
+          "rank": 2,
+          "note": "Same wine, damper cellars, thicker flor. Saltier, and a separate protected name for good reason."
+        },
+        {
+          "type": "appellation",
+          "id": 3154,
+          "name": "Montilla-Moriles",
+          "rank": 3,
+          "note": "Pedro Ximénez country, no fortification needed. Jerez's cheaper conscience."
+        },
+        {
+          "type": "producer",
+          "id": 37511,
+          "name": "Equipo Navazos",
+          "rank": 4,
+          "note": "Two men buying single butts other houses were about to blend away. It changed what the category could charge."
+        },
+        {
+          "type": "producer",
+          "id": 40543,
+          "name": "Valdespino",
+          "rank": 5,
+          "note": "Still ferments Inocente in butt from a single vineyard. Nobody else bothers."
+        },
+        {
+          "type": "producer",
+          "id": 39280,
+          "name": "Lustau",
+          "rank": 6,
+          "note": "The Almacenista range is a tour of the small stockholders. Best entry point there is."
+        },
+        {
+          "type": "producer",
+          "id": 39496,
+          "name": "Gonzalez Byass",
+          "rank": 7,
+          "note": "Tio Pepe en Rama once a year is the point; the rest is volume."
+        },
+        {
+          "type": "producer",
+          "id": 40204,
+          "name": "Barbadillo",
+          "rank": 8,
+          "note": "Sanlúcar's biggest, and the old Versos and Reliquia bottlings are extraordinary."
+        },
+        {
+          "type": "producer",
+          "id": 37730,
+          "name": "Hidalgo",
+          "rank": 9,
+          "note": "La Gitana. The Manzanilla you can buy anywhere and should more often."
+        },
+        {
+          "type": "producer",
+          "id": 49033,
+          "name": "Emilio Hidalgo",
+          "rank": 10,
+          "note": "Different family, smaller cellar. La Panesa Fino Especial is the best fino in Jerez."
+        },
+        {
+          "type": "producer",
+          "id": 37932,
+          "name": "Bodegas Tradicion",
+          "rank": 11,
+          "note": "Bought up old soleras and sells nothing young. VORS only, and it earns the acronym."
+        },
+        {
+          "type": "producer",
+          "id": 41730,
+          "name": "Rey Fernando de Castilla",
+          "rank": 12,
+          "note": "Antique range, no caramel, no sweetening. Honest amontillado at a fair price."
+        },
+        {
+          "type": "producer",
+          "id": 40206,
+          "name": "Delgado Zuleta",
+          "rank": 13,
+          "note": "La Goya. The oldest house in Sanlúcar and nobody in Britain stocks it."
+        },
+        {
+          "type": "grape",
+          "id": 6418,
+          "name": "Palomino",
+          "rank": 14,
+          "note": "Neutral, low-acid, dull as table wine. Under flor it becomes the most savoury thing in the shop."
+        },
+        {
+          "type": "grape",
+          "id": 5825,
+          "name": "Pedro Ximénez",
+          "rank": 15,
+          "note": "Sun-dried to raisins, four hundred grams of sugar, and it still has grip. Pour it over almost nothing."
+        },
+        {
+          "type": "wine",
+          "id": 1359079,
+          "name": "Valdespino, Fino Inocente Single Vineyard Sherry",
+          "rank": 16,
+          "note": "Macharnudo Alto, butt-fermented, single vineyard. The bottle that proves terroir survives the flor."
+        },
+        {
+          "type": "wine",
+          "id": 1170777,
+          "name": "Equipo Navazos, La Bota de Amontillado No 37 Navazos Sherry",
+          "rank": 17,
+          "note": "One butt, bottled as found. This is why people started paying attention again."
+        }
+      ],
+      "edges": [
+        {
+          "to": "jura",
+          "direction": "wilder",
+          "note": "The same veil of yeast, with no solera and no fortification to steady it."
+        },
+        {
+          "to": "rioja-traditionalists",
+          "direction": "earlier",
+          "note": "The other Spanish house style where the cellar outranks the vintage, and it comes as red wine."
+        },
+        {
+          "to": "champagne-growers",
+          "direction": "grander",
+          "note": "The other blended trade wine where a house style beats a single year, priced twenty times higher."
+        }
+      ]
+    },
+    {
+      "slug": "austrian-gruner",
+      "name": "Austrian Grüner",
+      "blurb": "Dry, peppery, structural white from loess and gneiss, sold at about a third of what the equivalent Burgundy asks.",
+      "rank": 9,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 2236,
+          "name": "Wachau",
+          "rank": 1,
+          "note": "Terraced gneiss on the Danube. Steinfeder, Federspiel, Smaragd is a private ripeness scale, not a register term."
+        },
+        {
+          "type": "appellation",
+          "id": 2269,
+          "name": "Kamptal",
+          "rank": 2,
+          "note": "Loess over rock, Heiligenstein above it. More generous than the Wachau and cheaper."
+        },
+        {
+          "type": "appellation",
+          "id": 2263,
+          "name": "Kremstal",
+          "rank": 3,
+          "note": "Between the two and overlooked by both. Which is where the value sits."
+        },
+        {
+          "type": "appellation",
+          "id": 2241,
+          "name": "Weinviertel",
+          "rank": 4,
+          "note": "The volume zone, and the first Austrian DAC. Peppery, cheap, entirely honest."
+        },
+        {
+          "type": "producer",
+          "id": 37555,
+          "name": "Franz Xaver Pichler",
+          "rank": 5,
+          "note": "The Wachau's power benchmark. Unendlich is ridiculous and occasionally worth it."
+        },
+        {
+          "type": "producer",
+          "id": 37554,
+          "name": "Willi Brundlmayer",
+          "rank": 6,
+          "note": "Kamptal done completely straight. Käferberg Grüner is the house's real statement."
+        },
+        {
+          "type": "producer",
+          "id": 37558,
+          "name": "Weingut Knoll",
+          "rank": 7,
+          "note": "The baroque label and the wines both refuse to modernise. Loibenberg Smaragd ages fifteen years."
+        },
+        {
+          "type": "producer",
+          "id": 40509,
+          "name": "Schloss Gobelsburg",
+          "rank": 8,
+          "note": "Monastic cellar, Moosbrugger's Tradition bottlings use nineteenth-century methods on purpose."
+        },
+        {
+          "type": "producer",
+          "id": 37559,
+          "name": "Nikolaihof",
+          "rank": 9,
+          "note": "Biodynamic since 1971, before anyone had the word. The Vinothek releases at twenty years old."
+        },
+        {
+          "type": "producer",
+          "id": 37378,
+          "name": "Prager",
+          "rank": 10,
+          "note": "Achleiten and Klaus. Tighter than Pichler and better in ten years."
+        },
+        {
+          "type": "producer",
+          "id": 37377,
+          "name": "Franz Hirtzberger",
+          "rank": 11,
+          "note": "Singerriedel. Ripe, dense, and the only Wachau estate that can carry that much weight."
+        },
+        {
+          "type": "producer",
+          "id": 46498,
+          "name": "Veyder Malberg",
+          "rank": 12,
+          "note": "Bought the terraces nobody would farm. Lower alcohol, no Vinea Wachau rules, better wine."
+        },
+        {
+          "type": "producer",
+          "id": 42501,
+          "name": "Rudi Pichler",
+          "rank": 13,
+          "note": "Wösendorf. The unrelated Pichler, and on Grüner the more interesting one."
+        },
+        {
+          "type": "producer",
+          "id": 42611,
+          "name": "Ott",
+          "rank": 14,
+          "note": "Wagram loess, Grüner with actual weight and no oak. Bernhard Ott's Fass 4 is the everyday bottle."
+        },
+        {
+          "type": "grape",
+          "id": 5779,
+          "name": "Grüner Veltliner",
+          "rank": 15,
+          "note": "White pepper and lentil, and it takes loess better than any other grape. Ages far longer than its reputation."
+        },
+        {
+          "type": "grape",
+          "id": 6249,
+          "name": "Riesling",
+          "rank": 16,
+          "note": "On Wachau gneiss it goes dry and stony. A different wine from the Mosel with the same name."
+        },
+        {
+          "type": "wine",
+          "id": 1445486,
+          "name": "Franz Xaver Pichler, Unendlich Gruner Veltliner, Wachau",
+          "rank": 17,
+          "note": "The maximum case for the grape. Fourteen percent and it still tastes like pepper and stone."
+        },
+        {
+          "type": "wine",
+          "id": 1265259,
+          "name": "Weingut Knoll, Loibner Ried Loibenberg Gruner Veltliner Smaragd, Wachau",
+          "rank": 18,
+          "note": "Loibenberg at full ripeness, in a cellar that never chased fashion. Keep it a decade."
+        }
+      ],
+      "edges": [
+        {
+          "to": "alsace",
+          "direction": "grander",
+          "note": "Same grapes plus Gewurztraminer, twice the weight, and a grand cru list to argue about."
+        },
+        {
+          "to": "mosel-kabinett",
+          "direction": "deeper",
+          "note": "The same acid with sugar left in, which is the harder trick."
+        },
+        {
+          "to": "jura",
+          "direction": "wilder",
+          "note": "Where a dry white is allowed to smell of the cellar."
+        }
+      ]
+    },
+    {
+      "slug": "swartland",
+      "name": "Swartland",
+      "blurb": "Old bush vines on granite and schist, farmed by people who left Stellenbosch on purpose.",
+      "rank": 10,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 7101,
+          "name": "Swartland",
+          "rank": 1,
+          "note": "A Wine of Origin district, not a European PDO, so the rules govern origin and nothing else. That's the point here."
+        },
+        {
+          "type": "appellation",
+          "id": 7447,
+          "name": "Paardeberg",
+          "rank": 2,
+          "note": "Decomposed granite. Most of the wines worth buying come off this hill."
+        },
+        {
+          "type": "appellation",
+          "id": 7522,
+          "name": "Riebeekberg",
+          "rank": 3,
+          "note": "Shale and slate on the other side. Tighter wines, and named on more labels every year."
+        },
+        {
+          "type": "appellation",
+          "id": 7071,
+          "name": "Coastal Region",
+          "rank": 4,
+          "note": "The catch-all above it, which tells you nothing and appears on plenty of good bottles."
+        },
+        {
+          "type": "producer",
+          "id": 37182,
+          "name": "The Sadie Family",
+          "rank": 5,
+          "note": "Eben Sadie found the old vineyards and then told everyone where they were. Columella and Palladius are the reference."
+        },
+        {
+          "type": "producer",
+          "id": 38259,
+          "name": "Mullineux",
+          "rank": 6,
+          "note": "Schist, granite and iron bottled separately to prove the soil argument. It works."
+        },
+        {
+          "type": "producer",
+          "id": 37677,
+          "name": "A.A. Badenhorst",
+          "rank": 7,
+          "note": "Kalmoesfontein. Old cellar, old vines, no equipment bought after 1950 if he can help it."
+        },
+        {
+          "type": "producer",
+          "id": 44339,
+          "name": "Porseleinberg",
+          "rank": 8,
+          "note": "Callie Louw farms schist with a horse and bottles one Syrah. The label is letterpressed; the wine is better than that sounds."
+        },
+        {
+          "type": "producer",
+          "id": 44325,
+          "name": "Testalonga",
+          "rank": 9,
+          "note": "Craig Hawkins, skin-contact Chenin, no sulphur to speak of. The wildest thing on the shelf."
+        },
+        {
+          "type": "producer",
+          "id": 45556,
+          "name": "David & Nadia",
+          "rank": 10,
+          "note": "Single-site Chenin from the Paardeberg. The most precise whites in the district."
+        },
+        {
+          "type": "producer",
+          "id": 40797,
+          "name": "Alheit Vineyards",
+          "rank": 11,
+          "note": "Heritage vineyards across the Cape, blended and single. Cartology is the bottle that converted the sceptics."
+        },
+        {
+          "type": "producer",
+          "id": 41734,
+          "name": "Intellego",
+          "rank": 12,
+          "note": "Jurgen Gouws, Chenin and Syrah, no oak to hide behind. Cheap for what it is."
+        },
+        {
+          "type": "producer",
+          "id": 44033,
+          "name": "Lammershoek",
+          "rank": 13,
+          "note": "The estate where half the Swartland's winemakers learned. Uneven now, good then."
+        },
+        {
+          "type": "producer",
+          "id": 52252,
+          "name": "Swerwer (JC Wickens)",
+          "rank": 14,
+          "note": "Old-vine Chenin from leased parcels. The next one to go up in price."
+        },
+        {
+          "type": "grape",
+          "id": 4484,
+          "name": "Chenin blanc",
+          "rank": 15,
+          "note": "South Africa has the oldest Chenin vines on earth and spent forty years distilling them into brandy."
+        },
+        {
+          "type": "grape",
+          "id": 6152,
+          "name": "Syrah",
+          "rank": 16,
+          "note": "On granite it goes peppery and thin-skinned, nothing like the Barossa version."
+        },
+        {
+          "type": "grape",
+          "id": 4503,
+          "name": "Cinsaut",
+          "rank": 17,
+          "note": "Dismissed as Hermitage and planted everywhere. Old-vine Cinsaut is the Cape's best cheap red."
+        },
+        {
+          "type": "wine",
+          "id": 1125403,
+          "name": "The Sadie Family, Columella, Swartland",
+          "rank": 18,
+          "note": "Syrah-led blend from a dozen old parcels. The first Cape wine to be worth its price abroad."
+        },
+        {
+          "type": "wine",
+          "id": 1376791,
+          "name": "Porseleinberg, Swartland",
+          "rank": 19,
+          "note": "One vineyard, one grape, concrete and foudre. As direct as wine gets."
+        }
+      ],
+      "edges": [
+        {
+          "to": "loire-chenin",
+          "direction": "deeper",
+          "note": "Chenin's home ground, with three hundred years of rules attached."
+        },
+        {
+          "to": "jura",
+          "direction": "wilder",
+          "note": "The same low-intervention argument, colder and older."
+        },
+        {
+          "to": "etna",
+          "direction": "earlier",
+          "note": "Bush vines on volcanic rock with a century's head start on the fine wine market."
+        }
+      ]
+    },
+    {
+      "slug": "alsace",
+      "name": "Alsace",
+      "blurb": "Fifty-one grand crus, four noble grapes, and a sweetness level the label is under no obligation to declare.",
+      "rank": 11,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 1752,
+          "name": "Alsace",
+          "rank": 1,
+          "note": "One regional PDO covering everything, with the grape on the front and the sugar left unstated."
+        },
+        {
+          "type": "appellation",
+          "id": 1962,
+          "name": "Alsace grand cru Rangen",
+          "rank": 2,
+          "note": "Volcanic, the steepest and southernmost. Smoky Riesling, and the only grand cru nobody disputes."
+        },
+        {
+          "type": "appellation",
+          "id": 1965,
+          "name": "Alsace grand cru Schlossberg",
+          "rank": 3,
+          "note": "Granite at Kientzheim, the first cru classified in 1975. Riesling and nothing else worth planting."
+        },
+        {
+          "type": "appellation",
+          "id": 1918,
+          "name": "Crémant d'Alsace",
+          "rank": 4,
+          "note": "France's biggest Crémant by volume, and at grower level it beats supermarket Champagne without trying."
+        },
+        {
+          "type": "producer",
+          "id": 34472,
+          "name": "Trimbach",
+          "rank": 5,
+          "note": "Dry when the region went sweet and never apologised. Clos Ste Hune is the best Riesling in France."
+        },
+        {
+          "type": "producer",
+          "id": 34474,
+          "name": "Domaine Zind Humbrecht",
+          "rank": 6,
+          "note": "Biodynamic, botrytis-tolerant, and the sugar varies wildly year to year. Read the indice or be surprised."
+        },
+        {
+          "type": "producer",
+          "id": 37528,
+          "name": "Domaine Weinbach",
+          "rank": 7,
+          "note": "Clos des Capucins. The Faller women have run it better than most négociants run anything."
+        },
+        {
+          "type": "producer",
+          "id": 37795,
+          "name": "Albert Boxler",
+          "rank": 8,
+          "note": "Sommerberg and Brand, tiny volumes, dry and mineral. The connoisseur's Alsace."
+        },
+        {
+          "type": "producer",
+          "id": 37368,
+          "name": "Domaine Ostertag",
+          "rank": 9,
+          "note": "Uses barrels, which scandalised the region. Muenchberg Riesling is the vindication."
+        },
+        {
+          "type": "producer",
+          "id": 38923,
+          "name": "Albert Mann",
+          "rank": 10,
+          "note": "Furstentum and Schlossberg, consistently. Nothing flashy and nothing wrong."
+        },
+        {
+          "type": "producer",
+          "id": 34469,
+          "name": "Josmeyer",
+          "rank": 11,
+          "note": "Dry Pinot Gris and Auxerrois taken seriously. Hengst Riesling ages twenty years."
+        },
+        {
+          "type": "producer",
+          "id": 37966,
+          "name": "Domaine Marcel Deiss",
+          "rank": 12,
+          "note": "Blends the grapes and labels the place, which is illegal in spirit and fought for in court. He was right."
+        },
+        {
+          "type": "producer",
+          "id": 38073,
+          "name": "Marc Kreydenweiss",
+          "rank": 13,
+          "note": "Kastelberg schist, biodynamic since 1989. Undervalued because Andlau is the wrong end of the road."
+        },
+        {
+          "type": "producer",
+          "id": 46044,
+          "name": "Domaine Christian Binner",
+          "rank": 14,
+          "note": "No sulphur, long élevage, some oxidative notes. Alsace for the Jura crowd."
+        },
+        {
+          "type": "grape",
+          "id": 6249,
+          "name": "Riesling",
+          "rank": 15,
+          "note": "The grape the grand crus exist for. Everything else is a passenger with good manners."
+        },
+        {
+          "type": "grape",
+          "id": 6481,
+          "name": "Pinot gris",
+          "rank": 16,
+          "note": "Fat, low-acid, often half-sweet without saying so. Good growers make it taste like a wine and not a dessert."
+        },
+        {
+          "type": "grape",
+          "id": 6471,
+          "name": "Gewürztraminer",
+          "rank": 17,
+          "note": "Lychee and rose and no acid at all. One glass is a pleasure and two is a mistake."
+        },
+        {
+          "type": "wine",
+          "id": 1316384,
+          "name": "Trimbach, Riesling Clos St Hune",
+          "rank": 18,
+          "note": "Rosacker limestone, released at five years, drinkable at twenty. The best dry Riesling made anywhere."
+        }
+      ],
+      "edges": [
+        {
+          "to": "austrian-gruner",
+          "direction": "cleaner",
+          "note": "The same grapes farmed dry, with the sugar question settled before bottling."
+        },
+        {
+          "to": "mosel-kabinett",
+          "direction": "deeper",
+          "note": "Riesling on slate, lighter, and with a rulebook that states the ripeness."
+        },
+        {
+          "to": "champagne-growers",
+          "direction": "grander",
+          "note": "If the Crémant did the job, this is where the same method stops compromising."
+        }
+      ]
+    },
+    {
+      "slug": "champagne-growers",
+      "name": "Champagne growers",
+      "blurb": "Récoltant-manipulants who kept their own fruit instead of selling it to the houses, and priced it accordingly.",
+      "rank": 12,
+      "members": [
+        {
+          "type": "appellation",
+          "id": 2057,
+          "name": "Champagne",
+          "rank": 1,
+          "note": "One PDO, three hundred-odd villages, and a grand cru list drawn up for grape prices rather than for taste."
+        },
+        {
+          "type": "appellation",
+          "id": 2060,
+          "name": "Coteaux champenois",
+          "rank": 2,
+          "note": "The still wine. Thin in nine years out of ten and remarkable in the tenth, which is now more often."
+        },
+        {
+          "type": "appellation",
+          "id": 2091,
+          "name": "Rosé des Riceys",
+          "rank": 3,
+          "note": "Still Pinot rosé from the Aube, a few hectares, made only in ripe years. Almost nobody has tasted it."
+        },
+        {
+          "type": "producer",
+          "id": 36160,
+          "name": "Jacques Selosse",
+          "rank": 4,
+          "note": "Anselme Selosse made growers think like Burgundians and the price followed. Oxidative and divisive, still the hinge."
+        },
+        {
+          "type": "producer",
+          "id": 37276,
+          "name": "Egly-Ouriet",
+          "rank": 5,
+          "note": "Ambonnay Pinot, long on lees, low dosage. The most complete grower Champagne going."
+        },
+        {
+          "type": "producer",
+          "id": 38798,
+          "name": "Ulysse Collin",
+          "rank": 6,
+          "note": "Took the family vines back off Pommery in 2003. Les Pierrières is the best Blanc de Blancs outside the Côte des Blancs."
+        },
+        {
+          "type": "producer",
+          "id": 40133,
+          "name": "Larmandier-Bernier",
+          "rank": 7,
+          "note": "Vertus, biodynamic, almost no dosage. Terre de Vertus is the argument for zero sugar."
+        },
+        {
+          "type": "producer",
+          "id": 39397,
+          "name": "Agrapart & Fils",
+          "rank": 8,
+          "note": "Avize, cask-fermented, chalk you can taste. Minéral and Vénus are the ones."
+        },
+        {
+          "type": "producer",
+          "id": 39564,
+          "name": "Jerome Prevost",
+          "rank": 9,
+          "note": "Two hectares of Meunier at Gueux, one wine. La Closerie made a dismissed grape respectable."
+        },
+        {
+          "type": "producer",
+          "id": 39553,
+          "name": "Chartogne-Taillet",
+          "rank": 10,
+          "note": "Merfy, north of the Montagne. Parcel bottlings from soils nobody had mapped."
+        },
+        {
+          "type": "producer",
+          "id": 43442,
+          "name": "Bereche et Fils",
+          "rank": 11,
+          "note": "Ludes. Still one of the few grower names that hasn't gone silly on price."
+        },
+        {
+          "type": "producer",
+          "id": 38308,
+          "name": "Pierre Peters",
+          "rank": 12,
+          "note": "Le Mesnil-sur-Oger, and the Réserve Oubliée perpetual blend is the value bottle of the whole region."
+        },
+        {
+          "type": "producer",
+          "id": 37837,
+          "name": "Vouette et Sorbee",
+          "rank": 13,
+          "note": "Buxières in the Aube, biodynamic, Kimmeridgian marl. Closer to Chablis than to Reims."
+        },
+        {
+          "type": "grape",
+          "id": 5958,
+          "name": "Chardonnay",
+          "rank": 14,
+          "note": "On Champagne chalk it does something it does nowhere else, which is to taste of the rock and not the fruit."
+        },
+        {
+          "type": "grape",
+          "id": 5991,
+          "name": "Pinot noir",
+          "rank": 15,
+          "note": "The body in the blend. In Ambonnay and Aÿ it can carry a wine on its own."
+        },
+        {
+          "type": "grape",
+          "id": 6599,
+          "name": "Pinot meunier",
+          "rank": 16,
+          "note": "Written off as filler for a century. Prévost and a few others have ended that argument."
+        },
+        {
+          "type": "wine",
+          "id": 1082337,
+          "name": "Jacques Selosse, Substance Blanc de Blancs Grand Cru",
+          "rank": 17,
+          "note": "A solera of Avize Chardonnay going back to 1986. The most Sherry-like Champagne made, and meant to be."
+        }
+      ],
+      "edges": [
+        {
+          "to": "loire-chenin",
+          "direction": "cheaper",
+          "note": "Traditional-method Chenin at a third of the money, and in a good year it holds up."
+        },
+        {
+          "to": "jura",
+          "direction": "deeper",
+          "note": "Where Selosse's oxidative habit came from and where it goes furthest."
+        },
+        {
+          "to": "sherry",
+          "direction": "earlier",
+          "note": "The older blended trade wine, solera instead of reserve, and a fraction of the price."
+        }
+      ]
+    }
+  ]
+}

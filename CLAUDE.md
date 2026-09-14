@@ -90,8 +90,8 @@ Entity model: `artist | label | master` are the only public entities. `release_s
   treating the bot theory as diagnosed.
 
 ## Database
-- Schemas: `auth`, `ingest`, `catalog`, `enrich`
-- Migrations: `packages/db/migrations/` (001–033), CI-gated by `scripts/migration-parity-audit.ts`
+- Schemas: `auth`, `ingest`, `catalog`, `enrich`, `wine` (Wine Bore corpus - LWIN spine, EU register, cahiers; loaders in `scripts/wine/`, design in `docs/wine-bore-build.md`)
+- Migrations: `packages/db/migrations/` (001–034), CI-gated by `scripts/migration-parity-audit.ts`
 - Schema types: `packages/db/src/schema.ts`
 - Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG, port 5433)
 - Production: `dig-db-scene` (Fly LHR, shared-cpu-2x/2GB, 10GB volume)
@@ -109,7 +109,7 @@ Entity model: `artist | label | master` are the only public entities. `release_s
 - No LLM inference in the retrieval path — structured data only
 - Workspace packages export from `src/` directly (not `dist/`) during development
 - Rate limits: anonymous 180/min (IP), keyed 1000/min — `apps/api/src/app.ts` `RATE_LIMITS` is the source of truth; keys validated against the `API_KEYS` env (unknown keys silently downgrade to anonymous)
-- Ops endpoints (`/v1/usage/internal`, `/v1/seo/cohort`) require a valid API key; `/v1/ask` accepts private beta keys and admits capped keyless Record Bore traffic only when `ASK_PUBLIC=on`
+- Ops endpoints (`/v1/usage/internal`, `/v1/seo/cohort`) require a valid API key; `/v1/ask` accepts private beta keys and admits capped keyless Bore traffic only when `ASK_PUBLIC=on` (per-bore monthly till: `ask_public_<month>` for Record Bore, `ask_public_wine_<month>` for Wine Bore)
 - Shared route helpers (parseDiscogsId, withTimeout, timeout replies): `apps/api/src/routes/v1/util.ts`
 
 ## File Layout
@@ -117,7 +117,8 @@ Entity model: `artist | label | master` are the only public entities. `release_s
 apps/api/                  — Fastify REST API server (port 3000)
 apps/api/src/app.ts        — app factory (rate-limit, CORS, logging, routes)
 apps/api/src/auth.ts       — API key validation (API_KEYS env)
-apps/api/src/routes/v1/ask/ — provider-switchable grounded chat (auth/tools/binding/loop)
+apps/api/src/routes/v1/ask/ — provider-switchable grounded chat; one loop, two bores (record-bore.ts, wine-bore.ts; `bore` in the request body)
+bores/<slug>/persona.md  — each Bore's character, loaded at boot (Record Bore /recordbore, Wine Bore /winebore)
 apps/web/                  — Next.js frontend (maintenance gate in src/lib/maintenance.ts)
 apps/ingest/               — Discogs XML import pipeline (CLI, local staging only)
 apps/mcp/                  — live Dig MCP (Streamable HTTP + legacy SSE)

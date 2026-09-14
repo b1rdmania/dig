@@ -1,0 +1,40 @@
+/* Wine Bore borrows Record Bore's sheet wholesale (recordbore.module.css).
+   Only what the counter needs and the record page doesn't lives here. */
+
+.counter {
+  margin-top: 18px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(33, 31, 26, 0.16);
+}
+
+.counterHead {
+  margin: 0 0 6px;
+  color: #716b60;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.bottle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.bottleName { color: #211f1a; }
+.bottleSub { color: #716b60; font-size: 13px; margin-left: 6px; }
+.bottleAct { color: #c83a25; text-decoration: none; white-space: nowrap; font-size: 14px; }
+.bottleAct:hover { text-decoration: underline; }
+
+.mark {
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-right: 0.28em;
+  border-radius: 50%;
+  background: #7a1f2b;
+  transform: translateY(-0.02em);
+}

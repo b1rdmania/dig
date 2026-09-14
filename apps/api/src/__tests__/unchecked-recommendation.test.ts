@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { looksLikeUncheckedRecommendation } from "../routes/v1/ask/loop.js";
+import { looksLikeUncheckedRecommendation } from "../routes/v1/ask/record-bore.js";
 
 /**
  * The loop sends the model back to the racks once when it writes a

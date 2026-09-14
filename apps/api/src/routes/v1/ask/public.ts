@@ -8,6 +8,7 @@
 //     up to 2x this. Approximate by design; the monthly cap is the hard wall
 //   - global monthly cap (ASK_PUBLIC_MONTHLY_MAX, default 400 asks) - durable,
 //     stored in enrich.usage_counters so restarts and deploys don't reset it
+// Both caps are per bore: each shop has its own till and its own daily tally.
 // Refusals speak in voice; the shop is shut, not "rate limited".
 // ---------------------------------------------------------------------------
 
@@ -37,8 +38,12 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function monthKey(): string {
-  return `ask_public_${new Date().toISOString().slice(0, 7)}`;
+function monthKey(quotaKey: string): string {
+  return `${quotaKey}_${new Date().toISOString().slice(0, 7)}`;
+}
+
+function dailyKey(quotaKey: string, ip: string): string {
+  return `${quotaKey}|${ip}`;
 }
 
 export type PublicGateResult =
@@ -60,8 +65,8 @@ export function isPublicAskEnabled(): boolean {
 /** Remaining asks for this visitor on the current API machine. The daily
  * gate is deliberately approximate across the two Fly machines; this exposes
  * the same counter the gate actually uses rather than inventing a web count. */
-export function publicAskRemaining(req: FastifyRequest): number {
-  const entry = dailyCounts.get(clientIp(req));
+export function publicAskRemaining(req: FastifyRequest, quotaKey: string): number {
+  const entry = dailyCounts.get(dailyKey(quotaKey, clientIp(req)));
   const count = entry?.day === today() ? entry.count : 0;
   return Math.max(0, dailyPerIp() - count);
 }
@@ -73,6 +78,7 @@ export function publicAskRemaining(req: FastifyRequest): number {
 export async function checkPublicAsk(
   req: FastifyRequest,
   db: Kysely<Database>,
+  quotaKey: string,
 ): Promise<PublicGateResult> {
   if (!publicEnabled()) {
     return {
@@ -88,7 +94,7 @@ export async function checkPublicAsk(
     for (const [k, v] of dailyCounts) if (v.day !== day) dailyCounts.delete(k);
   }
 
-  const ip = clientIp(req);
+  const ip = dailyKey(quotaKey, clientIp(req));
   const entry = dailyCounts.get(ip);
   const count = entry && entry.day === day ? entry.count : 0;
   if (count >= dailyPerIp()) {
@@ -98,7 +104,7 @@ export async function checkPublicAsk(
   let spent: number;
   try {
     const row = await sql<{ counter_value: string }>`
-      SELECT counter_value FROM enrich.usage_counters WHERE counter_key = ${monthKey()}
+      SELECT counter_value FROM enrich.usage_counters WHERE counter_key = ${monthKey(quotaKey)}
     `.execute(db);
     spent = Number(row.rows[0]?.counter_value ?? 0);
   } catch {
@@ -115,11 +121,11 @@ export async function checkPublicAsk(
 }
 
 /** Count an admitted public ask against the monthly till. */
-export async function recordPublicAsk(db: Kysely<Database>): Promise<void> {
+export async function recordPublicAsk(db: Kysely<Database>, quotaKey: string): Promise<void> {
   try {
     await sql`
       INSERT INTO enrich.usage_counters (counter_key, counter_value)
-      VALUES (${monthKey()}, 1)
+      VALUES (${monthKey(quotaKey)}, 1)
       ON CONFLICT (counter_key)
       DO UPDATE SET
         counter_value = enrich.usage_counters.counter_value + 1,

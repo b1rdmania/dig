@@ -8,8 +8,9 @@ import type { Database } from "@dig/db";
 import type { AnthropicMessage, ResponseMode } from "./types.js";
 import { requirePrivateKey } from "./auth.js";
 import { checkPublicAsk, isPublicAskEnabled, publicAskRemaining, recordPublicAsk } from "./public.js";
-import { runAgenticLoop, type LlmProvider, type AskProgressEvent } from "./loop.js";
-import { bindMediaToCitations, dedupeMedia, dedupeEvidence, extractCitedMasterIds } from "./binding.js";
+import { runAgenticLoop, type LlmProvider } from "./loop.js";
+import { bindMediaToCitations, dedupeMedia, extractCitedMasterIds } from "./binding.js";
+import { getBore } from "./bores.js";
 
 export type { MediaItem, EvidenceItem, ResponseMode } from "./types.js";
 
@@ -21,50 +22,33 @@ const PROVIDER: LlmProvider =
 const DEFAULT_MODEL =
   process.env.LLM_MODEL ?? (PROVIDER === "openrouter" ? "moonshotai/kimi-k3" : "claude-sonnet-4-6");
 const MAX_HISTORY_TURNS = 6;
-// Public (Record Bore page) budgets. Three lookup rounds then an answer (a scene
-// ask is get_scene, then batched label essentials, then write), and an
-// answer that fits on the counter: 1600 tokens let Kimi write for 43s.
-const PUBLIC_MAX_ROUNDS = 4;
-const PUBLIC_MAX_TOKENS = 600;
 
 interface AskBody {
+  /** Which shop: "record" (default) or "wine". Picks persona, tools, till. */
+  bore?: string;
   question?: string;
   history?: Array<{ role: "user" | "assistant"; content: string }>;
   model?: string;
   max_tokens?: number;
 }
 
-// Shop-owner-voiced labels for the live activity feed. Keyed on tool name;
-// some labels pull the query/role out of the input for specificity.
-function progressLabel(e: AskProgressEvent): string {
-  if (e.type === "delta") return "";
-  if (e.type === "round") {
-    return e.round === 0 ? "Reading the question…" : "Connecting the dots…";
-  }
-  const input = e.input ?? {};
-  switch (e.name) {
-    case "search_catalog": {
-      const q = String(input.query ?? "").trim();
-      return q ? `Flipping through the crates for “${q}”…` : "Flipping through the crates…";
-    }
-    case "get_artist": return "Pulling the artist's file…";
-    case "get_artist_masters": return "Laying out the discography…";
-    case "get_label": return "Reading the label's sleeve notes…";
-    case "get_label_releases": return "Going through the label's shelf…";
-    case "get_label_essentials": return "Picking out the label's core run…";
-    case "list_scenes": return "Scanning the scene map…";
-    case "get_scene": return "Reading up on the scene…";
-    case "get_master": return "Pulling the record…";
-    default: return "Rummaging out back…";
-  }
+function pickBore(raw: unknown) {
+  const slug = String(raw ?? "record").trim().toLowerCase();
+  return getBore(slug === "wine" ? "wine" : "record");
+}
+
+function dedupeBy<E>(items: E[], key: (e: E) => string): E[] {
+  const seen = new Set<string>();
+  return items.filter((e) => { const k = key(e); if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
 export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
-  app.get("/v1/ask/quota", async (req, reply) => {
+  app.get("/v1/ask/quota", async (req: FastifyRequest<{ Querystring: { bore?: string } }>, reply) => {
     if (!isPublicAskEnabled()) {
       return reply.status(404).send({ error: { code: "NOT_FOUND", message: "Not found", details: null } });
     }
-    return reply.send({ remaining: publicAskRemaining(req) });
+    const bore = pickBore(req.query?.bore);
+    return reply.send({ remaining: publicAskRemaining(req, bore.quotaKey) });
   });
 
   app.post("/v1/ask", {
@@ -76,11 +60,12 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
   }, async (req: FastifyRequest<{ Body: AskBody }>, reply) => {
     // Key holders pass as before; keyless visitors go through the public
     // (Record Bore) gate, which is off unless ASK_PUBLIC=on.
+    const bore = pickBore(req.body?.bore);
     let isPublic = false;
     const auth = requirePrivateKey(req);
     if (!auth.ok) {
       if (!isPublicAskEnabled()) return reply.status(auth.status).send(auth.body);
-      const pub = await checkPublicAsk(req, db);
+      const pub = await checkPublicAsk(req, db, bore.quotaKey);
       if (!pub.ok) return reply.status(pub.status).send(pub.body);
       isPublic = true;
     }
@@ -118,17 +103,18 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
 
     // Public asks run on the house defaults only - letting a stranger pick
     // the model or token budget on the shop's key is how the till empties.
-    const maxTokens = isPublic ? PUBLIC_MAX_TOKENS : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
-    const maxRounds = isPublic ? PUBLIC_MAX_ROUNDS : undefined;
+    const maxTokens = isPublic ? bore.publicMaxTokens : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
+    const maxRounds = isPublic ? bore.publicMaxRounds : undefined;
     const model = isPublic ? DEFAULT_MODEL : String(body.model ?? DEFAULT_MODEL);
     const started = Date.now();
     const log = (msg: string, extra?: Record<string, unknown>) =>
       req.log.info({ event: msg, ...extra });
 
-    if (isPublic) await recordPublicAsk(db);
+    if (isPublic) await recordPublicAsk(db, bore.quotaKey);
     try {
       const { answer, model: usedModel, tool_calls, media, evidence, mode, rounds } = await runAgenticLoop({
         db,
+        bore,
         question,
         history,
         model,
@@ -140,7 +126,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       });
 
       const dedupedMedia = dedupeMedia(media);
-      const dedupedEvidence = dedupeEvidence(evidence);
+      const dedupedEvidence = dedupeBy(evidence, bore.evidenceKey);
 
       // Citation-bound media: only return videos for masters whose dig.baby URL
       // appears in the assistant's answer text. See binding.ts for the rationale.
@@ -154,6 +140,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
 
       return reply.send({
         answer,
+        bore: bore.slug,
         media: boundMedia,
         mode,
         evidence: dedupedEvidence.slice(0, 20),
@@ -201,11 +188,12 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       rateLimit: { max: 10, timeWindow: "1 minute" },
     },
   }, async (req: FastifyRequest<{ Body: AskBody }>, reply) => {
+    const bore = pickBore(req.body?.bore);
     let isPublic = false;
     const auth = requirePrivateKey(req);
     if (!auth.ok) {
       if (!isPublicAskEnabled()) return reply.status(auth.status).send(auth.body);
-      const pub = await checkPublicAsk(req, db);
+      const pub = await checkPublicAsk(req, db, bore.quotaKey);
       if (!pub.ok) return reply.status(pub.status).send(pub.body);
       isPublic = true;
     }
@@ -241,14 +229,14 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       .slice(-MAX_HISTORY_TURNS)
       .map((m) => ({ role: m.role, content: m.content.slice(0, 3000) }));
 
-    const maxTokens = isPublic ? PUBLIC_MAX_TOKENS : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
-    const maxRounds = isPublic ? PUBLIC_MAX_ROUNDS : undefined;
+    const maxTokens = isPublic ? bore.publicMaxTokens : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
+    const maxRounds = isPublic ? bore.publicMaxRounds : undefined;
     const model = isPublic ? DEFAULT_MODEL : String(body.model ?? DEFAULT_MODEL);
     const started = Date.now();
     const log = (msg: string, extra?: Record<string, unknown>) =>
       req.log.info({ event: msg, ...extra });
 
-    if (isPublic) await recordPublicAsk(db);
+    if (isPublic) await recordPublicAsk(db, bore.quotaKey);
     reply.hijack();
     reply.raw.writeHead(200, {
       "content-type": "application/x-ndjson; charset=utf-8",
@@ -265,6 +253,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     try {
       const { answer, model: usedModel, tool_calls, media, evidence, mode, rounds } = await runAgenticLoop({
         db,
+        bore,
         question,
         history,
         model,
@@ -280,7 +269,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
           }
           write({
             type: "status",
-            label: progressLabel(e),
+            label: bore.progressLabel(e),
             // Raw workings for the UI's drop-down - actual tool + args.
             detail: e.type === "round"
               ? `round ${e.round + 1}`
@@ -299,9 +288,10 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       write({
         type: "result",
         answer,
+        bore: bore.slug,
         media: boundMedia,
         mode,
-        evidence: dedupeEvidence(evidence).slice(0, 20),
+        evidence: dedupeBy(evidence, bore.evidenceKey).slice(0, 20),
         meta: { model: usedModel, elapsed_ms: Date.now() - started, tool_calls, rounds },
       });
     } catch (err: any) {

@@ -35,6 +35,8 @@ import { initUsagePersistence, recordApiRequest, shutdownUsagePersistence } from
 import { registerAskRoutes } from "./routes/v1/ask.js";
 import { registerMarketRoutes } from "./routes/v1/market.js";
 import { registerScenesRoutes } from "./routes/v1/scenes.js";
+import { registerWineRoutes } from "./routes/v1/wine.js";
+import { refreshWineBore } from "./routes/v1/ask/bores.js";
 
 export interface AppDeps {
   databaseUrl: string;
@@ -259,6 +261,9 @@ export async function buildApp(deps: AppDeps): Promise<{
   registerAskRoutes(app, db);
   registerMarketRoutes(app, cache);
   registerScenesRoutes(app, db);
+  registerWineRoutes(app, db);
+  // Wine Bore's shelf map lives in the DB; assemble the prompt once per boot.
+  void refreshWineBore(db);
 
   app.addHook("onClose", async () => {
     await shutdownUsagePersistence();
