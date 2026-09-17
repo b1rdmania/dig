@@ -222,8 +222,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
         <div className={w.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- hand-drawn line art; optimisation would soften it */}
           <img className={w.face} src="/winebore-face.png" alt="" width={482} height={512} />
-          <h1 className={w.title}>Wine Bore<span className={s.dot}>.</span></h1>
-          <p className={w.tagline}>Ask about wine. I&rsquo;ll correct you.</p>
+          <h1 className={w.title}><b>Wine Bore<span className={s.dot}>.</span></b> Ask about wine. I&rsquo;ll correct you.</h1>
         </div>
 
         <div className={`${s.bore} ${s.openerBlock} ${w.opener}`}><p>{normalDashes(opener)}</p></div>
