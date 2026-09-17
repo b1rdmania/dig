@@ -59,7 +59,7 @@
 .wrap .col .bottleAct { font-size: 13px; }
 
 /* "How we built this": one link in the cap line, a native dialog. */
-.howLink { border: 0; background: none; padding: 0; margin-left: 6px; color: var(--red); cursor: pointer; font: inherit; }
+.howLink { border: 0; background: none; padding: 0; margin-left: 0; color: var(--red); cursor: pointer; font: inherit; }
 .howLink:hover { text-decoration: underline; }
 .how { position: fixed; inset: 0; margin: auto; width: min(640px, calc(100vw - 32px)); max-height: 85vh; overflow: auto; padding: 0; border: 1px solid var(--line); background: #fff; color: var(--ink); font-family: var(--type); }
 .how:not([open]) { display: none; }

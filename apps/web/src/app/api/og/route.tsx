@@ -42,16 +42,22 @@ export async function GET(req: NextRequest) {
     return renderPilot();
   }
   if (kind === "recordbore") {
-    return renderRecordBore("https://app.dig.baby/recordbore-face.png");
+    return renderBore({ faceUrl: `${ASSET_ORIGIN}/recordbore-face.png`, faceW: 252, faceH: 276, line: "Go on then. House and techno only.", ground: "#f2eee5" });
+  }
+  if (kind === "winebore") {
+    return renderBore({ faceUrl: `${ASSET_ORIGIN}/winebore-face.png`, faceW: 260, faceH: 276, line: "Go on then. I\u2019ll correct you.", ground: "#ffffff" });
   }
   return renderDefault(searchParams);
 }
 
 // ---------------------------------------------------------------------------
-// Record Bore card - one face, one line, nothing resembling product UI
+// Bore cards - one face, one line, nothing resembling product UI
 // ---------------------------------------------------------------------------
 
-async function renderRecordBore(faceUrl: string): Promise<ImageResponse> {
+// Where the face PNGs live. Override locally to render against a dev server.
+const ASSET_ORIGIN = process.env.OG_ASSET_ORIGIN ?? "https://app.dig.baby";
+
+async function renderBore({ faceUrl, faceW, faceH, line, ground }: { faceUrl: string; faceW: number; faceH: number; line: string; ground: string }): Promise<ImageResponse> {
   const font = await recordBoreFont;
   return new ImageResponse(
     (
@@ -63,7 +69,7 @@ async function renderRecordBore(faceUrl: string): Promise<ImageResponse> {
           alignItems: "center",
           justifyContent: "center",
           gap: "68px",
-          backgroundColor: "#f2eee5",
+          backgroundColor: ground,
           padding: "74px 90px",
           color: "#211f1a",
           fontFamily: font ? "Libre Baskerville" : "sans-serif",
@@ -73,8 +79,8 @@ async function renderRecordBore(faceUrl: string): Promise<ImageResponse> {
         <img
           src={faceUrl}
           alt=""
-          width="252"
-          height="276"
+          width={faceW}
+          height={faceH}
           style={{ objectFit: "contain" }}
         />
         <div
@@ -87,7 +93,7 @@ async function renderRecordBore(faceUrl: string): Promise<ImageResponse> {
             letterSpacing: "-0.025em",
           }}
         >
-          {"Go on then. House and techno only."}
+          {line}
         </div>
       </div>
     ),

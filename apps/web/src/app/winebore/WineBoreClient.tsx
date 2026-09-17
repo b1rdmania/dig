@@ -7,7 +7,6 @@
 // nothing in stock and says so.
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import type { ResponseMode } from "../llm-beta/LlmBetaClient";
 import s from "../recordbore/recordbore.module.css";
@@ -36,16 +35,6 @@ function normalDashes(value: string): string {
   return value.replace(/[–—]/g, "-");
 }
 
-async function getQuestionsLeft(): Promise<number | null> {
-  try {
-    const res = await fetch(`${API_URL}/v1/ask/quota?bore=wine`, { cache: "no-store" });
-    if (!res.ok) return null;
-    const data = await res.json() as { remaining?: number };
-    return Number.isFinite(data.remaining) ? Math.max(0, Number(data.remaining)) : null;
-  } catch {
-    return null;
-  }
-}
 
 // The shop carries on while he reads. One line at a time.
 const FILLERS = [
@@ -120,12 +109,10 @@ export function WineBoreClient({ opener }: { opener: string }) {
   const [loading, setLoading] = useState(false);
   const [activityLine, setActivityLine] = useState("");
   const [draft, setDraft] = useState("");
-  const [questionsLeft, setQuestionsLeft] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const howRef = useRef<HTMLDialogElement>(null);
 
-  useEffect(() => { void getQuestionsLeft().then(setQuestionsLeft); }, []);
 
   useEffect(() => {
     if (!loading) return;
@@ -206,7 +193,6 @@ export function WineBoreClient({ opener }: { opener: string }) {
       setLoading(false);
       setDraft("");
       setActivityLine("");
-      setQuestionsLeft(await getQuestionsLeft());
       inputRef.current?.focus();
     }
   }
@@ -214,9 +200,6 @@ export function WineBoreClient({ opener }: { opener: string }) {
   return (
     <div className={`${s.wrap} ${w.wrap}`}>
       <main className={`${s.col} ${w.col}`}>
-        <div className={s.topline}>
-          <Link className={s.home} href="/">&larr; home</Link>
-        </div>
         <div className={w.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- hand-drawn line art; optimisation would soften it */}
           <img className={w.face} src="/winebore-face.png" alt="" width={482} height={512} />
@@ -307,8 +290,6 @@ export function WineBoreClient({ opener }: { opener: string }) {
 
 
           <p className={s.cap}>
-            {questionsLeft === null ? "Limited questions." : `${questionsLeft} left.`} Nothing&rsquo;s for sale. He may be wrong.
-            {" "}
             <button type="button" className={w.howLink} onClick={() => howRef.current?.showModal()}>How we built this</button>
           </p>
         </section>
