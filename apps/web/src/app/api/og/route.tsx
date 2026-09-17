@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     return renderBore({ faceUrl: `${ASSET_ORIGIN}/recordbore-face.png`, faceW: 252, faceH: 276, line: "Go on then. House and techno only.", ground: "#f2eee5" });
   }
   if (kind === "winebore") {
-    return renderBore({ faceUrl: `${ASSET_ORIGIN}/winebore-face.png`, faceW: 414, faceH: 440, line: "Upload a wine list. I\u2019ll insult it.", ground: "#ffffff", stacked: true });
+    return renderBore({ faceUrl: `${ASSET_ORIGIN}/winebore-face.png`, faceW: 470, faceH: 500, line: "", ground: "#ffffff", stacked: true });
   }
   return renderDefault(searchParams);
 }
@@ -84,7 +84,7 @@ async function renderBore({ faceUrl, faceW, faceH, line, ground, stacked = false
           height={faceH}
           style={{ objectFit: "contain" }}
         />
-        <div
+        {line && <div
           style={{
             display: "flex",
             maxWidth: stacked ? "1000px" : "700px",
@@ -95,7 +95,7 @@ async function renderBore({ faceUrl, faceW, faceH, line, ground, stacked = false
           }}
         >
           {line}
-        </div>
+        </div>}
       </div>
     ),
     {
