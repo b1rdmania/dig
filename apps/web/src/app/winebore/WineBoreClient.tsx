@@ -78,11 +78,8 @@ function randomFiller(previous = ""): string {
 }
 
 // A suggestion either asks (q) or hands the counter over (fill).
-const SUGGESTIONS: Array<{ t: string; q?: string; fill?: string }> = [
-  { t: "What can go in a Chablis?", q: "What grapes is a Chablis actually allowed to be made from?" },
-  { t: "Riserva - older or better?", q: "Does Riserva on a Chianti mean it's better, or just older?" },
-  { t: "Name your favourite bottle", fill: "My favourite wine is " },
-];
+// The page is deliberately bare: no suggested questions. The favourite-bottle
+// challenge still works if the customer types it.
 
 // Evidence arrives as everything the tools returned; the counter shows the
 // bottles and growers, deduped, wines first.
@@ -126,6 +123,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
   const [questionsLeft, setQuestionsLeft] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const howRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => { void getQuestionsLeft().then(setQuestionsLeft); }, []);
 
@@ -307,29 +305,42 @@ export function WineBoreClient({ opener }: { opener: string }) {
             </button>
           </div>
 
-          {messages.length === 0 && (
-            <div className={s.suggest}>
-              <span className={s.suggestLead}>Try:</span>
-              {SUGGESTIONS.map((sug, index) => (
-                <span key={sug.t}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (sug.fill) { setInput(sug.fill); inputRef.current?.focus(); } else ask(sug.q);
-                    }}
-                  >
-                    {sug.t}
-                  </button>
-                  {index < SUGGESTIONS.length - 1 && <span aria-hidden="true">{" · "}</span>}
-                </span>
-              ))}
-            </div>
-          )}
 
           <p className={s.cap}>
             {questionsLeft === null ? "Limited questions." : `${questionsLeft} left.`} Nothing&rsquo;s for sale. He may be wrong.
+            {" "}
+            <button type="button" className={w.howLink} onClick={() => howRef.current?.showModal()}>How we built this</button>
           </p>
         </section>
+
+        <dialog ref={howRef} className={w.how} onClick={(e) => { if (e.target === howRef.current) howRef.current?.close(); }}>
+          <div className={w.howBody}>
+            <button type="button" className={w.howClose} onClick={() => howRef.current?.close()} aria-label="Close">&times;</button>
+            <h2>How we built this</h2>
+            <p>Wine Bore is a character on top of a database, not a prompt. Every fact he states comes from a lookup made in that turn. If the lookup returns nothing, he says so.</p>
+
+            <h3>The book</h3>
+            <p>The spine is the Liv-ex LWIN database: 212,311 rows in, 190,479 wines and 34,466 producers out, 185,293 of them live. On top of that:</p>
+            <ul>
+              <li>eAmbrosia, the EU register of protected names: 1,688 wine appellations, each with its yield cap, planting density, irrigation rule and municipalities.</li>
+              <li>The full legal text of 953 appellations: INAO cahiers des charges (France), MASAF disciplinari (Italy), MAPA pliegos (Spain). Full-text searchable, so he can quote the rule.</li>
+              <li>The Sci Data 2022 PDO dataset: 55,971 permitted-grape rows, 88.8% resolved to Wikidata grape varieties (2,211 grapes, 4,870 names and synonyms).</li>
+              <li>Wikidata wineries and wines, 41 consorzio and trade-body producer directories, and an Exa sweep of the 500 largest producers for their own websites: 7,579 producer links.</li>
+              <li>Systembolaget&rsquo;s assortment, 6,298 listings, demo only, for what a real shelf looks like.</li>
+            </ul>
+            <p>Then the joins. 168,314 wines resolved to an appellation; 96% of the live EU wines land on a register row, so Chablis knows it is Chardonnay only and Huet knows he is Vouvray. Non-EU regions got 504 synthetic entries with no rules attached, and he is told not to quote rules there. Every loader logs rows in, rows out, matched and unmatched, and unmatched rows are kept, never dropped.</p>
+
+            <h3>The character</h3>
+            <p>One persona file, six tools: search the cellar, look up an appellation and its rules, a producer, a wine, a grape, a shelf. The model reads the tools&rsquo; results and writes the answer. Anything it names that no tool returned is sent back to the book once; if it still can&rsquo;t ground it, it says &ldquo;don&rsquo;t quote me&rdquo;. No URLs leave the shop. The bottles under an answer are the ones he actually named.</p>
+            <p>The shelves, his private map of what leads where, are a draft pack of 12 shelves and 217 bottles. The register always beats the pack.</p>
+
+            <h3>What we checked</h3>
+            <p>Thirty questions before anyone saw the page: ten appellation rules, ten producer facts, ten favourite-bottle challenges. 30 of 30 grounded, none wrong, none hedged. Median 26 seconds an answer.</p>
+
+            <h3>What it is not</h3>
+            <p>No review sites, no tasting-note scrapes, no Vivino. The opinions are his; the facts are the register&rsquo;s. Nothing is for sale.</p>
+          </div>
+        </dialog>
       </main>
     </div>
   );
