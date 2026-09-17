@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     return renderBore({ faceUrl: `${ASSET_ORIGIN}/recordbore-face.png`, faceW: 252, faceH: 276, line: "Go on then. House and techno only.", ground: "#f2eee5" });
   }
   if (kind === "winebore") {
-    return renderBore({ faceUrl: `${ASSET_ORIGIN}/winebore-face.png`, faceW: 260, faceH: 276, line: "Go on then. I\u2019ll correct you.", ground: "#ffffff" });
+    return renderBore({ faceUrl: `${ASSET_ORIGIN}/winebore-face.png`, faceW: 414, faceH: 440, line: "Upload a wine list. I\u2019ll insult it.", ground: "#ffffff", stacked: true });
   }
   return renderDefault(searchParams);
 }
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 // Where the face PNGs live. Override locally to render against a dev server.
 const ASSET_ORIGIN = process.env.OG_ASSET_ORIGIN ?? "https://app.dig.baby";
 
-async function renderBore({ faceUrl, faceW, faceH, line, ground }: { faceUrl: string; faceW: number; faceH: number; line: string; ground: string }): Promise<ImageResponse> {
+async function renderBore({ faceUrl, faceW, faceH, line, ground, stacked = false }: { faceUrl: string; faceW: number; faceH: number; line: string; ground: string; stacked?: boolean }): Promise<ImageResponse> {
   const font = await recordBoreFont;
   return new ImageResponse(
     (
@@ -66,11 +66,12 @@ async function renderBore({ faceUrl, faceW, faceH, line, ground }: { faceUrl: st
           width: "100%",
           height: "100%",
           display: "flex",
+          flexDirection: stacked ? "column" : "row",
           alignItems: "center",
           justifyContent: "center",
-          gap: "68px",
+          gap: stacked ? "18px" : "68px",
           backgroundColor: ground,
-          padding: "74px 90px",
+          padding: stacked ? "40px 90px" : "74px 90px",
           color: "#211f1a",
           fontFamily: font ? "Libre Baskerville" : "sans-serif",
         }}
@@ -86,8 +87,8 @@ async function renderBore({ faceUrl, faceW, faceH, line, ground }: { faceUrl: st
         <div
           style={{
             display: "flex",
-            maxWidth: "700px",
-            fontSize: "72px",
+            maxWidth: stacked ? "1000px" : "700px",
+            fontSize: stacked ? "46px" : "72px",
             fontWeight: 400,
             lineHeight: 1.08,
             letterSpacing: "-0.025em",
