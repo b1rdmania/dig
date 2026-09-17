@@ -81,3 +81,5 @@
 
 /* Loading: one line, the pulsing dot, the filler in the voice's own grey. */
 .workingLine { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--muted); font-size: 18px; line-height: 1.4; }
+.howBody a { color: var(--red); text-decoration: none; }
+.howBody a:hover { text-decoration: underline; }

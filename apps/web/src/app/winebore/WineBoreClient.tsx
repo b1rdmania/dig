@@ -359,19 +359,18 @@ export function WineBoreClient({ opener }: { opener: string }) {
           <div className={w.howBody}>
             <button type="button" className={w.howClose} onClick={() => howRef.current?.close()} aria-label="Close">&times;</button>
             <h2>How we built this</h2>
-            <p>This is an experiment. I did one for records first, Record Bore, built on the Discogs house and techno database. The question was simple: can you give a language model taste? Not knowledge. Taste. Opinions about one narrow thing, backed up by facts you can check.</p>
-            <p>The model on its own has read everything and believes nothing. So the data came first.</p>
+            <p>An experiment, after Record Bore. Can you give a language model taste? Not knowledge. Opinions about one narrow thing, backed by facts you can check. The model on its own has read everything and believes nothing, so the data came first.</p>
 
             <h3>The data</h3>
-            <p>The spine is Liv-ex&rsquo;s LWIN list: 190,479 wines and 34,466 producers. On top of that, the EU register of protected names, 1,688 appellations, with the yield cap, the planting density and the irrigation rule for each one. Then the actual rulebooks for 953 of them. The French cahiers des charges, the Italian disciplinari, the Spanish pliegos. That&rsquo;s where the rules live, and the rules are what he&rsquo;s right about.</p>
-            <p>Then the joining up. 55,971 rows of which grapes are allowed where, matched to 2,211 grape varieties. Producer websites from Wikidata, 41 trade bodies and an Exa sweep of the 500 biggest houses. 96% of the live European wines land on a register entry, which is how Chablis knows it&rsquo;s Chardonnay only and Huet knows he&rsquo;s Vouvray.</p>
-            <p>Taste is the bit we&rsquo;ve only started. Each rulebook says what the wine has to look, smell and taste like, and he can quote it. Beyond that he has 536 tasting notes from the Swedish state monopoly and nothing from growers yet.</p>
+            <p>The spine is Liv-ex&rsquo;s LWIN list: 190,479 wines, 34,466 producers. On top, the EU register of protected names, 1,688 appellations with their yield caps and planting rules, and the actual rulebooks for 953 of them: the cahiers des charges, disciplinari and pliegos. That&rsquo;s where the rules live, and the rules are what he&rsquo;s right about.</p>
+            <p>Then the joining up. 55,971 rows of which grapes are allowed where, matched to 2,211 varieties. Producer websites from Wikidata, 41 trade bodies and an <a href="https://exa.ai" target="_blank" rel="noopener noreferrer">Exa</a> sweep of the 500 biggest houses. 96% of the live European wines land on a register entry, which is how Chablis knows it&rsquo;s Chardonnay only.</p>
+            <p>Taste is the bit we&rsquo;ve only started. Each rulebook says what the wine has to look, smell and taste like, and he can quote it. Beyond that, 536 notes from the Swedish state monopoly and nothing from growers yet.</p>
 
             <h3>How he answers</h3>
-            <p>One character file and six lookups: the cellar, an appellation and its rules, a producer, a wine, a grape, a shelf. Every fact in an answer has to come from a lookup made in that turn. If he names something the lookups didn&rsquo;t return, he gets sent back to the book once. If it&rsquo;s still not there, he says so.</p>
+            <p>One character file and six lookups: the cellar, an appellation and its rules, a producer, a wine, a grape, a shelf. Every fact has to come from a lookup made in that turn. If he names something the lookups didn&rsquo;t return, he&rsquo;s sent back to the book once. If it&rsquo;s still not there, he says so.</p>
 
             <h3>Where it goes next</h3>
-            <p>This is a working demo. The same shape would take a merchant&rsquo;s own stock list, or a taste much narrower than Europe. The more opinion you feed in, the more he sounds like a person. A thousand voice notes on a thousand wines, from a magazine&rsquo;s back pages or someone talking across a counter, would turn him into somebody specific. That&rsquo;s the next experiment, not this one.</p>
+            <p>The same shape would take a merchant&rsquo;s own stock list, or a taste much narrower than Europe. The more opinion you feed in, the more he sounds like a person. A thousand voice notes on a thousand wines would turn him into somebody specific. That&rsquo;s the next experiment, not this one.</p>
 
             <h3>What it isn&rsquo;t</h3>
             <p>No review sites, no scraped tasting notes, no Vivino.</p>
