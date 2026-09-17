@@ -3,6 +3,7 @@
  * permitted-variety strings against them.
  *
  * Reads:  data/wine/raw/wikidata/03_grape_varieties.csv (2,747 rows, "|"-separated cells)
+ *         data/wine/raw/grapes-catalogues/vivc/vivc-wine-grape-passport-data.csv (berry colour by VIVC number)
  *         scripts/wine/grape-synonyms.json (manual raw_norm -> QID, verified only)
  * Writes: wine.grapes, wine.grape_names, and wine.appellation_grapes.grape_id
  *
@@ -32,10 +33,37 @@ function colourOf(cell: string | null | undefined): string {
   const raw = na(cell);
   if (!raw) return "unknown";
   const toks = raw.split("|").map((t) => t.toLowerCase());
+  // A lone "black berry skin" is no evidence at all: where VIVC can check it,
+  // it is wrong 45% of the time (Xarel·lo, Altesse, Arbois, Bacchus all
+  // "black"). Unknown beats a coin toss on the counter.
+  if (toks.length === 1 && toks[0] === "black berry skin") return "unknown";
   if (toks.some((t) => ROSE.some((k) => t.includes(k)))) return "rose";
   if (toks.some((t) => WHITE.some((k) => t.includes(k)))) return "white";
   if (toks.some((t) => RED.some((k) => t.includes(k)))) return "red";
   return "unknown";
+}
+
+/** VIVC passport "Color of berry skin" -> schema colour. VIVC is ampelography; it wins over Wikidata. */
+const VIVC_COLOUR: Record<string, string> = { BLANC: "white", NOIR: "red", ROUGE: "red", ROSE: "rose", GRIS: "rose" };
+const VIVC_PATH = resolve(RAW, "grapes-catalogues", "vivc", "vivc-wine-grape-passport-data.csv");
+
+/** VIVC number -> colour, for every wine-grape passport row that states one. */
+async function readVivcColours(): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (!existsSync(VIVC_PATH)) return out;
+  for await (const r of readCsv(VIVC_PATH)) {
+    const id = na(r["VIVC number"]);
+    const colour = VIVC_COLOUR[(na(r["Color of berry skin"]) ?? "").toUpperCase()];
+    if (id && colour) out.set(id, colour);
+  }
+  return out;
+}
+
+/** VIVC berry colour when the item carries a VIVC number that VIVC knows; Wikidata's statements otherwise. */
+function grapeColour(vivcIds: string[], wikidataCell: string | null | undefined, vivc: Map<string, string>): string {
+  const fromVivc = [...new Set(vivcIds.map((id) => vivc.get(id)).filter((c): c is string => !!c))];
+  if (fromVivc.length === 1) return fromVivc[0];
+  return colourOf(wikidataCell);
 }
 
 /** Register colour code -> expected grape colour, for the fuzzy stages. */
@@ -90,6 +118,16 @@ async function main() {
   const notes: Record<string, unknown> = {};
 
   await upsertSource(pool, {
+    slug: "vivc",
+    name: "Vitis International Variety Catalogue (JKI Geilweilerhof)",
+    licence: "open, citation requested (Roeckel et al.)",
+    pulled_at: "2026-09-03",
+    notes: "wine-grape passport data, 6,893 records; supplies berry-skin colour over Wikidata",
+  });
+  const vivc = await readVivcColours();
+  notes.vivc_colours = vivc.size;
+
+  await upsertSource(pool, {
     slug: "wikidata",
     name: "Wikidata (wineries, regions, grape varieties, wines)",
     licence: "CC0",
@@ -138,7 +176,7 @@ async function main() {
     weightByQid.set(qid, weight);
     parsed.push({ qid, name, labels, aliases });
     grapeRows.push([
-      name, norm(name), colourOf(r.colours), qid,
+      name, norm(name), grapeColour(splitPipe(r.vivcIds), r.colours, vivc), qid,
       splitPipe(r.vivcIds), splitPipe(r.parentVarieties), splitPipe(r.countriesOfOrigin),
       "wikidata", qid,
     ]);
