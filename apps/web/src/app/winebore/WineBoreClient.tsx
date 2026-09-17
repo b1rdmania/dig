@@ -86,12 +86,32 @@ const SUGGESTIONS: Array<{ t: string; q?: string; fill?: string }> = [
 
 // Evidence arrives as everything the tools returned; the counter shows the
 // bottles and growers, deduped, wines first.
-function onTheCounter(evidence: Bottle[] | undefined): Bottle[] {
+// Only what he actually named goes on the counter: a bottle stays if its
+// producer (the part before the first comma) or its whole title appears in
+// the answer. If he named nothing the counter is empty.
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[-\u2010-\u2014']/g, " ").replace(/\s+/g, " ").toLowerCase();
+function named(answer: string, b: Bottle): boolean {
+  const a = fold(answer);
+  const parts = b.title.split(",").map((p) => fold(p).trim()).filter((p) => p.length > 2);
+  if (parts.length === 0) return false;
+  // He says "Overnoy", the book says "Maison Pierre Overnoy": the surname
+  // (last word of the house) as a whole word is enough for a producer.
+  const house = parts[0];
+  const surname = house.split(" ").filter((w) => w.length > 3).pop() ?? house;
+  const houseNamed = a.includes(house) || new RegExp(`\\b${surname}\\b`).test(a);
+  if (b.type === "producer") return houseNamed;
+  if (b.type !== "wine") return a.includes(fold(b.title).trim());
+  // A wine needs its house and, when the title carries one, its cuvée.
+  const cuvee = parts[parts.length - 1];
+  return houseNamed && (parts.length === 1 || a.includes(cuvee));
+}
+function onTheCounter(evidence: Bottle[] | undefined, answer: string): Bottle[] {
   if (!evidence) return [];
   const seen = new Set<string>();
   const order: Record<Bottle["type"], number> = { wine: 0, producer: 1, appellation: 2, grape: 3, shelf: 9 };
   return evidence
     .filter((b) => b.type !== "shelf")
+    .filter((b) => named(answer, b))
     .filter((b) => { const k = `${b.type}/${b.id}`; if (seen.has(k)) return false; seen.add(k); return true; })
     .sort((a, b) => order[a.type] - order[b.type])
     .slice(0, 8);
@@ -224,10 +244,10 @@ export function WineBoreClient({ opener }: { opener: string }) {
                       <ReactMarkdown>{normalDashes(m.content)}</ReactMarkdown>
                     )}
                   </div>
-                  {onTheCounter(m.evidence).length > 0 && (
+                  {onTheCounter(m.evidence, m.content).length > 0 && (
                     <div className={w.counter}>
                       <p className={w.counterHead}>On the counter</p>
-                      {onTheCounter(m.evidence).map((b) => (
+                      {onTheCounter(m.evidence, m.content).map((b) => (
                         <div key={`${b.type}/${b.id}`} className={w.bottle}>
                           <span>
                             <span className={w.bottleName}>{normalDashes(b.title)}</span>
