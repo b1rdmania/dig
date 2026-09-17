@@ -89,7 +89,7 @@ const SUGGESTIONS: Array<{ t: string; q?: string; fill?: string }> = [
 // Only what he actually named goes on the counter: a bottle stays if its
 // producer (the part before the first comma) or its whole title appears in
 // the answer. If he named nothing the counter is empty.
-const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[-\u2010-\u2014']/g, " ").replace(/\s+/g, " ").toLowerCase();
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N} ]/gu, " ").replace(/\s+/g, " ").toLowerCase();
 function named(answer: string, b: Bottle): boolean {
   const a = fold(answer);
   const parts = b.title.split(",").map((p) => fold(p).trim()).filter((p) => p.length > 2);
