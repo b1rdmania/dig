@@ -70,3 +70,11 @@
 .howBody h3 { margin: 22px 0 6px; font-size: 15px; font-weight: 700; }
 .howBody p, .howBody li { margin: 0 0 10px; font-size: 15px; line-height: 1.55; }
 .howBody ul { margin: 0 0 10px; padding-left: 18px; }
+
+/* The wine-list photo: a small print of what they handed over, then the read-out. */
+.listPhoto { display: block; max-width: 220px; max-height: 220px; margin: 2px 0 10px; border: 1px solid var(--line); }
+.listText { white-space: pre-line; }
+.listLine { margin: 10px 0 0; }
+.listBtn { border: 0; background: none; padding: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 15px; }
+.listBtn:hover { color: var(--ink); text-decoration: underline; }
+.listBtn:disabled { cursor: default; opacity: 0.5; }

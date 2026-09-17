@@ -5,17 +5,17 @@ const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev"
 
 export const metadata: Metadata = {
   title: "Wine Bore.",
-  description: "Ask about wine. I’ll correct you.",
+  description: "Ask. I’ll correct you.",
   openGraph: {
     title: "Wine Bore.",
-    description: "Ask about wine. I’ll correct you.",
+    description: "Ask. I’ll correct you.",
     type: "website",
     images: [{ url: "/api/og?kind=winebore", width: 1200, height: 630, alt: "Wine Bore - Go on then. I’ll correct you." }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Wine Bore.",
-    description: "Ask about wine. I’ll correct you.",
+    description: "Ask. I’ll correct you.",
     images: ["/api/og?kind=winebore"],
   },
   robots: { index: false, follow: false },

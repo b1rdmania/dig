@@ -171,7 +171,7 @@ function toOpenAiMessages(system: string, messages: AnthropicMessage[]) {
 // LLM_PROVIDER_IGNORE lists hosts a fallback may never land on. The round
 // trace (meta.rounds) is how you find them: on 2026-09-03 every 10-23s
 // answer-writing round was Makora; Parasail wrote the same in 2-3s.
-function providerPreference(model: string): Record<string, unknown> {
+export function providerPreference(model: string): Record<string, unknown> {
   const list = (name: string) => String(process.env[name] ?? "")
     .split(",")
     .map((x) => x.trim())

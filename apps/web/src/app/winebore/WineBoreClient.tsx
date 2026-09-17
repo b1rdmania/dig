@@ -25,10 +25,27 @@ interface Bottle {
 interface Turn {
   role: "user" | "assistant";
   content: string;
+  /** Object URL of the photo behind a wine-list turn, for the transcript only. */
+  image?: string;
   evidence?: Bottle[];
   error?: boolean;
   shopShut?: boolean;
   mode?: ResponseMode;
+}
+
+// Longest side 1600px, JPEG 0.82: a phone photo lands well under 1 MB and
+// the text on a list is still legible to the model.
+async function shrinkImage(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no canvas");
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", 0.82);
 }
 
 function normalDashes(value: string): string {
@@ -112,6 +129,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const howRef = useRef<HTMLDialogElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
 
   useEffect(() => {
@@ -124,10 +142,10 @@ export function WineBoreClient({ opener }: { opener: string }) {
     if (messages.length > 0) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, draft]);
 
-  async function ask(question?: string) {
+  async function ask(question?: string, image?: string) {
     const q = (question ?? input).trim();
     if (!q || loading) return;
-    const next: Turn[] = [...messages, { role: "user", content: q }];
+    const next: Turn[] = [...messages, { role: "user", content: q, image }];
     setMessages(next);
     setInput("");
     setActivityLine(randomFiller());
@@ -197,13 +215,48 @@ export function WineBoreClient({ opener }: { opener: string }) {
     }
   }
 
+  // A photo of a wine list: shrink it in the browser, have the API read it to
+  // text, then send that text through the ordinary ask so every name gets
+  // looked up. The photo itself only ever appears on this page.
+  async function readList(file: File) {
+    if (loading) return;
+    setLoading(true);
+    setActivityLine("Squinting at somebody's wine list…");
+    const preview = URL.createObjectURL(file);
+    try {
+      const dataUrl = await shrinkImage(file);
+      const res = await fetch(`${API_URL}/v1/wine/read-list`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+      const data = await res.json().catch(() => null) as { list?: string | null; error?: { message: string } } | null;
+      if (!res.ok) {
+        const shopShut = res.status === 429 && !!data?.error?.message;
+        setMessages((prev) => [...prev, { role: "assistant", content: data?.error?.message ?? "Couldn't read that. Try a straighter photo.", error: !shopShut, shopShut }]);
+        return;
+      }
+      if (!data?.list) {
+        setMessages((prev) => [...prev, { role: "user", content: "(a photo)", image: preview }, { role: "assistant", content: "That's not a wine list. I've seen wine lists." }]);
+        return;
+      }
+      setLoading(false);
+      await ask(`Here's a wine list:\n${data.list}\nWhat do you make of it?`, preview);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", content: "Couldn't read that. Try again.", error: true }]);
+    } finally {
+      setLoading(false);
+      setActivityLine("");
+    }
+  }
+
   return (
     <div className={`${s.wrap} ${w.wrap}`}>
       <main className={`${s.col} ${w.col}`}>
         <div className={w.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- hand-drawn line art; optimisation would soften it */}
           <img className={w.face} src="/winebore-face.png" alt="" width={482} height={512} />
-          <h1 className={w.title}><b>Wine Bore<span className={s.dot}>.</span></b> Ask about wine. I&rsquo;ll correct you.</h1>
+          <h1 className={w.title}><b>Wine Bore<span className={s.dot}>.</span></b> Ask. I&rsquo;ll correct you.</h1>
         </div>
 
         <div className={`${s.bore} ${s.openerBlock} ${w.opener}`}><p>{normalDashes(opener)}</p></div>
@@ -214,7 +267,11 @@ export function WineBoreClient({ opener }: { opener: string }) {
               m.role === "user" ? (
                 <div key={i} className={`${s.turn} ${s.userTurn}`}>
                   <p className={s.turnLabel}>You</p>
-                  <p className={s.youText}>{normalDashes(m.content)}</p>
+                  {m.image && (
+                    // eslint-disable-next-line @next/next/no-img-element -- object URL from the customer's own photo
+                    <img className={w.listPhoto} src={m.image} alt="" />
+                  )}
+                  <p className={`${s.youText} ${m.image ? w.listText : ""}`}>{normalDashes(m.content)}</p>
                 </div>
               ) : (
                 <article key={i} className={`${s.turn} ${s.boreTurn}`}>
@@ -288,6 +345,11 @@ export function WineBoreClient({ opener }: { opener: string }) {
             </button>
           </div>
 
+
+          <p className={w.listLine}>
+            <input ref={fileRef} type="file" accept="image/*" className={s.srOnly} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void readList(f); }} />
+            <button type="button" className={w.listBtn} disabled={loading} onClick={() => fileRef.current?.click()}>Upload a wine list. I&rsquo;ll insult it.</button>
+          </p>
 
           <p className={s.cap}>
             <button type="button" className={w.howLink} onClick={() => howRef.current?.showModal()}>How we built this</button>
