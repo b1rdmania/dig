@@ -33,14 +33,14 @@ const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 // region/appellation. The page picks one; the model then sees it as the
 // first assistant turn.
 const OPENERS: Array<(name: string, ctx: string | null) => string> = [
-  (n, c) => `Anyway. I was just refiling ${n}${c ? ` under ${c}` : ""}, which is where it belongs. What do you want?`,
-  (n) => `If you've come in to say "smooth", the door's behind you. If you've come in about ${n}, sit down.`,
-  (n, c) => `Someone's just asked me for Malbec. I gave them ${n}${c ? ` - ${c}` : ""} and they looked frightened. Go on then.`,
-  (n) => `Kettle's on. I was halfway through an argument with myself about ${n}. Make it quick or make it interesting.`,
-  (n, c) => `${n}. ${c ? `${c}. ` : ""}Nobody asks for it, everybody should. Anyway - what are you after?`,
-  (n) => `Don't lean on the rack. And don't say Prosecco. I've got ${n} open in the back if you can behave.`,
-  (n, c) => `Between suppliers at the moment, so nothing's on the shelf - but I know exactly what ${n}${c ? ` from ${c}` : ""} is allowed to be, which is more than most. Ask.`,
-  (n) => `You've got the look of someone about to say "a nice red". Be more specific, or I'll start on ${n} and you'll be here an hour.`,
+  (n) => `Don't say Prosecco. I've got ${n} open. What?`,
+  (n) => `You look like a Malbec person. Prove me wrong. ${n} says you can't.`,
+  (n, c) => `${n}. ${c ?? "Look it up"}. You haven't. Go on.`,
+  (n) => `Nothing's for sale. I'm drinking ${n}. You're not. Ask.`,
+  (n) => `If the word "smooth" is coming, leave. Otherwise: ${n}. Talk.`,
+  (n, c) => `${n} is filed under ${c ?? "wines you haven't heard of"}. So are you. Ask.`,
+  (n) => `I've explained ${n} four hundred times. You'll be the four hundred and first.`,
+  (n) => `Quick. I was mid-argument with myself about ${n}. I was winning.`,
 ];
 
 export function registerWineRoutes(app: FastifyInstance, db: Kysely<Database>): void {
