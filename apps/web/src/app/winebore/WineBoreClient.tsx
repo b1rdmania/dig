@@ -317,28 +317,23 @@ export function WineBoreClient({ opener }: { opener: string }) {
           <div className={w.howBody}>
             <button type="button" className={w.howClose} onClick={() => howRef.current?.close()} aria-label="Close">&times;</button>
             <h2>How we built this</h2>
-            <p>Wine Bore is a character on top of a database, not a prompt. Every fact he states comes from a lookup made in that turn. If the lookup returns nothing, he says so.</p>
+            <p>This is an experiment. It riffs off Record Bore, where I rebuilt the Discogs house and techno database and gave a character a counter to stand behind. The question both are testing: can you give a language model opinionated taste in one niche thing?</p>
+            <p>A model on its own has read everything and has no opinions worth having. So we built the data first and let the character stand on it.</p>
 
-            <h3>The book</h3>
-            <p>The spine is the Liv-ex LWIN database: 212,311 rows in, 190,479 wines and 34,466 producers out, 185,293 of them live. On top of that:</p>
-            <ul>
-              <li>eAmbrosia, the EU register of protected names: 1,688 wine appellations, each with its yield cap, planting density, irrigation rule and municipalities.</li>
-              <li>The full legal text of 953 appellations: INAO cahiers des charges (France), MASAF disciplinari (Italy), MAPA pliegos (Spain). Full-text searchable, so he can quote the rule.</li>
-              <li>The Sci Data 2022 PDO dataset: 55,971 permitted-grape rows, 88.8% resolved to Wikidata grape varieties (2,211 grapes, 4,870 names and synonyms).</li>
-              <li>Wikidata wineries and wines, 41 consorzio and trade-body producer directories, and an Exa sweep of the 500 largest producers for their own websites: 7,579 producer links.</li>
-              <li>Systembolaget&rsquo;s assortment, 6,298 listings, demo only, for what a real shelf looks like.</li>
-            </ul>
-            <p>Then the joins. 168,314 wines resolved to an appellation; 96% of the live EU wines land on a register row, so Chablis knows it is Chardonnay only and Huet knows he is Vouvray. Non-EU regions got 504 synthetic entries with no rules attached, and he is told not to quote rules there. Every loader logs rows in, rows out, matched and unmatched, and unmatched rows are kept, never dropped.</p>
+            <h3>The data</h3>
+            <p>The spine is the Liv-ex LWIN database: 190,479 wines and 34,466 producers. On top of that sits the EU register of protected names, 1,688 appellations with their yield caps, planting densities and irrigation rules, and the full legal text of 953 of them. The French cahiers des charges, the Italian disciplinari, the Spanish pliegos. That is where the rules live, and the rules are what he is right about.</p>
+            <p>Then the joins. 55,971 permitted-grape rows from the Sci Data PDO set, matched to 2,211 grape varieties. Producer websites from Wikidata, 41 trade-body directories and an Exa sweep of the 500 largest houses. 96% of the live EU wines land on a register row, so Chablis knows it is Chardonnay only and Huet knows he is Vouvray.</p>
+            <p>Taste is the layer we have only started. Each appellation&rsquo;s rulebook says what the wine must look, smell and taste like, and he can quote it. Beyond that he has 536 tasting notes from the Swedish monopoly and nothing from the growers themselves yet.</p>
 
-            <h3>The character</h3>
-            <p>One persona file, six tools: search the cellar, look up an appellation and its rules, a producer, a wine, a grape, a shelf. The model reads the tools&rsquo; results and writes the answer. Anything it names that no tool returned is sent back to the book once; if it still can&rsquo;t ground it, it says &ldquo;don&rsquo;t quote me&rdquo;. No URLs leave the shop. The bottles under an answer are the ones he actually named.</p>
-            <p>The shelves, his private map of what leads where, are a draft pack of 12 shelves and 217 bottles. The register always beats the pack.</p>
+            <h3>How he answers</h3>
+            <p>One persona file and six lookups: the cellar, an appellation and its rules, a producer, a wine, a grape, a shelf. Every fact in an answer has to come from a lookup made in that turn. If he names something no lookup returned, he is sent back to the book once. If it is still not there, he says so. No links leave the shop. The bottles under an answer are the ones he named.</p>
+            <p>Before anyone saw this page he answered thirty questions: ten on rules, ten on producers, ten favourite-bottle challenges. Thirty grounded, none wrong.</p>
 
-            <h3>What we checked</h3>
-            <p>Thirty questions before anyone saw the page: ten appellation rules, ten producer facts, ten favourite-bottle challenges. 30 of 30 grounded, none wrong, none hedged. Median 26 seconds an answer.</p>
+            <h3>Where it could go</h3>
+            <p>This is a working demo. The same shape would take a merchant&rsquo;s own stock list, or a taste far narrower than Europe. The richer the opinion you feed in, the closer he gets to a real person. A thousand voice notes on a thousand wines, from a magazine&rsquo;s back pages or a sommelier talking at the counter, would tune him into somebody specific. That is the next experiment, not this one.</p>
 
             <h3>What it is not</h3>
-            <p>No review sites, no tasting-note scrapes, no Vivino. The opinions are his; the facts are the register&rsquo;s. Nothing is for sale.</p>
+            <p>No review sites, no scraped tasting notes, no Vivino. Nothing is for sale.</p>
           </div>
         </dialog>
       </main>
