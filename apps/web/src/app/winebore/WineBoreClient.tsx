@@ -368,14 +368,13 @@ export function WineBoreClient({ opener }: { opener: string }) {
             <p>Taste is the bit we&rsquo;ve only started. Each rulebook says what the wine has to look, smell and taste like, and he can quote it. Beyond that he has 536 tasting notes from the Swedish state monopoly and nothing from growers yet.</p>
 
             <h3>How he answers</h3>
-            <p>One character file and six lookups: the cellar, an appellation and its rules, a producer, a wine, a grape, a shelf. Every fact in an answer has to come from a lookup made in that turn. If he names something the lookups didn&rsquo;t return, he gets sent back to the book once. If it&rsquo;s still not there, he says so. No links leave the shop. The bottles under an answer are the ones he actually named.</p>
-            <p>Before anyone saw this, he answered thirty questions: ten on rules, ten on producers, ten favourite-bottle challenges. Thirty grounded, none wrong.</p>
+            <p>One character file and six lookups: the cellar, an appellation and its rules, a producer, a wine, a grape, a shelf. Every fact in an answer has to come from a lookup made in that turn. If he names something the lookups didn&rsquo;t return, he gets sent back to the book once. If it&rsquo;s still not there, he says so.</p>
 
             <h3>Where it goes next</h3>
             <p>This is a working demo. The same shape would take a merchant&rsquo;s own stock list, or a taste much narrower than Europe. The more opinion you feed in, the more he sounds like a person. A thousand voice notes on a thousand wines, from a magazine&rsquo;s back pages or someone talking across a counter, would turn him into somebody specific. That&rsquo;s the next experiment, not this one.</p>
 
             <h3>What it isn&rsquo;t</h3>
-            <p>No review sites, no scraped tasting notes, no Vivino. Nothing is for sale.</p>
+            <p>No review sites, no scraped tasting notes, no Vivino.</p>
           </div>
         </dialog>
       </main>
