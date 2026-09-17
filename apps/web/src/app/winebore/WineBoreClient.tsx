@@ -214,20 +214,22 @@ export function WineBoreClient({ opener }: { opener: string }) {
   }
 
   return (
-    <div className={s.wrap}>
-      <main className={s.col}>
+    <div className={`${s.wrap} ${w.wrap}`}>
+      <main className={`${s.col} ${w.col}`}>
         <div className={s.topline}>
           <Link className={s.home} href="/">&larr; home</Link>
         </div>
-        <div className={s.masthead}>
-          <h1 className={s.title}><span className={w.mark} aria-hidden="true" />Wine Bore<span className={s.dot}>.</span></h1>
+        <div className={w.masthead}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- hand-drawn line art; optimisation would soften it */}
+          <img className={w.face} src="/winebore-face.png" alt="" width={482} height={512} />
+          <h1 className={w.title}>Wine Bore<span className={s.dot}>.</span></h1>
+          <p className={w.tagline}>Ask about wine. I&rsquo;ll correct you.</p>
         </div>
-        <p className={s.tagline}>Ask about wine. I&rsquo;ll probably correct you. Nothing in stock; everything in the book.</p>
 
-        <div className={`${s.bore} ${s.openerBlock}`}><p>{normalDashes(opener)}</p></div>
+        <div className={`${s.bore} ${s.openerBlock} ${w.opener}`}><p>{normalDashes(opener)}</p></div>
 
         {(messages.length > 0 || loading) && (
-          <section className={s.turns} aria-label="Conversation">
+          <section className={`${s.turns} ${w.turns}`} aria-label="Conversation">
             {messages.map((m, i) => (
               m.role === "user" ? (
                 <div key={i} className={`${s.turn} ${s.userTurn}`}>
@@ -284,7 +286,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
           </section>
         )}
 
-        <section className={s.askPanel} aria-labelledby="wine-bore-ask-label">
+        <section className={`${s.askPanel} ${w.askPanel}`} aria-labelledby="wine-bore-ask-label">
           <label id="wine-bore-ask-label" className={s.srOnly} htmlFor="wine-bore-question">Ask</label>
           <div className={s.composer}>
             <input
@@ -326,11 +328,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
           )}
 
           <p className={s.cap}>
-            {questionsLeft === null
-              ? "Limited questions. I lose interest after that."
-              : `${questionsLeft} question${questionsLeft === 1 ? "" : "s"} left. I lose interest after that.`}
-            <br />
-            (demo - nothing is for sale here, and he may be slow or wrong)
+            {questionsLeft === null ? "Limited questions." : `${questionsLeft} left.`} Nothing&rsquo;s for sale. He may be wrong.
           </p>
         </section>
       </main>
