@@ -151,7 +151,7 @@ async function main() {
     if (vs.some((v) => vivcColour(v.colour))) stats.colour_from_vivc++;
     // Wikidata P171 is the parent TAXON ("Vitis vinifera"), not a parent
     // variety. Parentage is VIVC Parent1 x Parent2, else Wikidata P1531.
-    let parents: string[] = [];
+    let parents: string[];
     // Only a full pedigree that markers confirm. VIVC gives Pinot noir as "? x
     // Savagnin blanc"; half a pedigree, stated flat on the counter, starts an argument the data cannot finish.
     const full = vs.length === 1 && vs[0].pedigree_confirmed && vs[0].parents.length === 2 && !vs[0].parents.includes("?");

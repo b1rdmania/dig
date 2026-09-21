@@ -12,6 +12,7 @@
  *
  *   DATABASE_URL=postgresql://dig:dig_local@localhost:5433/dig pnpm exec tsx scripts/wine/load-appellations.ts
  */
+import { plausibleYield } from "./appellation-rules";
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { RAW, connect, insertMany, logLoad, na, norm, numOrNull, readCsv, readJson, upsertSource } from "./lib";
@@ -121,7 +122,14 @@ async function main() {
   }
 
   // ---- idempotence ----------------------------------------------------
-  await pool.query(`DELETE FROM wine.appellations WHERE source = ANY($1::text[])`, [["eambrosia", "pdo-dataset"]]);
+  // Upsert on (source, source_ref), never delete-and-insert. wine.wines,
+  // wine.appellation_documents and the pack store appellation ids; a delete
+  // fails on those references once the corpus is loaded, and fresh serial ids
+  // would break the pack. Names and grape rows this loader owns are rebuilt.
+  // Run load-grapes.ts afterwards: it re-resolves appellation_grapes.grape_id.
+  const OWN = ["eambrosia", "pdo-dataset"];
+  await pool.query(`DELETE FROM wine.appellation_names WHERE source = ANY($1::text[])`, [OWN]);
+  await pool.query(`DELETE FROM wine.appellation_grapes WHERE source = 'pdo-dataset'`);
 
   // ---- appellations ---------------------------------------------------
   const appCols = [
@@ -130,6 +138,19 @@ async function main() {
     "min_planting_density", "irrigation", "municipalities", "source", "source_ref",
   ];
   const appRows: unknown[][] = [];
+  // The PDO dataset carries keying slips: Colli Romagna centrale 6,635 hl/ha,
+  // Verduno Pelaverga 8.1, Maremma toscana 80,000 kg/ha. No figure beats a wrong one.
+  const droppedYields: string[] = [];
+  const yieldHl = (name: string, v: unknown) => {
+    const n = numOrNull(v);
+    if (n !== null && !plausibleYield(n, "hl")) { droppedYields.push(`${name}: ${n} hl/ha`); return null; }
+    return n;
+  };
+  const yieldKg = (name: string, v: unknown) => {
+    const n = numOrNull(v);
+    if (n !== null && !plausibleYield(n, "kg")) { droppedYields.push(`${name}: ${n} kg/ha`); return null; }
+    return n;
+  };
   let greekNorm = 0;
   let noName = 0;
 
@@ -146,8 +167,8 @@ async function main() {
       name, nameNorm, country, g.giType, g.giIdentifier, g.fileNumber, na(g.euProtectionDate),
       na(g.status), na(g.legalInstrument?.text), `${EAMBROSIA_URL}/${g.giIdentifier}`,
       pdo ? splitSlash(pdo.Category_of_wine_product) : [],
-      pdo ? numOrNull(pdo.Maximum_yield_hl) : null,
-      pdo ? numOrNull(pdo.Maximum_yield_kg) : null,
+      pdo ? yieldHl(name, pdo.Maximum_yield_hl) : null,
+      pdo ? yieldKg(name, pdo.Maximum_yield_kg) : null,
       pdo ? numOrNull(pdo.Minimum_planting_density) : null,
       pdo ? na(pdo.Irrigation) : null,
       pdo ? splitSlash(pdo.Municip_nam) : [],
@@ -162,12 +183,16 @@ async function main() {
     appRows.push([
       name, norm(name), na(r.Country) ?? "EU", "PDO", null, r.PDOid.trim(), na(r.Registration),
       null, null, na(r.PDOinfo), splitSlash(r.Category_of_wine_product),
-      numOrNull(r.Maximum_yield_hl), numOrNull(r.Maximum_yield_kg), numOrNull(r.Minimum_planting_density),
+      yieldHl(name, r.Maximum_yield_hl), yieldKg(name, r.Maximum_yield_kg), numOrNull(r.Minimum_planting_density),
       na(r.Irrigation), splitSlash(r.Municip_nam), "pdo-dataset", r.PDOid.trim(),
     ]);
   }
 
-  const appOut = await insertMany(pool, "wine.appellations", appCols, appRows);
+  const appOut = await insertMany(
+    pool, "wine.appellations", appCols, appRows,
+    `ON CONFLICT (source, source_ref) DO UPDATE SET ${appCols.filter((c) => c !== "source" && c !== "source_ref").map((c) => `${c} = EXCLUDED.${c}`).join(", ")}`,
+  );
+  notes.implausible_yields_dropped = droppedYields;
 
   const idMap = new Map<string, number>();
   const fileMap = new Map<string, number>();

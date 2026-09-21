@@ -63,3 +63,12 @@ export function stripTypeSuffix(nn: string): string {
   while (toks.length > 1 && TYPE_SUFFIX.has(toks[toks.length - 1])) toks = toks.slice(0, -1);
   return toks.join(" ");
 }
+
+/**
+ * A maximum yield a vineyard could plausibly carry. The lowest real ceilings
+ * are the sweet wines (Quarts de Chaume 25 hl/ha); the highest are pergola
+ * and parral regions (Valle de Guimar 222 hl/ha, 30,000 kg/ha).
+ */
+export function plausibleYield(value: number, unit: "hl" | "kg"): boolean {
+  return unit === "hl" ? value >= 15 && value <= 250 : value >= 1500 && value <= 35000;
+}
