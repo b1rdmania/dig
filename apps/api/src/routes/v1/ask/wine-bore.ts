@@ -83,7 +83,7 @@ export const WINE_TOOLS: ToolDef[] = [
   {
     name: "get_appellation",
     description:
-      "The register entry for a protected name: type (PDO/PGI), permitted grapes with colour codes, yield and density limits, other spellings, protection date, the producers with most wines under it, and up to three official rule documents (cahier des charges / disciplinare / pliego). Pass q to get the matching clause from those documents.",
+      "The register entry for a protected name: type (PDO/PGI), the grapes the rule text names (first) and the other varieties authorised in the area (marked), the base yield and the ceiling (rendement butoir) from the rule text where it parses, the EU register figure, density, other spellings, protection date, the producers with most wines under it, and up to three official rule documents (cahier des charges / disciplinare / pliego). Pass q to get the matching clause from those documents.",
     input_schema: {
       type: "object",
       properties: {
@@ -139,6 +139,56 @@ function ev(ctx: ToolContext<WineEvidence>, e: WineEvidence) {
   ctx.evidenceCollector.push(e);
 }
 
+type AppellationGrape = { name: string; colour_code: string | null; kind: string; named_in_rules: boolean | null };
+
+/**
+ * Permitted grapes, in field names the model cannot misread. A register row
+ * for an Italian DOC lists every variety authorised in the province (Etna: 31
+ * names, Glera among them); the rule text names four. When a rule text is
+ * attached, the named varieties come first under their own key.
+ */
+export function shapeGrapes(grapes: AppellationGrape[]): Record<string, unknown> {
+  const label = (g: AppellationGrape) => `${g.name}${g.colour_code ? ` (${g.colour_code})` : ""}`;
+  if (!grapes.some((g) => g.named_in_rules !== null)) {
+    return { permitted_grapes: grapes.map(label), permitted_grapes_note: "Register list. No rule text attached, so the book cannot say which of these the rules name and which are only authorised in the wider area." };
+  }
+  return {
+    grapes_named_in_the_rules: grapes.filter((g) => g.named_in_rules).map(label),
+    other_varieties_authorised_in_the_area_but_not_named_in_the_rules: grapes.filter((g) => !g.named_in_rules).map(label),
+  };
+}
+
+type AppellationYields = {
+  country: string; max_yield_hl: number | null; max_yield_kg: number | null; base_yield_hl: number | null; butoir_yield_hl: number | null;
+  yield_rules: Array<{ label: string | null; base_hl: number; butoir_hl: number }> | null;
+};
+
+/**
+ * Yields. The EU register's French figure is the rendement butoir (the
+ * ceiling a bumper year may reach), not the yield a grower works to: La Tache
+ * is 35 hl/ha, butoir 49, register 49. The cahier's own pair goes out under
+ * plain names, and the register figure says what it is.
+ */
+export function shapeYields(d: AppellationYields): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (d.yield_rules?.length) {
+    out.yields_from_the_rule_text_hl_per_ha = d.yield_rules.map((r) => ({
+      applies_to: r.label ?? "all wines", base_yield: r.base_hl, ceiling_in_exceptional_years_rendement_butoir: r.butoir_hl,
+    }));
+    out.yield_note = "Quote base_yield as the yield. The ceiling is the rendement butoir, not the normal limit.";
+  }
+  if (d.max_yield_hl != null) {
+    if (d.country === "FR") {
+      out.eu_register_ceiling_hl_per_ha = d.max_yield_hl;
+      if (!d.yield_rules?.length) out.yield_note = "For a French AOC the EU register figure is the rendement butoir (the ceiling), not the base yield. The base yield is lower; the book does not hold it for this appellation.";
+    } else {
+      out.max_yield_hl_per_ha = d.max_yield_hl;
+    }
+  }
+  if (d.max_yield_kg != null) out.max_yield_kg_grapes_per_ha = d.max_yield_kg;
+  return out;
+}
+
 export async function executeWineTool(name: string, input: Record<string, unknown>, ctx: ToolContext<WineEvidence>): Promise<unknown> {
   const db = ctx.db as any;
   try {
@@ -159,8 +209,9 @@ export async function executeWineTool(name: string, input: Record<string, unknow
       return {
         id: d.id, name: d.name, country: d.country, type: d.gi_type, protected_since: d.protection_date, status: d.status,
         other_names: d.other_names, categories: d.categories,
-        permitted_grapes: d.grapes.map((g) => `${g.name}${g.colour_code ? ` (${g.colour_code})` : ""}${g.kind === "other" ? " [secondary]" : ""}`),
-        max_yield_hl_per_ha: d.max_yield_hl, max_yield_kg_per_ha: d.max_yield_kg, min_vines_per_ha: d.min_planting_density,
+        ...shapeGrapes(d.grapes),
+        ...shapeYields(d),
+        min_vines_per_ha: d.min_planting_density,
         legal_instrument: d.legal_instrument,
         rule_documents: d.documents.map((x) => ({ type: x.doc_type, title: x.title, clause: x.excerpt })),
         wines_in_book: d.wine_count,
@@ -203,7 +254,7 @@ export async function executeWineTool(name: string, input: Record<string, unknow
       for (const w of d.wines) ev(ctx, { type: "wine", id: w.lwin, title: w.name, subtitle: d.name, find_url: findUrl(w.name) });
       return {
         id: d.id, name: d.name, colour: d.colour, synonyms: d.synonyms, parents: d.parent_varieties, origin: d.countries_of_origin,
-        permitted_in_appellations: d.appellation_count, appellations: d.appellations.map((a) => ({ id: a.id, name: a.name, country: a.country, role: a.kind === "oiv" ? "principal" : "secondary" })),
+        permitted_in_appellations: d.appellation_count, appellations: d.appellations.map((a) => ({ id: a.id, name: a.name, country: a.country, list: a.kind === "oiv" ? "register main list" : "register other list" })),
         wines_naming_it: d.wine_count, example_wines: d.wines, source: d.source,
       };
     }

@@ -148,7 +148,12 @@ export interface AppellationDetail {
   min_planting_density: number | null;
   municipalities_count: number;
   other_names: string[];
-  grapes: Array<{ name: string; colour_code: string | null; kind: string; categories: string[]; grape_id: number | null }>;
+  /** named_in_rules: true = the attached rule text names the variety; false = on the register's list only; null = no rule text attached. Named first. */
+  grapes: Array<{ name: string; colour_code: string | null; kind: string; categories: string[]; grape_id: number | null; named_in_rules: boolean | null }>;
+  /** From the French cahier. null when the cahier gives several pairs (see yield_rules) or did not parse. */
+  base_yield_hl: number | null;
+  butoir_yield_hl: number | null;
+  yield_rules: Array<{ label: string | null; base_hl: number; butoir_hl: number }> | null;
   documents: Array<{ id: number; doc_type: string; title: string; url: string | null; excerpt: string | null }>;
   wine_count: number;
   producers: Array<{ id: number; name: string; wine_count: number }>;
@@ -160,6 +165,7 @@ export async function getAppellation(db: Kysely<any>, id: number, q?: string): P
   const row = (await sql<any>`
     SELECT id, name, country, gi_type, eu_file_number, protection_date::text, status, legal_instrument,
            register_url, categories, max_yield_hl, max_yield_kg, min_planting_density,
+           base_yield_hl, butoir_yield_hl, yield_rules,
            coalesce(array_length(municipalities, 1), 0) AS municipalities_count, source, source_ref
     FROM wine.appellations WHERE id = ${id}
   `.execute(db)).rows[0];
@@ -171,9 +177,10 @@ export async function getAppellation(db: Kysely<any>, id: number, q?: string): P
       ORDER BY name LIMIT 12
     `.execute(db).then((r) => r.rows.map((x) => x.name)),
     sql<any>`
-      SELECT grape_name_raw AS name, colour_code, kind, array_agg(DISTINCT coalesce(category, '')) AS categories, min(grape_id) AS grape_id
+      SELECT grape_name_raw AS name, colour_code, kind, array_agg(DISTINCT coalesce(category, '')) AS categories, min(grape_id) AS grape_id,
+             bool_or(named_in_rules) AS named_in_rules
       FROM wine.appellation_grapes WHERE appellation_id = ${id}
-      GROUP BY 1, 2, 3 ORDER BY kind, name
+      GROUP BY 1, 2, 3 ORDER BY bool_or(named_in_rules) DESC NULLS LAST, kind, name
     `.execute(db).then((r) => r.rows),
     (async () => {
       const query = q ? tsq(q) : null;
@@ -200,6 +207,9 @@ export async function getAppellation(db: Kysely<any>, id: number, q?: string): P
     ...row,
     max_yield_hl: row.max_yield_hl == null ? null : Number(row.max_yield_hl),
     max_yield_kg: row.max_yield_kg == null ? null : Number(row.max_yield_kg),
+    base_yield_hl: row.base_yield_hl == null ? null : Number(row.base_yield_hl),
+    butoir_yield_hl: row.butoir_yield_hl == null ? null : Number(row.butoir_yield_hl),
+    yield_rules: row.yield_rules ?? null,
     min_planting_density: row.min_planting_density == null ? null : Number(row.min_planting_density),
     municipalities_count: Number(row.municipalities_count),
     other_names: names,
@@ -347,7 +357,9 @@ export async function getGrape(db: Kysely<any>, id: number): Promise<GrapeDetail
   `.execute(db)).rows[0];
   if (!row) return null;
   const [syn, appCount, apps, wineCount, wines] = await Promise.all([
-    sql<{ name: string }>`SELECT DISTINCT name FROM wine.grape_names WHERE grape_id = ${id} AND kind <> 'primary' AND name <> ${row.name} ORDER BY name LIMIT 15`.execute(db).then((r) => r.rows.map((x) => x.name)),
+    // Most-used first (grape_names.uses: register rows, wine-list rows and LWIN wine names that spell
+    // the grape this way). Alphabetical order buried Spatburgunder under Affenthaler once VIVC's 447 Pinot noir names loaded.
+    sql<{ name: string }>`SELECT name FROM wine.grape_names WHERE grape_id = ${id} AND kind <> 'primary' AND name <> ${row.name} ORDER BY uses DESC, (source = 'vivc'), (kind <> 'translation'), name LIMIT 15`.execute(db).then((r) => r.rows.map((x) => x.name)),
     sql<{ n: string }>`SELECT count(DISTINCT appellation_id)::text AS n FROM wine.appellation_grapes WHERE grape_id = ${id}`.execute(db).then((r) => Number(r.rows[0]?.n ?? 0)),
     sql<any>`
       SELECT DISTINCT a.id, a.name, a.country, min(ag.kind) AS kind

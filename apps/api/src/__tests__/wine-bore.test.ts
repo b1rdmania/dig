@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { unlinkAll, looksLikeUncheckedBottle } from "../routes/v1/ask/wine-bore.js";
+import { unlinkAll, looksLikeUncheckedBottle, shapeGrapes, shapeYields } from "../routes/v1/ask/wine-bore.js";
 
 /**
  * Wine Bore grounds by evidence, not links: no URL leaves the shop, and a
@@ -30,5 +30,34 @@ describe("looksLikeUncheckedBottle", () => {
   });
   it("passes counter chat", () => {
     expect(looksLikeUncheckedBottle("Fair. Say what you mean by dry and I'll re-aim.", 0)).toBe(false);
+  });
+});
+
+describe("get_appellation output", () => {
+  it("La Tâche: base 35 and ceiling 49 under plain names, and the register figure is called a ceiling", () => {
+    const out = shapeYields({ country: "FR", max_yield_hl: 49, max_yield_kg: null, base_yield_hl: 35, butoir_yield_hl: 49, yield_rules: [{ label: null, base_hl: 35, butoir_hl: 49 }] });
+    expect(out.yields_from_the_rule_text_hl_per_ha).toEqual([{ applies_to: "all wines", base_yield: 35, ceiling_in_exceptional_years_rendement_butoir: 49 }]);
+    expect(out.eu_register_ceiling_hl_per_ha).toBe(49);
+    expect(out).not.toHaveProperty("max_yield_hl_per_ha");
+  });
+  it("a French AOC with no parsed cahier never offers the register figure as the yield", () => {
+    const out = shapeYields({ country: "FR", max_yield_hl: 35, max_yield_kg: null, base_yield_hl: null, butoir_yield_hl: null, yield_rules: null });
+    expect(out).not.toHaveProperty("max_yield_hl_per_ha");
+    expect(String(out.yield_note)).toMatch(/not the base yield/);
+  });
+  it("Barolo keeps its register maximum", () => {
+    const out = shapeYields({ country: "IT", max_yield_hl: 56, max_yield_kg: 8000, base_yield_hl: null, butoir_yield_hl: null, yield_rules: null });
+    expect(out).toEqual({ max_yield_hl_per_ha: 56, max_yield_kg_grapes_per_ha: 8000 });
+  });
+  it("Etna leads with the varieties the disciplinare names and marks the rest", () => {
+    const g = (name: string, named: boolean | null) => ({ name, colour_code: "N", kind: "oiv", named_in_rules: named });
+    const out = shapeGrapes([g("Nerello Mascalese", true), g("Carricante", true), g("Glera", false)]);
+    expect(out.grapes_named_in_the_rules).toEqual(["Nerello Mascalese (N)", "Carricante (N)"]);
+    expect(out.other_varieties_authorised_in_the_area_but_not_named_in_the_rules).toEqual(["Glera (N)"]);
+  });
+  it("says so when no rule text is attached", () => {
+    const out = shapeGrapes([{ name: "Riesling", colour_code: "B", kind: "oiv", named_in_rules: null }]);
+    expect(out.permitted_grapes).toEqual(["Riesling (B)"]);
+    expect(out).toHaveProperty("permitted_grapes_note");
   });
 });

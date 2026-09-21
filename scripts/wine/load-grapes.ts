@@ -216,25 +216,28 @@ async function main() {
       for (const a of m.aliases) pushName(gid, a, "synonym", null, "wikidata", "wikidata");
     }
   }
-  // VIVC lists 447 names for Pinot noir. get_grape prints the first 15 synonyms
-  // in alphabetical order, so loading them all would bury Spatburgunder under
-  // Affenthaler, Aprofekete, Arbst. Only a VIVC name that the corpus uses is
-  // loaded: a register spelling (Malbech, Olasz Rizling) or a wine-list
-  // spelling (Aragonez, Tinta de Toro). The rest stay in grape-synonyms.json.
-  const { rows: usedRows } = await pool.query(
-    `SELECT DISTINCT grape_name_raw FROM wine.appellation_grapes UNION SELECT DISTINCT grape_name_raw FROM wine.wine_grapes`,
-  );
-  const used = new Set<string>();
-  for (const r of usedRows) {
-    const nn = norm(r.grape_name_raw as string);
-    const stripped = stripColourWords(nn);
-    for (const form of [nn, stripped]) {
-      if (!form) continue;
-      used.add(form);
-      const toks = form.split(" ");
-      if (toks.length > 2) used.add(toks.slice(0, 2).join(" "));
-    }
+  // Every VIVC synonym loads (get_grape orders synonyms by how often the
+  // corpus uses them, so 447 names for Pinot noir no longer bury Spatburgunder).
+  // One kind stays out: a synonym that is also a protected place name. VIVC
+  // lists ANJOU under Chenin blanc and CHAMPAGNE under several grapes; in the
+  // search vector those would answer a place query with a grape.
+  const { rows: placeRows } = await pool.query(`SELECT DISTINCT name_norm FROM wine.appellation_names`);
+  const places = new Set<string>(placeRows.map((r) => r.name_norm as string));
+  let placeNamesSkipped = 0;
+  // Nor does a homonym: VIVC files PINOT GRIS as a local name for Pinot noir,
+  // TROUSSEAU for Tempranillo, GAMAY for Grenache. Each is another variety's
+  // own name. Listed as a synonym it reads as "Tempranillo, also called
+  // Trousseau", which is false everywhere but one Spanish village.
+  const owner = new Map<string, number>();
+  const own = (nn: string, gid: number) => { if (nn && !owner.has(nn)) owner.set(nn, gid); };
+  for (const r of nameRows) if (r[3] === "primary" || r[3] === "translation") own(r[2] as string, r[0] as number);
+  for (const h of heads) {
+    const gid = idByQid.get(h.qid);
+    if (!gid || h.vivc.length !== 1) continue;
+    const prime = varieties[h.vivc[0]]?.prime;
+    if (prime) { own(norm(prime), gid); own(stripColourWords(norm(prime)), gid); }
   }
+  let homonymsSkipped = 0;
   let vivcNames = 0;
   for (const h of heads) {
     const gid = idByQid.get(h.qid);
@@ -242,14 +245,38 @@ async function main() {
     const v = varieties[h.vivc[0]];
     if (!v) continue;
     for (const s of [v.prime, ...v.synonyms]) {
-      if (!used.has(norm(s))) continue;
+      if (places.has(norm(s))) { placeNamesSkipped++; continue; }
+      const held = owner.get(norm(s));
+      if (held !== undefined && held !== gid) { homonymsSkipped++; continue; }
       const before = nameRows.length;
       pushName(gid, titleCase(s), "synonym", null, "vivc", "vivc");
       if (nameRows.length > before) vivcNames++;
     }
   }
+  // ---- uses: how often the corpus spells the grape this way (migration 035)
+  // Register rows and wine-list rows count once each. An LWIN wine name counts
+  // when it holds the synonym as whole words ("Arbois Pupillin Ploussard"), and
+  // only for a synonym of two words or of seven letters and more: "Alicante",
+  // "Orleans" and "Bordeaux" are places in a wine name, not grapes.
+  const phraseCount = new Map<string, number>();
+  const bump = (k: string, n = 1) => phraseCount.set(k, (phraseCount.get(k) ?? 0) + n);
+  const { rows: rawUses } = await pool.query(
+    `SELECT grape_name_raw AS raw, count(*)::int AS n FROM wine.appellation_grapes GROUP BY 1 UNION ALL SELECT grape_name_raw, count(*)::int FROM wine.wine_grapes GROUP BY 1`,
+  );
+  const directUses = new Map<string, number>();
+  for (const r of rawUses) { const k = norm(r.raw as string); directUses.set(k, (directUses.get(k) ?? 0) + (r.n as number)); }
+  const { rows: wineNames } = await pool.query(`SELECT wine_name FROM wine.wines WHERE wine_name IS NOT NULL`);
+  for (const w of wineNames) {
+    const toks = norm(w.wine_name as string).split(" ").filter(Boolean);
+    const seen = new Set<string>();
+    for (let i = 0; i < toks.length; i++) for (let len = 1; len <= 3 && i + len <= toks.length; len++) seen.add(toks.slice(i, i + len).join(" "));
+    for (const k of seen) bump(k);
+  }
+  const usesOf = (nn: string) => (directUses.get(nn) ?? 0) + (nn.includes(" ") || nn.length >= 7 ? phraseCount.get(nn) ?? 0 : 0);
+  for (const r of nameRows) r.push(usesOf(r[2] as string));
+
   const namesOut = await insertMany(
-    pool, "wine.grape_names", ["grape_id", "name", "name_norm", "kind", "lang", "source"],
+    pool, "wine.grape_names", ["grape_id", "name", "name_norm", "kind", "lang", "source", "uses"],
     nameRows, "ON CONFLICT DO NOTHING",
   );
 
@@ -324,6 +351,8 @@ async function main() {
   notes.items_merged_into_another_by_vivc_number = mergedAway;
   notes.vivc_number_assigned_by_name = parsed.filter((p) => p.vivcVia && p.vivcVia !== "wikidata").length;
   notes.vivc_names_added = vivcNames;
+  notes.vivc_synonyms_skipped_as_place_names = placeNamesSkipped;
+  notes.vivc_synonyms_skipped_as_another_grapes_name = homonymsSkipped;
   notes.facts = stats;
   notes.distinct_unresolved_names = unresolved.size;
   notes.top_unresolved = top;
