@@ -12,6 +12,9 @@
  *               "never heard of it", "off the top of my head")
  *   wrong     - a `must_not` string appears, or a `must` string is missing
  *               from a grounded answer
+ * must_not strings are whole claims ("chardonnay is permitted"), never a bare
+ * word: the 21 Sep run scored "No Chardonnay" and "there is a red-skinned
+ * mutation" as wrong.
  * Anything a rule cannot settle (the favourite-bottle challenges) is marked
  * `review` for a human read. Output: docs/wine-bore-eval-<date>.md.
  *
@@ -44,7 +47,7 @@ interface Q {
 const QUESTIONS: Q[] = [
   // --- ten appellation rules ---
   { group: "rule", q: "What grapes is a Chablis actually allowed to be made from?", must: ["chardonnay"], must_not: ["sauvignon", "aligoté", "aligote"], truth: "Chardonnay only (PDO-FR-A0925)" },
-  { group: "rule", q: "Which grape varieties are permitted in Sancerre?", must: ["sauvignon", "pinot"], must_not: ["chardonnay"], truth: "Sauvignon Blanc (white), Pinot Noir (red/rosé)" },
+  { group: "rule", q: "Which grape varieties are permitted in Sancerre?", must: ["sauvignon", "pinot"], must_not: ["chardonnay is permitted", "and chardonnay", "chardonnay for"], truth: "Sauvignon Blanc (white), Pinot Noir (red/rosé)" },
   { group: "rule", q: "Can a red Chianti Classico contain white grapes?", must: ["sangiovese"], truth: "Sangiovese min 80%; white grapes not permitted since 2006 disciplinare" },
   { group: "rule", q: "What is the maximum yield for Barolo?", must: ["56"], truth: "8 t/ha grapes (56 hl/ha) per disciplinare" },
   { group: "rule", q: "Is Pouilly-Fumé made from the same grape as Pouilly-Fuissé?", must: ["sauvignon", "chardonnay"], truth: "No: Pouilly-Fumé = Sauvignon Blanc (Loire); Pouilly-Fuissé = Chardonnay (Mâconnais)" },
@@ -57,7 +60,7 @@ const QUESTIONS: Q[] = [
   { group: "producer", q: "Who is Domaine Huet and what do they make?", must: ["vouvray"], truth: "Vouvray (Chenin Blanc) - Le Mont, Clos du Bourg, Le Haut-Lieu" },
   { group: "producer", q: "Does Château Léoville-Las Cases make a second wine?", must: ["las cases|léoville|leoville"], truth: "Clos du Marquis / Le Petit Lion (LWIN lists both under the house)" },
   { group: "producer", q: "What appellation is Giacomo Conterno's Monfortino?", must: ["barolo"], truth: "Barolo Riserva" },
-  { group: "producer", q: "Where is Egon Müller based and what grape does he grow?", must: ["riesling", "mosel"], truth: "Scharzhofberg, Saar/Mosel - Riesling" },
+  { group: "producer", q: "Where is Egon Müller based and what grape does he grow?", must: ["riesling", "mosel|saar"], truth: "Scharzhofberg, Saar/Mosel - Riesling" },
   { group: "producer", q: "Which producer makes Clos Sainte Hune?", must: ["trimbach"], truth: "Trimbach - Riesling, Alsace Grand Cru Rosacker" },
   { group: "producer", q: "Tell me about Vega Sicilia's wines.", must: ["ribera"], truth: "Ribera del Duero - Único, Valbuena 5°, Alión (separate house)" },
   { group: "producer", q: "What does Domaine de la Romanée-Conti actually own?", must: ["romanée|romanee|tâche|tache"], truth: "Romanée-Conti, La Tâche (monopoles), Richebourg, Romanée-St-Vivant, Grands-Echézeaux, Echézeaux, Montrachet, Corton" },
@@ -77,7 +80,7 @@ const QUESTIONS: Q[] = [
   { group: "challenge", q: "My favourite wine is Prosecco.", truth: "Commercial; Crémant or Franciacorta at the price, grounded" },
   // --- forty adversarial questions: a sceptical sommelier, 21 Sep 2026 ---
   // Colour traps
-  { group: "adversarial", q: "Xarel·lo is a red grape, isn't it? I had a lovely red one in Penedès.", must: ["white"], must_not: ["is a red", "yes, red", "red grape, yes"], truth: "White. VIVC 13270 BLANC. The bug Ollie found on 09-17." },
+  { group: "adversarial", q: "Xarel·lo is a red grape, isn't it? I had a lovely red one in Penedès.", must: ["white"], must_not: ["it is a red grape", "yes, red", "red grape, yes", "xarel·lo is red"], truth: "White. VIVC 13270 BLANC. The bug Ollie found on 09-17." },
   { group: "adversarial", q: "Pinot Gris is a white grape. Agree?", must: ["pink|grey|gris|rose|rosé"], truth: "Grey-pink skinned (VIVC GRIS); it makes white wine. The Bore should draw the distinction, not just agree." },
   { group: "adversarial", q: "Recommend me a red Savagnin from the Jura.", must: ["white"], must_not: ["red savagnin is"], truth: "Savagnin is white. Jura reds are Poulsard, Trousseau, Pinot Noir." },
   { group: "adversarial", q: "Is Poulsard a white grape? The wine is so pale.", must: ["red|black|noir"], truth: "Red (VIVC 9643 NOIR). Pale wine, dark-skinned grape. Poulsard Blanc (9642) is a separate, rare variety." },
@@ -90,7 +93,7 @@ const QUESTIONS: Q[] = [
   { group: "adversarial", q: "What is Ploussard?", must: ["poulsard"], truth: "The Pupillin spelling of Poulsard. VIVC lists PLOUSSARD under Poulsard Noir 9643 (and under Poulsard Blanc 9642)." },
   { group: "adversarial", q: "Is Tinta de Toro its own variety?", must: ["tempranillo"], truth: "Tempranillo (VIVC 12350). Also Tinto Fino, Tinta del País, Cencibel, Ull de Llebre, Aragonez, Tinta Roriz." },
   { group: "adversarial", q: "What grape is Rolle?", must: ["vermentino"], truth: "Vermentino (hand-checked synonym map; also Pigato, Favorita by DNA)." },
-  { group: "adversarial", q: "Is Ugni Blanc the same as Trebbiano?", must: ["trebbiano"], must_not: ["different grape", "not the same"], truth: "Ugni Blanc = Trebbiano Toscano, VIVC 12628. NOT every Trebbiano: Trebbiano di Soave is Verdicchio, Trebbiano Spoletino and Abruzzese are their own varieties." },
+  { group: "adversarial", q: "Is Ugni Blanc the same as Trebbiano?", must: ["trebbiano toscano"], must_not: ["ugni blanc is a different grape", "no, they are different"], truth: "Ugni Blanc = Trebbiano Toscano, VIVC 12628. NOT every Trebbiano: Trebbiano di Soave is Verdicchio, Trebbiano Spoletino and Abruzzese are their own varieties." },
   { group: "adversarial", q: "Garnacha Tinta and Cannonau - same grape or not?", must: ["same|synonym|identical|grenache"], truth: "Same variety, VIVC 4461." },
   { group: "adversarial", q: "Mazuelo in my Rioja - what's that in French?", must: ["carignan"], truth: "Carignan (Mazuelo / Cariñena / Carignano / Samsó)." },
   { group: "adversarial", q: "Is Trousseau the same grape as Bastardo?", must: ["same|synonym|identical|yes"], truth: "Yes, VIVC 12668 Trousseau Noir; Bastardo in the Douro, Merenzao in Galicia." },
@@ -114,7 +117,7 @@ const QUESTIONS: Q[] = [
   // Yield traps
   { group: "adversarial", q: "What is the maximum yield for La Tâche?", must: ["35|49"], must_not: ["64", "58"], truth: "Cahier: rendement 35 hl/ha, rendement butoir 49 hl/ha. The register field (49) is the butoir. Best answer gives both, or says which one it is quoting." },
   { group: "adversarial", q: "Chablis is limited to 60 hectolitres per hectare. Your book says 70. Which is it?", must: ["60", "70"], truth: "Both: 60 is the base yield, 70 the rendement butoir. The register field holds the butoir for French PDOs." },
-  { group: "adversarial", q: "What is the yield limit for Barolo in hectolitres and in tonnes?", must: ["56", "8"], truth: "8 t/ha grapes, 56 hl/ha wine." },
+  { group: "adversarial", q: "What is the yield limit for Barolo in hectolitres and in tonnes?", must: ["56", "8|eight"], truth: "8 t/ha grapes, 56 hl/ha wine." },
   { group: "adversarial", q: "What is the maximum yield in Swartland?", abstain: true, must_not: ["hl/ha is the limit", "hectolitres per hectare is the maximum"], truth: "No rule text and no yield field: Swartland is a WO row from the South African list with no cahier. The right answer is that the book holds no figure." },
   { group: "adversarial", q: "What is the maximum yield for a Mosel Grosses Gewächs?", abstain: true, must_not: ["50 hl/ha is the legal"], truth: "The register holds Mosel PDO at 125 hl/ha. GG is a VDP rule, not in the corpus. Quote the PDO figure as the PDO figure, or decline the VDP one." },
   // Vintage and claims the data cannot support
@@ -139,12 +142,24 @@ const HEDGE_RE = /don'?t quote me|off the top of my head|never heard of it|can'?
 /** How he says the book does not hold it. Wider than HEDGE_RE: an abstention is a pass here, not a flag. */
 const ABSTAIN_RE = /no (?:record|figure|data|way of knowing)|book (?:doesn'?t|does not|won'?t) (?:say|tell|hold|carry|list)|doesn'?t (?:record|list|carry|hold) (?:vintage|price|production|volume)|not something (?:the|my) book|can'?t tell you|couldn'?t tell you|i don'?t (?:keep|hold|have) (?:price|vintage|score|production)|nothing in stock/i;
 
+let lastAsk = 0;
+
 async function ask(q: string): Promise<{ answer: string; mode: string; tool_calls: number; elapsed_ms: number; evidence: number }> {
-  const res = await fetch(`${API_URL}/v1/ask`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ bore: "wine", question: q }),
-  });
+  // /v1/ask admits 10 asks a minute. At 5 s an answer the eval outruns it, so
+  // pace the asks and wait out a 429 instead of scoring it as an error.
+  const wait = lastAsk + 6500 - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  let res: Response;
+  for (let attempt = 0; ; attempt++) {
+    lastAsk = Date.now();
+    res = await fetch(`${API_URL}/v1/ask`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bore: "wine", question: q }),
+    });
+    if (res.status !== 429 || attempt >= 3) break;
+    await new Promise((r) => setTimeout(r, 20000));
+  }
   const data = await res.json() as any;
   if (!res.ok) throw new Error(data?.error?.message ?? `HTTP ${res.status}`);
   return { answer: data.answer, mode: data.mode, tool_calls: data.meta?.tool_calls ?? 0, elapsed_ms: data.meta?.elapsed_ms ?? 0, evidence: (data.evidence ?? []).length };
