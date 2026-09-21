@@ -285,7 +285,74 @@ In the tests as never-auto: Overnoy, Gros, Conterno, Mascarello, Prüm, Leroy.
 8. **`get_grape` lists synonyms alphabetically, first 15.** Grenache has about 160 names, so "Grenache" itself may not be in the 15 shown for the row `Garnacha Tinta`. Ordering by source and kind (translation, then Wikidata synonym, then VIVC) is a one-line change in `packages/domain/src/wine.ts`. It is a call-site change, so it was not made.
 9. **The eval was not run.** See below.
 
-## Eval
+## Second pass, 21 September 2026 (later the same day)
+
+Same branch, same limits. Five commits. Scope widened in three named places: the eval key, a
+migration, and the tool output.
+
+### What changed
+
+1. **Eval run.** 70 questions on the branch data, 0 errors, median 7.6 s. Machine tally 48 grounded,
+   5 declined, 5 wrong, 12 review. After reading every failure: the 5 wrong are scorer faults (a bare
+   `must_not` word fires on a denial: "No Chardonnay"), the first 30 match the 14 Sep baseline (20 of
+   20, 10 of 10), and 2 of the 40 adversarial answers assert what the book does not hold (Clos de Tart's
+   2017 sale; a ruling on Monfortino 2010 against 2013). Both are prompt causes. No failure traces to a
+   wrong value. Full table: `docs/wine-bore-eval-2026-09-21.md`. The 40 were also run against a
+   database in prod's state: the rule scorer does not separate the two (32 grounded there), the
+   answers do (La Tâche: "the book doesn't hold the base figure" against "35"). Model spend: $1.42.
+2. **Base yield (was "Not fixed" 1).** Migration 035 adds `base_yield_hl`, `butoir_yield_hl` and
+   `yield_rules` to `wine.appellations`. `rule-facts.ts` (pure, tested) parses prose, prose by colour,
+   the two-column Burgundy table and split tables. It refuses an opposition draft that prints the struck
+   figure beside the new one (Musigny: "35 42 hectolitres"), a label with a figure in it, and a parse
+   far from the register figure. `load-rule-facts.ts` loads it. 213 of 406 cahiers parse (147 with one
+   pair, 66 with several); the register figure equals the butoir in 184 and the base in 0.
+   `max_yield_hl` is untouched. La Tâche: 35 and 49. Chablis: 60 and 75, premier cru 58 and 73 (the
+   register's 70 is older than the 2025 cahier). `get_appellation` now returns
+   `yields_from_the_rule_text_hl_per_ha` with `base_yield` and
+   `ceiling_in_exceptional_years_rendement_butoir`, and the French register figure as
+   `eu_register_ceiling_hl_per_ha`. A French AOC with no parsed cahier carries a note that the figure
+   is not the base yield. Italy and Spain keep `max_yield_hl_per_ha`.
+3. **Grapes the rules name (was "Not fixed" 2).** `appellation_grapes.named_in_rules`: true when the
+   attached rule text names the variety (by its register name, a name without its colour or clone
+   word, or a loaded synonym), false when it does not, NULL with no rule text. 830 appellations marked,
+   17,098 of 35,942 rows named. Etna leads with Carricante, Catarratto Bianco Comune, Catarratto Bianco
+   Lucido, Nerello Cappuccio, Nerello Mascalese, Trebbiano Toscano; the other 25 go out under
+   `other_varieties_authorised_in_the_area_but_not_named_in_the_rules`. The tool no longer calls the
+   register's OIV column "principal".
+4. **Synonym order (was "Not fixed" 8).** `grape_names.uses` counts register rows, wine-list rows and
+   LWIN wine names that spell the grape this way. `get_grape` orders by it. The full VIVC set now loads
+   (`grape_names` 5,907 -> 36,141), minus 286 names that are protected places (ANJOU under Chenin) and
+   1,089 that are another grape's own name. That second filter fixed a fault the first pass had let
+   in: VIVC files TROUSSEAU under Tempranillo and PINOT GRIS under Pinot noir, and the first pass
+   loaded both as synonyms. PDO grape strings resolved 53,628 -> 53,656 (95.9%); wine grapes 1,926 of
+   1,933. Pinot noir now shows Spätburgunder, Pinot nero, Burgunder, Rulandské Modré.
+5. **`load-lwin.ts` upserts (was "Not fixed" 6).** Same ids after a run on the loaded corpus (id sum
+   unchanged), 0 listings, links, names or grapes lost. Run `producer-merge.ts` after it.
+
+### Still not fixed, and new
+
+- **33 French PDOs without a cahier.** Légifrance answers 403 to a script; the ministry bulletin host
+  (`info.agriculture.gouv.fr`) did not answer; eAmbrosia carries no specification link. Not done.
+- **193 of 406 French cahiers do not parse for yields** (Hermitage parses; Musigny, Montrachet and the
+  other opposition drafts do not, by design; Champagne states kg, not hl). The tool says the book does
+  not hold the base figure for those.
+- **LWIN drops French articles from wine names** ("Bourg" for Le Bourg, "Clos Bourg Sec"). The eval
+  caught it: "No Le Bourg in my book". An alias row per wine is a guess at Le, La or Les; not done.
+- **Synonym noise.** A few high-count names are places or people in wine names ("Santo Stefano" and
+  "Cluster" under Tempranillo and Pinot noir). Pigato and Favorita stay separate rows from Vermentino.
+- **Prompt items for Andy** are in the eval doc. The persona was not touched.
+
+### Prod reload, as it stands now
+
+`ops/reload-winebore-data.sh` (syntax-checked, not run) gained three steps: `migrate:up` first
+(035, additive, safe under the old api code), `load-rule-facts.ts` after the documents, and
+`fly deploy --config fly.api.toml` last, because `packages/domain/src/wine.ts` and
+`apps/api/src/routes/v1/ask/wine-bore.ts` now read the new columns. Deploy after the migration and
+loaders, never before. Two checks added: La Tâche 35 / 49 and the Etna named list. Extra tables
+against the first-pass list: `wine.appellations` (three yield columns), `wine.appellation_grapes`
+(`named_in_rules`), `wine.grape_names` (`uses`, 36,141 rows).
+
+## Eval (first pass; superseded by the second pass above)
 
 `scripts/wine/eval.ts` now has 70 questions: the 30 from 14 September and 40 adversarial
 ones (8 colour traps, 9 synonym traps, 6 monopole and ownership, 8 permitted grapes, 5
@@ -303,7 +370,7 @@ task did not name it, so it was not used. To run:
 One command: `ops/reload-winebore-data.sh`. It was written and syntax-checked (`bash -n`). It
 was not run. It replaces `ops/reload-winebore-grapes.sh` (the grape reload is its step 3).
 It needs `data/wine/raw/` on the machine, including tonight's new INAO PDFs and texts.
-No api or web deploy: no code under `apps/` or `packages/` changed.
+First pass: no code under `apps/` or `packages/` changed. Second pass: it did, so the script ends with an api deploy (see the second-pass section).
 
 Tables that change on prod, in the order the script runs the loaders:
 
@@ -313,11 +380,14 @@ Tables that change on prod, in the order the script runs the loaders:
 | 2 | `load-gi-lists.ts` | `wine.appellations` (+654), `appellation_names` (+710) |
 | 3 | `load-grapes.ts` | `wine.grapes` (2,211 -> 2,125, ids pinned), `grape_names` (4,870 -> 5,907), `appellation_grapes.grape_id` |
 | 4 | `resolve-wine-grapes.ts` | `wine.wine_grapes.grape_id` |
+| 0 | `pnpm --filter @dig/db migrate:up` | migration 035 (second pass) |
 | 5 | `load-appellation-documents.ts` | `wine.appellation_documents` (953 -> 1,080) |
+| 5b | `load-rule-facts.ts` (second pass) | `wine.appellations` yield columns, `appellation_grapes.named_in_rules` |
 | 6 | `resolve-appellations.ts` | `wine.wines.appellation_id`, `appellation_match`; `appellation_names` kind=lwin; synthetic `appellations` (504 -> 113) |
 | 7 | `producer-merge.ts` | `wine.wines.producer_id`, `listings.producer_id`, `producers.wine_count`, `producer_links` kind=merged_into |
 | 8 | `search-vectors.ts` | `search_vector` on producers, wines, listings, appellations, grapes, documents |
 | 9 | `load-pack.ts` | `wine.shelves`, `shelf_members`, `shelf_edges` |
+| 10 | `fly deploy --config fly.api.toml` (second pass) | api code that reads the new columns |
 
 The script prints eight checks before and after. Expected after, from the local run:
 colour unknown 201; "Vitis" parents 0; 53,628 of 55,971; 412 cahiers; La Tâche 1; Etna 348;

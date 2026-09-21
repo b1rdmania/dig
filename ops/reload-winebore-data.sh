@@ -1,23 +1,30 @@
 #!/usr/bin/env bash
 # Reload the Wine Bore corpus on prod after the 2026-09-21 data audit
-# (docs/wine-bore-data-audit-2026-09-21.md). Data only: no api deploy, no web
-# deploy, persona untouched. This replaces ops/reload-winebore-grapes.sh; the
-# grape reload is step 3 here.
+# (docs/wine-bore-data-audit-2026-09-21.md). Second pass added migration 035 and
+# changed the get_appellation / get_grape tool output, so this now runs the
+# migration first and deploys the api last. No web deploy, persona untouched.
+# This replaces ops/reload-winebore-grapes.sh; the grape reload is step 3 here.
 #
 # Usage:  ops/reload-winebore-data.sh
 # Needs:  fly logged in, Docker running (dig-baby-mvp-postgres-1 supplies psql 16),
 #         data/wine/raw/ on this machine (the loaders read it).
 #
-# Tables written, in order:
+# Steps, in order:
+#   0 migrate:up                   migration 035: appellations.base_yield_hl, butoir_yield_hl, yield_rules;
+#                                  appellation_grapes.named_in_rules; grape_names.uses (additive; old api code is unaffected)
 #   1 load-appellations            wine.appellations (upsert, ids kept), appellation_names, appellation_grapes
 #   2 load-gi-lists                wine.appellations + appellation_names for US, AU, NZ, ZA, CL, AR (pinned ids)
-#   3 load-grapes                  wine.grapes (pinned ids), grape_names, appellation_grapes.grape_id
+#   3 load-grapes                  wine.grapes (pinned ids), grape_names (+ uses), appellation_grapes.grape_id
 #   4 resolve-wine-grapes          wine.wine_grapes.grape_id
 #   5 load-appellation-documents   wine.appellation_documents
-#   6 resolve-appellations         wine.wines.appellation_id, appellation_names (kind=lwin), synthetic appellations
-#   7 producer-merge               wine.wines.producer_id, listings.producer_id, producers.wine_count, producer_links (kind=merged_into)
-#   8 search-vectors               search_vector on every wine table
-#   9 load-pack                    wine.shelves, shelf_members, shelf_edges (Swartland now points at real WO rows)
+#   6 load-rule-facts              wine.appellations base_yield_hl / butoir_yield_hl / yield_rules, appellation_grapes.named_in_rules
+#   7 resolve-appellations         wine.wines.appellation_id, appellation_names (kind=lwin), synthetic appellations
+#   8 producer-merge               wine.wines.producer_id, listings.producer_id, producers.wine_count, producer_links (kind=merged_into)
+#   9 search-vectors               search_vector on every wine table
+#  10 load-pack                    wine.shelves, shelf_members, shelf_edges (Swartland now points at real WO rows)
+#  11 fly deploy (api)             packages/domain/src/wine.ts and apps/api/.../wine-bore.ts read the new columns.
+#                                  Deploy AFTER the migration and the loaders, never before.
+# load-lwin.ts is not in the list: LWIN did not change. It is safe to run now (it upserts); run producer-merge after it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PG=dig-baby-mvp-postgres-1
@@ -42,7 +49,12 @@ checks() {
   echo "   Live wines on Etna:    $(psqlp "select count(*) from wine.wines w join wine.appellations a on a.id=w.appellation_id where a.name='Etna' and w.status='Live'")"
   echo "   Argentina resolved:    $(psqlp "select count(appellation_id)||' of '||count(*) from wine.wines where country='AR' and status='Live'")"
   echo "   producers with Live wines: $(psqlp "select count(*) from wine.producers where wine_count>0")"
+  echo "   La Tache base / butoir: $(psqlp "select coalesce(base_yield_hl::text,'-')||' / '||coalesce(butoir_yield_hl::text,'-') from wine.appellations where name_norm='la tache'" 2>/dev/null || echo 'no column yet')"
+  echo "   Etna grapes the rules name: $(psqlp "select string_agg(distinct grape_name_raw, ', ') from wine.appellation_grapes g join wine.appellations a on a.id=g.appellation_id where a.name='Etna' and g.named_in_rules" 2>/dev/null || echo 'no column yet')"
 }
+
+echo "== migrate (035, additive)"
+DATABASE_URL="$PROD" pnpm --filter @dig/db migrate:up | tail -3
 
 echo "== before"; checks
 
@@ -51,17 +63,24 @@ run load-gi-lists.ts
 run load-grapes.ts
 run resolve-wine-grapes.ts
 run load-appellation-documents.ts
+run load-rule-facts.ts
 run resolve-appellations.ts
 run producer-merge.ts
 run search-vectors.ts
 run load-pack.ts
-psqlp "ANALYZE wine.appellations; ANALYZE wine.appellation_names; ANALYZE wine.appellation_grapes; ANALYZE wine.appellation_documents; ANALYZE wine.grapes; ANALYZE wine.grape_names; ANALYZE wine.wine_grapes; ANALYZE wine.wines; ANALYZE wine.producers; ANALYZE wine.producer_links; ANALYZE wine.listings"
+psqlp "ANALYZE wine.appellations; ANALYZE wine.appellation_names; ANALYZE wine.appellation_grapes; ANALYZE wine.appellation_documents; ANALYZE wine.grapes; ANALYZE wine.grape_names; ANALYZE wine.wine_grapes; ANALYZE wine.wines; ANALYZE wine.producers; ANALYZE wine.producer_links; ANALYZE wine.listings"  # grape_names.uses and named_in_rules are covered by the table ANALYZE above
 
 echo "== after"; checks
 # Expected after, from the local run on 2026-09-21:
 #   colour unknown 201, 'Vitis' parents 0, 53,628 of 55,971 resolved, 412 cahiers,
-#   La Tache 1, Etna 348, Argentina 4,245 of 4,390, 32,540 producers with Live wines.
+#   La Tache 1, Etna 348, Argentina 4,245 of 4,390, 32,540 producers with Live wines,
+#   La Tache 35 / 49, Etna: Carricante, Catarratto Bianco Comune, Catarratto Bianco Lucido,
+#   Nerello Cappuccio, Nerello Mascalese, Trebbiano Toscano.
+#   PDO grape strings resolved is 53,656 after the second pass.
 pkill -f "fly proxy 15432" || true
+
+echo "== deploy api (tool output reads the new columns)"
+GODEBUG=netdns=go fly deploy --config fly.api.toml --remote-only
 
 echo "== smoke"
 curl -s https://dig-api.fly.dev/v1/wine/stats; echo

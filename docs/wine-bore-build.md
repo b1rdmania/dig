@@ -19,7 +19,7 @@ What changes in the engine to make that true:
   `record`, so the public gate, streaming and caps are shared.
 - Wine Bore gets its own monthly counter row and its own daily per-IP map.
 
-## Schema: `wine` (migration 034)
+## Schema: `wine` (migrations 034, 035)
 
 | Table | Spine | Notes |
 |---|---|---|
@@ -66,6 +66,7 @@ Rules that hold across every loader:
 | join-report.ts | load_log + live counts | docs/wine-bore-join-report.md | agent C |
 | search-vectors.ts | all | search_vector columns | agent C |
 | load-gi-lists.ts | ttb-ava/avas.geojson, wine-australia-gi/*.geojson, scripts/wine/gi-lists/{nz,za,cl,ar}.json + ids.json | appellations, appellation_names for US, AU, NZ, ZA, CL, AR (run before resolve-appellations) | 09-21 |
+| load-rule-facts.ts | appellation_documents.text, appellation_grapes, grape_names | appellations.base_yield_hl / butoir_yield_hl / yield_rules, appellation_grapes.named_in_rules (run after load-appellation-documents and load-grapes) | 09-21 |
 | producer-merge.ts | producers, wines, lwin/lwin.csv | wines.producer_id, listings.producer_id, producers.wine_count, producer_links(kind=merged_into) (run after resolve-appellations) | 09-21 |
 | fetch-vivc-names.py, build-grape-synonyms.ts | vivc.de, wikidata/03_grape_varieties.csv | scripts/wine/grape-synonyms.json (load-grapes.ts reads it) | 09-21 |
 | extract-inao-text.ts, fetch-inao-missing.py | inao/cdc/*.pdf, inao/cdc/index.csv | inao/cdc-text/*.txt, missing PDFs (run before load-appellation-documents) | 09-21 |
@@ -291,3 +292,20 @@ has nothing in stock and says so in voice.
   not the base yield; it needs a `base_yield_hl` column. Italian permitted-grape lists mix
   named varieties with the province-wide list (Etna 31 names). 33 French PDOs still lack a
   cahier (Châteauneuf-du-Pape, Chassagne-Montrachet, Beaune, Chambolle-Musigny).
+- 09-21 (second pass): migration 035 - `appellations.base_yield_hl`, `butoir_yield_hl`,
+  `yield_rules`; `appellation_grapes.named_in_rules`; `grape_names.uses`. `rule-facts.ts` parses the
+  base yield and the rendement butoir from a French cahier (213 of 406) and tells whether a rule text
+  names a variety; `load-rule-facts.ts` loads both. Run it after load-appellations, load-grapes and
+  load-appellation-documents. La Tâche 35 / 49. Etna leads with the six varieties its disciplinare names.
+- 09-21 (second pass): tool output. `get_appellation` returns `grapes_named_in_the_rules` first, the
+  rest marked, and yields as `base_yield` and `ceiling_in_exceptional_years_rendement_butoir`; the
+  French register figure is `eu_register_ceiling_hl_per_ha`. `get_grape` orders synonyms by
+  `grape_names.uses`. The full VIVC synonym set loads, minus protected place names (286) and other
+  grapes' own names (1,089: VIVC files TROUSSEAU under Tempranillo). The api must be deployed after
+  migration 035.
+- 09-21 (second pass): `load-lwin.ts` upserts; producer ids hold across a reload. Run
+  `producer-merge.ts` after it.
+- 09-21 (second pass): eval run, 70 questions, `docs/wine-bore-eval-2026-09-21.md`. After reading:
+  30 of 30 on the original set, 38 of 40 adversarial (33 correct, 5 declined), 2 prompt-cause
+  assertions, 0 data-cause failures. `eval.ts` paces under the 10-asks-a-minute limit; `must_not`
+  strings are whole claims.
