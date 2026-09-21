@@ -64,10 +64,10 @@ Not missing - queued. Candidates for the next cut if Andy wants a longer counter
   *Landwein* PGIs (2347, 2348), which are the wrong thing entirely.
 - **Rioja**: one `Rioja` PDO (2145). Rioja Alta / Alavesa / Oriental are not
   register rows, so "traditionalist" cannot be expressed as a place here.
-- **Swartland**: no EU register row. The four members (7101, 7447, 7522, 7071)
-  are synthetic `source='lwin'` WO rows from `resolve-appellations.ts` with
-  `gi_type='WO'`. No cahier behind them and no permitted-variety list - the Bore
-  must not quote rules on this shelf.
+- **Swartland**: no EU register row. Since 21 Sep the four members are real Wine of
+  Origin rows from `load-gi-lists.ts` (8690 Swartland, 8681 Voor Paardeberg, 8692
+  Riebeekberg, 8674 Coastal Region). Still no rule text and no permitted-variety
+  list - the Bore must not quote rules on this shelf.
 - **Etna**: the contrade (Santo Spirito, Rampante, Barbabecchi, Calderara
   Sottana) are not appellations anywhere in the corpus. They appear inside
   `wine.wines.display_name` only.
@@ -77,20 +77,18 @@ Not missing - queued. Candidates for the next cut if Andy wants a longer counter
 
 ## 5. Grapes with no usable row
 
-- **Sylvaner** for Alsace: no plain Sylvaner row. Nearest is `Sylvaner Verde`
-  (5389), which is Grüner Silvaner under another spelling and would read as a
-  different grape. The Alsace shelf runs Riesling / Pinot gris / Gewürztraminer.
-- **Ploussard**, the Jura's own name for Poulsard: not a `grape_names` alias.
-  Poulsard (5482) carries the shelf; Bornard's labels say Ploussard and the Bore
-  will not join the two.
-- **Palomino Fino**: only `Palomino` (6418). Fine for the shelf, wrong if anyone
-  asks about the Jerez clone distinction.
-- **Garnacha**: the plain name resolves to `Garnacha Tinta` (6036) and `Grenache`
-  (6208) is a separate row with fewer appellation links. Rioja uses 6036, so a
-  question phrased "Grenache" may land on the other row.
-- **Ruché**: two rows, `Ruché` (6273, 36 appellation links) and `Ruche'` (5403,
-  0). Cascina Tavijn is not on the shelf so neither is used, but the duplicate is
-  live and will bite whoever adds a Monferrato shelf.
+Re-checked 21 Sep 2026 after the VIVC load (`docs/wine-bore-data-audit-2026-09-21.md`).
+The ids in the first cut of this section were wrong after the 09-17 reload; ids are now pinned.
+
+- **Sylvaner**: resolved. `Sylvaner Verde` merged into `Silvaner` (4615); "Sylvaner" is a synonym.
+- **Ploussard**: resolved. VIVC lists it under Poulsard (5482). It is also a synonym of
+  Poulsard Blanc, so a bare "Ploussard" with no colour stays unresolved in the loaders;
+  the grape search finds Poulsard.
+- **Palomino Fino**: a VIVC synonym of `Palomino` (6418). Still one row; the Jerez clone
+  distinction is not in the corpus.
+- **Garnacha / Grenache**: one row now, `Garnacha Tinta` (6036, the VIVC prime name), with
+  Grenache and Cannonau as synonyms.
+- **Ruché**: one row (6273). `Ruche'` merged into it.
 
 ## 6. Wines
 

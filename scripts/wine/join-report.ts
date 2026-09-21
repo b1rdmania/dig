@@ -82,7 +82,8 @@ async function main() {
   L.push("");
   const counts = await q(pool, `
     SELECT 'appellations' t, count(*) c FROM wine.appellations
-    UNION ALL SELECT 'appellations (EU register)', count(*) FROM wine.appellations WHERE source <> 'lwin'
+    UNION ALL SELECT 'appellations (EU register)', count(*) FROM wine.appellations WHERE source IN ('eambrosia','pdo-dataset')
+    UNION ALL SELECT 'appellations (official non-EU GI lists)', count(*) FROM wine.appellations WHERE source NOT IN ('eambrosia','pdo-dataset','lwin')
     UNION ALL SELECT 'appellations (synthetic, non-EU)', count(*) FROM wine.appellations WHERE source = 'lwin'
     UNION ALL SELECT 'appellation_names', count(*) FROM wine.appellation_names
     UNION ALL SELECT 'appellation_names (kind=lwin)', count(*) FROM wine.appellation_names WHERE kind = 'lwin'
@@ -256,11 +257,11 @@ async function main() {
   L.push("Taken from the loaders' own notes, not from guesswork.");
   L.push("");
   L.push([
-    "- **Wines -> appellations, non-EU (US 83%, NZ 13%, AR 0%, MX 0%, LB/IL/GE 0%).** A synthetic row is only",
-    "  created where LWIN carries a *designation*. Argentina, New Zealand, Mexico, Lebanon, Israel and Georgia",
-    "  have almost none in the LWIN DESIGNATION column, so Mendoza, Marlborough and Valle de Guadalupe get",
-    "  nothing. Moving this means a per-country GI list (TTB for the remaining US AVAs, Wine Australia GIs,",
-    "  INV for Argentina, NZ GI schedule) loaded as real appellation rows - not a looser resolver.",
+    "- **Wines -> appellations, non-EU.** Since 21 Sep 2026 the six countries with an official list resolve by",
+    "  place against real GI rows (load-gi-lists.ts): AR 97%, NZ 99%, ZA 97%, CL 96%, AU 98%, US 84%. The US",
+    "  remainder is wines LWIN files by state or county (California 1,761, Santa Barbara County 692, Sonoma",
+    "  County 557): a county is not an AVA, so nothing should match. Mexico, Lebanon, Israel, Georgia and China",
+    "  are still 0%: no list is loaded for them. Canada, Switzerland and the rest keep synthetic rows.",
   ].join("\n"));
   L.push([
     "- **Wines -> appellations, EU remainder (5,557 Live).** The largest bucket is wines with no region and no",
@@ -271,25 +272,23 @@ async function main() {
     "  which have no register row at all. Each needs a decision, not code.",
   ].join("\n"));
   L.push([
-    "- **The `site` stage never fires (0 rows).** It is kept because it is correct, but LWIN files the Alsace",
+    "- **The `site` stage fires for Argentina only (Gualtallary under Tupungato).** In the EU LWIN files the Alsace",
     "  grand cru lieux-dits in SUB_REGION rather than SITE, and every string that reaches SITE is a Burgundy",
     "  climat (\"Morgeot\", \"Les Suchots\") whose sub_region has already matched the village PDO. Climats are not",
     "  separately protected names, so there is nothing in the register for them to hit. A premier-cru climat",
     "  layer would need INAO's climat list, which is a new source, not a new stage.",
   ].join("\n"));
   L.push([
-    "- **appellation_grapes -> grapes (88.8%).** load-grapes.ts reports that none of the 30 most frequent",
-    "  unresolved register spellings (Malbech, Carignano, Olasz Rizling, Rulandske Modre...) appears anywhere in",
-    "  the Wikidata aliases column, so `scripts/wine/grape-synonyms.json` is live but empty. This moves only with",
-    "  a second synonym authority - VIVC's own synonym export, or the national catalogues - not with fuzzier",
-    "  matching, which was tried and rejected below 0.7.",
+    "- **appellation_grapes -> grapes (88.8% on 14 Sep, 95.8% on 21 Sep).** VIVC is now the second synonym",
+    "  authority: `scripts/wine/grape-synonyms.json` holds 28,705 VIVC synonyms for 1,846 varieties and a",
+    "  hand-checked map for ten register typos. The remainder is names no source lists (Zenit, Bolero, Accent,",
+    "  Stajerska Belina), names several varieties share with nothing to split them (Gamay Teinturier, Tintilla)",
+    "  and register typos not yet checked by hand. Add a typo to the `manual` block only after checking it.",
   ].join("\n"));
   L.push([
-    "- **wine_grapes -> grapes (97.7%).** The 18 remaining spellings are regional synonyms Wikidata does not",
-    "  carry as aliases (Mazuelo = Carignan, Aragonez = Tempranillo, Tinto fino / Tinta del pais / Tinta de toro",
-    "  = Tempranillo, Rolle = Vermentino, Sangiovese grosso = Sangiovese) plus one Systembolaget field that holds",
-    "  an appellation, not a grape (\"Barolo DOCG\"). A hand-verified synonym file of about twenty entries closes",
-    "  most of it.",
+    "- **wine_grapes -> grapes (97.7% on 14 Sep, 99.6% on 21 Sep).** What is left: one Systembolaget field that",
+    "  holds an appellation, not a grape (\"Barolo DOCG\"), and a few names VIVC files under more than one",
+    "  variety (Minella, Malvasia di Candia). A wine string carries no colour code to split them.",
   ].join("\n"));
   L.push([
     "- **Systembolaget -> LWIN (41.6%).** load-systembolaget.ts reports 69.2% of producer-matched rows also match",

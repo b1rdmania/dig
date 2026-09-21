@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "pnpm --filter @dig/api dev",
     "build": "pnpm -r build",
-    "test": "pnpm -r test",
+    "test": "pnpm -r test && pnpm test:wine",
+    "test:wine": "pnpm --filter @dig/api exec vitest run --root ../../scripts/wine",
     "lint": "eslint .",
     "typecheck": "pnpm -r typecheck",
     "dev:web": "pnpm --filter @dig/web dev",

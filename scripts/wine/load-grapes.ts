@@ -216,6 +216,25 @@ async function main() {
       for (const a of m.aliases) pushName(gid, a, "synonym", null, "wikidata", "wikidata");
     }
   }
+  // VIVC lists 447 names for Pinot noir. get_grape prints the first 15 synonyms
+  // in alphabetical order, so loading them all would bury Spatburgunder under
+  // Affenthaler, Aprofekete, Arbst. Only a VIVC name that the corpus uses is
+  // loaded: a register spelling (Malbech, Olasz Rizling) or a wine-list
+  // spelling (Aragonez, Tinta de Toro). The rest stay in grape-synonyms.json.
+  const { rows: usedRows } = await pool.query(
+    `SELECT DISTINCT grape_name_raw FROM wine.appellation_grapes UNION SELECT DISTINCT grape_name_raw FROM wine.wine_grapes`,
+  );
+  const used = new Set<string>();
+  for (const r of usedRows) {
+    const nn = norm(r.grape_name_raw as string);
+    const stripped = stripColourWords(nn);
+    for (const form of [nn, stripped]) {
+      if (!form) continue;
+      used.add(form);
+      const toks = form.split(" ");
+      if (toks.length > 2) used.add(toks.slice(0, 2).join(" "));
+    }
+  }
   let vivcNames = 0;
   for (const h of heads) {
     const gid = idByQid.get(h.qid);
@@ -223,6 +242,7 @@ async function main() {
     const v = varieties[h.vivc[0]];
     if (!v) continue;
     for (const s of [v.prime, ...v.synonyms]) {
+      if (!used.has(norm(s))) continue;
       const before = nameRows.length;
       pushName(gid, titleCase(s), "synonym", null, "vivc", "vivc");
       if (nameRows.length > before) vivcNames++;

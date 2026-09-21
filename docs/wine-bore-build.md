@@ -39,7 +39,9 @@ Rules that hold across every loader:
 
 1. `name_norm` is `norm()` from `scripts/wine/lib.ts`. Nothing else.
 2. Loaders are idempotent: delete the rows this loader owns (by `source`)
-   and reload. Never truncate another loader's rows.
+   and reload. Never truncate another loader's rows. A table whose ids the
+   pack stores (grapes, appellations) is upserted or loaded with pinned ids,
+   never renumbered (09-21).
 3. Unmatched rows are kept with NULL foreign keys and a `match_method`, never
    dropped. Every loader writes a `wine.load_log` row.
 4. Country is ISO alpha-2 in `country`; the source spelling stays in
@@ -57,12 +59,16 @@ Rules that hold across every loader:
 | load-systembolaget.ts | systembolaget/assortment.json | listings, wine_grapes, producer_links(kind=monopoly) | agent A |
 | load-wikidata-wines.ts | wikidata/04_wines.csv | wine_names, wine_grapes | agent A |
 | load-appellations.ts | eambrosia/detail/*.json, pdo-dataset/PDO_EU_id.csv + PDO_EU_cat.csv | appellations, appellation_names, appellation_grapes | agent B |
-| load-grapes.ts | wikidata/03_grape_varieties.csv | grapes, grape_names; resolves appellation_grapes.grape_id | agent B |
+| load-grapes.ts | wikidata/03_grape_varieties.csv, scripts/wine/grape-synonyms.json, grape-ids.json | grapes, grape_names; resolves appellation_grapes.grape_id | agent B, 09-21 |
 | load-appellation-documents.ts | inao/cdc-text, masaf/text + index.csv, mapa/text + index.csv | appellation_documents | agent B |
 | resolve-appellations.ts | wines × appellation_names | wines.appellation_id, appellation_names(kind=lwin), synthetic non-EU appellations | agent C (after A + B) |
 | resolve-wine-grapes.ts | wine_grapes x grape_names | wine_grapes.grape_id | agent C |
 | join-report.ts | load_log + live counts | docs/wine-bore-join-report.md | agent C |
 | search-vectors.ts | all | search_vector columns | agent C |
+| load-gi-lists.ts | ttb-ava/avas.geojson, wine-australia-gi/*.geojson, scripts/wine/gi-lists/{nz,za,cl,ar}.json + ids.json | appellations, appellation_names for US, AU, NZ, ZA, CL, AR (run before resolve-appellations) | 09-21 |
+| producer-merge.ts | producers, wines, lwin/lwin.csv | wines.producer_id, listings.producer_id, producers.wine_count, producer_links(kind=merged_into) (run after resolve-appellations) | 09-21 |
+| fetch-vivc-names.py, build-grape-synonyms.ts | vivc.de, wikidata/03_grape_varieties.csv | scripts/wine/grape-synonyms.json (load-grapes.ts reads it) | 09-21 |
+| extract-inao-text.ts, fetch-inao-missing.py | inao/cdc/*.pdf, inao/cdc/index.csv | inao/cdc-text/*.txt, missing PDFs (run before load-appellation-documents) | 09-21 |
 
 ## Tools the Bore gets (six)
 
@@ -241,3 +247,47 @@ has nothing in stock and says so in voice.
   permission classifier. Migration 034 is additive; the data ships as a `pg_dump -n wine`
   restore (`~/Documents/wine-bore-schema-2026-09-14.dump`, 47 MB); commands in
   `~/Documents/wine-bore-handover-2026-09-14.md`.
+- 09-21 (data audit): full write-up in `docs/wine-bore-data-audit-2026-09-21.md`. Branch
+  `winebore-data-2026-09-21`, local only. Prod reload: `ops/reload-winebore-data.sh` (not run).
+- 09-21: a cahier is filed under a name only when its own header says so
+  (`inao-cahiers.ts`). The INAO pull trusted file names: Santenay, Beaune,
+  Chassagne-Montrachet and Irancy carried a bundle that opens with Bellet, Juliénas
+  carried Régnié, and 109 PDFs had no text at all. `extract-inao-text.ts` and
+  `fetch-inao-missing.py` fill the gaps. INAO documents 285 -> 412; 335 of 368 French
+  PDOs have their own cahier; La Tâche has one.
+- 09-21: `load-grapes.ts` reads `grape-synonyms.json`, which `build-grape-synonyms.ts`
+  writes from the VIVC pull (`fetch-vivc-names.py`, 81,037 names). VIVC decides colour,
+  origin, parentage and synonyms wherever a number is known; 459 items get a number by
+  name. The loader had read Wikidata P171 (parent taxon) as parentage: 1,913 grapes had
+  "Vitis vinifera" as a parent. Items merge only when VIVC and Wikidata both say they are
+  one variety (2,211 -> 2,125 rows). `grape-rules.ts` is the one resolver for both grape
+  loaders. PDO grape strings 88.8% -> 95.8%; wine grapes 97.7% -> 99.6%; colour unknown
+  845 -> 201.
+- 09-21: ids are part of the loader contract, because `shelves.json` stores them. The
+  09-17 grape reload renumbered every grape and broke all 28 grape shelf members.
+  `grape-ids.json` and `gi-lists/ids.json` pin ids; `load-appellations.ts` and
+  `load-gi-lists.ts` upsert on `(source, source_ref)`. `load-lwin.ts` still deletes and
+  re-inserts: fix it before the next LWIN release.
+- 09-21: `load-gi-lists.ts` - 654 official GI rows for US, AU, NZ, ZA, CL, AR with 407
+  parent links. `resolve-appellations.ts` matches those countries by place with no
+  designation gate. AR 1 -> 4,245 of 4,390; NZ 524 -> 3,973 of 4,032; synthetic rows
+  504 -> 113. The Swartland shelf points at real WO rows.
+- 09-21: EU sub-regions no longer fall through to the region. `Etna` held 0 wines (348
+  sat on Sicilia); `Chablis grand cru` held 0 (303 sat on Chablis, because LWIN keeps
+  "Grand Cru" in CLASSIFICATION). Rules in `appellation-rules.ts`. The EU Live rate stays
+  95.95%: the wines were counted before, on the wrong row.
+- 09-21: `producer-merge.ts` - conservative merge, review file
+  `docs/wine-bore-producer-merge-review.md`. 1,108 auto pairs applied, 8,727 review,
+  21,247 reject; producers with Live wines 33,218 -> 32,540. Never auto: a differing given
+  name (Overnoy, Gros, Conterno, Mascarello, Prüm), or two different titles (Domaine Leroy
+  is not Maison Leroy). Each run starts from `lwin.csv`, so a withdrawn merge is undone.
+  Order: `producer-merge.ts --reset-only`, then `load-producer-links.ts` and
+  `load-systembolaget.ts` if they must re-run, then `producer-merge.ts`.
+- 09-21: `norm()` and `na()` live in `text.ts`; `lib.ts` re-exports them. Pure modules and
+  their tests load without `pg`. Tests: `pnpm test:wine` (78), now part of `pnpm test`.
+- 09-21: `eval.ts` has 70 questions (40 adversarial, verdict `declined` for a correct
+  refusal). Not run: no model key in the repo.
+- 09-21, open: `max_yield_hl` is the rendement butoir for France (159 of 179 parsed cahiers),
+  not the base yield; it needs a `base_yield_hl` column. Italian permitted-grape lists mix
+  named varieties with the province-wide list (Etna 31 names). 33 French PDOs still lack a
+  cahier (Châteauneuf-du-Pape, Chassagne-Montrachet, Beaune, Chambolle-Musigny).
