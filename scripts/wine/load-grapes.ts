@@ -3,114 +3,38 @@
  * permitted-variety strings against them.
  *
  * Reads:  data/wine/raw/wikidata/03_grape_varieties.csv (2,747 rows, "|"-separated cells)
- *         data/wine/raw/grapes-catalogues/vivc/vivc-wine-grape-passport-data.csv (berry colour by VIVC number)
- *         scripts/wine/grape-synonyms.json (manual raw_norm -> QID, verified only)
+ *         scripts/wine/grape-synonyms.json (build-grape-synonyms.ts: VIVC prime names, synonyms,
+ *           colour, origin, parents, VIVC numbers assigned by name, plus the manual map)
+ *         scripts/wine/grape-ids.json (QID -> wine.grapes.id)
  * Writes: wine.grapes, wine.grape_names, and wine.appellation_grapes.grape_id
  *
- * Owns source='wikidata' in wine.grapes/grape_names. Idempotent: nulls the
- * grape_id values it set, deletes its grapes, reloads, re-resolves.
+ * Owns source='wikidata' in wine.grapes. Idempotent: nulls the grape_id values
+ * it set, deletes its grapes, reloads, re-resolves.
+ *
+ * Where a VIVC number is known, VIVC decides colour, origin and parentage.
+ * Items that share one VIVC number are one variety and load as one row.
+ *
+ * Ids are part of the contract: bores/wine-bore/pack/shelves.json stores
+ * wine.grapes.id. A delete-and-insert reload hands out new serial ids and
+ * breaks every grape on a shelf (the 09-17 reload did). grape-ids.json pins
+ * the id of every QID the first load created; a new QID takes the next id
+ * above the file's highest and should be added to the file.
  *
  *   DATABASE_URL=postgresql://dig:dig_local@localhost:5433/dig pnpm exec tsx scripts/wine/load-grapes.ts
  */
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import type { SynonymFile } from "./build-grape-synonyms";
+import { type Colour, GrapeResolver, type NameTier, colourFromCode, grapeColour, mergeByVivc, stripColourWords, titleCase, vivcColour, vivcForms } from "./grape-rules";
 import { RAW, connect, insertMany, logLoad, na, norm, readCsv, readJson, upsertSource } from "./lib";
 
 const SYNONYMS_PATH = resolve(__dirname, "grape-synonyms.json");
-
-/** Wikidata colour statements -> the four values the schema allows. */
-const ROSE = ["pink", "grey", "gris", "rose", "rosé", "rosa"];
-const RED = ["black", "blue", "noir", "red", "purpl", "violet", "ruby", "brick", "jet"];
-const WHITE = ["white", "green", "yellow", "blanc", "gold", "lime", "amber"];
-
-/**
- * Wikidata carries two colour statements per variety - berry-skin colour and
- * a plain colour - and they disagree for 368 rows: Semillon is "black berry
- * skin|white", Silvaner "yellow-green|black berry skin". "black berry skin"
- * is the spurious one, so rose beats white beats red rather than first-wins.
- */
-function colourOf(cell: string | null | undefined): string {
-  const raw = na(cell);
-  if (!raw) return "unknown";
-  const toks = raw.split("|").map((t) => t.toLowerCase());
-  // A lone "black berry skin" is no evidence at all: where VIVC can check it,
-  // it is wrong 45% of the time (Xarel·lo, Altesse, Arbois, Bacchus all
-  // "black"). Unknown beats a coin toss on the counter.
-  if (toks.length === 1 && toks[0] === "black berry skin") return "unknown";
-  if (toks.some((t) => ROSE.some((k) => t.includes(k)))) return "rose";
-  if (toks.some((t) => WHITE.some((k) => t.includes(k)))) return "white";
-  if (toks.some((t) => RED.some((k) => t.includes(k)))) return "red";
-  return "unknown";
-}
-
-/** VIVC passport "Color of berry skin" -> schema colour. VIVC is ampelography; it wins over Wikidata. */
-const VIVC_COLOUR: Record<string, string> = { BLANC: "white", NOIR: "red", ROUGE: "red", ROSE: "rose", GRIS: "rose" };
-const VIVC_PATH = resolve(RAW, "grapes-catalogues", "vivc", "vivc-wine-grape-passport-data.csv");
-
-/** VIVC number -> colour, for every wine-grape passport row that states one. */
-async function readVivcColours(): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  if (!existsSync(VIVC_PATH)) return out;
-  for await (const r of readCsv(VIVC_PATH)) {
-    const id = na(r["VIVC number"]);
-    const colour = VIVC_COLOUR[(na(r["Color of berry skin"]) ?? "").toUpperCase()];
-    if (id && colour) out.set(id, colour);
-  }
-  return out;
-}
-
-/** VIVC berry colour when the item carries a VIVC number that VIVC knows; Wikidata's statements otherwise. */
-function grapeColour(vivcIds: string[], wikidataCell: string | null | undefined, vivc: Map<string, string>): string {
-  const fromVivc = [...new Set(vivcIds.map((id) => vivc.get(id)).filter((c): c is string => !!c))];
-  if (fromVivc.length === 1) return fromVivc[0];
-  return colourOf(wikidataCell);
-}
-
-/** Register colour code -> expected grape colour, for the fuzzy stages. */
-function colourFromCode(code: string | null): string | null {
-  if (!code) return null;
-  if (code === "B") return "white";
-  if (code === "N") return "red";
-  if (code === "Rs" || code === "Rg" || code === "G" || code === "Gr" || code === "R") return "rose";
-  return null;
-}
-
-/**
- * Colour adjectives the national registers bolt onto a variety name:
- * "Weißer Riesling" is Riesling, "Blauer Spätburgunder" is Pinot Noir.
- */
-const COLOUR_WORDS = new Set([
-  "weisser", "weisse", "weiss", "weisen", "blauer", "blaue", "blau", "grauer", "graue",
-  "roter", "rote", "rot", "gelber", "gelbe", "fruhroter", "fruhrote", "schwarzer",
-  "blanc", "blanche", "blancs", "noir", "noire", "noirs", "gris", "grise", "rouge", "rose",
-  "bianco", "bianca", "bianchi", "nero", "nera", "neri", "grigio", "grigia", "rosso", "rossa",
-  "blanco", "blanca", "tinto", "tinta", "negro", "negra", "rosado", "roxo", "branco",
-]);
-
-/**
- * The colour a variety name states about itself: "Caino blanco" is white,
- * "Douce noir" red. Name words are reliable where Wikidata's colour
- * statements are not, so they veto a match the colour code contradicts.
- */
-const NAME_WHITE = new Set(["blanc", "blanche", "blanco", "bianco", "branco", "weiss", "weisser", "white", "belyi", "zold", "verde", "bily"]);
-const NAME_RED = new Set(["noir", "noire", "nero", "nera", "negro", "negra", "tinto", "tinta", "neagra", "modre", "modry", "schwarz", "schwarzer", "black", "rouge", "rosso", "rossa", "kek"]);
-
-function nameColourWord(nameNorm: string): string | null {
-  const toks = nameNorm.split(" ");
-  if (toks.some((t) => NAME_WHITE.has(t))) return "white";
-  if (toks.some((t) => NAME_RED.has(t))) return "red";
-  return null;
-}
+const IDS_PATH = resolve(__dirname, "grape-ids.json");
 
 function splitPipe(v: string | null | undefined): string[] {
   const t = na(v);
   if (!t) return [];
   return t.split("|").map((s) => s.trim()).filter(Boolean);
-}
-
-function stripColourWords(nameNorm: string): string {
-  const toks = nameNorm.split(" ").filter((t) => t && !COLOUR_WORDS.has(t));
-  return toks.join(" ");
 }
 
 async function main() {
@@ -121,12 +45,9 @@ async function main() {
     slug: "vivc",
     name: "Vitis International Variety Catalogue (JKI Geilweilerhof)",
     licence: "open, citation requested (Roeckel et al.)",
-    pulled_at: "2026-09-03",
-    notes: "wine-grape passport data, 6,893 records; supplies berry-skin colour over Wikidata",
+    pulled_at: "2026-09-21",
+    notes: "prime names, synonyms, berry colour, origin and parentage; wins over Wikidata wherever a VIVC number is known",
   });
-  const vivc = await readVivcColours();
-  notes.vivc_colours = vivc.size;
-
   await upsertSource(pool, {
     slug: "wikidata",
     name: "Wikidata (wineries, regions, grape varieties, wines)",
@@ -134,6 +55,13 @@ async function main() {
     pulled_at: "2026-09-03",
     notes: "SPARQL exports; 03_grape_varieties.csv = 2,747 varieties with VIVC ids and parentage",
   });
+
+  const syn: SynonymFile = existsSync(SYNONYMS_PATH)
+    ? readJson<SynonymFile>(SYNONYMS_PATH)
+    : { generated: "", source: "", manual: {}, assigned: {}, varieties: {} };
+  const varieties = syn.varieties ?? {};
+  const assigned = syn.assigned ?? {};
+  notes.vivc_varieties_in_file = Object.keys(varieties).length;
 
   // ---- read -----------------------------------------------------------
   type Row = Record<string, string>;
@@ -148,14 +76,14 @@ async function main() {
   const clearedWine = await pool.query(`UPDATE wine.wine_grapes SET grape_id = NULL WHERE grape_id IS NOT NULL`);
   await pool.query(`DELETE FROM wine.grapes WHERE source = 'wikidata'`);
 
-  // ---- grapes ---------------------------------------------------------
-  const grapeRows: unknown[][] = [];
+  // ---- parse ----------------------------------------------------------
+  type Parsed = {
+    qid: string; name: string; labels: [string, string][]; aliases: string[];
+    vivc: string[]; vivcVia: string | null; weight: number; row: Row;
+  };
+  const parsed: Parsed[] = [];
   let noLabel = 0;
   const seenQid = new Set<string>();
-  const weightByQid = new Map<string, number>();
-  type Parsed = { qid: string; name: string; labels: [string, string][]; aliases: string[] };
-  const parsed: Parsed[] = [];
-
   for (const r of rows) {
     const qid = (na(r.item) as string).split("/").pop() as string;
     if (seenQid.has(qid)) continue;
@@ -168,42 +96,101 @@ async function main() {
     const aliases = splitPipe(r.aliases);
     const name = na(r.itemLabel_en) ?? labels[0]?.[1] ?? aliases[0] ?? null;
     if (!name) { noLabel++; continue; }
-    // How much Wikidata actually knows about this item. The export holds thin
-    // duplicates ("Mourvedre" Q139941743 next to "Mourvèdre" Q161864); the
-    // richer item wins when two grapes normalise to the same string.
-    const weight = (splitPipe(r.vivcIds).length ? 4 : 0) + aliases.length
-      + (splitPipe(r.parentVarieties).length ? 2 : 0) + (splitPipe(r.countriesOfOrigin).length ? 1 : 0);
-    weightByQid.set(qid, weight);
-    parsed.push({ qid, name, labels, aliases });
-    grapeRows.push([
-      name, norm(name), grapeColour(splitPipe(r.vivcIds), r.colours, vivc), qid,
-      splitPipe(r.vivcIds), splitPipe(r.parentVarieties), splitPipe(r.countriesOfOrigin),
-      "wikidata", qid,
-    ]);
+    const own = splitPipe(r.vivcIds);
+    const vivc = own.length ? own : assigned[qid] ? [assigned[qid].vivc] : [];
+    // How much the sources know about this item. The heaviest item keeps the
+    // name when several items are one variety.
+    const weight = (own.length ? 4 : 0) + aliases.length + (splitPipe(r.hybridOf).length ? 2 : 0) + (splitPipe(r.countriesOfOrigin).length ? 1 : 0);
+    parsed.push({ qid, name, labels, aliases, vivc, vivcVia: own.length ? "wikidata" : assigned[qid]?.via ?? null, weight, row: r });
+  }
+
+  // ---- one row per variety ---------------------------------------------
+  const vivcNameSets = new Map<string, Set<string>>();
+  for (const [id, v] of Object.entries(varieties)) vivcNameSets.set(id, new Set([v.prime, ...v.synonyms].map((n) => norm(n))));
+  const keep = mergeByVivc(parsed.map((p) => {
+    const v = p.vivc.length === 1 ? varieties[p.vivc[0]] : undefined;
+    const own = [p.name, ...p.labels.map(([, l]) => l), ...p.aliases].flatMap((l) => vivcForms(l, norm));
+    const prime = v ? norm(v.prime) : "";
+    return {
+      qid: p.qid, vivc: p.vivc, weight: p.weight, primaryNorm: norm(p.name), nameNorms: own,
+      vivcKnowsName: !!v && own.some((n) => (vivcNameSets.get(p.vivc[0]) as Set<string>).has(n)),
+      // The display name only: the Bastardo item carries a French label "Trousseau".
+      isPrimeName: !!v && vivcForms(p.name, norm).some((n) => n === prime || n === stripColourWords(prime)),
+    };
+  }));
+  const members = new Map<string, Parsed[]>();
+  for (const p of parsed) {
+    const head = keep.get(p.qid) as string;
+    if (!members.has(head)) members.set(head, []);
+    (members.get(head) as Parsed[]).push(p);
+  }
+  const heads = parsed.filter((p) => keep.get(p.qid) === p.qid);
+  const mergedAway = parsed.length - heads.length;
+
+  /** A VIVC parent in the form the counter reads: the loaded grape's own name when there is one. */
+  const displayByVivcPrime = new Map<string, string>();
+  for (const h of heads) for (const id of h.vivc) {
+    const prime = varieties[id]?.prime;
+    if (prime && !displayByVivcPrime.has(prime)) displayByVivcPrime.set(prime, h.name);
+  }
+
+  const pinned: Record<string, number> = existsSync(IDS_PATH) ? readJson<Record<string, number>>(IDS_PATH) : {};
+  let nextId = Math.max(0, ...Object.values(pinned)) + 1;
+  const unpinned: string[] = [];
+  const idFor = (qid: string): number => {
+    if (pinned[qid]) return pinned[qid];
+    unpinned.push(qid);
+    return nextId++;
+  };
+
+  const grapeRows: unknown[][] = [];
+  const stats = { colour_from_vivc: 0, parents_from_vivc: 0, parents_from_wikidata: 0, origin_from_vivc: 0 };
+  for (const h of heads) {
+    const vs = h.vivc.map((id) => varieties[id]).filter(Boolean);
+    const colour = grapeColour(vs.map((v) => vivcColour(v.colour)), h.row.colours);
+    if (vs.some((v) => vivcColour(v.colour))) stats.colour_from_vivc++;
+    // Wikidata P171 is the parent TAXON ("Vitis vinifera"), not a parent
+    // variety. Parentage is VIVC Parent1 x Parent2, else Wikidata P1531.
+    let parents: string[] = [];
+    // Only a full pedigree that markers confirm. VIVC gives Pinot noir as "? x
+    // Savagnin blanc"; half a pedigree, stated flat on the counter, starts an argument the data cannot finish.
+    const full = vs.length === 1 && vs[0].pedigree_confirmed && vs[0].parents.length === 2 && !vs[0].parents.includes("?");
+    if (full) {
+      parents = vs[0].parents.map((p) => displayByVivcPrime.get(p) ?? titleCase(p));
+      stats.parents_from_vivc++;
+    } else {
+      parents = splitPipe(h.row.hybridOf);
+      if (parents.length) stats.parents_from_wikidata++;
+    }
+    // Wikidata P495 says "Italy" for 801 items, Riesling and Chardonnay among them.
+    let origin = splitPipe(h.row.countriesOfOrigin);
+    if (vs.length === 1 && vs[0].country) { origin = [titleCase(vs[0].country)]; stats.origin_from_vivc++; }
+    grapeRows.push([idFor(h.qid), h.name, norm(h.name), colour, h.qid, h.vivc, parents, origin, "wikidata", h.qid]);
   }
 
   const grapesOut = await insertMany(
     pool, "wine.grapes",
-    ["name", "name_norm", "colour", "wikidata_qid", "vivc_ids", "parent_varieties", "countries_of_origin", "source", "source_ref"],
+    ["id", "name", "name_norm", "colour", "wikidata_qid", "vivc_ids", "parent_varieties", "countries_of_origin", "source", "source_ref"],
     grapeRows, "ON CONFLICT DO NOTHING",
   );
 
-  const { rows: back } = await pool.query(`SELECT id, source_ref, colour, name_norm FROM wine.grapes WHERE source='wikidata'`);
+  await pool.query(`SELECT setval('wine.grapes_id_seq', (SELECT max(id) FROM wine.grapes))`);
+  notes.qids_without_pinned_id = unpinned.length;
+
+  const { rows: back } = await pool.query(`SELECT id, source_ref, colour, name_norm, vivc_ids FROM wine.grapes WHERE source='wikidata'`);
   const idByQid = new Map<string, number>();
-  const colourById = new Map<number, string>();
-  const primaryNormById = new Map<number, string>();
-  const rankById = new Map<number, [number, number]>(); // [weight, -qidNumber]
-  for (const r of back) {
-    idByQid.set(r.source_ref, r.id);
-    colourById.set(r.id, r.colour);
-    primaryNormById.set(r.id, r.name_norm);
-    rankById.set(r.id, [weightByQid.get(r.source_ref) ?? 0, -Number(String(r.source_ref).slice(1))]);
+  for (const r of back) idByQid.set(r.source_ref, r.id);
+  // A merged-away QID still resolves (grape-synonyms.json manual entries name QIDs).
+  for (const p of parsed) {
+    const gid = idByQid.get(keep.get(p.qid) as string);
+    if (gid && !idByQid.has(p.qid)) idByQid.set(p.qid, gid);
   }
 
-  // ---- grape_names (PK is (grape_id, name_norm): primary > translation > synonym)
+  // ---- grape_names (PK is (grape_id, name_norm): primary > translation > synonym > VIVC)
   const nameRows: unknown[][] = [];
+  const tiers: { grapeId: number; nameNorm: string; tier: NameTier }[] = [];
   const takenName = new Set<string>();
-  const pushName = (gid: number, raw: string, kind: string, lang: string | null) => {
+  const pushName = (gid: number, raw: string, kind: string, lang: string | null, source: string, tier: NameTier) => {
     const n = na(raw);
     if (!n) return;
     const nn = norm(n);
@@ -211,14 +198,31 @@ async function main() {
     const key = `${gid}|${nn}`;
     if (takenName.has(key)) return;
     takenName.add(key);
-    nameRows.push([gid, n, nn, kind, lang, "wikidata"]);
+    nameRows.push([gid, n, nn, kind, lang, source]);
+    tiers.push({ grapeId: gid, nameNorm: nn, tier });
   };
-  for (const p of parsed) {
-    const gid = idByQid.get(p.qid);
+  for (const h of heads) {
+    const gid = idByQid.get(h.qid);
     if (!gid) continue;
-    pushName(gid, p.name, "primary", p.labels.find(([, v]) => v === p.name)?.[0] ?? "en");
-    for (const [lang, v] of p.labels) pushName(gid, v, "translation", lang);
-    for (const a of p.aliases) pushName(gid, a, "synonym", null);
+    pushName(gid, h.name, "primary", h.labels.find(([, v]) => v === h.name)?.[0] ?? "en", "wikidata", "primary");
+    for (const m of members.get(h.qid) as Parsed[]) {
+      // The name of an item merged into this one is as good as a label.
+      if (m.qid !== h.qid) pushName(gid, m.name, "synonym", null, "wikidata", "wikidata");
+      for (const [lang, v] of m.labels) pushName(gid, v, m.qid === h.qid ? "translation" : "synonym", lang, "wikidata", "wikidata");
+      for (const a of m.aliases) pushName(gid, a, "synonym", null, "wikidata", "wikidata");
+    }
+  }
+  let vivcNames = 0;
+  for (const h of heads) {
+    const gid = idByQid.get(h.qid);
+    if (!gid || h.vivc.length !== 1) continue;
+    const v = varieties[h.vivc[0]];
+    if (!v) continue;
+    for (const s of [v.prime, ...v.synonyms]) {
+      const before = nameRows.length;
+      pushName(gid, titleCase(s), "synonym", null, "vivc", "vivc");
+      if (nameRows.length > before) vivcNames++;
+    }
   }
   const namesOut = await insertMany(
     pool, "wine.grape_names", ["grape_id", "name", "name_norm", "kind", "lang", "source"],
@@ -226,112 +230,34 @@ async function main() {
   );
 
   // ---- resolve appellation_grapes.grape_id ----------------------------
-  // norm -> candidate grape ids, from every name we just loaded.
-  const byNorm = new Map<string, Set<number>>();
-  for (const r of nameRows) {
-    const gid = r[0] as number;
-    const nn = r[2] as string;
-    if (!byNorm.has(nn)) byNorm.set(nn, new Set());
-    (byNorm.get(nn) as Set<number>).add(gid);
-  }
-
-  const manual: Record<string, string> = existsSync(SYNONYMS_PATH) ? readJson<Record<string, string>>(SYNONYMS_PATH) : {};
   const manualIds = new Map<string, number>();
   const manualMissing: string[] = [];
-  for (const [rawNorm, qid] of Object.entries(manual)) {
+  for (const [rawNorm, qid] of Object.entries(syn.manual ?? {})) {
     const gid = idByQid.get(qid);
     if (gid) manualIds.set(rawNorm, gid);
     else manualMissing.push(`${rawNorm}=${qid}`);
   }
-
-  /**
-   * One candidate, or none. A norm that hits several grapes is decided by an
-   * exact primary-name hit, then by how much Wikidata knows about the item,
-   * then by the older QID - never left to insertion order.
-   */
-  let disambiguated = 0;
-  let vetoedByColourWord = 0;
-  function pick(nn: string, wantColour: string | null, strict: boolean): { gid: number | null; ambiguous: boolean } {
-    const set = byNorm.get(nn);
-    if (!set || set.size === 0) return { gid: null, ambiguous: false };
-    let ids = [...set];
-    // A white variety never resolves to a name that says "noir", and back.
-    if (wantColour === "white" || wantColour === "red") {
-      const kept = ids.filter((id) => {
-        const w = nameColourWord(primaryNormById.get(id) ?? "");
-        return !w || w === wantColour || wantColour === "rose";
-      });
-      if (kept.length === 0) { vetoedByColourWord++; return { gid: null, ambiguous: false }; }
-      if (kept.length < ids.length) vetoedByColourWord++;
-      ids = kept;
-    }
-    if (ids.length > 1) {
-      const primaries = ids.filter((id) => primaryNormById.get(id) === nn);
-      if (primaries.length >= 1) ids = primaries;
-      if (ids.length > 1) {
-        disambiguated++;
-        ids = ids.sort((a, b) => {
-          const ra = rankById.get(a) ?? [0, 0];
-          const rb = rankById.get(b) ?? [0, 0];
-          const ca = colourById.get(a) === wantColour ? 1 : 0;
-          const cb = colourById.get(b) === wantColour ? 1 : 0;
-          return cb - ca || rb[0] - ra[0] || rb[1] - ra[1];
-        });
-      }
-    }
-    const gid = ids[0];
-    if (strict && wantColour) {
-      const c = colourById.get(gid);
-      if (c && c !== "unknown" && c !== wantColour) return { gid: null, ambiguous: false };
-    }
-    return { gid, ambiguous: false };
-  }
+  const weightByQid = new Map(parsed.map((p) => [p.qid, p.weight]));
+  const resolver = new GrapeResolver(
+    back.map((r) => ({ id: r.id, primaryNorm: r.name_norm, colour: r.colour as Colour, weight: weightByQid.get(r.source_ref) ?? 0, vivc: r.vivc_ids.length === 1 ? r.vivc_ids[0] : null })),
+    tiers, manualIds,
+  );
 
   const { rows: agRows } = await pool.query(
     `SELECT appellation_id, grape_name_raw, kind, category, colour_code FROM wine.appellation_grapes WHERE source='pdo-dataset'`,
   );
 
   const stages: Record<string, number> = { manual: 0, exact: 0, colour_stripped: 0, first_two: 0 };
-  let ambiguous = 0;
   const updates: [number, number, string, string, string][] = []; // gid, appId, raw, kind, category
   const unresolved = new Map<string, Set<number>>();
 
   for (const r of agRows) {
     const raw = r.grape_name_raw as string;
-    const nn = norm(raw);
-    const want = colourFromCode(r.colour_code as string | null);
-    let gid: number | null = null;
-    let amb = false;
-
-    const m = manualIds.get(nn);
-    if (m) { gid = m; stages.manual++; }
-
-    if (!gid) {
-      const e = pick(nn, want, false);
-      if (e.gid) { gid = e.gid; stages.exact++; } else if (e.ambiguous) amb = true;
-    }
-    if (!gid) {
-      const stripped = stripColourWords(nn);
-      if (stripped && stripped !== nn) {
-        const s = pick(stripped, want, true);
-        if (s.gid) { gid = s.gid; stages.colour_stripped++; } else if (s.ambiguous) amb = true;
-      }
-    }
-    if (!gid) {
-      for (const cand of [nn, stripColourWords(nn)]) {
-        const toks = cand.split(" ").filter(Boolean);
-        if (toks.length <= 2) continue;
-        const two = toks.slice(0, 2).join(" ");
-        const s = pick(two, want, true);
-        if (s.gid) { gid = s.gid; stages.first_two++; break; }
-        if (s.ambiguous) amb = true;
-      }
-    }
-
-    if (gid) {
-      updates.push([gid, r.appellation_id as number, raw, r.kind as string, r.category as string]);
+    const hit = resolver.resolve(norm(raw), colourFromCode(r.colour_code as string | null));
+    if (hit) {
+      stages[hit.stage]++;
+      updates.push([hit.id, r.appellation_id as number, raw, r.kind as string, r.category as string]);
     } else {
-      if (amb) ambiguous++;
       if (!unresolved.has(raw)) unresolved.set(raw, new Set());
       (unresolved.get(raw) as Set<number>).add(r.appellation_id as number);
     }
@@ -368,9 +294,13 @@ async function main() {
   notes.resolved = updated;
   notes.resolution_rate = `${((updated / agRows.length) * 100).toFixed(1)}%`;
   notes.stages = stages;
-  notes.ambiguous_norm_skipped = ambiguous;
-  notes.disambiguated_by_rank = disambiguated;
-  notes.colour_word_vetoes = vetoedByColourWord;
+  notes.vivc_synonym_shared_and_skipped = resolver.vivcAmbiguous;
+  notes.disambiguated_by_rank = resolver.disambiguated;
+  notes.colour_word_vetoes = resolver.vetoedByColourWord;
+  notes.items_merged_into_another_by_vivc_number = mergedAway;
+  notes.vivc_number_assigned_by_name = parsed.filter((p) => p.vivcVia && p.vivcVia !== "wikidata").length;
+  notes.vivc_names_added = vivcNames;
+  notes.facts = stats;
   notes.distinct_unresolved_names = unresolved.size;
   notes.top_unresolved = top;
   notes.manual_synonyms_loaded = manualIds.size;

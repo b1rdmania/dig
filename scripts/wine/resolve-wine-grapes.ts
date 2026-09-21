@@ -24,20 +24,12 @@
  *
  *   DATABASE_URL=postgresql://dig:dig_local@localhost:5433/dig pnpm exec tsx scripts/wine/resolve-wine-grapes.ts
  */
-import { connect, logLoad, norm } from "./lib";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { type Colour, GrapeResolver, type NameTier } from "./grape-rules";
+import { connect, logLoad, norm, readJson } from "./lib";
 
-/** Colour adjectives bolted onto a variety name. Same set as load-grapes.ts. */
-const COLOUR_WORDS = new Set([
-  "weisser", "weisse", "weiss", "weisen", "blauer", "blaue", "blau", "grauer", "graue",
-  "roter", "rote", "rot", "gelber", "gelbe", "fruhroter", "fruhrote", "schwarzer",
-  "blanc", "blanche", "blancs", "noir", "noire", "noirs", "gris", "grise", "rouge", "rose",
-  "bianco", "bianca", "bianchi", "nero", "nera", "neri", "grigio", "grigia", "rosso", "rossa",
-  "blanco", "blanca", "tinto", "tinta", "negro", "negra", "rosado", "roxo", "branco",
-]);
-
-function stripColourWords(nameNorm: string): string {
-  return nameNorm.split(" ").filter((t) => t && !COLOUR_WORDS.has(t)).join(" ");
-}
+const SYNONYMS_PATH = resolve(__dirname, "grape-synonyms.json");
 
 async function main() {
   const pool = connect();
@@ -45,73 +37,47 @@ async function main() {
 
   await pool.query(`UPDATE wine.wine_grapes SET grape_id = NULL WHERE grape_id IS NOT NULL`);
 
-  // ---- index every grape spelling -------------------------------------
+  // Same resolver as load-grapes.ts (grape-rules.ts). A wine string carries no
+  // colour code, so a VIVC synonym shared by several varieties stays unresolved.
   const { rows: grapes } = await pool.query(
-    `SELECT id, name_norm, coalesce(array_length(vivc_ids,1),0)::int vivc FROM wine.grapes`,
+    `SELECT g.id, g.name_norm, g.colour, g.vivc_ids, coalesce(array_length(g.vivc_ids,1),0)::int * 4
+            + (SELECT count(*) FROM wine.grape_names n WHERE n.grape_id = g.id AND n.source <> 'vivc')::int AS weight
+     FROM wine.grapes g`,
   );
-  const primaryNorm = new Map<number, string>();
-  const vivcById = new Map<number, number>();
-  for (const g of grapes) { primaryNorm.set(g.id, g.name_norm); vivcById.set(g.id, g.vivc); }
-
-  const { rows: names } = await pool.query(`SELECT grape_id, name_norm FROM wine.grape_names`);
-  const byNorm = new Map<string, number[]>();
-  const aliasCount = new Map<number, number>();
-  for (const n of names) {
-    const list = byNorm.get(n.name_norm);
-    if (list) { if (!list.includes(n.grape_id)) list.push(n.grape_id); }
-    else byNorm.set(n.name_norm, [n.grape_id]);
-    aliasCount.set(n.grape_id, (aliasCount.get(n.grape_id) ?? 0) + 1);
+  const { rows: names } = await pool.query(`SELECT grape_id, name_norm, kind, source FROM wine.grape_names`);
+  // The hand-checked map in grape-synonyms.json (raw_norm -> QID), same as load-grapes.ts.
+  const manualQids: Record<string, string> = existsSync(SYNONYMS_PATH)
+    ? readJson<{ manual?: Record<string, string> }>(SYNONYMS_PATH).manual ?? {} : {};
+  const { rows: qids } = await pool.query(`SELECT id, wikidata_qid FROM wine.grapes WHERE wikidata_qid IS NOT NULL`);
+  const idByQid = new Map<string, number>(qids.map((r) => [r.wikidata_qid, r.id]));
+  const manual = new Map<string, number>();
+  for (const [rawNorm, qid] of Object.entries(manualQids)) {
+    const id = idByQid.get(qid);
+    if (id) manual.set(rawNorm, id);
   }
 
-  let disambiguated = 0;
-  function pick(nn: string): number | null {
-    const ids = byNorm.get(nn);
-    if (!ids || ids.length === 0) return null;
-    if (ids.length === 1) return ids[0];
-    let cand = ids.filter((id) => primaryNorm.get(id) === nn);
-    if (cand.length === 0) cand = [...ids];
-    if (cand.length > 1) {
-      disambiguated++;
-      cand.sort((a, b) =>
-        (vivcById.get(b) ?? 0) - (vivcById.get(a) ?? 0) ||
-        (aliasCount.get(b) ?? 0) - (aliasCount.get(a) ?? 0) ||
-        a - b);
-    }
-    return cand[0];
-  }
+  const resolver = new GrapeResolver(
+    grapes.map((g) => ({ id: g.id, primaryNorm: g.name_norm, colour: g.colour as Colour, weight: g.weight, vivc: g.vivc_ids.length === 1 ? g.vivc_ids[0] : null })),
+    names.map((n) => ({
+      grapeId: n.grape_id, nameNorm: n.name_norm,
+      tier: (n.kind === "primary" ? "primary" : n.source === "vivc" ? "vivc" : "wikidata") as NameTier,
+    })),
+    manual,
+  );
 
-  // ---- resolve --------------------------------------------------------
   const { rows: wg } = await pool.query(
     `SELECT lwin::text, grape_name_raw, source FROM wine.wine_grapes`,
   );
-  const stages: Record<string, number> = { exact: 0, colour_stripped: 0, first_two: 0 };
+  const stages: Record<string, number> = { manual: 0, exact: 0, colour_stripped: 0, first_two: 0 };
   const updates: Array<[string, string, string, number]> = [];
   const unresolved = new Map<string, number>();
 
   for (const r of wg) {
-    const nn = norm(r.grape_name_raw);
-    let gid = pick(nn);
-    if (gid) stages.exact++;
-    if (!gid) {
-      const stripped = stripColourWords(nn);
-      if (stripped && stripped !== nn) {
-        gid = pick(stripped);
-        if (gid) stages.colour_stripped++;
-      }
-    }
-    if (!gid) {
-      for (const cand of [nn, stripColourWords(nn)]) {
-        const toks = cand.split(" ").filter(Boolean);
-        if (toks.length <= 2) continue;
-        gid = pick(toks.slice(0, 2).join(" "));
-        if (gid) { stages.first_two++; break; }
-      }
-    }
-    if (gid) updates.push([r.lwin, r.grape_name_raw, r.source, gid]);
+    const hit = resolver.resolve(norm(r.grape_name_raw));
+    if (hit) { stages[hit.stage]++; updates.push([r.lwin, r.grape_name_raw, r.source, hit.id]); }
     else unresolved.set(r.grape_name_raw, (unresolved.get(r.grape_name_raw) ?? 0) + 1);
   }
 
-  // ---- write ----------------------------------------------------------
   const CHUNK = 2000;
   for (let i = 0; i < updates.length; i += CHUNK) {
     const slice = updates.slice(i, i + CHUNK);
@@ -130,7 +96,8 @@ async function main() {
 
   const top = [...unresolved.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20);
   notes.stages = stages;
-  notes.disambiguated = disambiguated;
+  notes.disambiguated = resolver.disambiguated;
+  notes.vivc_synonym_shared_and_skipped = resolver.vivcAmbiguous;
   notes.rate_pct = Number(((100 * updates.length) / wg.length).toFixed(2));
   notes.distinct_unresolved = unresolved.size;
   notes.top_unresolved = top.map(([name, rows]) => ({ name, rows }));
