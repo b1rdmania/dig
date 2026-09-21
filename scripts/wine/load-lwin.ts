@@ -119,36 +119,16 @@ async function main(): Promise<void> {
 
   console.log(`[lwin] read ${rowsIn} rows, kept ${wines.length}, ${producers.size} producers`);
 
-  // Idempotent, but only as the FIRST loader: wine.listings and the link /
-  // name / grape tables point at these rows, and listings' FKs do not cascade.
-  // Reloading the spine under a loaded corpus would fail on a foreign key, so
-  // say so instead, and require FORCE=1 to clear the downstream rows for a
-  // full rebuild (after which loaders 2-4 must be re-run).
-  const dep = await pool.query<{ listings: string; links: string; names: string; grapes: string }>(
-    `SELECT (SELECT count(*) FROM wine.listings)::text listings,
-            (SELECT count(*) FROM wine.producer_links)::text links,
-            (SELECT count(*) FROM wine.wine_names)::text names,
-            (SELECT count(*) FROM wine.wine_grapes)::text grapes`,
-  );
-  const d = dep.rows[0];
-  const depTotal = Number(d.listings) + Number(d.links) + Number(d.names) + Number(d.grapes);
-  if (depTotal > 0) {
-    if (process.env.FORCE !== "1") {
-      throw new Error(
-        `wine.wines / wine.producers have dependent rows (listings=${d.listings} producer_links=${d.links} ` +
-        `wine_names=${d.names} wine_grapes=${d.grapes}). load-lwin rebuilds the spine, so those rows must go ` +
-        `first. Re-run with FORCE=1 to clear them, then re-run load-producer-links, load-systembolaget and ` +
-        `load-wikidata-wines.`,
-      );
-    }
-    console.warn(`[lwin] FORCE=1: clearing ${depTotal} dependent rows (loaders 2-4 must be re-run)`);
-    await pool.query(`DELETE FROM wine.wine_grapes`);
-    await pool.query(`DELETE FROM wine.wine_names`);
-    await pool.query(`DELETE FROM wine.listings`);
-    await pool.query(`DELETE FROM wine.producer_links`);
-  }
-  await pool.query(`DELETE FROM wine.wines WHERE source = $1`, [SRC]);
-  await pool.query(`DELETE FROM wine.producers WHERE source = $1`, [SRC]);
+  // Upsert, never delete-and-insert (21 Sep 2026). wine.producers.id is stored
+  // in the pack (120 shelf members), in producer_links, listings and
+  // producer-merge's links; wine.wines.lwin is referenced by listings,
+  // wine_names, wine_grapes and the pack. The old loader cleared all of that
+  // under FORCE=1 and handed every producer a new serial id. Now a producer
+  // keeps its id for as long as LWIN keeps its (title, name, country), and a
+  // new LWIN release only adds and updates. Columns other loaders own
+  // (website, founded_year, wikidata_qid, uk_importer, appellation_id,
+  // appellation_match, search_vector) are not touched. producer_id goes back
+  // to the LWIN producer, so run producer-merge.ts afterwards.
 
   const prodRows = [...producers.values()].map((p) => {
     let region: string | null = null;
@@ -173,7 +153,9 @@ async function main(): Promise<void> {
     "wine.producers",
     ["name", "title", "display_name", "name_norm", "country", "country_name", "region", "wine_count", "source", "source_ref"],
     prodRows,
-    "ON CONFLICT (source, source_ref) DO NOTHING",
+    `ON CONFLICT (source, source_ref) DO UPDATE SET name = EXCLUDED.name, title = EXCLUDED.title, display_name = EXCLUDED.display_name,
+       name_norm = EXCLUDED.name_norm, country = EXCLUDED.country, country_name = EXCLUDED.country_name, region = EXCLUDED.region,
+       wine_count = EXCLUDED.wine_count`,
   );
 
   const ids = await pool.query<{ source_ref: string; id: number }>(
@@ -195,7 +177,18 @@ async function main(): Promise<void> {
       "site", "parcel", "colour", "sub_type", "wine_type", "designation", "classification", "vintage_config",
       "first_vintage", "final_vintage", "status", "source"],
     wineRows,
-    "ON CONFLICT (lwin) DO NOTHING",
+    `ON CONFLICT (lwin) DO UPDATE SET display_name = EXCLUDED.display_name, producer_id = EXCLUDED.producer_id, wine_name = EXCLUDED.wine_name,
+       country = EXCLUDED.country, country_name = EXCLUDED.country_name, region = EXCLUDED.region, sub_region = EXCLUDED.sub_region,
+       site = EXCLUDED.site, parcel = EXCLUDED.parcel, colour = EXCLUDED.colour, sub_type = EXCLUDED.sub_type, wine_type = EXCLUDED.wine_type,
+       designation = EXCLUDED.designation, classification = EXCLUDED.classification, vintage_config = EXCLUDED.vintage_config,
+       first_vintage = EXCLUDED.first_vintage, final_vintage = EXCLUDED.final_vintage, status = EXCLUDED.status`,
+  );
+
+  // Rows LWIN no longer carries are kept (LWIN marks a withdrawn wine Deleted; it does not drop the row) and counted.
+  const gone = await pool.query<{ wines: string; producers: string }>(
+    `SELECT (SELECT count(*) FROM wine.wines WHERE source = $1 AND NOT (lwin = ANY($2::bigint[])))::text wines,
+            (SELECT count(*) FROM wine.producers WHERE source = $1 AND NOT (source_ref = ANY($3::text[])))::text producers`,
+    [SRC, wines.map((w) => w.lwin), [...producers.keys()]],
   );
 
   const noCountry = await pool.query<{ n: string }>(
@@ -215,6 +208,7 @@ async function main(): Promise<void> {
     skipped_by_type: Object.fromEntries(skipped),
     dropped_bad_lwin_or_no_producer: badLwin,
     producers_country_unmapped: Number(noCountry.rows[0].n),
+    rows_no_longer_in_lwin: { wines: Number(gone.rows[0].wines), producers: Number(gone.rows[0].producers) },
   });
 
   await pool.end();
