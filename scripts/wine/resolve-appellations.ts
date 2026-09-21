@@ -17,11 +17,32 @@
  *      one that strips a trailing wine-type word ("Etna Rosso" -> "Etna")
  *      from strings that did not match exactly.
  *
- *   2. Non-EU wines: no register exists, so synthesise one appellation row
- *      per (country, designation, sub_region-or-region) with source='lwin'
- *      and gi_type from the designation, and match the wines to it. Only
- *      where the wine actually carries a designation - an undesignated
- *      Californian red gets nothing.
+ *   2. Six non-EU countries with a real official GI list (US, AU, NZ, ZA, CL,
+ *      AR - loaded by load-gi-lists.ts into wine.appellations with
+ *      source in ttb-ava/wine-australia-gi/iponz-gi/sawis-wo/cl-decreto-464/
+ *      inv-ig): match LWIN's strings against those real rows too, in the
+ *      order site -> sub_region -> region (site first, not last, because
+ *      Argentina genuinely nests a finer place there - LWIN files Gualtallary
+ *      as SITE under SUB_REGION "Tupungato" - unlike the EU data this stage
+ *      order was tuned for). No designation gate: LWIN's DESIGNATION column
+ *      is inconsistent within a place (Paso Robles is filed as AVA, DO and
+ *      AOP) and gating on it is exactly what left AR at 1/4,390 and NZ at
+ *      524/4,032 before. Spelling gaps between LWIN and the official name are
+ *      carried as `aliases` in the committed scripts/wine/gi-lists/<cc>.json
+ *      files, loaded by load-gi-lists.ts as appellation_names rows - the same
+ *      "alias is a row, not a branch" rule as the EU curated table above.
+ *
+ *   3. Every other non-EU wine: no register and no official list exists, so
+ *      synthesise one appellation row per (country, designation,
+ *      sub_region-or-region) with source='lwin' and gi_type from the
+ *      designation, and match the wines to it. Only where the wine actually
+ *      carries a designation - an undesignated Californian red gets nothing.
+ *      This also catches the leftovers inside the six real-GI countries: a
+ *      LWIN place with a designation but no matching official row (an
+ *      informal marketing zone like "Gimblett Gravels" or "Alto Cachapoal")
+ *      still gets a synthetic row, same as before; only a place a real GI row
+ *      already covers is skipped here (methodOf already holds it by the time
+ *      this step runs).
  *
  * EU wines that do not match stay NULL with appellation_match='none'. The
  * top unmatched buckets are printed and written to load_log.notes so the
@@ -34,6 +55,7 @@
  *   DATABASE_URL=postgresql://dig:dig_local@localhost:5433/dig pnpm exec tsx scripts/wine/resolve-appellations.ts
  */
 import type pg from "pg";
+import { type Wine, registerStages, stripTypeSuffix } from "./appellation-rules";
 import { connect, insertMany, logLoad, norm, upsertSource } from "./lib";
 
 /**
@@ -49,6 +71,14 @@ const EU_REGISTER = new Set([
 
 /** Designations that name a real non-EU GI scheme; everything else is 'other'. */
 const GI_TYPES = new Set(["AVA", "GI", "WO", "VQA"]);
+
+/**
+ * Countries with a real official GI list loaded by load-gi-lists.ts. These
+ * get a register-style match (no designation gate) before the synthetic
+ * fallback ever runs; every other non-EU country still uses the synthetic
+ * per-place row it always has.
+ */
+const REAL_GI_COUNTRIES = new Set(["US", "AU", "NZ", "ZA", "CL", "AR"]);
 
 /**
  * LWIN spelling -> register spelling, per country. LWIN's REGION column is in
@@ -84,6 +114,16 @@ const LWIN_ALIASES: Array<[string, string, string]> = [
   ["IT", "Sicily", "Sicilia"],
   ["IT", "Moscato d'Asti", "Asti"],
   ["IT", "Barolo Chinato", "Barolo"],
+  // Audit 09-21: sub-regions that fell through to the region row.
+  ["IT", "Conegliano Valdobbiadene Superiore", "Conegliano Valdobbiadene - Prosecco"],
+  ["IT", "Valdobbiadene Superiore di Cartizze", "Conegliano Valdobbiadene - Prosecco"],
+  ["FR", "Blaye-Cotes de Bordeaux", "Cotes de Bordeaux"],
+  ["FR", "Castillon-Cotes de Bordeaux", "Cotes de Bordeaux"],
+  ["FR", "Cadillac-Cotes de Bordeaux", "Cotes de Bordeaux"],
+  ["FR", "Francs-Cotes de Bordeaux", "Cotes de Bordeaux"],
+  ["FR", "Sainte-Foy-Cotes de Bordeaux", "Cotes de Bordeaux"],
+  ["FR", "Blanquette de Limoux", "Limoux"],
+  ["FR", "Muscat de Cap Corse", "Muscat du Cap Corse"],
   ["ES", "Canary Islands", "Islas Canarias"],
   ["ES", "Tenerife", "Islas Canarias"],
   ["PT", "Moscatel de Setubal", "Setubal"],
@@ -112,17 +152,6 @@ const LWIN_ALIASES: Array<[string, string, string]> = [
   ["GB", "Wales", "Welsh"],
 ];
 
-/**
- * Wine-type words LWIN bolts onto a protected name. Stripped from the END of
- * a string only, and only after the exact stage has failed - so
- * "Bordeaux Superieur", which is its own PDO, is never reduced to "Bordeaux".
- */
-const TYPE_SUFFIX = new Set([
-  "rosso", "rossa", "bianco", "bianca", "rosato", "spumante", "chinato", "passito",
-  "liquoroso", "novello", "frizzante", "amabile", "dolce", "secco", "vendemmia",
-  "tardiva", "rouge", "blanc", "blanche", "rose", "sec", "moelleux", "doux", "mousseux",
-  "tinto", "blanco", "espumoso", "dulce", "branco", "red", "white", "sparkling", "sweet",
-]);
 
 /**
  * norm() cannot see through the letters NFKD does not decompose, so the
@@ -141,22 +170,8 @@ export function looseNorm(s: string): string {
   return norm(t);
 }
 
-function stripTypeSuffix(nn: string): string {
-  let toks = nn.split(" ").filter(Boolean);
-  while (toks.length > 1 && TYPE_SUFFIX.has(toks[toks.length - 1])) toks = toks.slice(0, -1);
-  return toks.join(" ");
-}
 
 type App = { id: number; gi_type: string; grapes: number };
-type Wine = {
-  lwin: string;
-  country: string | null;
-  region: string | null;
-  sub_region: string | null;
-  site: string | null;
-  designation: string | null;
-  status: string;
-};
 
 /** country|name_norm -> appellation ids. Rebuilt after each alias insert. */
 class Index {
@@ -260,7 +275,7 @@ async function main() {
 
   // ---- wines ----------------------------------------------------------
   const { rows: wines } = (await pool.query(
-    `SELECT lwin::text, country, region, sub_region, site, designation, status FROM wine.wines`,
+    `SELECT lwin::text, country, region, sub_region, site, designation, classification, status FROM wine.wines`,
   )) as { rows: Wine[] };
 
   const methodOf = new Map<string, { id: number; method: string }>();
@@ -270,22 +285,15 @@ async function main() {
   function matchRegister(w: Wine): { id: number; method: string } | null {
     const c = w.country;
     if (!c) return null;
-    const stages: Array<[string, string]> = [];
-    if (w.sub_region) {
-      stages.push(["sub_region", norm(w.sub_region)]);
-      // LWIN files the Alsace grand cru lieux-dits in SUB_REGION, not SITE
-      // ("Alsace / Eichberg / Grand Cru"), and each one is its own PDO named
-      // "Alsace grand cru <lieu-dit>". Without this the wine falls through to
-      // the region stage and lands on plain Alsace.
-      if (w.country === "FR") stages.push(["sub_region", norm(`alsace grand cru ${w.sub_region}`)]);
-    }
-    if (w.site) {
-      stages.push(["site", norm(w.site)]);
-      // Alsace grand cru lieux-dits are each their own PDO, named
-      // "Alsace grand cru <lieu-dit>"; LWIN keeps the bare lieu-dit.
-      if (c === "FR") stages.push(["site", norm(`alsace grand cru ${w.site}`)]);
-    }
-    if (w.region) stages.push(["region", norm(w.region)]);
+    // Scoped to the EU register on purpose: load-gi-lists.ts now shares this
+    // same `index` with rows for the six real-GI countries below, and this
+    // function's stage order (sub_region before site) is wrong for them -
+    // Argentina genuinely nests a finer place in SITE (Gualtallary under
+    // SUB_REGION "Tupungato"), which sub_region-first would shadow. Without
+    // this gate a Gualtallary wine would silently resolve to plain Tupungato
+    // here, before matchRealGi ever got a turn.
+    if (!EU_REGISTER.has(c)) return null;
+    const stages = registerStages(w);
     for (const [method, nn] of stages) {
       const hit = index.pick(c, nn);
       if (hit.id) {
@@ -304,10 +312,15 @@ async function main() {
 
   // ---- generated aliases: strip a trailing wine-type word -------------
   // Only for strings that failed pass 1, so an exact PDO is never shadowed.
+  // A wine that matched on REGION alone still has a failed SUB_REGION: "Etna
+  // Rosso" sat on Sicilia (348 wines, Etna itself held none) because the
+  // region alias Sicily -> Sicilia matched first and ended the search.
+  const regionOnly = (w: Wine) => methodOf.get(w.lwin)?.method === "region" && !!w.sub_region;
   const genCandidates = new Map<string, { country: string; raw: string }>();
   for (const w of wines) {
-    if (methodOf.has(w.lwin) || !w.country) continue;
-    for (const raw of [w.sub_region, w.region]) {
+    if (!w.country || !EU_REGISTER.has(w.country)) continue;
+    if (methodOf.has(w.lwin) && !regionOnly(w)) continue;
+    for (const raw of regionOnly(w) ? [w.sub_region] : [w.sub_region, w.region]) {
       if (!raw) continue;
       const nn = norm(raw);
       const stripped = stripTypeSuffix(nn);
@@ -333,10 +346,44 @@ async function main() {
 
   // Pass 2: the strings the generator just taught the index.
   for (const w of wines) {
-    if (methodOf.has(w.lwin)) continue;
+    if (methodOf.has(w.lwin) && !regionOnly(w)) continue;
     const m = matchRegister(w);
     if (m) methodOf.set(w.lwin, m);
   }
+
+  // ---- real non-EU GI lists (US, AU, NZ, ZA, CL, AR) -------------------
+  // load-gi-lists.ts has already loaded these into wine.appellations /
+  // wine.appellation_names (source in ttb-ava, wine-australia-gi, iponz-gi,
+  // sawis-wo, cl-decreto-464, inv-ig), so `index` already carries them - no
+  // separate index to build. Stage order is site -> sub_region -> region,
+  // site first because Argentina genuinely nests a finer place there
+  // (Gualtallary is SITE under SUB_REGION "Tupungato"); US/AU/NZ/ZA/CL never
+  // populate SITE, so the reordering is a no-op for them. No designation
+  // gate anywhere in this pass.
+  function matchRealGi(w: Wine): { id: number; method: string } | null {
+    const c = w.country;
+    if (!c) return null;
+    const stages: Array<[string, string]> = [];
+    if (w.site) stages.push(["site", norm(w.site)]);
+    if (w.sub_region) stages.push(["sub_region", norm(w.sub_region)]);
+    if (w.region) stages.push(["region", norm(w.region)]);
+    for (const [method, nn] of stages) {
+      const hit = index.pick(c, nn);
+      if (hit.id) {
+        if (hit.tie) ties[`${c}|${nn}`] = (ties[`${c}|${nn}`] ?? 0) + 1;
+        return { id: hit.id, method };
+      }
+    }
+    return null;
+  }
+  let realGiHits = 0;
+  for (const w of wines) {
+    if (methodOf.has(w.lwin)) continue;
+    if (!w.country || !REAL_GI_COUNTRIES.has(w.country)) continue;
+    const m = matchRealGi(w);
+    if (m) { methodOf.set(w.lwin, m); realGiHits++; }
+  }
+  notes.real_gi_hits = realGiHits;
 
   // ---- synthetic non-EU appellations ----------------------------------
   // One row per PLACE, not per (place, designation). LWIN's DESIGNATION
@@ -475,4 +522,4 @@ async function writeMatches(pool: pg.Pool, pairs: Array<[string, number, string]
   }
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });

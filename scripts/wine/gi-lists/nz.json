@@ -1,0 +1,33 @@
+[
+  { "name": "New Zealand", "gi_type": "enduring", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+  { "name": "North Island", "gi_type": "enduring", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+  { "name": "South Island", "gi_type": "enduring", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+
+  { "name": "Northland", "gi_type": "GI", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+
+  { "name": "Auckland", "gi_type": "GI", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+  { "name": "Waiheke Island", "gi_type": "GI", "parent": "Auckland", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+  { "name": "Kumeu", "gi_type": "GI", "parent": "Auckland", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+  { "name": "Matakana", "gi_type": "GI", "parent": "Auckland", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+
+  { "name": "Gisborne", "gi_type": "GI", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+
+  { "name": "Hawke's Bay", "gi_type": "GI", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+
+  { "name": "Wairarapa", "gi_type": "GI", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+  { "name": "Gladstone", "gi_type": "GI", "parent": "Wairarapa", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+  { "name": "Martinborough", "gi_type": "GI", "parent": "Wairarapa", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+
+  { "name": "Nelson", "gi_type": "GI", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+
+  { "name": "Marlborough", "gi_type": "GI", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+
+  { "name": "Canterbury", "gi_type": "GI", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+  { "name": "North Canterbury", "gi_type": "GI", "parent": "Canterbury", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+  { "name": "Waipara Valley", "gi_type": "GI", "parent": "North Canterbury", "aliases": ["Waipara"], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+
+  { "name": "Waitaki Valley", "gi_type": "GI", "parent": null, "aliases": ["Waitaki Valley North Otago"], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+
+  { "name": "Central Otago", "gi_type": "GI", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" },
+  { "name": "Bannockburn", "gi_type": "GI", "parent": "Central Otago", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/New_Zealand_wine" }
+]

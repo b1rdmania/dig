@@ -1,0 +1,59 @@
+[
+  { "name": "Mendoza", "gi_type": "IG", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+
+  { "name": "Lujan de Cuyo", "gi_type": "DOC", "parent": "Mendoza", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Agrelo", "gi_type": "paraje", "parent": "Lujan de Cuyo", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Vistalba", "gi_type": "paraje", "parent": "Lujan de Cuyo", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Perdriel", "gi_type": "paraje", "parent": "Lujan de Cuyo", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Las Compuertas", "gi_type": "paraje", "parent": "Lujan de Cuyo", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Carrodilla", "gi_type": "paraje", "parent": "Lujan de Cuyo", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Ugarteche", "gi_type": "paraje", "parent": "Lujan de Cuyo", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Chacras de Coria", "gi_type": "paraje", "parent": "Lujan de Cuyo", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Anchoris", "gi_type": "paraje", "parent": "Lujan de Cuyo", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Mayor Drummond", "gi_type": "paraje", "parent": "Lujan de Cuyo", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Tres Esquinas", "gi_type": "paraje", "parent": "Lujan de Cuyo", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+
+  { "name": "San Rafael", "gi_type": "DOC", "parent": "Mendoza", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+
+  { "name": "Maipu", "gi_type": "IG", "parent": "Mendoza", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Coquimbito", "gi_type": "paraje", "parent": "Maipu", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Cruz de Piedra", "gi_type": "paraje", "parent": "Maipu", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Las Barrancas", "gi_type": "paraje", "parent": "Maipu", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Lunlunta", "gi_type": "paraje", "parent": "Maipu", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+  { "name": "Russell", "gi_type": "paraje", "parent": "Maipu", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Mendoza_wine" },
+
+  { "name": "Valle de Uco", "gi_type": "IG", "parent": "Mendoza", "aliases": ["Uco Valley"], "source_url": "https://es.wikipedia.org/wiki/Valle_de_Uco" },
+  { "name": "Tupungato", "gi_type": "IG", "parent": "Valle de Uco", "aliases": [], "source_url": "https://es.wikipedia.org/wiki/Valle_de_Uco" },
+  { "name": "Gualtallary", "gi_type": "IG", "parent": "Tupungato", "aliases": [], "source_url": "https://es.wikipedia.org/wiki/Valle_de_Uco" },
+  { "name": "Paraje Altamira", "gi_type": "IG", "parent": "Valle de Uco", "aliases": [], "source_url": "https://es.wikipedia.org/wiki/Valle_de_Uco" },
+  { "name": "Los Chacayes", "gi_type": "IG", "parent": "Valle de Uco", "aliases": [], "source_url": "https://es.wikipedia.org/wiki/Valle_de_Uco" },
+  { "name": "La Consulta", "gi_type": "IG", "parent": "Valle de Uco", "aliases": [], "source_url": "https://es.wikipedia.org/wiki/Valle_de_Uco" },
+  { "name": "La Carrera", "gi_type": "IG", "parent": "Valle de Uco", "aliases": [], "source_url": "https://es.wikipedia.org/wiki/Valle_de_Uco" },
+  { "name": "Pampa El Cepillo", "gi_type": "IG", "parent": "Valle de Uco", "aliases": [], "source_url": "https://es.wikipedia.org/wiki/Valle_de_Uco" },
+  { "name": "San Pablo", "gi_type": "IG", "parent": "Valle de Uco", "aliases": [], "source_url": "https://es.wikipedia.org/wiki/Valle_de_Uco" },
+
+  { "name": "San Juan", "gi_type": "region", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Calingasta", "gi_type": "department", "parent": "San Juan", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Ullum", "gi_type": "department", "parent": "San Juan", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Zonda", "gi_type": "department", "parent": "San Juan", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Tulum Valley", "gi_type": "valley", "parent": "San Juan", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Pedernal", "gi_type": "valley", "parent": "San Juan", "aliases": ["Pedernal Valley"], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+
+  { "name": "La Rioja", "gi_type": "region", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Famatina", "gi_type": "valley", "parent": "La Rioja", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+
+  { "name": "Catamarca", "gi_type": "region", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Jujuy", "gi_type": "region", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+
+  { "name": "Salta", "gi_type": "region", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Cafayate", "gi_type": "department", "parent": "Salta", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Cachi", "gi_type": "department", "parent": "Salta", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+
+  { "name": "Patagonia", "gi_type": "region", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Rio Negro", "gi_type": "province", "parent": "Patagonia", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Neuquen", "gi_type": "province", "parent": "Patagonia", "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+
+  { "name": "Chubut", "gi_type": "region", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Buenos Aires", "gi_type": "region", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" },
+  { "name": "Tucuman", "gi_type": "region", "parent": null, "aliases": [], "source_url": "https://en.wikipedia.org/wiki/Argentine_wine" }
+]

@@ -1380,28 +1380,28 @@
       "members": [
         {
           "type": "appellation",
-          "id": 7101,
+          "id": 8690,
           "name": "Swartland",
           "rank": 1,
           "note": "A Wine of Origin district, not a European PDO, so the rules govern origin and nothing else. That's the point here."
         },
         {
           "type": "appellation",
-          "id": 7447,
+          "id": 8681,
           "name": "Paardeberg",
           "rank": 2,
           "note": "Decomposed granite. Most of the wines worth buying come off this hill."
         },
         {
           "type": "appellation",
-          "id": 7522,
+          "id": 8692,
           "name": "Riebeekberg",
           "rank": 3,
           "note": "Shale and slate on the other side. Tighter wines, and named on more labels every year."
         },
         {
           "type": "appellation",
-          "id": 7071,
+          "id": 8674,
           "name": "Coastal Region",
           "rank": 4,
           "note": "The catch-all above it, which tells you nothing and appears on plenty of good bottles."
