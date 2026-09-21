@@ -131,7 +131,11 @@ async function main() {
   const displayByVivcPrime = new Map<string, string>();
   for (const h of heads) for (const id of h.vivc) {
     const prime = varieties[id]?.prime;
-    if (prime && !displayByVivcPrime.has(prime)) displayByVivcPrime.set(prime, h.name);
+    // Only a row whose VIVC number is Wikidata's own statement lends its name
+    // ("Gouais blanc" for HEUNISCH WEISS). A thin item that took its number
+    // from a synonym must not: Heben would print as "Pansale".
+    const named = h.vivcVia === "wikidata";
+    if (prime && named && !displayByVivcPrime.has(prime)) displayByVivcPrime.set(prime, h.name);
   }
 
   const pinned: Record<string, number> = existsSync(IDS_PATH) ? readJson<Record<string, number>>(IDS_PATH) : {};
