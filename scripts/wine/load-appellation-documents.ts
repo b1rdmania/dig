@@ -2,7 +2,9 @@
  * load-appellation-documents.ts - the rules as text.
  *
  * Reads:
- *   data/wine/raw/inao/cdc-text/*.txt   (285 French cahiers des charges)
+ *   data/wine/raw/inao/cdc-text/*.txt   (French cahiers des charges; run extract-inao-text.ts first.
+ *                                        Bundles are split and every text is checked against its
+ *                                        own header - see inao-cahiers.ts)
  *   data/wine/raw/inao/lists/inao-ref-produit-siqo.csv (slug -> accented INAO title)
  *   data/wine/raw/masaf/index.csv + masaf/text/*.txt    (521 Italian disciplinari)
  *   data/wine/raw/mapa/index.csv  + mapa/text/*.txt     (147 Spanish pliegos)
@@ -18,6 +20,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
+import { cahierFor, isGarbled, splitCahiers } from "./inao-cahiers";
 import { RAW, connect, insertMany, logLoad, na, norm, readCsv, upsertSource } from "./lib";
 
 const MIN_CHARS = 500;
@@ -36,7 +39,7 @@ function sha256(path: string): string | null {
 async function main() {
   const pool = connect();
 
-  await upsertSource(pool, { slug: "inao", name: "INAO - cahiers des charges (FR)", licence: "public administrative documents; INAO boundaries under Licence Ouverte", pulled_at: "2026-09-03", notes: "PDFs + extracted text; 285 wine cahiers extracted" });
+  await upsertSource(pool, { slug: "inao", name: "INAO - cahiers des charges (FR)", licence: "public administrative documents; INAO boundaries under Licence Ouverte", pulled_at: "2026-09-03", notes: "PDFs + extracted text; bundles split per cahier, every text checked against its own header" });
   await upsertSource(pool, { slug: "masaf", name: "MASAF - disciplinari di produzione (IT)", licence: "government publication", pulled_at: "2026-09-03", notes: "521 disciplinari; catalogoviti (variety register) deliberately not loaded" });
   await upsertSource(pool, { slug: "mapa", name: "MAPA - pliegos de condiciones (ES)", licence: "government publication", pulled_at: "2026-09-03", notes: "149 indexed pliegos, 147 with extracted text" });
 
@@ -65,11 +68,31 @@ async function main() {
   const titleFromSlug: string[] = [];
 
   // ---- INAO ---------------------------------------------------------------
+  // A file name is no evidence of what the PDF holds (see inao-cahiers.ts).
+  // Pass 1 reads every text once and indexes every cahier found inside a
+  // bundle. Pass 2 files a text under a slug only when a header names it.
   const inaoDir = resolve(RAW, "inao", "cdc-text");
-  for (const f of readdirSync(inaoDir).filter((x) => x.endsWith(".txt")).sort()) {
+  const inaoFiles = readdirSync(inaoDir).filter((x) => x.endsWith(".txt")).sort();
+  const inaoText = new Map<string, string>();
+  const sectionBySlug = new Map<string, { text: string; from: string }>();
+  for (const f of inaoFiles) {
     const slug = f.replace(/\.txt$/, "");
     const text = readFileSync(resolve(inaoDir, f), "utf8");
-    if (text.trim().length < MIN_CHARS) { skipped.inao.push(`${slug} (${text.trim().length} chars)`); continue; }
+    inaoText.set(slug, text);
+    if (isGarbled(text)) continue;
+    const sections = splitCahiers(text);
+    if (sections.length < 2) continue;
+    for (const sec of sections) {
+      const body = text.slice(sec.start, sec.end);
+      for (const key of [...sec.slugs, sec.slugs.join("-ou-")]) {
+        const held = sectionBySlug.get(key);
+        if (!held || body.length > held.text.length) sectionBySlug.set(key, { text: body, from: slug });
+      }
+    }
+  }
+  const inaoRejected: Record<string, string[]> = { garbled: [], wrong_cahier: [], bundle_without_slug: [] };
+  const inaoHow: Record<string, number> = { whole: 0, section: 0, shared: 0, recovered_from_bundle: 0, slug_without_pdf: 0 };
+  const pushInao = (slug: string, text: string) => {
     let title = inaoTitle.get(slug) ?? null;
     if (!title) { title = titleCase(slug); titleFromSlug.push(slug); }
     const pdf = resolve(RAW, "inao", "cdc", `${slug}.pdf`);
@@ -78,6 +101,22 @@ async function main() {
       sha256: existsSync(pdf) && statSync(pdf).isFile() ? sha256(pdf) : null,
       text, source: "inao", source_ref: slug,
     });
+  };
+  for (const [slug, text] of inaoText) {
+    if (text.trim().length < MIN_CHARS) { skipped.inao.push(`${slug} (${text.trim().length} chars)`); continue; }
+    const v = cahierFor(slug, text);
+    if (v.ok) { inaoHow[v.how]++; pushInao(slug, v.text); continue; }
+    const other = sectionBySlug.get(slug) ?? slug.split("-ou-").map((p) => sectionBySlug.get(p)).find(Boolean);
+    if (other) { inaoHow.recovered_from_bundle++; pushInao(slug, other.text); continue; }
+    inaoRejected[v.reason].push(v.found.length ? `${slug} (holds ${v.found.slice(0, 3).join(", ")})` : slug);
+  }
+  // Cahiers that sit inside a bundle but never had a PDF of their own
+  // (Romanee-Conti, Echezeaux, Corton-Charlemagne). Wine appellations only.
+  for (const [slug, sec] of sectionBySlug) {
+    if (inaoText.has(slug) || !inaoTitle.has(slug) || slug.includes("-ou-")) continue;
+    if ([...inaoText.keys()].some((k) => k.split("-ou-").includes(slug))) continue;
+    inaoHow.slug_without_pdf++;
+    pushInao(slug, sec.text);
   }
 
   // ---- MASAF and MAPA (index.csv + text/<slug>.txt) -----------------------
@@ -214,6 +253,8 @@ async function main() {
     skipped_under_500_chars: skipped,
     index_rows_without_text: missingText,
     inao_titles_from_slug: titleFromSlug,
+    inao_filed_by: inaoHow,
+    inao_rejected: inaoRejected,
     ambiguous_name_norm: [...new Set(ambiguous)].slice(0, 15),
   };
 
