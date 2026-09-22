@@ -140,7 +140,7 @@ const FR_NOISE = [
 ];
 
 const FR_START = [
-  { re: /\n[^\n]*informations? sur (?:la qualit[ée] et )?les caract[ée]ristiques d[ue]s? produits?[^\n]*\n/i, name: "Informations sur la qualité et les caractéristiques du produit" },
+  { re: /\n[^\n]*informations? sur (?:la qualit[ée] et )?les caract[ée]ristiques d[ue]s? (?:produits?|vins)[^\n]*\n/i, name: "Informations sur la qualité et les caractéristiques du produit" },
   { re: /\n[^\n]*sp[ée]cificit[ée] du produit[^\n]*\n/i, name: "Spécificité du produit" },
 ];
 const FR_END = /\n[^\n]*(interactions? causales?|lien causal|lien entre la sp[ée]cificit[ée]|sp[ée]cificit[ée] de la zone g[ée]ographique|3°\s*-)[^\n]*\n/i;

@@ -3,6 +3,8 @@
 # (docs/wine-bore-data-audit-2026-09-21.md). Second pass added migration 035 and
 # changed the get_appellation / get_grape tool output, so this now runs the
 # migration first and deploys the api last. No web deploy, persona untouched.
+# 2026-09-22 added migration 036 (wine.appellation_taste) and step 6b,
+# load-appellation-taste (docs/wine-bore-taste-2026-09-22.md).
 # This replaces ops/reload-winebore-grapes.sh; the grape reload is step 3 here.
 #
 # Usage:  ops/reload-winebore-data.sh
@@ -12,12 +14,14 @@
 # Steps, in order:
 #   0 migrate:up                   migration 035: appellations.base_yield_hl, butoir_yield_hl, yield_rules;
 #                                  appellation_grapes.named_in_rules; grape_names.uses (additive; old api code is unaffected)
+#                                  migration 036: wine.appellation_taste (additive; old api code is unaffected)
 #   1 load-appellations            wine.appellations (upsert, ids kept), appellation_names, appellation_grapes
 #   2 load-gi-lists                wine.appellations + appellation_names for US, AU, NZ, ZA, CL, AR (pinned ids)
 #   3 load-grapes                  wine.grapes (pinned ids), grape_names (+ uses), appellation_grapes.grape_id
 #   4 resolve-wine-grapes          wine.wine_grapes.grape_id
 #   5 load-appellation-documents   wine.appellation_documents
 #   6 load-rule-facts              wine.appellations base_yield_hl / butoir_yield_hl / yield_rules, appellation_grapes.named_in_rules
+#  6b load-appellation-taste       wine.appellation_taste (the organoleptic clause per appellation, document and style; upsert, ids kept)
 #   7 resolve-appellations         wine.wines.appellation_id, appellation_names (kind=lwin), synthetic appellations
 #   8 producer-merge               wine.wines.producer_id, listings.producer_id, producers.wine_count, producer_links (kind=merged_into)
 #   9 search-vectors               search_vector on every wine table
@@ -51,9 +55,10 @@ checks() {
   echo "   producers with Live wines: $(psqlp "select count(*) from wine.producers where wine_count>0")"
   echo "   La Tache base / butoir: $(psqlp "select coalesce(base_yield_hl::text,'-')||' / '||coalesce(butoir_yield_hl::text,'-') from wine.appellations where name_norm='la tache'" 2>/dev/null || echo 'no column yet')"
   echo "   Etna grapes the rules name: $(psqlp "select string_agg(distinct grape_name_raw, ', ') from wine.appellation_grapes g join wine.appellations a on a.id=g.appellation_id where a.name='Etna' and g.named_in_rules" 2>/dev/null || echo 'no column yet')"
+  echo "   Chablis grand cru taste clause: $(psqlp "select coalesce(left(t.clause_text, 60), '-') from wine.appellation_taste t join wine.appellations a on a.id=t.appellation_id where a.name_norm='chablis grand cru' limit 1" 2>/dev/null || echo 'no table yet')"
 }
 
-echo "== migrate (035, additive)"
+echo "== migrate (035 and 036, additive)"
 DATABASE_URL="$PROD" pnpm --filter @dig/db migrate:up | tail -3
 
 echo "== before"; checks
@@ -64,11 +69,12 @@ run load-grapes.ts
 run resolve-wine-grapes.ts
 run load-appellation-documents.ts
 run load-rule-facts.ts
+run load-appellation-taste.ts
 run resolve-appellations.ts
 run producer-merge.ts
 run search-vectors.ts
 run load-pack.ts
-psqlp "ANALYZE wine.appellations; ANALYZE wine.appellation_names; ANALYZE wine.appellation_grapes; ANALYZE wine.appellation_documents; ANALYZE wine.grapes; ANALYZE wine.grape_names; ANALYZE wine.wine_grapes; ANALYZE wine.wines; ANALYZE wine.producers; ANALYZE wine.producer_links; ANALYZE wine.listings"  # grape_names.uses and named_in_rules are covered by the table ANALYZE above
+psqlp "ANALYZE wine.appellations; ANALYZE wine.appellation_names; ANALYZE wine.appellation_grapes; ANALYZE wine.appellation_documents; ANALYZE wine.grapes; ANALYZE wine.grape_names; ANALYZE wine.wine_grapes; ANALYZE wine.wines; ANALYZE wine.producers; ANALYZE wine.producer_links; ANALYZE wine.listings; ANALYZE wine.appellation_taste"  # grape_names.uses and named_in_rules are covered by the table ANALYZE above
 
 echo "== after"; checks
 # Expected after, from the local run on 2026-09-21:
@@ -77,6 +83,7 @@ echo "== after"; checks
 #   La Tache 35 / 49, Etna: Carricante, Catarratto Bianco Comune, Catarratto Bianco Lucido,
 #   Nerello Cappuccio, Nerello Mascalese, Trebbiano Toscano.
 #   PDO grape strings resolved is 53,656 after the second pass.
+#   Chablis grand cru taste clause: "Le « Chablis grand cru » est un vin blanc sec, vif et fruité..." (22 Sep).
 pkill -f "fly proxy 15432" || true
 
 echo "== deploy api (tool output reads the new columns)"

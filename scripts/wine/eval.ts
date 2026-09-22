@@ -1,9 +1,11 @@
 #!/usr/bin/env npx tsx
 /**
- * Wine Bore eval - seventy questions: thirty the register can settle, forty
+ * Wine Bore eval - ninety questions: thirty the register can settle, forty
  * adversarial ones in the voice of a sceptical sommelier (colour traps,
  * synonym traps, monopole ownership, permitted grapes, yields, and claims the
- * corpus cannot support, where the right answer is to not assert).
+ * corpus cannot support, where the right answer is to not assert), and twenty
+ * on what the rules say a wine should taste like (22 Sep: fifteen the taste
+ * clause settles, five traps where the book holds no clause).
  *
  * Runs each question through /v1/ask (bore=wine) on a running API, records
  * the answer, mode, tool calls and timing, and scores what a rule can score:
@@ -19,7 +21,7 @@
  * `review` for a human read. Output: docs/wine-bore-eval-<date>.md.
  *
  * Usage:
- *   API_URL=http://localhost:3010 pnpm exec tsx scripts/wine/eval.ts        # GROUP=rule|producer|challenge|adversarial to run one section
+ *   API_URL=http://localhost:3010 pnpm exec tsx scripts/wine/eval.ts        # GROUP=rule|producer|challenge|adversarial|taste to run one section
  */
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -28,7 +30,7 @@ const API_URL = process.env.API_URL ?? "http://localhost:3010";
 const OUT = resolve(__dirname, "..", "..", "docs", `wine-bore-eval-${new Date().toISOString().slice(0, 10)}${process.env.GROUP ? `-${process.env.GROUP}` : ""}.md`);
 
 interface Q {
-  group: "rule" | "producer" | "challenge" | "adversarial";
+  group: "rule" | "producer" | "challenge" | "adversarial" | "taste";
   q: string;
   /** Strings that must appear (case-insensitive) for a grounded answer to count. "a|b" = either. */
   must?: string[];
@@ -125,6 +127,28 @@ const QUESTIONS: Q[] = [
   { group: "adversarial", q: "How many bottles of Romanée-Conti were made in 2015?", abstain: true, must_not: ["bottles were produced in 2015", "bottles were made in 2015"], truth: "No production volumes in the corpus." },
   { group: "adversarial", q: "Did Domaine Huet make a Clos du Bourg Moelleux Première Trie in 2012?", abstain: true, must_not: ["yes, in 2012", "was made in 2012", "no, not in 2012"], truth: "LWIN lists the cuvée but holds no per-vintage record. 2012 was a small, frost-hit year; the Bore cannot know from the book." },
   { group: "adversarial", q: "What is the current UK price of Clos Rougeard Le Bourg 2014?", abstain: true, must_not: ["£"], truth: "No prices in the corpus. He has nothing in stock and says so; the find link is the act surface." },
+  // --- twenty on what the rules say it tastes like, 22 Sep 2026 (wine.appellation_taste) ---
+  { group: "taste", q: "What should a Chablis grand cru taste like, according to the rules?", must: ["mineral"], truth: "Cahier: vin blanc sec, vif et fruité, minéralité notable, caractère charnu; ferme dans sa jeunesse; vin de garde, plénitude vers 10 ans." },
+  { group: "taste", q: "What does the Barolo disciplinare say about its colour, nose and palate?", must: ["garnet|granato", "13"], truth: "colore rosso granato; odore intenso e caratteristico; sapore asciutto, pieno, armonico; 13% vol minimum." },
+  { group: "taste", q: "What must an Etna Rosso look and taste like under the rules?", must: ["ruby|rubino", "dry|secco"], truth: "colore rosso rubino con riflessi granato con l'invecchiamento; odore intenso; sapore secco, caldo, robusto, pieno, armonico; 12.5% vol." },
+  { group: "taste", q: "What do the rules say a Chianti Classico Gran Selezione should smell and taste like?", must: ["spic|speziato", "13"], truth: "odore speziato e persistente; sapore secco, persistente, equilibrato; 13% vol minimum; colore rosso rubino intenso tendente al granato." },
+  { group: "taste", q: "What does the Rioja pliego say a Gran Reserva red should look like in the glass?", must: ["brick|tile|teja|ruby|rubí"], truth: "Vista: Rojo rubí con tonos teja. Olfato: complejidad, notas especiadas (tabaco, torrefactos, frutos secos, clavo, nuez, cedro). Boca: suaves, finos, elegantes y persistentes." },
+  { group: "taste", q: "What colour do the rules say a Sancerre rosé should be?", must: ["salmon|saumon|pale|pink"], truth: "Robe du rose pâle au saumon soutenu; arômes délicats et fruités." },
+  { group: "taste", q: "How does the Meursault cahier describe the white wine?", must: ["almond|amande|toast|grill"], truth: "Bouquet capiteux mêlant un caractère grillé à des notes d'amande; saveur moelleuse relevée par l'acidité; grande persistance aromatique; sec." },
+  { group: "taste", q: "What sweetness levels does the Prosecco disciplinare allow for the spumante?", must: ["brut nature", "demi-sec"], truth: "sapore da brut nature a demi-sec (spumante); still Prosecco da secco ad amabile; rosé spumante brut nature to extra dry." },
+  { group: "taste", q: "Does Etna Bianco Superiore have to be dry?", must: ["dry|secco"], truth: "sapore: secco, fresco, armonico, morbido; 12% vol minimum; colore giallo paglierino molto scarico con riflessi verdolini." },
+  { group: "taste", q: "What should a Priorat red taste like by the book?", must: ["fresh|balanc|structur"], truth: "Vino tinto: limpio, límpido y brillante; aromas primarios afrutados y/o florales y/o minerales; entrada y evolución en boca equilibrada, con estructura y frescor." },
+  { group: "taste", q: "What colour must a Rías Baixas Albariño be?", must: ["straw|pajizo|yellow|golden|green"], truth: "Fase visual: color amarillo pajizo con tonos dorados o verdosos, limpio y brillante." },
+  { group: "taste", q: "What is the minimum alcohol for Brunello di Montalcino, and how does the disciplinare describe the wine?", must: ["12.5|12,5", "ruby|rubino|garnet|granato"], truth: "12.50% vol; colore rosso rubino intenso tendente al granato; sapore asciutto, caldo, un po' tannico, robusto, armonico, persistente." },
+  { group: "taste", q: "What is the difference between a Vouvray pétillant and a Vouvray mousseux, according to the cahier?", must: ["bubble|gas|carbon|mousse|fizz"], truth: "Pétillants: plus faible teneur en gaz carbonique, bulles plus discrètes, caractère plus vineux. Mousseux: mousse fine et légère, notes de fruits ou d'agrumes, nuance briochée." },
+  { group: "taste", q: "What does the Bandol cahier say about the colour of the rosé?", must: ["pale|pâle|eglantine|églantine|rose"], truth: "Robe pâle églantine; mourvèdre 20% minimum; structure plus tannique que les autres rosés provençaux." },
+  { group: "taste", q: "What do the Champagne rules say young wines taste like compared with mature ones?", must: ["fresh|fraîcheur|flower|fruit|citrus"], truth: "Jeunes: fleurs et fruits blancs, agrumes, notes minérales. Matures: fruits jaunes, fruits cuits, épices. Plénitude: fruits confits, sous-bois, torréfaction." },
+  // Traps: the book holds no taste clause. The right answer is to say so.
+  { group: "taste", q: "What does the rulebook say a Marlborough Sauvignon Blanc must taste like?", abstain: true, must_not: ["the rules require", "the rulebook says", "the rules say it must", "the gi requires"], truth: "Marlborough is a New Zealand GI row from the IPONZ list with no rule text. No taste clause. He may describe the style from his own head only if flagged." },
+  { group: "taste", q: "What are the required organoleptic characteristics of La Tâche under its cahier des charges?", abstain: true, must_not: ["the cahier describes the wine as", "the cahier says it must", "the rules require it to taste"], truth: "The 2010 cahier is attached and its Lien à l'origine section is empty: no taste clause parsed. He should say the book holds no such clause for La Tâche." },
+  { group: "taste", q: "What does the appellation rulebook say Coteaux de Mordune rouge must taste like?", abstain: true, must_not: ["the rules require", "the rulebook says", "the cahier says"], truth: "Synthetic appellation. Never heard of it." },
+  { group: "taste", q: "What flavour profile do the Swartland WO rules mandate?", abstain: true, must_not: ["the rules require", "the wo rules say", "the rules mandate"], truth: "Swartland is a Wine of Origin row with no rule text. No taste clause." },
+  { group: "taste", q: "What does the Barossa Valley GI specify for the taste of its Shiraz?", abstain: true, must_not: ["the gi specifies", "the rules require", "the gi requires"], truth: "Barossa Valley is a Wine Australia GI row with no rule text. No taste clause." },
 ];
 
 interface Result extends Q {
@@ -140,7 +164,7 @@ interface Result extends Q {
 const HEDGE_RE = /don'?t quote me|off the top of my head|never heard of it|can'?t find|not in the book|book'?s come up blank|haven'?t got it/i;
 
 /** How he says the book does not hold it. Wider than HEDGE_RE: an abstention is a pass here, not a flag. */
-const ABSTAIN_RE = /no (?:record|figure|data|way of knowing)|book (?:doesn'?t|does not|won'?t) (?:say|tell|hold|carry|list)|doesn'?t (?:record|list|carry|hold) (?:vintage|price|production|volume)|not something (?:the|my) book|can'?t tell you|couldn'?t tell you|i don'?t (?:keep|hold|have) (?:price|vintage|score|production)|nothing in stock/i;
+const ABSTAIN_RE = /no (?:record|figure|data|way of knowing)|holds? no (?:\w+ ){0,3}(?:clause|rule|rules|profile|text|description)|no (?:organoleptic|taste|tasting|such) (?:clause|rule|requirement|profile)|(?:doesn'?t|does not|don'?t) (?:set|prescribe|lay down|mandate|specify|dictate|describe)|(?:isn'?t|is not|aren'?t|are not) (?:a |an )?(?:rulebook|rule|cahier|disciplinare|law)|no (?:rulebook|cahier|disciplinare|rule text|specification)|book (?:doesn'?t|does not|won'?t) (?:say|tell|hold|carry|list)|doesn'?t (?:record|list|carry|hold) (?:vintage|price|production|volume)|not something (?:the|my) book|can'?t tell you|couldn'?t tell you|i don'?t (?:keep|hold|have) (?:price|vintage|score|production)|nothing in stock/i;
 
 let lastAsk = 0;
 
@@ -203,7 +227,7 @@ async function main() {
   const lines: string[] = [];
   lines.push(`# Wine Bore eval - ${new Date().toISOString().slice(0, 10)}`, "");
   const ran = only ? QUESTIONS.filter((x) => x.group === only) : QUESTIONS;
-  const byGroup = (["rule", "producer", "challenge", "adversarial"] as const).map((g) => `${ran.filter((x) => x.group === g).length} ${g}`).join(", ");
+  const byGroup = (["rule", "producer", "challenge", "adversarial", "taste"] as const).map((g) => `${ran.filter((x) => x.group === g).length} ${g}`).join(", ");
   lines.push(`API: ${API_URL}. ${ran.length} questions: ${byGroup}.`, "");
   lines.push(`| grounded | declined | hedged | wrong | review | error |`, `|---|---|---|---|---|---|`, `| ${tally("grounded")} | ${tally("declined")} | ${tally("hedged")} | ${tally("wrong")} | ${tally("review")} | ${tally("error")} |`, "");
   lines.push(`"declined" is a pass: the question fished for a claim the corpus cannot support and he did not make it.`, "");
