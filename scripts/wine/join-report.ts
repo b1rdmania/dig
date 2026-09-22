@@ -88,6 +88,7 @@ async function main() {
     UNION ALL SELECT 'appellation_names', count(*) FROM wine.appellation_names
     UNION ALL SELECT 'appellation_names (kind=lwin)', count(*) FROM wine.appellation_names WHERE kind = 'lwin'
     UNION ALL SELECT 'appellation_documents', count(*) FROM wine.appellation_documents
+    UNION ALL SELECT 'appellation_taste', count(*) FROM wine.appellation_taste
     UNION ALL SELECT 'appellation_grapes', count(*) FROM wine.appellation_grapes
     UNION ALL SELECT 'grapes', count(*) FROM wine.grapes
     UNION ALL SELECT 'grape_names', count(*) FROM wine.grape_names
@@ -215,6 +216,20 @@ async function main() {
            (SELECT count(*)::int FROM wine.appellations WHERE source <> 'lwin') a
       FROM wine.appellation_documents WHERE appellation_id IS NOT NULL`))[0];
   L.push(`Register appellations with at least one rule document: ${appWithDoc.c} / ${appWithDoc.a} = ${pct(appWithDoc.c, appWithDoc.a)}. The three ministries publish FR, IT and ES only.`);
+  L.push("");
+
+  L.push("### Taste clauses (what the rules say it tastes like, migration 036)");
+  L.push("");
+  const taste = await q(pool, `
+    SELECT d.source, d.country, count(*)::int documents,
+           count(*) FILTER (WHERE EXISTS (SELECT 1 FROM wine.appellation_taste t WHERE t.source_document_id = d.id))::int with_clause,
+           (SELECT count(*)::int FROM wine.appellation_taste t JOIN wine.appellation_documents x ON x.id = t.source_document_id WHERE x.source = d.source) clauses
+      FROM wine.appellation_documents d WHERE d.appellation_id IS NOT NULL GROUP BY 1,2 ORDER BY 3 DESC`);
+  L.push(table(["source", "country", "documents attached", "with a taste clause", "rate", "clauses (styles)"],
+    taste.map((r) => [r.source, r.country, r.documents, r.with_clause, pct(r.with_clause, r.documents), r.clauses])));
+  L.push("");
+  const tasteColour = await q(pool, `SELECT coalesce(colour, 'unknown') colour, count(*)::int c FROM wine.appellation_taste GROUP BY 1 ORDER BY 2 DESC`);
+  L.push(`Clauses by colour or style: ${tasteColour.map((r) => `${r.colour} ${r.c}`).join(", ")}. Verbatim in the source language; the Bore's model translates at answer time. Gap list and parser rules: docs/wine-bore-taste-2026-09-22.md.`);
   L.push("");
 
   L.push("### Search vectors");

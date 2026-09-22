@@ -90,8 +90,8 @@ Entity model: `artist | label | master` are the only public entities. `release_s
   treating the bot theory as diagnosed.
 
 ## Database
-- Schemas: `auth`, `ingest`, `catalog`, `enrich`, `wine` (Wine Bore corpus - LWIN spine, EU register, cahiers; loaders in `scripts/wine/`, design in `docs/wine-bore-build.md`)
-- Migrations: `packages/db/migrations/` (001–034), CI-gated by `scripts/migration-parity-audit.ts`
+- Schemas: `auth`, `ingest`, `catalog`, `enrich`, `wine` (Wine Bore corpus - LWIN spine, EU register, cahiers and their taste clauses; loaders in `scripts/wine/`, design in `docs/wine-bore-build.md`)
+- Migrations: `packages/db/migrations/` (001–036), CI-gated by `scripts/migration-parity-audit.ts`
 - Schema types: `packages/db/src/schema.ts`
 - Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG, port 5433)
 - Production: `dig-db-scene` (Fly LHR, shared-cpu-2x/2GB, 10GB volume)

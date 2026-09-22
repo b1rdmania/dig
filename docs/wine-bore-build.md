@@ -19,7 +19,7 @@ What changes in the engine to make that true:
   `record`, so the public gate, streaming and caps are shared.
 - Wine Bore gets its own monthly counter row and its own daily per-IP map.
 
-## Schema: `wine` (migrations 034, 035)
+## Schema: `wine` (migrations 034, 035, 036)
 
 | Table | Spine | Notes |
 |---|---|---|
@@ -27,6 +27,7 @@ What changes in the engine to make that true:
 | appellations | id | EU register row per protected name; non-EU designations added by the resolver with `source='lwin'` |
 | appellation_names | (appellation_id, name_norm, kind) | every spelling, incl. the strings LWIN uses |
 | appellation_documents | (source, source_ref) | cahier / disciplinare / pliego full text, tsvector |
+| appellation_taste | (appellation_id, doc_source, doc_source_ref, style_key) | the organoleptic clause per appellation, document and style, verbatim in its own language, with min_alcohol and sweetness where stated (036) |
 | grapes, grape_names | id | Wikidata varieties + synonyms |
 | appellation_grapes | (appellation_id, grape_name_raw, kind, category) | permitted varieties from the Sci Data PDO set; grape_id NULL when unresolved |
 | producers, producer_links | id | LWIN producer per (title, name, country); links to Wikidata / directories / Exa / monopoly |
@@ -66,6 +67,7 @@ Rules that hold across every loader:
 | join-report.ts | load_log + live counts | docs/wine-bore-join-report.md | agent C |
 | search-vectors.ts | all | search_vector columns | agent C |
 | load-gi-lists.ts | ttb-ava/avas.geojson, wine-australia-gi/*.geojson, scripts/wine/gi-lists/{nz,za,cl,ar}.json + ids.json | appellations, appellation_names for US, AU, NZ, ZA, CL, AR (run before resolve-appellations) | 09-21 |
+| load-appellation-taste.ts | appellation_documents.text | appellation_taste (run after load-appellation-documents; upsert, ids kept) | 09-22 |
 | load-rule-facts.ts | appellation_documents.text, appellation_grapes, grape_names | appellations.base_yield_hl / butoir_yield_hl / yield_rules, appellation_grapes.named_in_rules (run after load-appellation-documents and load-grapes) | 09-21 |
 | producer-merge.ts | producers, wines, lwin/lwin.csv | wines.producer_id, listings.producer_id, producers.wine_count, producer_links(kind=merged_into) (run after resolve-appellations) | 09-21 |
 | fetch-vivc-names.py, build-grape-synonyms.ts | vivc.de, wikidata/03_grape_varieties.csv | scripts/wine/grape-synonyms.json (load-grapes.ts reads it) | 09-21 |
@@ -309,3 +311,14 @@ has nothing in stock and says so in voice.
   30 of 30 on the original set, 38 of 40 adversarial (33 correct, 5 declined), 2 prompt-cause
   assertions, 0 data-cause failures. `eval.ts` paces under the 10-asks-a-minute limit; `must_not`
   strings are whole claims.
+- 09-22 (taste): migration 036 - `wine.appellation_taste`. `taste-rules.ts` reads the organoleptic
+  clause out of each rule text with code (FR "Informations sur la qualité et les caractéristiques du
+  produit", IT "Caratteristiche al consumo" colore / odore / sapore per tipologia, ES "Características
+  organolépticas" vista / olfato / boca per type) and `load-appellation-taste.ts` stores it verbatim,
+  per style, with the document cited. No model call; the Bore's model translates at answer time.
+  1,034 of 1,072 attached documents yield a clause (FR 383, IT 508, ES 143); 5,675 clauses.
+  `get_appellation` carries `what_the_rules_say_it_tastes_like` (eight styles, 520 characters each),
+  absent when the book holds no clause. Gaps: 17 famous French names with no cahier at all, and the
+  2010-11 Burgundy grand cru cahiers (La Tâche, Musigny, Montrachet, Richebourg, Corton) whose "Lien à
+  l'origine" is an empty heading. Write-up: `docs/wine-bore-taste-2026-09-22.md`; eval (90 questions,
+  20 in group `taste`): `docs/wine-bore-eval-2026-09-22.md`. Reload script gains step 6b.
