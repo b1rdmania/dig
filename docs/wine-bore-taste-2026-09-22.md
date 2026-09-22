@@ -244,8 +244,9 @@ then each miss read by hand.
 ## Spend
 
 Extraction: $0.00 (code only; no model call).
-Eval: see `docs/wine-bore-eval-2026-09-22.md` for the before and after reading of the
-OpenRouter key's usage counter.
+Eval: $0.94 on the OpenRouter key ($26.09 before, $27.03 after; $0.87 for the smoke question
+and the 90-question run, $0.07 for a second start of the harness by mistake, killed after a few
+questions). Cap was $5.
 
 ## Checks run
 
