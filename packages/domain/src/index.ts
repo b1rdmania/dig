@@ -176,6 +176,7 @@ export {
   type WineEntityType,
   type WineSearchHit,
   type AppellationDetail,
+  type AppellationTaste,
   type ProducerDetail as WineProducerDetail,
   type WineDetail,
   type GrapeDetail,

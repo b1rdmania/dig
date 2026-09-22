@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { unlinkAll, looksLikeUncheckedBottle, shapeGrapes, shapeYields } from "../routes/v1/ask/wine-bore.js";
+import { unlinkAll, looksLikeUncheckedBottle, shapeGrapes, shapeYields, shapeTaste } from "../routes/v1/ask/wine-bore.js";
 
 /**
  * Wine Bore grounds by evidence, not links: no URL leaves the shop, and a
@@ -59,5 +59,39 @@ describe("get_appellation output", () => {
     const out = shapeGrapes([{ name: "Riesling", colour_code: "B", kind: "oiv", named_in_rules: null }]);
     expect(out.permitted_grapes).toEqual(["Riesling (B)"]);
     expect(out).toHaveProperty("permitted_grapes_note");
+  });
+});
+
+describe("what the rules say it tastes like", () => {
+  const t = (style: string | null, colour: "red" | "white" | "rose" | "sparkling" | "sweet" | "fortified" | null, clause_text: string, extra: Partial<{ min_alcohol: number | null; sweetness: string | null }> = {}) => ({
+    id: 1, style, colour, language: "it", clause_text, min_alcohol: null, sweetness: null, ...extra,
+    document: { id: 10727, doc_type: "disciplinare", title: "Etna", source: "masaf", source_ref: "etna" },
+  });
+  it("is absent when the book holds no clause", () => {
+    expect(shapeTaste([])).toEqual({});
+  });
+  it("gives each style verbatim, with the figures and the citation", () => {
+    const out = shapeTaste([t("Etna rosso", "red", "colore: rosso rubino;\nodore: intenso, caratteristico;\nsapore: secco, caldo, robusto, pieno, armonico;", { min_alcohol: 12.5, sweetness: "dry" })]) as any;
+    const block = out.what_the_rules_say_it_tastes_like;
+    expect(block.styles).toHaveLength(1);
+    expect(block.styles[0]).toMatchObject({ applies_to: "Etna rosso", colour_or_style: "red", language: "Italian", min_alcohol_pct: 12.5, sweetness: "dry" });
+    expect(block.styles[0].rule_text).toMatch(/^colore: rosso rubino;/);
+    expect(block.styles[0].cited_from).toBe('disciplinare "Etna" (document 10727)');
+    expect(block).not.toHaveProperty("more_styles_in_the_book");
+  });
+  it("caps the clause and the number of styles so the card fits the ask loop", () => {
+    const long = "Les vins blancs " + "présentent des arômes de fleurs blanches et une bouche tendue. ".repeat(20);
+    const many = Array.from({ length: 11 }, (_, i) => t(`style ${i}`, null, long));
+    const out = shapeTaste(many) as any;
+    const block = out.what_the_rules_say_it_tastes_like;
+    expect(block.styles).toHaveLength(8);
+    expect(block.more_styles_in_the_book).toBe(3);
+    expect(block.styles[0].rule_text.length).toBeLessThan(540);
+    expect(block.styles[0].rule_text).toMatch(/\[…\]$/);
+    expect(block.styles[0].applies_to).toBe("style 0");
+  });
+  it("names the whole appellation when the text does not split by colour", () => {
+    const out = shapeTaste([t(null, "white", "Le « Chablis grand cru » est un vin blanc sec, vif et fruité.")]) as any;
+    expect(out.what_the_rules_say_it_tastes_like.styles[0].applies_to).toBe("all wines of the appellation");
   });
 });

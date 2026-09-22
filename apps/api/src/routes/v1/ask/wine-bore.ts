@@ -18,6 +18,7 @@ import {
   listShelves,
   findUrl,
   type WineEntityType,
+  type AppellationTaste,
 } from "@dig/domain";
 import type { BoreConfig, ProgressEvent, ToolContext, ToolDef } from "./bore.js";
 
@@ -48,7 +49,7 @@ FINDING THINGS (never spoken aloud):
 Match the digging to the question. A simple ask - one appellation, one producer, one grape - needs one or two lookups, then the answer. The customer is standing at the counter; don't disappear into the cellar for five minutes.
 
 - A named appellation, producer, wine or grape → search_cellar to resolve the ID, then the matching get_ call. Batch both in one round when you can.
-- "What grapes can X use", "what does Riserva / Kabinett / Grand Cru mean here", "how much can they crop" → get_appellation. Pass a q (e.g. "cépages", "rendement", "vitigni", "variedades") to pull the clause from the cahier des charges when the customer wants the letter of the rule.
+- "What grapes can X use", "what does Riserva / Kabinett / Grand Cru mean here", "how much can they crop", "what should X taste like", "what colour / nose / palate do the rules require" → get_appellation. Its what_the_rules_say_it_tastes_like block is the legal profile per style, verbatim; put its sense into English and say it is what the rules require. If the block is absent, the book holds no taste clause for that name: say so, and do not invent one. Pass a q (e.g. "cépages", "rendement", "vitigni", "variedades") to pull the clause from the cahier des charges when the customer wants the letter of the rule.
 - "Who makes good X", "what's the producer's range" → get_producer; its wines list is the range, the classification column says which are the serious cuvées.
 - A specific bottle → get_wine: grapes, appellation, and any listings with a tasting text. The taste text is a monopoly's own note, in Swedish - read it, don't quote it verbatim.
 - "What is Trousseau", "where is Mencía grown" → get_grape: synonyms, and which appellations permit it.
@@ -83,7 +84,7 @@ export const WINE_TOOLS: ToolDef[] = [
   {
     name: "get_appellation",
     description:
-      "The register entry for a protected name: type (PDO/PGI), the grapes the rule text names (first) and the other varieties authorised in the area (marked), the base yield and the ceiling (rendement butoir) from the rule text where it parses, the EU register figure, density, other spellings, protection date, the producers with most wines under it, and up to three official rule documents (cahier des charges / disciplinare / pliego). Pass q to get the matching clause from those documents.",
+      "The register entry for a protected name: type (PDO/PGI), the grapes the rule text names (first) and the other varieties authorised in the area (marked), the base yield and the ceiling (rendement butoir) from the rule text where it parses, the EU register figure, density, other spellings, protection date, what the rule text says the wine must look, smell and taste like per colour or style (verbatim, with the document cited; absent when the book holds no clause), the producers with most wines under it, and up to three official rule documents (cahier des charges / disciplinare / pliego). Pass q to get the matching clause from those documents.",
     input_schema: {
       type: "object",
       properties: {
@@ -189,6 +190,41 @@ export function shapeYields(d: AppellationYields): Record<string, unknown> {
   return out;
 }
 
+/** Clause text cap per style and styles cap per appellation: the whole block must fit the ask loop's context beside the rest of the card. */
+const TASTE_CLAUSE_CHARS = 520;
+const TASTE_STYLES_MAX = 8;
+
+/**
+ * What the rule text says the wine must look, smell and taste like: verbatim
+ * in its own language (the model translates), per style, with the document it
+ * came from so he can say "the disciplinare says". Absent when the book holds
+ * no clause, so the persona's "the book doesn't hold it" line covers it.
+ */
+export function shapeTaste(taste: AppellationTaste[]): Record<string, unknown> {
+  if (!taste.length) return {};
+  const lang: Record<string, string> = { fr: "French", it: "Italian", es: "Spanish", de: "German", pt: "Portuguese" };
+  const shown = taste.slice(0, TASTE_STYLES_MAX);
+  return {
+    what_the_rules_say_it_tastes_like: {
+      note: "Verbatim from the rule document, in its own language. Quote the sense of it in English as what the rules require; this is the legal profile, not a tasting note.",
+      styles: shown.map((t) => {
+        const cut = t.clause_text.length > TASTE_CLAUSE_CHARS;
+        const doc = t.document.doc_type ? `${t.document.doc_type}${t.document.title ? ` "${t.document.title}"` : ""}${t.document.id ? ` (document ${t.document.id})` : ""}` : `${t.document.source} ${t.document.source_ref}`;
+        return {
+          applies_to: t.style ?? "all wines of the appellation",
+          ...(t.colour ? { colour_or_style: t.colour } : {}),
+          rule_text: cut ? `${t.clause_text.slice(0, TASTE_CLAUSE_CHARS).replace(/\s+\S*$/, "")} […]` : t.clause_text,
+          language: lang[t.language] ?? t.language,
+          ...(t.min_alcohol != null ? { min_alcohol_pct: t.min_alcohol } : {}),
+          ...(t.sweetness ? { sweetness: t.sweetness } : {}),
+          cited_from: doc,
+        };
+      }),
+      ...(taste.length > shown.length ? { more_styles_in_the_book: taste.length - shown.length } : {}),
+    },
+  };
+}
+
 export async function executeWineTool(name: string, input: Record<string, unknown>, ctx: ToolContext<WineEvidence>): Promise<unknown> {
   const db = ctx.db as any;
   try {
@@ -211,6 +247,7 @@ export async function executeWineTool(name: string, input: Record<string, unknow
         other_names: d.other_names, categories: d.categories,
         ...shapeGrapes(d.grapes),
         ...shapeYields(d),
+        ...shapeTaste(d.taste),
         min_vines_per_ha: d.min_planting_density,
         legal_instrument: d.legal_instrument,
         rule_documents: d.documents.map((x) => ({ type: x.doc_type, title: x.title, clause: x.excerpt })),

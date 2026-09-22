@@ -359,7 +359,7 @@ const ES_KEY = /^\s*(?:[-–•·]\s*){0,2}(?:\(?[\d.]{1,7}\)?\s+|[a-z][.)]\s+)?
 const ES_TABLE_HEAD = /^\s*fase\s+descripci[óo]n\s*$/i;
 const ES_TABLE_TOKEN = /^\s*(fase\s+visual|fase\s+olfativa|fase\s+gustativa|fase|visual|olfativa|gustativa)\b\s*/i;
 const ES_STYLE_OPEN = /^(los|el|las|la)\s+vinos?\s+(?:[\w\- ]{0,30}?)(tintos?|blancos?|rosados?|claretes?|espumosos?|dulces?|generosos?|licorosos?|de licor|de aguja|jóvenes|j[óo]venes)\b/i;
-const ES_TASTE = /\b(color|aroma|arom[áa]tic|boca|nariz|tanin|fresc|frut|flor|equilibr|estructur|persisten|untuos|ácid|acid|amargo|dulz|sabor|limpio|brillante|capa|ribete|tonos?|notas?|recuerdos?|especi|madera|crianza)\b/i;
+const ES_TASTE = /\b(color|aroma|olor|sabor|burbuja|frescura|arom[áa]tic|boca|nariz|tanin|fresc|frut|flor|equilibr|estructur|persisten|untuos|ácid|acid|amargo|dulz|sabor|limpio|brillante|capa|ribete|tonos?|notas?|recuerdos?|especi|madera|crianza)\b/i;
 
 /** The section ends at the next numbered heading in capitals ("3. PRÁCTICAS ESPECÍFICAS") or a known heading word. */
 function spanishSectionEnd(line: string): boolean {
@@ -431,7 +431,7 @@ export function parseSpanishTaste(text: string): TasteClause[] {
         continue;
       }
     }
-    if (!t) { if (cur?.prose) cur = null; continue; }
+    if (!t) continue; // prose under a label runs to the next label or key line
     if (ES_KEY.test(line)) {
       const fam = keyFamily(line);
       if (!cur || cur.prose || cur.lines.some((x) => keyFamily(x) === fam)) open(pendingLabel, false);
@@ -493,7 +493,7 @@ function spanishSweetness(label: string | null, clause: string): string | null {
   if (/\bsemi ?dulce\b|\bsemidulce\b/i.test(src)) return "medium-sweet";
   if (/\bsemi ?seco\b|\bsemiseco\b/i.test(src)) return "off-dry";
   if (/\bdulces?\b/i.test(src)) return "sweet";
-  if (/\bsecos?\b/i.test(src)) return "dry";
+  if (/(?<!frutos? )(?<!frutas )\bsecos?\b/i.test(src)) return "dry";
   return null;
 }
 
