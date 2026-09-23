@@ -23,6 +23,21 @@ export interface WineSearchHit {
 
 const SEARCH_LIMIT_MAX = 12;
 
+/**
+ * The loaders' name_norm (scripts/wine/text.ts norm) - keep the two identical.
+ * "Château Léoville-Las Cases" -> "chateau leoville las cases".
+ */
+export function normName(s: string): string {
+  return s
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .replace(/[’'`´]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 /** Diacritic-stripped 'simple' tsquery: the vectors were built with unaccent(). */
 function tsq(q: string) {
   const t = buildTsquery(q.normalize("NFKD").replace(/[\u0300-\u036f]/g, ""));
@@ -50,7 +65,7 @@ export async function searchWine(
         ${country ? sql`AND country = ${country}` : sql``}
       ORDER BY rank DESC, name
       LIMIT ${perType}
-    `.execute(db).then((r) => r.rows));
+    `.execute(db).then((r) => r.rows.length > 0 ? r.rows : appellationsNamedIn(db, params.q, country, perType)));
   }
   if (want("producer")) {
     parts.push(sql<WineSearchHit>`
@@ -93,7 +108,7 @@ export async function searchWine(
   // so a misspelt appellation ("Chabli", "Sancere") or a producer typed from
   // memory still lands. Wines are excluded - 190k rows and no trgm index.
   if (hits.length < 3) {
-    const qn = params.q.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const qn = normName(params.q);
     if (qn.length >= 3) {
       const fuzzy: Array<Promise<WineSearchHit[]>> = [];
       if (want("appellation")) {
@@ -130,6 +145,35 @@ export async function searchWine(
   const qn = params.q.trim().toLowerCase();
   hits.sort((a, b) => Number(b.name.toLowerCase() === qn) - Number(a.name.toLowerCase() === qn) || b.rank - a.rank);
   return hits.slice(0, limit).map((h) => ({ ...h, id: Number(h.id), rank: Number(h.rank) }));
+}
+
+/**
+ * Fallback when no appellation has every term of the query: "Marlborough
+ * Sauvignon Blanc" names a place and a grape, so the AND query finds no
+ * appellation. Return the appellations whose name (any register spelling)
+ * appears whole in the query, longest first - "Chablis Grand Cru" before
+ * "Chablis". Rank is the share of the query the name covers.
+ */
+export async function appellationsNamedIn(
+  db: Kysely<any>,
+  q: string,
+  country: string | null,
+  limit: number,
+): Promise<WineSearchHit[]> {
+  const qn = normName(q);
+  if (qn.length < 3) return [];
+  const r = await sql<WineSearchHit>`
+    SELECT 'appellation' AS type, a.id, a.name, a.country || ' · ' || a.gi_type AS context,
+           max(length(n.name_norm))::float / ${qn.length} AS rank
+    FROM wine.appellation_names n JOIN wine.appellations a ON a.id = n.appellation_id
+    WHERE length(n.name_norm) >= 3
+      AND position(' ' || n.name_norm || ' ' IN ${` ${qn} `}) > 0
+      ${country ? sql`AND a.country = ${country}` : sql``}
+    GROUP BY a.id, a.name, a.country, a.gi_type
+    ORDER BY rank DESC, a.name
+    LIMIT ${limit}
+  `.execute(db);
+  return r.rows;
 }
 
 export interface AppellationTaste {
