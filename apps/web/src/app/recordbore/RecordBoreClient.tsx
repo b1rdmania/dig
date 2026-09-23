@@ -587,12 +587,11 @@ export function RecordBoreClient({ opener }: { opener: string }) {
             </div>
           )}
 
-          <p className={s.cap}>
-            In stock: house &amp; techno, 1988&ndash;2008.{" "}
-            {questionsLeft === null
-              ? "A few questions a day."
-              : `${questionsLeft} question${questionsLeft === 1 ? "" : "s"} left.`}
-          </p>
+          {questionsLeft !== null && questionsLeft <= 5 && (
+            <p className={s.cap}>
+              {`${questionsLeft} question${questionsLeft === 1 ? "" : "s"} left.`}
+            </p>
+          )}
         </section>
 
       </main>
