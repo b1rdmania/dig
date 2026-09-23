@@ -233,8 +233,45 @@ async function collectVideos(
 // Invariant: every entity a tool returns to the model is registered as
 // evidence. The answer scrubber (binding.unlinkUncited) removes links to
 // anything NOT in evidence, so a partial registration would strip links to
-// real results. Video pre-fetch is the only thing that stays capped.
+// real results. executeTool enforces this on every result, so a tool that
+// forgets to register (get_artist_collaborators and get_artist_groups did,
+// 09-08 to 09-23) cannot cost the customer a link.
+const DIG_ENTITY_RE = /^https:\/\/app\.dig\.baby\/(master|artist|label)\/(\d+)$/;
+
+export function registerReturnedEntities(result: unknown, evidenceCollector: EvidenceItem[]): void {
+  const walk = (v: unknown): void => {
+    if (Array.isArray(v)) { v.forEach(walk); return; }
+    if (!v || typeof v !== "object") return;
+    const o = v as Record<string, unknown>;
+    const m = typeof o.dig_url === "string" ? DIG_ENTITY_RE.exec(o.dig_url) : null;
+    if (m) {
+      evidenceCollector.push({
+        type: m[1] as EvidenceItem["type"],
+        discogs_id: Number(m[2]),
+        title: String(o.name ?? o.title ?? ""),
+        dig_url: o.dig_url as string,
+      });
+    }
+    Object.values(o).forEach(walk);
+  };
+  walk(result);
+}
+
 export async function executeTool(
+  db: Kysely<Database>,
+  name: string,
+  input: Record<string, unknown>,
+  mediaCollector: MediaItem[],
+  evidenceCollector: EvidenceItem[],
+  errorRef: { count: number },
+  allowedMasterIds: Set<number>,
+): Promise<unknown> {
+  const result = await runTool(db, name, input, mediaCollector, evidenceCollector, errorRef, allowedMasterIds);
+  registerReturnedEntities(result, evidenceCollector);
+  return result;
+}
+
+async function runTool(
   db: Kysely<Database>,
   name: string,
   input: Record<string, unknown>,

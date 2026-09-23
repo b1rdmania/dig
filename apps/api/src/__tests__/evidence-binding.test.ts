@@ -268,3 +268,18 @@ describe("unlinkUncited — links to entities never fetched this turn", () => {
     expect(unlinkUncited(a, [])).toBe("A and B");
   });
 });
+
+describe("registerReturnedEntities (every returned entity is evidence)", () => {
+  it("keeps links to collaborators and group members a graph tool returned", async () => {
+    const { registerReturnedEntities } = await import("../routes/v1/ask/tools.js");
+    const evidence: EvidenceItem[] = [];
+    registerReturnedEntities({
+      collaborators: [{ discogs_id: 7, name: "Robert Owens", dig_url: "https://app.dig.baby/artist/7" }],
+      groups: [{ discogs_id: 9, name: "Fingers Inc.", master_count: 4, dig_url: "https://app.dig.baby/artist/9" }],
+      scene: { dig_url: "https://app.dig.baby/scene/chicago-house" },
+    }, evidence);
+    expect(evidence.map((e) => `${e.type}/${e.discogs_id}`)).toEqual(["artist/7", "artist/9"]);
+    const a = "[Robert Owens](https://app.dig.baby/artist/7) in [Fingers Inc.](https://app.dig.baby/artist/9)";
+    expect(unlinkUncited(a, evidence)).toBe(a);
+  });
+});
