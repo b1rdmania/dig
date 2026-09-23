@@ -132,8 +132,10 @@ export const RECORD_BORE: BoreConfig<EvidenceItem> = {
   evidenceKey: (e) => e.dig_url,
   // Three lookup rounds then an answer (a scene ask is get_scene, then
   // batched label essentials, then write), and an answer that fits on the
-  // counter: 1600 tokens let Kimi write for 43s.
-  publicMaxRounds: 4,
+  // counter: 1600 tokens let Kimi write for 43s. A graph dig ("who did he
+  // work with") can use all three lookups and then write from memory;
+  // RECORD_BORE_PUBLIC_ROUNDS lets 5 be measured against 4 without a deploy.
+  publicMaxRounds: Math.min(Math.max(Number(process.env.RECORD_BORE_PUBLIC_ROUNDS) || 4, 2), 6),
   publicMaxTokens: 600,
   quotaKey: "ask_public",
 };
