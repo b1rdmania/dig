@@ -15,21 +15,13 @@
 import type { FastifyRequest } from "fastify";
 import { sql } from "@dig/db";
 import type { Kysely, Database } from "@dig/db";
+import { clientIp } from "../../../client-ip.js";
 
 // Read per-request (unlike auth.ts's load-time keys) so tests can flip the
 // gate without module-cache surgery.
 const publicEnabled = () => (process.env.ASK_PUBLIC ?? "").trim() === "on";
 const dailyPerIp = () => Math.max(1, Number(process.env.ASK_PUBLIC_DAILY_PER_IP ?? 20));
 const monthlyMax = () => Math.max(1, Number(process.env.ASK_PUBLIC_MONTHLY_MAX ?? 400));
-
-// Fly terminates the connection at its proxy, so req.ip is the proxy, not the
-// visitor. fly-client-ip is set by the platform and not spoofable through it.
-export function clientIp(req: FastifyRequest): string {
-  const fly = String(req.headers["fly-client-ip"] ?? "").trim();
-  if (fly) return fly;
-  const fwd = String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim();
-  return fwd || req.ip;
-}
 
 interface DailyEntry { day: string; count: number }
 const dailyCounts = new Map<string, DailyEntry>();

@@ -19,6 +19,7 @@ import rateLimit from "@fastify/rate-limit";
 import cors from "@fastify/cors";
 import Redis from "ioredis";
 import { MemoryCache } from "./memory-cache.js";
+import { clientIp } from "./client-ip.js";
 import { randomUUID } from "node:crypto";
 import { createDb } from "@dig/db";
 import { healthCheck, getTimeoutStats } from "@dig/domain";
@@ -120,9 +121,9 @@ export async function buildApp(deps: AppDeps): Promise<{
       ...(redis ? { redis } : {}),
       // Exempt keys (RATE_LIMIT_EXEMPT_KEYS) skip the store entirely — see auth.ts.
       allowList: (req: FastifyRequest) => isRateLimitExempt(req),
-      // Unknown/absent keys bucket by IP — otherwise an attacker could mint a
-      // fresh bucket per request by rotating bogus key values.
-      keyGenerator: (req: FastifyRequest) => validApiKey(req) ?? req.ip,
+      // Unknown/absent keys bucket by visitor IP — otherwise an attacker could
+      // mint a fresh bucket per request by rotating bogus key values.
+      keyGenerator: (req: FastifyRequest) => validApiKey(req) ?? clientIp(req),
       addHeadersOnExceeding: {
         "x-ratelimit-limit": true,
         "x-ratelimit-remaining": true,
@@ -174,7 +175,7 @@ export async function buildApp(deps: AppDeps): Promise<{
       status,
       elapsed_ms: Math.round(elapsed),
       category,
-      ip: req.ip,
+      ip: clientIp(req),
       api_key: apiKey ? apiKey.slice(0, 8) + "..." : null,
       api_key_valid: apiKeyValid,
     }));
