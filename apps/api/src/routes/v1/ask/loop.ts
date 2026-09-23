@@ -29,6 +29,16 @@ const REASONING_EFFORT = (["low", "medium", "high"].includes(String(process.env.
   ? String(process.env.LLM_REASONING_EFFORT)
   : "low") as "low" | "medium" | "high";
 const LOOP_DEADLINE_MS = 240_000;
+// Once an OpenRouter stream is open, the longest it may go without a byte.
+// OpenRouter sends ": OPENROUTER PROCESSING" keep-alives, so a quiet stream
+// this long is stalled, not thinking.
+const STREAM_IDLE_TIMEOUT_MS = 30_000;
+
+// One abort for a model call: the caller's signal (client gone) or our own
+// timer, whichever fires first.
+function callSignal(controller: AbortController, caller?: AbortSignal): AbortSignal {
+  return caller ? AbortSignal.any([caller, controller.signal]) : controller.signal;
+}
 
 
 async function callAnthropic(params: {
@@ -38,6 +48,7 @@ async function callAnthropic(params: {
   tools: ToolDef[];
   maxTokens: number;
   anthropicApiKey: string;
+  signal?: AbortSignal;
 }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ANTHROPIC_CALL_TIMEOUT_MS);
@@ -58,7 +69,7 @@ async function callAnthropic(params: {
         tools: params.tools,
         messages: params.messages,
       }),
-      signal: controller.signal,
+      signal: callSignal(controller, params.signal),
     });
   } finally {
     clearTimeout(timer);
@@ -192,11 +203,12 @@ async function callOpenRouter(params: {
   maxTokens: number;
   apiKey: string;
   onDelta?: (text: string) => void;
+  signal?: AbortSignal;
 }): Promise<LlmResponse> {
   const controller = new AbortController();
-  // The timer bounds time-to-first-byte; once the stream is open the
-  // per-token cadence is what matters and a long answer must not be cut.
-  const timer = setTimeout(() => controller.abort(), ANTHROPIC_CALL_TIMEOUT_MS);
+  // The timer bounds time-to-first-byte; once the stream is open it becomes
+  // an idle timer (below): a long answer must not be cut, a stalled one must.
+  let timer = setTimeout(() => controller.abort(), ANTHROPIC_CALL_TIMEOUT_MS);
 
   let res: Response;
   try {
@@ -229,7 +241,7 @@ async function callOpenRouter(params: {
         // toward max_tokens, so keep this LOW whenever the budget is small.
         reasoning: { effort: REASONING_EFFORT },
       }),
-      signal: controller.signal,
+      signal: callSignal(controller, params.signal),
     });
   } finally {
     clearTimeout(timer);
@@ -300,18 +312,31 @@ async function callOpenRouter(params: {
   if (!reader) throw new Error("OpenRouter error: empty stream body");
   const decoder = new TextDecoder();
   let buffer = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-    for (const line of lines) {
-      if (!line.startsWith("data:")) continue; // comments (": OPENROUTER PROCESSING") and blanks
-      const payload = line.slice(5).trim();
-      if (payload === "[DONE]") continue;
-      handleChunk(payload);
+  // Aborting the fetch controller errors the pending read.
+  const idle = () => {
+    clearTimeout(timer);
+    timer = setTimeout(
+      () => controller.abort(new Error(`OpenRouter stream idle for ${STREAM_IDLE_TIMEOUT_MS}ms`)),
+      STREAM_IDLE_TIMEOUT_MS,
+    );
+  };
+  try {
+    for (;;) {
+      idle();
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue; // comments (": OPENROUTER PROCESSING") and blanks
+        const payload = line.slice(5).trim();
+        if (payload === "[DONE]") continue;
+        handleChunk(payload);
+      }
     }
+  } finally {
+    clearTimeout(timer);
   }
   if (buffer.startsWith("data:")) {
     const payload = buffer.slice(5).trim();
@@ -355,6 +380,8 @@ export async function runAgenticLoop<E>(params: {
   apiKey: string;
   /** Model calls in total; the last one runs with no tools so it must answer. */
   maxRounds?: number;
+  /** Aborts when the client disconnects: no further model calls are paid for. */
+  signal?: AbortSignal;
   log: (msg: string, extra?: Record<string, unknown>) => void;
   onEvent?: (e: AskProgressEvent) => void;
 }): Promise<{ answer: string; model: string; tool_calls: number; media: MediaItem[]; evidence: E[]; mode: ResponseMode; rounds: AskRoundTrace[] }> {
@@ -372,8 +399,9 @@ export async function runAgenticLoop<E>(params: {
           maxTokens: params.maxTokens,
           apiKey: params.apiKey,
           onDelta: (text) => params.onEvent?.({ type: "delta", text }),
+          signal: params.signal,
         })
-      : callAnthropic({ model: params.model, system: bore.systemPrompt, messages, tools, maxTokens: params.maxTokens, anthropicApiKey: params.apiKey });
+      : callAnthropic({ model: params.model, system: bore.systemPrompt, messages, tools, maxTokens: params.maxTokens, anthropicApiKey: params.apiKey, signal: params.signal });
   const messages: AnthropicMessage[] = [
     ...params.history,
     { role: "user", content: params.question },
@@ -398,6 +426,8 @@ export async function runAgenticLoop<E>(params: {
   const stopLooking = bore.stopLooking;
 
   for (let round = 0; round < maxRounds; round++) {
+    // Nobody is waiting for the answer: stop before paying for another call.
+    params.signal?.throwIfAborted();
     if (Date.now() > deadline) {
       log("ask:deadline_exceeded", { round, tool_calls: toolCallCount });
       const mode: ResponseMode = evidenceCollector.length > 0 ? "timeout_degraded" : "grounded_empty";

@@ -2,7 +2,7 @@
 // /v1/ask - Fastify route registration
 // ---------------------------------------------------------------------------
 
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import type { AnthropicMessage, ResponseMode } from "./types.js";
@@ -40,6 +40,16 @@ function pickBore(raw: unknown) {
 function dedupeBy<E>(items: E[], key: (e: E) => string): E[] {
   const seen = new Set<string>();
   return items.filter((e) => { const k = key(e); if (seen.has(k)) return false; seen.add(k); return true; });
+}
+
+// Aborts when the connection closes before the response has been written, so
+// the loop stops paying for model calls nobody will read.
+export function clientGone(reply: FastifyReply): AbortSignal {
+  const gone = new AbortController();
+  reply.raw.on("close", () => {
+    if (!reply.raw.writableFinished) gone.abort(new Error("client disconnected"));
+  });
+  return gone.signal;
 }
 
 export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
@@ -111,6 +121,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       req.log.info({ event: msg, ...extra });
 
     if (isPublic) await recordPublicAsk(db, bore.quotaKey);
+    const signal = clientGone(reply);
     try {
       const { answer, model: usedModel, tool_calls, media, evidence, mode, rounds } = await runAgenticLoop({
         db,
@@ -122,6 +133,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         maxRounds,
         provider: PROVIDER,
         apiKey,
+        signal,
         log,
       });
 
@@ -152,6 +164,11 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         },
       });
     } catch (err: any) {
+      if (signal.aborted) {
+        // Nobody is reading; the status only reaches the request log.
+        log("ask:client_gone", { elapsed_ms: Date.now() - started });
+        return reply.status(499).send();
+      }
       log("ask:request_failed", { elapsed_ms: Date.now() - started, error: String(err?.message ?? err), status: err?.status });
       // 401 passthrough only makes sense on the BYO-key flow; with a
       // server-side OpenRouter key, upstream auth failures are our config
@@ -237,6 +254,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       req.log.info({ event: msg, ...extra });
 
     if (isPublic) await recordPublicAsk(db, bore.quotaKey);
+    const signal = clientGone(reply);
     reply.hijack();
     reply.raw.writeHead(200, {
       "content-type": "application/x-ndjson; charset=utf-8",
@@ -247,7 +265,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
     const write = (obj: unknown) => {
       try {
         reply.raw.write(`${JSON.stringify(obj)}\n`);
-      } catch { /* client gone - loop result is discarded below */ }
+      } catch { /* client gone - the close handler aborts the loop */ }
     };
 
     try {
@@ -261,6 +279,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         maxRounds,
         provider: PROVIDER,
         apiKey,
+        signal,
         log,
         onEvent: (e) => {
           if (e.type === "delta") {
@@ -295,6 +314,10 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         meta: { model: usedModel, elapsed_ms: Date.now() - started, tool_calls, rounds },
       });
     } catch (err: any) {
+      if (signal.aborted) {
+        log("ask:client_gone", { elapsed_ms: Date.now() - started, stream: true });
+        return;
+      }
       log("ask:request_failed", { elapsed_ms: Date.now() - started, error: String(err?.message ?? err), status: err?.status, stream: true });
       const isClientAuth = PROVIDER === "anthropic" && err?.status === 401;
       write({
