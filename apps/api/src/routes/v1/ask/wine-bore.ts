@@ -200,7 +200,7 @@ const TASTE_STYLES_MAX = 8;
  * came from so he can say "the disciplinare says". Absent when the book holds
  * no clause, so the persona's "the book doesn't hold it" line covers it.
  */
-export function shapeTaste(taste: AppellationTaste[]): Record<string, unknown> {
+export function shapeTaste(taste: AppellationTaste[], total = taste.length): Record<string, unknown> {
   if (!taste.length) return {};
   const lang: Record<string, string> = { fr: "French", it: "Italian", es: "Spanish", de: "German", pt: "Portuguese" };
   const shown = taste.slice(0, TASTE_STYLES_MAX);
@@ -220,7 +220,7 @@ export function shapeTaste(taste: AppellationTaste[]): Record<string, unknown> {
           cited_from: doc,
         };
       }),
-      ...(taste.length > shown.length ? { more_styles_in_the_book: taste.length - shown.length } : {}),
+      ...(total > shown.length ? { more_styles_in_the_book: total - shown.length } : {}),
     },
   };
 }
@@ -247,7 +247,7 @@ export async function executeWineTool(name: string, input: Record<string, unknow
         other_names: d.other_names, categories: d.categories,
         ...shapeGrapes(d.grapes),
         ...shapeYields(d),
-        ...shapeTaste(d.taste),
+        ...shapeTaste(d.taste, d.taste_total),
         min_vines_per_ha: d.min_planting_density,
         legal_instrument: d.legal_instrument,
         rule_documents: d.documents.map((x) => ({ type: x.doc_type, title: x.title, clause: x.excerpt })),

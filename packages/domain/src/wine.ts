@@ -211,8 +211,10 @@ export interface AppellationDetail {
   butoir_yield_hl: number | null;
   yield_rules: Array<{ label: string | null; base_hl: number; butoir_hl: number }> | null;
   documents: Array<{ id: number; doc_type: string; title: string; url: string | null; excerpt: string | null }>;
-  /** What the rule text says the wine must look, smell and taste like, verbatim in its own language, per style (migration 036). Empty when no clause parsed. */
+  /** What the rule text says the wine must look, smell and taste like, verbatim in its own language, per style (migration 036). Empty when no clause parsed. Whole-appellation clauses first; at most 12. */
   taste: AppellationTaste[];
+  /** Taste clauses the book holds for this appellation, before the limit. */
+  taste_total: number;
   wine_count: number;
   producers: Array<{ id: number; name: string; wine_count: number }>;
   source: string;
@@ -229,7 +231,7 @@ export async function getAppellation(db: Kysely<any>, id: number, q?: string): P
   `.execute(db)).rows[0];
   if (!row) return null;
 
-  const [names, grapes, docs, wines, producers, taste] = await Promise.all([
+  const [names, grapes, docs, wines, producers, { taste, taste_total }] = await Promise.all([
     sql<{ name: string }>`
       SELECT DISTINCT name FROM wine.appellation_names WHERE appellation_id = ${id} AND kind IN ('protected','transcription') AND name <> ${row.name}
       ORDER BY name LIMIT 12
@@ -259,19 +261,27 @@ export async function getAppellation(db: Kysely<any>, id: number, q?: string): P
       WHERE w.appellation_id = ${id} AND w.status = 'Live'
       GROUP BY p.id, p.display_name ORDER BY wine_count DESC, p.display_name LIMIT 8
     `.execute(db).then((r) => r.rows),
-    // Base styles (a colour, no mention) first, then riserva / superiore / crianza, then the rest; the loader's order inside each group.
+    // Whole-appellation clauses (style NULL) first, then base styles (a colour,
+    // no mention), then riserva / superiore / crianza, then the rest; the
+    // loader's order inside each group. total counts every clause, not the 12.
     sql<any>`
       SELECT t.id, t.style, t.colour, t.language, t.clause_text, t.min_alcohol, t.sweetness,
-             t.doc_source, t.doc_source_ref, d.id AS document_id, d.doc_type, d.title AS document_title
+             t.doc_source, t.doc_source_ref, d.id AS document_id, d.doc_type, d.title AS document_title,
+             count(*) OVER ()::int AS total
       FROM wine.appellation_taste t LEFT JOIN wine.appellation_documents d ON d.id = t.source_document_id
       WHERE t.appellation_id = ${id}
-      ORDER BY (t.style ~* '(riserva|superiore|reserva|crianza|premier cru|grand cru|vigna|passito|vendemmia tardiva|novello|frizzante|spumante|liquoroso)') , t.id
+      ORDER BY t.style IS NOT NULL,
+               (t.style ~* '(riserva|superiore|reserva|crianza|premier cru|grand cru|vigna|passito|vendemmia tardiva|novello|frizzante|spumante|liquoroso)'),
+               t.id
       LIMIT 12
-    `.execute(db).then((r) => r.rows.map((t: any): AppellationTaste => ({
-      id: t.id, style: t.style, colour: t.colour, language: t.language, clause_text: t.clause_text,
-      min_alcohol: t.min_alcohol == null ? null : Number(t.min_alcohol), sweetness: t.sweetness,
-      document: { id: t.document_id ?? null, doc_type: t.doc_type ?? null, title: t.document_title ?? null, source: t.doc_source, source_ref: t.doc_source_ref },
-    }))),
+    `.execute(db).then((r) => ({
+      taste_total: Number(r.rows[0]?.total ?? 0),
+      taste: r.rows.map((t: any): AppellationTaste => ({
+        id: t.id, style: t.style, colour: t.colour, language: t.language, clause_text: t.clause_text,
+        min_alcohol: t.min_alcohol == null ? null : Number(t.min_alcohol), sweetness: t.sweetness,
+        document: { id: t.document_id ?? null, doc_type: t.doc_type ?? null, title: t.document_title ?? null, source: t.doc_source, source_ref: t.doc_source_ref },
+      })),
+    })),
   ]);
 
   return {
@@ -287,6 +297,7 @@ export async function getAppellation(db: Kysely<any>, id: number, q?: string): P
     grapes: grapes.map((g: any) => ({ ...g, categories: (g.categories as string[]).filter(Boolean) })),
     documents: docs,
     taste,
+    taste_total,
     wine_count: wines,
     producers,
   };
