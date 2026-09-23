@@ -588,6 +588,7 @@ export function RecordBoreClient({ opener }: { opener: string }) {
           )}
 
           <p className={s.cap}>
+            In stock: house &amp; techno, 1988&ndash;2008.{" "}
             {questionsLeft === null
               ? "A few questions a day."
               : `${questionsLeft} question${questionsLeft === 1 ? "" : "s"} left.`}
