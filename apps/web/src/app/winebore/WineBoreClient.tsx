@@ -312,7 +312,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
 
             {loading && !draft && (
               <div className={`${s.turn} ${s.working}`} role="status" aria-live="polite">
-                <p className={w.workingLine}>
+                <p className={s.workingLine}>
                   <span className={s.workingMark} aria-hidden="true" />
                   {normalDashes((activityLine || FILLERS[0]).replace(/[.…]+$/, ""))}
                 </p>

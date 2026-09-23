@@ -129,15 +129,6 @@ interface RecMeta {
   cover: string | null;
 }
 
-// A suggestion either asks (q) or hands the counter to the customer (fill -
-// the challenge only works if they name the record themselves).
-const SUGGESTIONS: Array<{ t: string; q?: string; fill?: string }> = [
-  { t: "Chicago house, 1988", q: "Chicago house, 1988 - what still sounds dangerous?" },
-  { t: "Detroit techno, 1992", q: "Detroit techno, 1992 - what belongs in the front rack?" },
-  { t: "UK garage, 1997", q: "UK garage, 1997 - the good year. Tuff Jam, Dem 2, what did the reissues miss?" },
-  { t: "Name your favourite record", fill: "My favourite record is " },
-];
-
 // Media items are one-per-video; the crate is one-per-record. First video wins
 // (it's the one the answer's citation bound first).
 function dedupeByMaster(media: MediaItem[]): MediaItem[] {
@@ -472,11 +463,10 @@ export function RecordBoreClient({ opener }: { opener: string }) {
 
           {loading && !draft && (
             <div className={`${s.turn} ${s.working}`} role="status" aria-live="polite">
-              <div className={s.workingHead}>
+              <p className={s.workingLine}>
                 <span className={s.workingMark} aria-hidden="true" />
-                <span>Looking through the racks</span>
-              </div>
-              <p className={s.activity}>{normalDashes((activityLine || BORE_FILLERS[0]).replace(/[.…]+$/, ""))}</p>
+                {normalDashes((activityLine || BORE_FILLERS[0]).replace(/[.…]+$/, ""))}
+              </p>
             </div>
           )}
 
@@ -564,28 +554,6 @@ export function RecordBoreClient({ opener }: { opener: string }) {
               <span className={s.sendWord}>ask</span><span aria-hidden="true">&rarr;</span>
             </button>
           </div>
-
-          {messages.length === 0 && (
-            <div className={s.suggest}>
-              {SUGGESTIONS.map((sug) => (
-                <button
-                  key={sug.t}
-                  type="button"
-                  onClick={() => {
-                    if (sug.fill) {
-                      setInput(sug.fill);
-                      inputRef.current?.focus();
-                    } else {
-                      ask(sug.q);
-                    }
-                  }}
-                >
-                  <span aria-hidden="true">&rarr;</span>
-                  <span>{sug.t}</span>
-                </button>
-              ))}
-            </div>
-          )}
 
           {questionsLeft !== null && questionsLeft <= 5 && (
             <p className={s.cap}>
