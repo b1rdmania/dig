@@ -7,6 +7,7 @@
  * Privacy: no PII collected. Session IDs are random UUIDs generated client-side.
  */
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { clientIp } from "../../client-ip.js";
 import {
   recordTelemetryEvent,
   recordShareChannel,
@@ -85,7 +86,7 @@ export function registerEventRoutes(app: FastifyInstance): void {
         session_id: evt.session_id.slice(0, 36),
         route: evt.route || null,
         req_id: requestId,
-        ip: req.ip,
+        ip: clientIp(req),
         ...flattenProperties(evt.properties),
       }));
 

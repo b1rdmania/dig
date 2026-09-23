@@ -90,6 +90,10 @@ describe("what the rules say it tastes like", () => {
     expect(block.styles[0].rule_text).toMatch(/\[…\]$/);
     expect(block.styles[0].applies_to).toBe("style 0");
   });
+  it("counts every clause in the book, not only the ones fetched", () => {
+    const fetched = Array.from({ length: 12 }, (_, i) => t(`style ${i}`, null, "vino bianco secco."));
+    expect((shapeTaste(fetched, 125) as any).what_the_rules_say_it_tastes_like.more_styles_in_the_book).toBe(117);
+  });
   it("names the whole appellation when the text does not split by colour", () => {
     const out = shapeTaste([t(null, "white", "Le « Chablis grand cru » est un vin blanc sec, vif et fruité.")]) as any;
     expect(out.what_the_rules_say_it_tastes_like.styles[0].applies_to).toBe("all wines of the appellation");

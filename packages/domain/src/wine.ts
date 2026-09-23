@@ -23,6 +23,21 @@ export interface WineSearchHit {
 
 const SEARCH_LIMIT_MAX = 12;
 
+/**
+ * The loaders' name_norm (scripts/wine/text.ts norm) - keep the two identical.
+ * "Château Léoville-Las Cases" -> "chateau leoville las cases".
+ */
+export function normName(s: string): string {
+  return s
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .replace(/[’'`´]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 /** Diacritic-stripped 'simple' tsquery: the vectors were built with unaccent(). */
 function tsq(q: string) {
   const t = buildTsquery(q.normalize("NFKD").replace(/[\u0300-\u036f]/g, ""));
@@ -50,7 +65,7 @@ export async function searchWine(
         ${country ? sql`AND country = ${country}` : sql``}
       ORDER BY rank DESC, name
       LIMIT ${perType}
-    `.execute(db).then((r) => r.rows));
+    `.execute(db).then((r) => r.rows.length > 0 ? r.rows : appellationsNamedIn(db, params.q, country, perType)));
   }
   if (want("producer")) {
     parts.push(sql<WineSearchHit>`
@@ -93,7 +108,7 @@ export async function searchWine(
   // so a misspelt appellation ("Chabli", "Sancere") or a producer typed from
   // memory still lands. Wines are excluded - 190k rows and no trgm index.
   if (hits.length < 3) {
-    const qn = params.q.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const qn = normName(params.q);
     if (qn.length >= 3) {
       const fuzzy: Array<Promise<WineSearchHit[]>> = [];
       if (want("appellation")) {
@@ -132,6 +147,35 @@ export async function searchWine(
   return hits.slice(0, limit).map((h) => ({ ...h, id: Number(h.id), rank: Number(h.rank) }));
 }
 
+/**
+ * Fallback when no appellation has every term of the query: "Marlborough
+ * Sauvignon Blanc" names a place and a grape, so the AND query finds no
+ * appellation. Return the appellations whose name (any register spelling)
+ * appears whole in the query, longest first - "Chablis Grand Cru" before
+ * "Chablis". Rank is the share of the query the name covers.
+ */
+export async function appellationsNamedIn(
+  db: Kysely<any>,
+  q: string,
+  country: string | null,
+  limit: number,
+): Promise<WineSearchHit[]> {
+  const qn = normName(q);
+  if (qn.length < 3) return [];
+  const r = await sql<WineSearchHit>`
+    SELECT 'appellation' AS type, a.id, a.name, a.country || ' · ' || a.gi_type AS context,
+           max(length(n.name_norm))::float / ${qn.length} AS rank
+    FROM wine.appellation_names n JOIN wine.appellations a ON a.id = n.appellation_id
+    WHERE length(n.name_norm) >= 3
+      AND position(' ' || n.name_norm || ' ' IN ${` ${qn} `}) > 0
+      ${country ? sql`AND a.country = ${country}` : sql``}
+    GROUP BY a.id, a.name, a.country, a.gi_type
+    ORDER BY rank DESC, a.name
+    LIMIT ${limit}
+  `.execute(db);
+  return r.rows;
+}
+
 export interface AppellationTaste {
   id: number;
   /** The style as the rule text labels it ("Etna rosso riserva", "vins blancs", "VINO TINTO RESERVA"); null when the text does not split. */
@@ -167,8 +211,10 @@ export interface AppellationDetail {
   butoir_yield_hl: number | null;
   yield_rules: Array<{ label: string | null; base_hl: number; butoir_hl: number }> | null;
   documents: Array<{ id: number; doc_type: string; title: string; url: string | null; excerpt: string | null }>;
-  /** What the rule text says the wine must look, smell and taste like, verbatim in its own language, per style (migration 036). Empty when no clause parsed. */
+  /** What the rule text says the wine must look, smell and taste like, verbatim in its own language, per style (migration 036). Empty when no clause parsed. Whole-appellation clauses first; at most 12. */
   taste: AppellationTaste[];
+  /** Taste clauses the book holds for this appellation, before the limit. */
+  taste_total: number;
   wine_count: number;
   producers: Array<{ id: number; name: string; wine_count: number }>;
   source: string;
@@ -185,7 +231,7 @@ export async function getAppellation(db: Kysely<any>, id: number, q?: string): P
   `.execute(db)).rows[0];
   if (!row) return null;
 
-  const [names, grapes, docs, wines, producers, taste] = await Promise.all([
+  const [names, grapes, docs, wines, producers, { taste, taste_total }] = await Promise.all([
     sql<{ name: string }>`
       SELECT DISTINCT name FROM wine.appellation_names WHERE appellation_id = ${id} AND kind IN ('protected','transcription') AND name <> ${row.name}
       ORDER BY name LIMIT 12
@@ -215,19 +261,27 @@ export async function getAppellation(db: Kysely<any>, id: number, q?: string): P
       WHERE w.appellation_id = ${id} AND w.status = 'Live'
       GROUP BY p.id, p.display_name ORDER BY wine_count DESC, p.display_name LIMIT 8
     `.execute(db).then((r) => r.rows),
-    // Base styles (a colour, no mention) first, then riserva / superiore / crianza, then the rest; the loader's order inside each group.
+    // Whole-appellation clauses (style NULL) first, then base styles (a colour,
+    // no mention), then riserva / superiore / crianza, then the rest; the
+    // loader's order inside each group. total counts every clause, not the 12.
     sql<any>`
       SELECT t.id, t.style, t.colour, t.language, t.clause_text, t.min_alcohol, t.sweetness,
-             t.doc_source, t.doc_source_ref, d.id AS document_id, d.doc_type, d.title AS document_title
+             t.doc_source, t.doc_source_ref, d.id AS document_id, d.doc_type, d.title AS document_title,
+             count(*) OVER ()::int AS total
       FROM wine.appellation_taste t LEFT JOIN wine.appellation_documents d ON d.id = t.source_document_id
       WHERE t.appellation_id = ${id}
-      ORDER BY (t.style ~* '(riserva|superiore|reserva|crianza|premier cru|grand cru|vigna|passito|vendemmia tardiva|novello|frizzante|spumante|liquoroso)') , t.id
+      ORDER BY t.style IS NOT NULL,
+               (t.style ~* '(riserva|superiore|reserva|crianza|premier cru|grand cru|vigna|passito|vendemmia tardiva|novello|frizzante|spumante|liquoroso)'),
+               t.id
       LIMIT 12
-    `.execute(db).then((r) => r.rows.map((t: any): AppellationTaste => ({
-      id: t.id, style: t.style, colour: t.colour, language: t.language, clause_text: t.clause_text,
-      min_alcohol: t.min_alcohol == null ? null : Number(t.min_alcohol), sweetness: t.sweetness,
-      document: { id: t.document_id ?? null, doc_type: t.doc_type ?? null, title: t.document_title ?? null, source: t.doc_source, source_ref: t.doc_source_ref },
-    }))),
+    `.execute(db).then((r) => ({
+      taste_total: Number(r.rows[0]?.total ?? 0),
+      taste: r.rows.map((t: any): AppellationTaste => ({
+        id: t.id, style: t.style, colour: t.colour, language: t.language, clause_text: t.clause_text,
+        min_alcohol: t.min_alcohol == null ? null : Number(t.min_alcohol), sweetness: t.sweetness,
+        document: { id: t.document_id ?? null, doc_type: t.doc_type ?? null, title: t.document_title ?? null, source: t.doc_source, source_ref: t.doc_source_ref },
+      })),
+    })),
   ]);
 
   return {
@@ -243,6 +297,7 @@ export async function getAppellation(db: Kysely<any>, id: number, q?: string): P
     grapes: grapes.map((g: any) => ({ ...g, categories: (g.categories as string[]).filter(Boolean) })),
     documents: docs,
     taste,
+    taste_total,
     wine_count: wines,
     producers,
   };
