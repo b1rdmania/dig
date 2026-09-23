@@ -135,6 +135,7 @@ const SUGGESTIONS: Array<{ t: string; q?: string; fill?: string }> = [
   { t: "Chicago house, 1988", q: "Chicago house, 1988 - what still sounds dangerous?" },
   { t: "Detroit techno, 1992", q: "Detroit techno, 1992 - what belongs in the front rack?" },
   { t: "UK garage, 1997", q: "UK garage, 1997 - the good year. Tuff Jam, Dem 2, what did the reissues miss?" },
+  { t: "Name your favourite record", fill: "My favourite record is " },
 ];
 
 // Media items are one-per-video; the crate is one-per-record. First video wins
@@ -150,6 +151,12 @@ function CrateRow({ item, meta }: { item: MediaItem; meta?: RecMeta }) {
   const title = meta?.title ?? item.title;
   const sub = [meta?.label, meta?.year].filter(Boolean).join(" · ");
   const ytId = extractYouTubeId(item.youtube_url);
+  // Sleeve sources in order: the cover, then the video still, then the black
+  // block. A cover that 404s falls through to the still rather than a blank.
+  const ytThumb = ytId ? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg` : null;
+  const sleeves = [meta?.cover, ytThumb].filter((u): u is string => Boolean(u));
+  const [failed, setFailed] = useState<string[]>([]);
+  const sleeveSrc = sleeves.find((u) => !failed.includes(u)) ?? null;
   return (
     <>
       <div className={s.record}>
@@ -161,9 +168,16 @@ function CrateRow({ item, meta }: { item: MediaItem; meta?: RecMeta }) {
           disabled={!ytId}
         >
           <span className={s.sleeve}>
-            {meta?.cover && (
-              // eslint-disable-next-line @next/next/no-img-element -- external CAA image, next/image can't optimise it
-              <img className={s.sleeveImg} src={meta.cover} alt="" loading="lazy" />
+            {sleeveSrc && (
+              // eslint-disable-next-line @next/next/no-img-element -- external CAA/YouTube image, next/image can't optimise it
+              <img
+                key={sleeveSrc}
+                className={`${s.sleeveImg} ${sleeveSrc === ytThumb ? s.sleeveYt : ""}`}
+                src={sleeveSrc}
+                alt=""
+                loading="lazy"
+                onError={() => setFailed((f) => [...f, sleeveSrc])}
+              />
             )}
           </span>
         </button>
@@ -389,9 +403,11 @@ export function RecordBoreClient({ opener }: { opener: string }) {
         <div className={s.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
           <img className={s.face} src="/recordbore-face.png" alt="" width={54} height={59} />
-          <h1 className={s.title}>Record Bore<span className={s.dot}>.</span></h1>
+          <h1 className={s.title}>
+            <span className={s.wordmark}>Record Bore<span className={s.dot}>.</span></span>
+            <span className={s.claim}><span>Ask me anything.</span> <span>I&rsquo;ll answer something better.</span></span>
+          </h1>
         </div>
-        <p className={s.tagline}>Ask about records. I&rsquo;ll probably disagree. In stock: house &amp; techno, 1988-2008.</p>
 
         <div className={`${s.bore} ${s.openerBlock}`}><p>{normalDashes(opener)}</p></div>
 
@@ -545,40 +561,37 @@ export function RecordBoreClient({ opener }: { opener: string }) {
               spellCheck={false}
             />
             <button className={s.send} onClick={() => ask()} disabled={loading || !input.trim()} type="button">
-              <span className={s.srOnly}>Ask</span><span aria-hidden="true">&rarr;</span>
+              <span className={s.sendWord}>ask</span><span aria-hidden="true">&rarr;</span>
             </button>
           </div>
 
           {messages.length === 0 && (
             <div className={s.suggest}>
-              <span className={s.suggestLead}>Try:</span>
-              {SUGGESTIONS.map((sug, index) => (
-                <span key={sug.t}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (sug.fill) {
-                        setInput(sug.fill);
-                        inputRef.current?.focus();
-                      } else {
-                        ask(sug.q);
-                      }
-                    }}
-                  >
-                    {sug.t}
-                  </button>
-                  {index < SUGGESTIONS.length - 1 && <span aria-hidden="true"> · </span>}
-                </span>
+              {SUGGESTIONS.map((sug) => (
+                <button
+                  key={sug.t}
+                  type="button"
+                  onClick={() => {
+                    if (sug.fill) {
+                      setInput(sug.fill);
+                      inputRef.current?.focus();
+                    } else {
+                      ask(sug.q);
+                    }
+                  }}
+                >
+                  <span aria-hidden="true">&rarr;</span>
+                  <span>{sug.t}</span>
+                </button>
               ))}
             </div>
           )}
 
           <p className={s.cap}>
+            In stock: house &amp; techno, 1988&ndash;2008.{" "}
             {questionsLeft === null
-              ? "Limited questions. I lose interest after that."
-              : `${questionsLeft} question${questionsLeft === 1 ? "" : "s"} left. I lose interest after that.`}
-            <br />
-            (this is a demo concept so may be slow or erratic)
+              ? "A few questions a day."
+              : `${questionsLeft} question${questionsLeft === 1 ? "" : "s"} left.`}
           </p>
         </section>
 

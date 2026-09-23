@@ -5,7 +5,8 @@
   --red: #c83a25;
   --muted: #716b60;
   --line: rgba(33, 31, 26, 0.16);
-  --type: "Iowan Old Style", Baskerville, "Times New Roman", serif;
+  --type: "Times New Roman", Times, serif;
+  --measure: 680px;
 
   width: 100vw;
   margin-left: calc(50% - 50vw);
@@ -23,7 +24,7 @@
 .col,
 main.col {
   box-sizing: border-box;
-  width: min(760px, 100%);
+  width: min(720px, 100%);
   min-height: 0;
   margin: 0 auto;
   padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(64px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
@@ -54,6 +55,7 @@ main.col {
 
 .home:focus-visible,
 .suggest button:focus-visible,
+.input:focus-visible,
 .send:focus-visible,
 .recAct:focus-visible,
 .bagToggle:focus-visible,
@@ -63,67 +65,76 @@ main.col {
   outline-offset: 3px;
 }
 
+/* Face, wordmark, claim: one line where the width allows, Wine Bore's
+   pattern. The claim drops under the wordmark on a phone. */
 .masthead {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 28px;
+  align-items: flex-end;
+  gap: 12px;
+  max-width: var(--measure);
+  margin-top: 32px;
 }
 
 .face {
-  width: 74px;
+  width: 54px;
   height: auto;
   flex: 0 0 auto;
-  transform: translateY(3px);
 }
 
 .title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+  row-gap: 8px;
   margin: 0;
-  font-size: clamp(42px, 8vw, 56px);
+  font-weight: 400;
+}
+
+.wordmark {
+  font-size: 52px;
   font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 0.96;
+  white-space: nowrap;
 }
+
+.claim {
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+/* Break between the two sentences, never inside one. */
+.claim > span { display: inline-block; }
 
 .dot { color: var(--red); }
 
-.tagline {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1.45;
-}
-
-.openerBlock { max-width: 680px; margin-top: 48px; }
+.openerBlock { max-width: var(--measure); margin-top: 40px; }
 .bore { font-family: inherit; }
 .bore p { margin: 0 0 0.8em; font-size: 18px; font-weight: 400; line-height: 1.58; }
 .bore.openerBlock p { margin: 0; font-size: 18px; line-height: 1.5; }
 .bore p:last-child { margin-bottom: 0; }
 .bore a:hover { color: #9f2d1d; }
 
-.askPanel { max-width: 920px; margin-top: 42px; }
+.askPanel { max-width: var(--measure); margin-top: 24px; }
 
 .composerLabel,
 .turnLabel {
   display: block;
   margin: 0;
-  color: var(--ink);
+  color: var(--muted);
   font-family: inherit;
   font-size: 13px;
   font-weight: 400;
   line-height: 1.4;
-  opacity: 0.58;
 }
 
 .composer {
   display: flex;
   align-items: baseline;
   gap: 16px;
-  margin-top: 4px;
-  border-bottom: 1px solid rgba(33, 31, 26, 0.42);
+  border-bottom: 1.5px solid var(--ink);
 }
-
-.composer:focus-within { border-bottom-color: var(--ink); }
 
 .input {
   flex: 1;
@@ -139,47 +150,61 @@ main.col {
   font-size: 19px !important;
   font-weight: 400;
   line-height: 1.3;
-  padding: 7px 0 10px;
+  padding: 8px 0;
 }
 
 .input:focus { outline: 0; }
-.input::placeholder { color: #7f786c; font-weight: 400; opacity: 0.72; }
+.input::placeholder { color: var(--muted); font-weight: 400; opacity: 1; }
 
+/* Ink at rest, red once there is something to send. Never a filled button. */
 .send {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
   min-width: 44px;
   min-height: 44px;
   border: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--ink);
   cursor: pointer;
   font: 400 24px/1 var(--type);
-  padding: 0 0 8px 12px;
+  padding: 0 0 8px 8px;
   -webkit-tap-highlight-color: transparent;
 }
 
-.composer:focus-within .send:not(:disabled),
-.send:hover:not(:disabled) { color: var(--red); transform: translateX(2px); }
-.send:disabled { cursor: default; opacity: 0.38; }
+.sendWord { font-size: 17px; font-weight: 700; }
+.send:not(:disabled) { color: var(--red); }
+.send:disabled { cursor: default; }
 
+/* Suggestions are prompts to tap: one per row, full width. */
 .suggest {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0;
-  margin-top: 13px;
-  color: var(--muted);
-  font-size: 14px;
+  flex-direction: column;
+  margin-top: 8px;
 }
 
-.suggestLead { margin-right: 4px; }
-.suggest button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font: inherit; padding: 0; }
-.suggest button:hover { color: var(--red); text-decoration: underline; }
-.cap { margin: 9px 0 0; color: var(--ink); font-size: 13px; font-weight: 400; opacity: 0.5; }
+.suggest button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: 400 16px/1.3 var(--type);
+  padding: 0;
+  text-align: left;
+}
 
-.turns { display: flex; max-width: 680px; flex-direction: column; gap: 24px; margin-top: 48px; }
+.suggest button:hover { color: var(--red); }
+.cap { margin: 16px 0 0; color: var(--muted); font-size: 14px; font-weight: 400; }
+
+.turns { display: flex; max-width: var(--measure); flex-direction: column; gap: 24px; margin-top: 48px; }
 .turn { padding: 0; }
 .turnLabel { margin-bottom: 8px; }
-.userTurn { padding: 14px 0; }
+.userTurn { padding: 16px 0; }
 
 .youText {
   margin: 0;
@@ -199,10 +224,10 @@ main.col {
   font-family: inherit;
 }
 
-.workingHead { display: flex; align-items: center; gap: 9px; color: var(--ink); font-size: 13px; font-weight: 500; }
+.workingHead { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 13px; font-weight: 500; }
 .workingMark { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: workingPulse 1.2s ease-in-out infinite; }
 @keyframes workingPulse { 50% { opacity: 0.22; transform: scale(0.72); } }
-.activity { margin: 5px 0 0 16px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.activity { margin: 8px 0 0 16px; color: var(--muted); font-size: 13px; line-height: 1.45; }
 .plain { color: var(--muted); font-family: inherit; font-size: 14px !important; }
 .shutFace { display: block; width: 42px; height: auto; margin-bottom: 10px; }
 
@@ -213,9 +238,12 @@ main.col {
 .sleeve { position: relative; display: block; width: 48px; height: 48px; overflow: hidden; background: var(--ink); }
 .sleeve::after { position: absolute; inset: 14px; border: 1px solid rgba(242, 238, 229, 0.55); border-radius: 50%; content: ""; }
 .sleeveImg { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* YouTube hqdefault is 4:3 with the 16:9 frame letterboxed inside it. Scale so
+   the frame's height fills the sleeve, then centre: a square crop, no bars. */
+.sleeveImg.sleeveYt { inset: auto; top: 50%; left: 50%; width: auto; max-width: none; height: 133.34%; transform: translate(-50%, -50%); object-fit: initial; }
 .recMeta { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
 .recTitle { font-size: 14px; font-weight: 500; line-height: 1.35; }
-.recSub { color: var(--ink); font-size: 11px; font-weight: 400; opacity: 0.58; }
+.recSub { color: var(--muted); font-size: 13px; font-weight: 400; }
 .recActs { display: flex; align-items: center; gap: 12px; margin-left: auto; }
 .recAct { border: 0; background: none; cursor: pointer; font: 400 12px/1.3 var(--type); padding: 0; text-decoration: none; white-space: nowrap; }
 .recAct:hover { text-decoration: underline; }
@@ -251,18 +279,18 @@ main.col {
     padding-bottom: max(52px, env(safe-area-inset-bottom));
     padding-left: max(18px, env(safe-area-inset-left));
   }
-  .masthead { margin-top: 22px; }
-  .face { width: 64px; transform: translateY(2px); }
-  .tagline { font-size: 15px; }
-  .openerBlock { margin-top: 24px; }
+  .masthead { align-items: flex-start; margin-top: 24px; }
+  .wordmark { font-size: clamp(38px, 11vw, 52px); }
+  .openerBlock { margin-top: 32px; }
   .bore.openerBlock p { font-size: 17px; }
-  .askPanel { margin-top: 28px; }
+  .askPanel { margin-top: 24px; }
   .input { font-size: 18px !important; }
   .send { padding-bottom: 8px; }
-  .turns { margin-top: 30px; }
+  .turns { margin-top: 32px; }
   .bore p { font-size: 17px; line-height: 1.6; }
   .record { align-items: flex-start; }
-  .recActs { flex-direction: column; align-items: flex-end; gap: 5px; }
+  .recActs { gap: 12px; }
+  .recAct { display: inline-flex; min-height: 44px; align-items: center; }
   .bagHead,
   .bagList p { align-items: flex-start; }
   .bagList p { flex-direction: column; gap: 3px; }
