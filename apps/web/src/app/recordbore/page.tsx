@@ -35,12 +35,8 @@ export const viewport: Viewport = {
 
 const OPENER_QUOTES = [
   "Anyway. What do you want? And don’t say Daft Punk - the answer’s Roulé and we both know it.",
-  "Mind the boxes. Browsing is fine, buying is better, asking is best.",
-  "Don’t lean on that rack. Ask me something worth dropping the needle for.",
   "You’ve got the look of someone about to say ‘deep house’. Be more specific.",
-  "Kettle’s just gone on. Make it quick or make it interesting.",
-  "The good stuff isn’t in the window. It never is. Go on then.",
-  "I was in the middle of refiling the 12-inches, so this had better be good.",
+  "The good stuff isn’t in the window. It never is.",
   "If you heard it on an advert, the door’s behind you. Otherwise - speak.",
 ];
 
