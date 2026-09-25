@@ -494,29 +494,3 @@ export async function getShelf(db: Kysely<any>, slug: string): Promise<ShelfDeta
   return { ...row, members, edges };
 }
 
-/** Something real to open on: a shelf member when the pack exists, else a Live wine with an appellation. */
-export async function randomOpenerSubject(db: Kysely<any>): Promise<{ kind: "wine" | "producer" | "appellation"; name: string; context: string | null } | null> {
-  const fromShelf = (await sql<any>`
-    SELECT m.entity_type, m.entity_id, s.name AS shelf FROM wine.shelf_members m JOIN wine.shelves s ON s.slug = m.shelf_slug
-    WHERE m.entity_type IN ('producer','appellation','wine') ORDER BY random() LIMIT 1
-  `.execute(db)).rows[0];
-  if (fromShelf) {
-    const id = Number(fromShelf.entity_id);
-    if (fromShelf.entity_type === "producer") {
-      const p = (await sql<any>`SELECT display_name AS name, region FROM wine.producers WHERE id = ${id}`.execute(db)).rows[0];
-      if (p) return { kind: "producer", name: p.name, context: p.region ?? fromShelf.shelf };
-    } else if (fromShelf.entity_type === "appellation") {
-      const a = (await sql<any>`SELECT name, country FROM wine.appellations WHERE id = ${id}`.execute(db)).rows[0];
-      if (a) return { kind: "appellation", name: a.name, context: a.country };
-    } else {
-      const w = (await sql<any>`SELECT display_name AS name, sub_region, region FROM wine.wines WHERE lwin = ${id}`.execute(db)).rows[0];
-      if (w) return { kind: "wine", name: w.name, context: w.sub_region ?? w.region };
-    }
-  }
-  const w = (await sql<any>`
-    SELECT w.display_name AS name, a.name AS appellation FROM wine.wines w JOIN wine.appellations a ON a.id = w.appellation_id
-    WHERE w.status = 'Live' AND w.classification IS NOT NULL
-    OFFSET floor(random() * greatest((SELECT count(*) FROM wine.wines WHERE status = 'Live' AND classification IS NOT NULL AND appellation_id IS NOT NULL), 1)) LIMIT 1
-  `.execute(db)).rows[0];
-  return w ? { kind: "wine", name: w.name, context: w.appellation } : null;
-}

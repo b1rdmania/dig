@@ -171,7 +171,6 @@ export {
   getGrape,
   getShelf,
   listShelves,
-  randomOpenerSubject,
   findUrl,
   type WineEntityType,
   type WineSearchHit,

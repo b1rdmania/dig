@@ -23,7 +23,10 @@ const PROVIDER: LlmProvider =
 const DEFAULT_MODEL =
   process.env.LLM_MODEL ?? (PROVIDER === "openrouter" ? "moonshotai/kimi-k3" : "claude-sonnet-4-6");
 const MAX_HISTORY_TURNS = 6;
-const MAX_EVIDENCE = 20;
+// The page shows only what the answer names, so a generous pool costs
+// nothing - a tight one let a flood of same-surname search hits push the
+// actual picks (and the appellations) off the end.
+const MAX_EVIDENCE = 40;
 // The after-answer lookups (videos, the wine counter) run once the answer is
 // written, so they add straight to the wait. Fail open: a slow lookup costs
 // pictures, never the answer.

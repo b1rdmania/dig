@@ -11,22 +11,10 @@ import ReactMarkdown from "react-markdown";
 import type { ResponseMode } from "../llm-beta/LlmBetaClient";
 import s from "../recordbore/recordbore.module.css";
 import w from "./winebore.module.css";
+import { onTheCounter, type Bottle } from "./counter";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 
-interface Bottle {
-  type: "appellation" | "producer" | "wine" | "grape" | "shelf";
-  id: number | string;
-  title: string;
-  subtitle: string | null;
-  find_url: string | null;
-  /** The producer's own site (on a wine's card, its maker's). */
-  site_url?: string | null;
-  /** A photo of the house from Wikimedia Commons; credit is required. */
-  image?: { kind: "photo" | "logo"; src: string; page: string; credit: string | null; licence: string | null } | null;
-  /** Where the appellation is: the delimited area over its country. */
-  map_url?: string | null;
-}
 
 interface Turn {
   role: "user" | "assistant";
@@ -81,6 +69,14 @@ const FILLERS = [
   "Correcting the pronunciation of Montrachet. There is no T…",
   "Ignoring an email about 'orange wine season'…",
   "Finding the page. The book's older than you…",
+  "Shutting the door. The Malbec drinkers are getting in…",
+  "Someone wants 'the Rioja we had on holiday'. Breathing through it…",
+  "Being asked what goes with fish. Thirty years of this…",
+  "Keeping my voice down. Something's breathing…",
+  "Hearing a Jura called 'fruity'. Not over it…",
+  "Waiting for a Christmas card from a grower in Barolo. Still waiting…",
+  "Reading every rulebook in Europe so you don't have to…",
+  "Mid-argument with myself about sherry. Losing…",
 ];
 
 function randomFiller(previous = ""): string {
@@ -93,56 +89,15 @@ function randomFiller(previous = ""): string {
 // The page is deliberately bare: no suggested questions. The favourite-bottle
 // challenge still works if the customer types it.
 
-// Evidence arrives as everything the tools returned; the counter shows the
-// bottles and growers, deduped, wines first.
-// Only what he actually named goes on the counter: a bottle stays if its
-// producer (the part before the first comma) or its whole title appears in
-// the answer. If he named nothing the counter is empty.
-const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N} ]/gu, " ").replace(/\s+/g, " ").toLowerCase();
-// Words that name a kind of house, not a house: "Chateau" alone is no one.
-const HONORIFIC = new Set([
-  "chateau", "domaine", "maison", "weingut", "bodega", "bodegas", "tenuta", "quinta", "cantina", "azienda", "clos", "cave", "caves", "winery", "estate", "cellars",
-  // ...and the family tail: "Giacomo Borgogno & Figli" is named by "Borgogno".
-  "figli", "fils", "freres", "sons", "fratelli", "hermanos", "famille", "familia", "family", "vins", "vini", "vinos", "wines",
-]);
-function named(answer: string, b: Bottle, places: Set<string>): boolean {
-  const a = fold(answer);
-  const parts = b.title.split(",").map((p) => fold(p).trim()).filter((p) => p.length > 2);
-  if (parts.length === 0) return false;
-  // He says "Overnoy", the book says "Maison Pierre Overnoy": the surname
-  // (last word of the house) as a whole word is enough for a producer -
-  // unless it's only an honorific, or a place he named anyway ("Lucy
-  // Margaux" is not named by talking about Margaux).
-  const house = parts[0];
-  const words = house.split(" ").filter((w) => w.length > 3 && !HONORIFIC.has(w));
-  const surname = words.pop();
-  const houseNamed = (a.includes(house) && !HONORIFIC.has(house)) || (!!surname && !places.has(surname) && new RegExp(`\\b${surname}\\b`).test(a));
-  if (b.type === "producer") return houseNamed;
-  if (b.type !== "wine") return a.includes(fold(b.title).trim());
-  // A wine needs its house and, when the title carries one, its cuvée.
-  const cuvee = parts[parts.length - 1];
-  return houseNamed && (parts.length === 1 || a.includes(cuvee));
-}
-function onTheCounter(evidence: Bottle[] | undefined, answer: string): Bottle[] {
-  if (!evidence) return [];
-  const seen = new Set<string>();
-  const order: Record<Bottle["type"], number> = { wine: 0, producer: 1, appellation: 2, grape: 3, shelf: 9 };
-  const places = new Set(evidence.filter((b) => b.type === "appellation").flatMap((b) => fold(b.title).split(" ")));
-  return evidence
-    .filter((b) => b.type !== "shelf")
-    .filter((b) => named(answer, b, places))
-    .filter((b) => { const k = `${b.type}/${b.id}`; if (seen.has(k)) return false; seen.add(k); return true; })
-    .sort((a, b) => order[a.type] - order[b.type])
-    .slice(0, 8);
-}
 
-export function WineBoreClient({ opener }: { opener: string }) {
+export function WineBoreClient() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Turn[]>([]);
   const [loading, setLoading] = useState(false);
   const [activityLine, setActivityLine] = useState("");
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const lastReplyRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const howRef = useRef<HTMLDialogElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -154,9 +109,15 @@ export function WineBoreClient({ opener }: { opener: string }) {
     return () => window.clearInterval(id);
   }, [loading]);
 
+  // A new question scrolls down to the working line; a finished reply scrolls
+  // to its own first line, so it reads from the top with the counter below.
+  // Streaming text doesn't drag the page along.
   useEffect(() => {
-    if (messages.length > 0) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, draft]);
+    const last = messages[messages.length - 1];
+    if (!last) return;
+    if (last.role === "assistant") lastReplyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    else bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   async function ask(question?: string, image?: string) {
     const q = (question ?? input).trim();
@@ -168,10 +129,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
     setLoading(true);
 
     try {
-      const history = [
-        { role: "assistant" as const, content: opener },
-        ...next.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
-      ];
+      const history = next.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
       const res = await fetch(`${API_URL}/v1/ask/stream`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -275,8 +233,6 @@ export function WineBoreClient({ opener }: { opener: string }) {
           <h1 className={w.title}><b>Wine Bore<span className={s.dot}>.</span></b> Ask.</h1>
         </div>
 
-        <div className={`${s.bore} ${s.openerBlock} ${w.opener}`}><p>{normalDashes(opener)}</p></div>
-
         {(messages.length > 0 || loading) && (
           <section className={`${s.turns} ${w.turns}`} aria-label="Conversation">
             {messages.map((m, i) => (
@@ -290,7 +246,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
                   <p className={`${s.youText} ${m.image ? w.listText : ""}`}>{normalDashes(m.content)}</p>
                 </div>
               ) : (
-                <article key={i} className={`${s.turn} ${s.boreTurn}`}>
+                <article key={i} ref={i === messages.length - 1 ? lastReplyRef : undefined} className={`${s.turn} ${s.boreTurn}`}>
                   <p className={s.turnLabel}>Wine Bore</p>
                   <div className={s.bore}>
                     {m.error ? (
@@ -299,46 +255,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
                       <ReactMarkdown>{normalDashes(m.content)}</ReactMarkdown>
                     )}
                   </div>
-                  {onTheCounter(m.evidence, m.content).length > 0 && (
-                    <div className={w.counter}>
-                      <p className={w.counterHead}>On the counter</p>
-                      {onTheCounter(m.evidence, m.content).map((b, _i, all) => (
-                        <div
-                          key={`${b.type}/${b.id}`}
-                          className={`${w.bottle} ${!b.map_url && !b.image && all.some((x) => x.image || x.map_url) ? w.indent : ""}`}
-                        >
-                          {b.map_url ? (
-                            <a className={`${w.thumb} ${w.map}`} href={b.map_url} target="_blank" rel="noopener noreferrer" aria-label={`Map of ${b.title}`}>
-                              {/* eslint-disable-next-line @next/next/no-img-element -- static SVG map, nothing for next/image to optimise */}
-                              <img src={b.map_url} alt="" loading="lazy" />
-                            </a>
-                          ) : b.image ? (
-                            <a className={w.thumb} href={b.image.page} target="_blank" rel="noopener noreferrer" aria-label={`Photo of ${b.title} on Wikimedia Commons`}>
-                              {/* eslint-disable-next-line @next/next/no-img-element -- external Wikimedia Commons thumbnail */}
-                              <img src={b.image.src} alt="" loading="lazy" />
-                            </a>
-                          ) : null}
-                          <span className={w.bottleText}>
-                            <span className={w.bottleName}>{normalDashes(b.title)}</span>
-                            {b.subtitle && <span className={w.bottleSub}>{normalDashes(b.subtitle)}</span>}
-                            {b.image && !b.map_url && (
-                              <a className={w.credit} href={b.image.page} target="_blank" rel="noopener noreferrer">
-                                {b.image.kind === "logo" ? "logo" : "photo"}{b.image.credit ? `: ${b.image.credit}` : ""}{b.image.licence ? `, ${b.image.licence}` : ""}
-                              </a>
-                            )}
-                          </span>
-                          <span className={w.acts}>
-                            {b.site_url && (
-                              <a className={w.bottleAct} href={b.site_url} target="_blank" rel="noopener noreferrer">{b.type === "wine" ? "the house" : "their site"} &rarr;</a>
-                            )}
-                            {b.find_url && (
-                              <a className={w.bottleAct} href={b.find_url} target="_blank" rel="noopener noreferrer">find it &rarr;</a>
-                            )}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <Counter bottles={onTheCounter(m.evidence, m.content)} />
                 </article>
               )
             ))}
@@ -422,6 +339,67 @@ export function WineBoreClient({ opener }: { opener: string }) {
           </div>
         </dialog>
       </main>
+    </div>
+  );
+}
+
+// What he named, under the answer. Bottles and growers are on show - their
+// links are the point. Places fold away behind "Where it's from": useful,
+// but a map on every reply is more than most turns need.
+function Counter({ bottles }: { bottles: Bottle[] }) {
+  if (bottles.length === 0) return null;
+  const places = bottles.filter((b) => b.type === "appellation");
+  const onShow = bottles.filter((b) => b.type !== "appellation");
+  const pictured = onShow.some((b) => b.image);
+  return (
+    <div className={w.counter}>
+      {onShow.length > 0 && (
+        <>
+          <p className={w.counterHead}>On the counter</p>
+          {onShow.map((b) => <CounterRow key={`${b.type}/${b.id}`} b={b} indent={pictured && !b.image} />)}
+        </>
+      )}
+      {places.length > 0 && (
+        <details className={w.places}>
+          <summary className={w.counterHead}>Where it&rsquo;s from: {places.map((p) => normalDashes(p.title)).join(", ")}</summary>
+          {places.map((b) => <CounterRow key={`${b.type}/${b.id}`} b={b} indent={false} />)}
+        </details>
+      )}
+    </div>
+  );
+}
+
+function CounterRow({ b, indent }: { b: Bottle; indent: boolean }) {
+  return (
+    <div className={`${w.bottle} ${indent ? w.indent : ""}`}>
+      {b.map_url ? (
+        <a className={`${w.thumb} ${w.map}`} href={b.map_url} target="_blank" rel="noopener noreferrer" aria-label={`Map of ${b.title}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- static SVG map, nothing for next/image to optimise */}
+          <img src={b.map_url} alt="" loading="lazy" />
+        </a>
+      ) : b.image ? (
+        <a className={w.thumb} href={b.image.page} target="_blank" rel="noopener noreferrer" aria-label={`Photo of ${b.title} on Wikimedia Commons`}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- external Wikimedia Commons thumbnail */}
+          <img src={b.image.src} alt="" loading="lazy" />
+        </a>
+      ) : null}
+      <span className={w.bottleText}>
+        <span className={w.bottleName}>{normalDashes(b.title)}</span>
+        {b.subtitle && <span className={w.bottleSub}>{normalDashes(b.subtitle)}</span>}
+        {b.image && !b.map_url && (
+          <a className={w.credit} href={b.image.page} target="_blank" rel="noopener noreferrer">
+            {b.image.kind === "logo" ? "logo" : "photo"}{b.image.credit ? `: ${b.image.credit}` : ""}{b.image.licence ? `, ${b.image.licence}` : ""}
+          </a>
+        )}
+      </span>
+      <span className={w.acts}>
+        {b.site_url && (
+          <a className={w.bottleAct} href={b.site_url} target="_blank" rel="noopener noreferrer">{b.type === "wine" ? "the house" : "their site"} &rarr;</a>
+        )}
+        {b.find_url && (
+          <a className={w.bottleAct} href={b.find_url} target="_blank" rel="noopener noreferrer">find it &rarr;</a>
+        )}
+      </span>
     </div>
   );
 }
