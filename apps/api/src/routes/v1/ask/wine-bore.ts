@@ -22,6 +22,7 @@ import {
 } from "@dig/domain";
 import type { BoreConfig, ProgressEvent, ToolContext, ToolDef } from "./bore.js";
 import { toolError, thrownToolError } from "./tool-error.js";
+import { dressCounter } from "./wine-counter.js";
 
 export interface WineEvidence {
   type: WineEntityType | "shelf";
@@ -30,6 +31,21 @@ export interface WineEvidence {
   subtitle: string | null;
   /** Search handoff - the act surface until a merchant licenses the shop. */
   find_url: string | null;
+  // Set after the answer by dressCounter (wine-counter.ts), for the page only.
+  /** The producer's own site: on a producer's card, and on a wine's for its maker. */
+  site_url?: string | null;
+  /** A photo of the house (or its logo) from Wikimedia Commons, with credit. */
+  image?: CounterImage | null;
+  /** An appellation's region map (EU PDOs). */
+  map_url?: string | null;
+}
+
+export interface CounterImage {
+  kind: "photo" | "logo";
+  src: string;
+  page: string;
+  credit: string | null;
+  licence: string | null;
 }
 
 const RULES = `
@@ -375,6 +391,7 @@ export function makeWineBore(shelfMap: string): BoreConfig<WineEvidence> {
     },
     emptyAnswer: "Say that again for me. What is it you're actually after - a bottle, a place, or an argument?",
     evidenceKey: (e) => `${e.type}/${e.id}`,
+    enrichEvidence: dressCounter,
     publicMaxRounds: 4,
     publicMaxTokens: 600,
     quotaKey: "ask_public_wine",

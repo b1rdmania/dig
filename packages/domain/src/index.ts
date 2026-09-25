@@ -161,7 +161,7 @@ export {
   type ContextBlock,
 } from "./enrichment.js";
 
-export { loadRecordBorePersona, loadBorePersona, type BorePersonaSlug } from "./persona.js";
+export { loadRecordBorePersona, loadBorePersona, loadBorePack, type BorePersonaSlug } from "./persona.js";
 
 export {
   searchWine,

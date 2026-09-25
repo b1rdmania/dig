@@ -23,27 +23,34 @@ const PROVIDER: LlmProvider =
 const DEFAULT_MODEL =
   process.env.LLM_MODEL ?? (PROVIDER === "openrouter" ? "moonshotai/kimi-k3" : "claude-sonnet-4-6");
 const MAX_HISTORY_TURNS = 6;
-// The video fill runs after the answer is written, so it adds straight to
-// the wait. Fail open: a slow lookup costs videos, never the answer.
-const FILL_MEDIA_TIMEOUT_MS = 4_000;
+const MAX_EVIDENCE = 20;
+// The after-answer lookups (videos, the wine counter) run once the answer is
+// written, so they add straight to the wait. Fail open: a slow lookup costs
+// pictures, never the answer.
+const AFTER_ANSWER_TIMEOUT_MS = 4_000;
 
-async function fillMedia<E>(
+/** The evidence the response carries, with the bore's after-answer detail. */
+async function afterAnswer<E>(
   bore: BoreConfig<E>,
   db: Kysely<Database>,
   answer: string,
-  evidence: readonly E[],
+  evidence: E[],
   media: MediaItem[],
   log: (msg: string, extra?: Record<string, unknown>) => void,
-): Promise<void> {
-  if (!bore.fillMedia) return;
+): Promise<E[]> {
+  const shown = dedupeBy(evidence, bore.evidenceKey).slice(0, MAX_EVIDENCE);
+  if (!bore.fillMedia && !bore.enrichEvidence) return shown;
   const start = Date.now();
   const before = media.length;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  await Promise.race([
-    bore.fillMedia(db, answer, evidence, media).catch(() => {}),
-    new Promise((resolve) => { timer = setTimeout(resolve, FILL_MEDIA_TIMEOUT_MS); }),
-  ]).finally(() => clearTimeout(timer));
-  log("ask:media_fill", { added: media.length - before, elapsed_ms: Date.now() - start });
+  const work = Promise.all([
+    bore.fillMedia?.(db, answer, evidence, media).catch((err) => log("ask:media_fill_error", { error: String(err?.message ?? err) })),
+    bore.enrichEvidence?.(db, shown).catch((err) => log("ask:enrich_error", { error: String(err?.message ?? err) })),
+  ]);
+  await Promise.race([work, new Promise((resolve) => { timer = setTimeout(resolve, AFTER_ANSWER_TIMEOUT_MS); })])
+    .finally(() => clearTimeout(timer));
+  log("ask:after_answer", { videos_added: media.length - before, elapsed_ms: Date.now() - start });
+  return shown;
 }
 
 interface AskBody {
@@ -167,9 +174,8 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         log,
       });
 
-      await fillMedia(bore, db, answer, evidence, media, log);
+      const shownEvidence = await afterAnswer(bore, db, answer, evidence, media, log);
       const dedupedMedia = dedupeMedia(media);
-      const dedupedEvidence = dedupeBy(evidence, bore.evidenceKey);
 
       // Citation-bound media: only return videos for masters whose dig.baby URL
       // appears in the assistant's answer text. See binding.ts for the rationale.
@@ -186,7 +192,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         bore: bore.slug,
         media: boundMedia,
         mode,
-        evidence: dedupedEvidence.slice(0, 20),
+        evidence: shownEvidence,
         meta: {
           model: usedModel,
           elapsed_ms: Date.now() - started,
@@ -329,7 +335,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         },
       });
 
-      await fillMedia(bore, db, answer, evidence, media, log);
+      const shownEvidence = await afterAnswer(bore, db, answer, evidence, media, log);
       const boundMedia = bindMediaToCitations(dedupeMedia(media), answer);
       log("ask:media_bind", {
         media_total: media.length,
@@ -343,7 +349,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         bore: bore.slug,
         media: boundMedia,
         mode,
-        evidence: dedupeBy(evidence, bore.evidenceKey).slice(0, 20),
+        evidence: shownEvidence,
         meta: { model: usedModel, elapsed_ms: Date.now() - started, tool_calls, rounds },
       });
     } catch (err: any) {

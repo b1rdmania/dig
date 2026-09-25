@@ -62,6 +62,11 @@ export interface BoreConfig<E = unknown> {
    * Bore is video-led, so every linked record should bring its videos.
    */
   fillMedia?: (db: Kysely<Database>, answer: string, evidence: readonly E[], media: MediaItem[]) => Promise<void>;
+  /**
+   * After the answer: add page-only detail to the evidence the response
+   * carries (Wine Bore: producer sites, photos, region maps). Mutates in place.
+   */
+  enrichEvidence?: (db: Kysely<Database>, evidence: E[]) => Promise<void>;
   /** Dedupe key for evidence rows in the response. */
   evidenceKey: (e: E) => string;
   /** Public (keyless) budgets for this bore's page. */

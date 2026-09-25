@@ -36,3 +36,4 @@ coverage/
 *.tsbuildinfo
 no-dead-ends-report.json
 scripts/bore-eval/results/
+.playwright-mcp/

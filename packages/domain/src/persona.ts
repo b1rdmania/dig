@@ -45,6 +45,25 @@ export function loadBorePersona(slug: BorePersonaSlug): string {
   return body;
 }
 
+/**
+ * A bore's data pack file (bores/<slug>/pack/<file>, JSON), read once. Fails
+ * soft to null: a pack that didn't make it into the image costs the bore its
+ * pictures, never its answers.
+ */
+const packs = new Map<string, unknown>();
+export function loadBorePack<T>(slug: BorePersonaSlug, file: string): T | null {
+  const key = `${slug}/${file}`;
+  if (!packs.has(key)) {
+    try {
+      const path = fileURLToPath(new URL(`../../../bores/${slug}/pack/${file}`, import.meta.url));
+      packs.set(key, JSON.parse(readFileSync(path, "utf8")));
+    } catch {
+      packs.set(key, null);
+    }
+  }
+  return packs.get(key) as T | null;
+}
+
 /** Record Bore's original entry point; kept so nothing else moves. */
 export function loadRecordBorePersona(): string {
   return loadBorePersona("record-bore");
