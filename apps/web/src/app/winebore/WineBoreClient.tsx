@@ -399,21 +399,26 @@ export function WineBoreClient({ opener }: { opener: string }) {
           <div className={w.howBody}>
             <button type="button" className={w.howClose} onClick={() => howRef.current?.close()} aria-label="Close">&times;</button>
             <h2>How we built this</h2>
-            <p>An experiment, after Record Bore. Can you give a language model taste? Not knowledge. Opinions about one narrow thing, backed by facts you can check. The model on its own has read everything and believes nothing, so the data came first.</p>
+            <p>This came out of Record Bore. I wanted to see if you could give a language model taste, not just more knowledge. A narrow point of view, backed by things you can check.</p>
 
             <h3>The data</h3>
-            <p>The spine is Liv-ex&rsquo;s LWIN list: 185,293 wines, 34,466 producers. On top, the EU register of protected names, 2,455 appellations with their yield caps and planting rules, and the actual rulebooks for 1,080 of them: the cahiers des charges, disciplinari and pliegos. That&rsquo;s where the rules live, and the rules are what he&rsquo;s right about.</p>
-            <p>Then the joining up. 55,971 rows of which grapes are allowed where, matched to 2,125 varieties. Producer websites from Wikidata, 41 trade bodies and an <a href="https://exa.ai" target="_blank" rel="noopener noreferrer">Exa</a> sweep of the 500 biggest houses. 96% of the live European wines land on a register entry, which is how Chablis knows it&rsquo;s Chardonnay only.</p>
-            <p>Taste is the bit we&rsquo;ve only started. Each rulebook says what the wine has to look, smell and taste like, and he can quote it. That&rsquo;s 5,675 clauses, and it&rsquo;s where his tasting words come from. Beyond that, 536 notes from the Swedish state monopoly and nothing from growers yet.</p>
+            <p>The base is Liv-ex&rsquo;s LWIN list: 185,293 wines and 34,466 producers.</p>
+            <p>Then 2,455 EU appellations and the actual rulebooks for 1,080 of them: the cahiers des charges, disciplinari and pliegos.</p>
+            <p>That joins to 55,971 grape/appellation relationships across 2,125 varieties, plus producer data from Wikidata, 41 trade bodies, producer websites and an <a href="https://exa.ai" target="_blank" rel="noopener noreferrer">Exa</a> sweep of the 500 biggest houses.</p>
+            <p>96% of live European wines now resolve to an appellation.</p>
+            <p>For taste, there are 5,675 rulebook clauses describing how wines should look, smell and taste, plus 536 tasting notes from the Swedish state monopoly.</p>
+            <p>Nothing from growers yet.</p>
 
             <h3>How he answers</h3>
-            <p>One character file and six lookups: the cellar, an appellation and its rules, a producer, a wine, a grape, a shelf. Every fact has to come from a lookup made in that turn. If he names something the lookups didn&rsquo;t return, he&rsquo;s sent back to the book once. If it&rsquo;s still not there, he says so.</p>
+            <p>A character file and a few lookups across wines, grapes, producers and appellations. Facts have to come from the data he just looked up. If they don&rsquo;t, he checks again or says he doesn&rsquo;t know.</p>
 
             <h3>Where it goes next</h3>
-            <p>The same shape would take a merchant&rsquo;s own stock list, or a taste much narrower than Europe. The more opinion you feed in, the more he sounds like a person. A thousand voice notes on a thousand wines would turn him into somebody specific. That&rsquo;s the next experiment, not this one.</p>
+            <p>The interesting bit is making the taste more specific.</p>
+            <p>A merchant could add its own stock. A thousand voice notes on a thousand wines would make him sound like somebody in particular.</p>
+            <p>That&rsquo;s the next experiment.</p>
 
             <h3>What it isn&rsquo;t</h3>
-            <p>No review sites, no scraped tasting notes, no Vivino.</p>
+            <p>No review sites. No scraped tasting notes. No Vivino.</p>
           </div>
         </dialog>
       </main>
