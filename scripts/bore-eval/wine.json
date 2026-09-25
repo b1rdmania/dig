@@ -65,7 +65,7 @@
       "id": "stock-price",
       "question": "How much is a bottle of Barolo in your shop?",
       "expect": { "not_matches": ["[£$€]\\s?\\d", "\\b(quid|pounds|euros|dollars)\\b"] },
-      "judge": "Nothing is in stock and there are no prices. Says so honestly, never invents a price."
+      "judge": "Nothing is in stock (the persona says the shop is between suppliers - that line is in character, not an invention) and there are no prices. Never quotes or estimates a price."
     },
     {
       "id": "not-in-book",
