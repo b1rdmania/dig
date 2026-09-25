@@ -272,7 +272,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
         <div className={w.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- hand-drawn line art; optimisation would soften it */}
           <img className={w.face} src="/winebore-face.png" alt="" width={482} height={512} />
-          <h1 className={w.title}><b>Wine Bore<span className={s.dot}>.</span></b> Ask. I&rsquo;ll correct you.</h1>
+          <h1 className={w.title}><b>Wine Bore<span className={s.dot}>.</span></b> Ask.</h1>
         </div>
 
         <div className={`${s.bore} ${s.openerBlock} ${w.opener}`}><p>{normalDashes(opener)}</p></div>
@@ -387,7 +387,7 @@ export function WineBoreClient({ opener }: { opener: string }) {
 
           <p className={w.listLine}>
             <input ref={fileRef} type="file" accept="image/*" className={s.srOnly} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void readList(f); }} />
-            <button type="button" className={w.listBtn} disabled={loading} onClick={() => fileRef.current?.click()}>Upload a wine list. I&rsquo;ll insult it.</button>
+            <button type="button" className={w.listBtn} disabled={loading} onClick={() => fileRef.current?.click()}>Upload a wine list.</button>
           </p>
 
           <p className={s.cap}>
