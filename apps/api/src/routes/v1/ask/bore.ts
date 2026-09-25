@@ -24,7 +24,6 @@ export interface ToolContext<E> {
   db: Kysely<Database>;
   mediaCollector: MediaItem[];
   evidenceCollector: E[];
-  errorRef: { count: number };
   /** Per-conversation scratch the tools may use (Record Bore: allowed master IDs). */
   scratch: Map<string, unknown>;
 }
@@ -57,6 +56,12 @@ export interface BoreConfig<E = unknown> {
   handover: (evidence: readonly E[]) => string;
   /** When the model wrote nothing usable at all. */
   emptyAnswer: string;
+  /**
+   * After the answer is written: fetch media for what it actually cites but
+   * the tools didn't collect (they only prefetch the top few rows). Record
+   * Bore is video-led, so every linked record should bring its videos.
+   */
+  fillMedia?: (db: Kysely<Database>, answer: string, evidence: readonly E[], media: MediaItem[]) => Promise<void>;
   /** Dedupe key for evidence rows in the response. */
   evidenceKey: (e: E) => string;
   /** Public (keyless) budgets for this bore's page. */

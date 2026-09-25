@@ -35,3 +35,4 @@ coverage/
 .mcp.json
 *.tsbuildinfo
 no-dead-ends-report.json
+scripts/bore-eval/results/

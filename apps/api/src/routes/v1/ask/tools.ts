@@ -20,9 +20,11 @@ import {
   getArtistCollaborators,
   getArtistGroupsAndMembers,
   getArtistIdentity,
+  type LabelMasterLink,
 } from "@dig/domain";
 import type { MediaItem, EvidenceItem } from "./types.js";
-import { isAllowedMasterId, INVALID_MASTER_ID_ERROR } from "./binding.js";
+import { extractCitedMasterIds, isAllowedMasterId, INVALID_MASTER_ID_ERROR } from "./binding.js";
+import { toolError, thrownToolError } from "./tool-error.js";
 
 export const TOOLS = [
   {
@@ -230,6 +232,27 @@ async function collectVideos(
   }));
 }
 
+// Videos for every master the answer links that the tools didn't already
+// collect videos for. Tools prefetch only their top rows, so a record the
+// model picked from further down a list reached the page with no video.
+// Bounded: the rail shows a handful, and each master is one read.
+const FILL_MAX_MASTERS = 8;
+
+export async function fillCitedVideos(
+  db: Kysely<Database>,
+  answer: string,
+  evidence: readonly EvidenceItem[],
+  mediaCollector: MediaItem[],
+): Promise<void> {
+  const have = new Set(mediaCollector.map((m) => m.discogs_id));
+  const titles = new Map(evidence.filter((e) => e.type === "master").map((e) => [e.discogs_id, e.title]));
+  const missing = [...extractCitedMasterIds(answer)]
+    .filter((id) => !have.has(id))
+    .slice(0, FILL_MAX_MASTERS)
+    .map((id) => ({ discogs_id: id, title: titles.get(id) ?? "" }));
+  if (missing.length > 0) await collectVideos(db, missing, mediaCollector, missing.length);
+}
+
 // Invariant: every entity a tool returns to the model is registered as
 // evidence. The answer scrubber (binding.unlinkUncited) removes links to
 // anything NOT in evidence, so a partial registration would strip links to
@@ -263,10 +286,9 @@ export async function executeTool(
   input: Record<string, unknown>,
   mediaCollector: MediaItem[],
   evidenceCollector: EvidenceItem[],
-  errorRef: { count: number },
   allowedMasterIds: Set<number>,
 ): Promise<unknown> {
-  const result = await runTool(db, name, input, mediaCollector, evidenceCollector, errorRef, allowedMasterIds);
+  const result = await runTool(db, name, input, mediaCollector, evidenceCollector, allowedMasterIds);
   registerReturnedEntities(result, evidenceCollector);
   return result;
 }
@@ -277,7 +299,6 @@ async function runTool(
   input: Record<string, unknown>,
   mediaCollector: MediaItem[],
   evidenceCollector: EvidenceItem[],
-  errorRef: { count: number },
   allowedMasterIds: Set<number>,
 ): Promise<unknown> {
   try {
@@ -303,11 +324,14 @@ async function runTool(
         mediaCollector,
       );
       return {
+        // Artist and label ride along on masters: a title alone can't tell
+        // the 1987 Transmat original from five later covers of the same name.
         results: sr.results.map((r) => ({
           type: r.type,
           discogs_id: r.discogs_id,
           name: r.name ?? r.title,
           year: r.year,
+          ...(r.type === "master" ? { artist: r.primary_artist ?? null, label: r.primary_label ?? null } : {}),
         })),
         total: sr.results.length,
         hint: sr.meta.hint ?? undefined,
@@ -321,7 +345,7 @@ async function runTool(
         getArtist(db, id, batchId, dumpDate) as Promise<any>,
         getArtistIdentity(db, id, batchId).catch(() => null),
       ]);
-      if (!d) { errorRef.count++; return { error: "Artist not found" }; }
+      if (!d) return toolError("not_found", `No artist with ID ${id}. Use an ID from search_catalog.`);
       evidenceCollector.push({ type: "artist", discogs_id: d.discogs_id, title: d.name, dig_url: `https://app.dig.baby/artist/${d.discogs_id}` });
       // Every resolved alias is a real in-scope artist the model may now link.
       for (const n of identity?.names ?? []) {
@@ -356,7 +380,7 @@ async function runTool(
       const id = Number(input.discogs_id);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.labels");
       const d = await getLabel(db, id, batchId, dumpDate) as any;
-      if (!d) { errorRef.count++; return { error: "Label not found" }; }
+      if (!d) return toolError("not_found", `No label with ID ${id}. Use an ID from search_catalog.`);
       evidenceCollector.push({ type: "label", discogs_id: d.discogs_id, title: d.name, dig_url: `https://app.dig.baby/label/${d.discogs_id}` });
       return {
         discogs_id: d.discogs_id,
@@ -373,11 +397,11 @@ async function runTool(
       const id = Number(input.discogs_id);
       // Server-side guard: reject if this ID was never established as a master ID
       if (!isAllowedMasterId(allowedMasterIds, id)) {
-        return { error: INVALID_MASTER_ID_ERROR };
+        return toolError("invalid_input", INVALID_MASTER_ID_ERROR);
       }
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.masters");
       const d = await getMaster(db, id, batchId, dumpDate) as any;
-      if (!d) { errorRef.count++; return { error: "Master not found" }; }
+      if (!d) return toolError("not_found", `No master with ID ${id}. Use an ID from search_catalog.`);
 
       evidenceCollector.push({ type: "master", discogs_id: d.discogs_id, title: d.title, dig_url: `https://app.dig.baby/master/${d.discogs_id}` });
 
@@ -455,18 +479,21 @@ async function runTool(
       const id = Number(input.discogs_id);
       const limit = Math.min(Math.max(Number(input.limit ?? 15), 1), 20);
       const { batchId, dumpDate } = await getBatchForTable(db, "catalog.labels");
-      const result = await getLabelReleases(db, id, batchId, dumpDate, limit) as any;
-      const labelMasters = (result.links ?? []).map((l: any) => ({
+      const result = await getLabelReleases(db, id, batchId, dumpDate, limit, undefined, "weight");
+      const labelMasters = (result.links as LabelMasterLink[]).map((l) => ({
         discogs_id: l.discogs_id,
-        title: l.title,
+        title: l.title ?? "",
         year: l.year ?? null,
-        artist: l.artist ?? null,
+        artist: l.primary_artist ?? null,
         dig_url: `https://app.dig.baby/master/${l.discogs_id}`,
       }));
       for (const r of labelMasters) {
         evidenceCollector.push({ type: "master", discogs_id: r.discogs_id, title: r.title, dig_url: r.dig_url });
         allowedMasterIds.add(r.discogs_id);
       }
+      // Best first, so the top of the list is what gets recommended - and
+      // what the video rail needs. Labels with no core run land here.
+      await collectVideos(db, labelMasters, mediaCollector, 6);
       return {
         masters: labelMasters,
         total: result.pagination?.total_estimate ?? (result.links?.length ?? 0),
@@ -562,10 +589,10 @@ async function runTool(
 
     if (name === "get_scene") {
       const slug = String(input.slug ?? "").trim().slice(0, 80);
-      if (!slug) { errorRef.count++; return { error: "Scene slug required" }; }
+      if (!slug) return toolError("invalid_input", "slug is required. Scene slugs are listed in your instructions or by list_scenes.");
       const { batchId } = await getBatchForTable(db, "catalog.masters");
       const scene = await getScene(db, slug, batchId);
-      if (!scene) { errorRef.count++; return { error: `Scene not found: ${slug}` }; }
+      if (!scene) return toolError("not_found", `No scene "${slug}". Scene slugs are listed in your instructions or by list_scenes.`);
 
       // Register member labels as cite-able evidence so the model's links validate.
       for (const l of scene.labels) {
@@ -686,10 +713,8 @@ async function runTool(
       };
     }
 
-    errorRef.count++;
-    return { error: `Unknown tool: ${name}` };
-  } catch (err: any) {
-    errorRef.count++;
-    return { error: String(err?.message ?? err) };
+    return toolError("invalid_input", `Unknown tool: ${name}`);
+  } catch (err) {
+    return thrownToolError(err);
   }
 }

@@ -1,0 +1,121 @@
+{
+  "bore": "record",
+  "cases": [
+    {
+      "id": "opening-underground",
+      "question": "got anything good? something underground",
+      "expect": { "asks_question": true, "max_links": 1 },
+      "judge": "A broad first ask. The shop owner should size the customer up with one sharp question about what they already rate, and put at most one taster on the counter. A list of records fails."
+    },
+    {
+      "id": "opening-deep-techno",
+      "question": "deep techno please",
+      "expect": { "asks_question": true, "max_links": 1 },
+      "judge": "Broad first ask: one sharp question back, at most one linked taster, no dump of records."
+    },
+    {
+      "id": "label-tresor",
+      "question": "What's essential on Tresor?",
+      "expect": { "mode": "grounded_success", "min_tool_calls": 1, "min_links": 3, "mentions_any": ["Jeff Mills", "Robert Hood", "Blake Baxter", "Juan Atkins", "3 Phase", "Surgeon", "Joey Beltram", "Cristian Vogel", "Drexciya"] },
+      "judge": "Names the label's core records with an opinion on why each matters. Every record linked."
+    },
+    {
+      "id": "label-deeper-than-basic-channel",
+      "question": "I love Basic Channel. Which labels go deeper?",
+      "expect": { "mode": "grounded_success", "min_tool_calls": 1, "min_links": 2, "mentions_any": ["Chain Reaction", "Main Street", "Rhythm & Sound", "Maurizio", "Echocord", "Deepchord", "Scion", "Burial Mix"] },
+      "judge": "Points to specific labels and records in the deeper direction and says what makes them deeper. Talks about sound, not about a feature or a map."
+    },
+    {
+      "id": "artist-larry-heard",
+      "question": "Best Larry Heard records?",
+      "expect": { "mode": "grounded_success", "min_tool_calls": 1, "min_links": 3, "mentions_any": ["Mr. Fingers", "Fingers Inc", "Amnesia", "Can You Feel It", "Sceneries", "Alien"] },
+      "judge": "Covers his aliases (Mr. Fingers, Fingers Inc.) as one person and picks the records with reasons."
+    },
+    {
+      "id": "aliases-aphex-twin",
+      "question": "What aliases did Aphex Twin record under?",
+      "expect": { "min_tool_calls": 1, "mentions_any": ["AFX", "Polygon Window", "Caustic Window", "GAK", "Bradley Strider", "Q-Chastic", "Power-Pill"] },
+      "judge": "Lists aliases that came back from the lookup, ideally with a record for the interesting ones. No aliases invented."
+    },
+    {
+      "id": "remixes-carl-craig",
+      "question": "What did Carl Craig remix for other people?",
+      "expect": { "mode": "grounded_success", "min_tool_calls": 1, "min_links": 2 },
+      "judge": "Remixes he did for other artists, not his own records. Linked, with a view on the standouts."
+    },
+    {
+      "id": "credits-model-500",
+      "question": "Who produced and engineered the Model 500 records?",
+      "expect": { "min_tool_calls": 1 },
+      "judge": "Answers from the credit data. If the credits are thin, says so plainly rather than guessing."
+    },
+    {
+      "id": "collaborators-theo-parrish",
+      "question": "Who did Theo Parrish work with?",
+      "expect": { "min_tool_calls": 1, "min_links": 2 },
+      "judge": "Named collaborators with the records they share, and a thread worth pulling."
+    },
+    {
+      "id": "scene-detroit-1992",
+      "question": "Detroit techno from 1992, where do I start?",
+      "expect": { "mode": "grounded_success", "min_tool_calls": 1, "min_links": 3 },
+      "judge": "Records from around 1992 on the right Detroit labels. Doesn't present 'scenes' as a product feature."
+    },
+    {
+      "id": "era-uk-bleep",
+      "question": "UK bleep records from around 1990",
+      "expect": { "mode": "grounded_success", "min_links": 3, "mentions_any": ["Warp", "LFO", "Sweet Exorcist", "Nightmares on Wax", "Forgemasters", "Unique 3", "Ital Rockers"] },
+      "judge": "Sheffield/Bradford bleep-era records, linked, with some opinion."
+    },
+    {
+      "id": "record-strings-of-life",
+      "question": "Tell me about Strings of Life",
+      "expect": { "mode": "grounded_success", "min_tool_calls": 1, "min_links": 1, "mentions_any": ["Rhythim Is Rhythim", "Derrick May", "Transmat"] },
+      "judge": "Facts about the record come from the lookup (artist, label, year). Offers a next record to chase."
+    },
+    {
+      "id": "out-of-scope-oasis",
+      "question": "Got any Oasis?",
+      "expect": { "max_words": 120 },
+      "judge": "Wrong shop. A short, dry, correct answer and a nudge toward something in scope. Does not pretend to stock Oasis."
+    },
+    {
+      "id": "out-of-scope-post-2008",
+      "question": "What's the best techno record of 2015?",
+      "expect": { "max_words": 150 },
+      "judge": "The shop stops at 2008. Says so in voice and offers something from inside the window instead of inventing a 2015 answer."
+    },
+    {
+      "id": "not-in-stock",
+      "question": "What's good on Glorbnax Records?",
+      "expect": { "max_links": 2 },
+      "judge": "The label doesn't exist. Says it's not in here, doesn't invent records for it."
+    },
+    {
+      "id": "dig-deeper-drexciya",
+      "question": "Take me deeper on Drexciya, the weird end.",
+      "expect": { "min_tool_calls": 2, "min_links": 2 },
+      "judge": "Uses the credit graph or aliases (e.g. James Stinson projects) and explains the thread from Drexciya to each pick."
+    },
+    {
+      "id": "pushback-not-trippy",
+      "history": [
+        { "role": "user", "content": "something trippy from Chicago" },
+        { "role": "assistant", "content": "Start with Can You Feel It by Mr. Fingers and the Trax back catalogue." }
+      ],
+      "question": "none of these are trippy",
+      "expect": { "min_words": 8 },
+      "judge": "Feedback, not a new search brief. Owns the miss, sharpens the read of what 'trippy' means, and re-aims with something more fitting. Silence or a brush-off fails."
+    },
+    {
+      "id": "follow-up-more",
+      "history": [
+        { "role": "user", "content": "early Chicago acid" },
+        { "role": "assistant", "content": "Acid Tracks by Phuture is where it starts. Then Armando and Adonis on Trax." }
+      ],
+      "question": "send me more like that",
+      "expect": { "min_tool_calls": 1, "min_links": 2 },
+      "judge": "A follow-up must still be checked against the stock: new linked records, not a from-memory list."
+    }
+  ]
+}

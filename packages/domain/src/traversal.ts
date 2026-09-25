@@ -445,14 +445,17 @@ export async function getArtistCatalogReleases(
  *   - "chronological" — by year ASC, discogs_id ASC. Powers the redesigned
  *     label-page catalog spine. When set, also LEFT JOINs release_shadow on
  *     the main pressing to surface the catalog number (RS 91040, etc).
+ *   - "weight" — best first (scene_weight DESC), same shape as chronological.
+ *     For the ask loop: a label with no curated core run falls back here, and
+ *     its first masters by ID are an arbitrary slice, not the label's best.
  *
  * Replaces the old release-level traversal which was the only way to find a
  * label's catalog in the full-catalog shape.
  */
 export interface LabelMasterLink extends TraversalLink {
-  /** Catalog number from the main pressing — only populated for sort=chronological. */
+  /** Catalog number from the main pressing — only populated for sort=chronological|weight. */
   catalog_number?: string | null;
-  /** Primary artist credit text — only populated for sort=chronological. */
+  /** Primary artist credit text — only populated for sort=chronological|weight. */
   primary_artist?: string | null;
 }
 
@@ -463,13 +466,13 @@ export async function getLabelReleases(
   dumpDate: string,
   limit = DEFAULT_LIMIT,
   cursor?: string,
-  sort: "id" | "chronological" = "id",
+  sort: "id" | "chronological" | "weight" = "id",
 ): Promise<TraversalResponse> {
   const start = Date.now();
   const lim = Math.min(Math.max(limit, 1), MAX_LIMIT);
   const afterId = cursor ? decodeCursor(cursor) : null;
 
-  if (sort === "chronological") {
+  if (sort === "chronological" || sort === "weight") {
     // Year-sorted catalog spine. We fetch up to MAX_LIMIT + 1 in one shot,
     // then slice in JS — chronological cursor pagination over (year,
     // discogs_id) gets ugly with NULLs and isn't worth the complexity for
@@ -497,6 +500,7 @@ export async function getLabelReleases(
       ])
       .where("catalog.masters.primary_label_discogs_id", "=", labelDiscogsId)
       .where("catalog.masters.batch_id", "=", batchId)
+      .$if(sort === "weight", (q) => q.orderBy("catalog.masters.scene_weight", sql`desc nulls last`))
       .orderBy("catalog.masters.year", "asc")
       .orderBy("catalog.masters.discogs_id", "asc")
       .limit(lim)

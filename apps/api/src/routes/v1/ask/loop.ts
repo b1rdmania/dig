@@ -9,6 +9,7 @@ import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import type { AnthropicMessage, AnthropicContentBlock, MediaItem, ResponseMode } from "./types.js";
 import type { BoreConfig, ToolDef } from "./bore.js";
+import { isRetrievalFailure, isToolError, toolError, toolErrorCause } from "./tool-error.js";
 
 // Default round budget for private (BYO-key / llm-beta) asks. The public
 // Record Bore page passes a tighter budget (see index.ts): a live ask on
@@ -46,6 +47,8 @@ async function callAnthropic(params: {
   system: string;
   messages: AnthropicMessage[];
   tools: ToolDef[];
+  /** Last round: tools stay declared (so the cache holds) but can't be called. */
+  noTools?: boolean;
   maxTokens: number;
   anthropicApiKey: string;
   signal?: AbortSignal;
@@ -62,11 +65,21 @@ async function callAnthropic(params: {
         "x-api-key": params.anthropicApiKey,
         "anthropic-version": "2023-06-01",
       },
+      // Prompt caching. Every round resends tools + persona + the turn so
+      // far; caching makes rounds 2+ read that prefix at ~0.1x instead of
+      // paying for it again. The explicit marker pins tools + system (the
+      // big static part); top-level cache_control moves a second breakpoint
+      // to the end of the growing conversation each round. The last round
+      // keeps the tool list and sets tool_choice "none" instead of dropping
+      // the tools: changing the tool list rebuilds the whole cache, and
+      // tool_choice only invalidates the messages tier.
       body: JSON.stringify({
         model: params.model,
         max_tokens: params.maxTokens,
-        system: params.system,
+        cache_control: { type: "ephemeral" },
+        system: [{ type: "text", text: params.system, cache_control: { type: "ephemeral" } }],
         tools: params.tools,
+        ...(params.noTools && params.tools.length > 0 ? { tool_choice: { type: "none" } } : {}),
         messages: params.messages,
       }),
       signal: callSignal(controller, params.signal),
@@ -87,6 +100,27 @@ async function callAnthropic(params: {
   return res.json() as Promise<LlmResponse>;
 }
 
+/** Token accounting for one call, normalised across providers. */
+export interface LlmUsage {
+  input_tokens: number;
+  output_tokens: number;
+  /** Prompt tokens served from the provider's cache. */
+  cached_tokens: number;
+  /** Anthropic only: tokens written to the cache this call. */
+  cache_write_tokens?: number;
+}
+
+function anthropicUsage(u: Record<string, unknown> | undefined): LlmUsage | undefined {
+  if (!u) return undefined;
+  const n = (k: string) => Number(u[k] ?? 0) || 0;
+  return {
+    input_tokens: n("input_tokens") + n("cache_read_input_tokens") + n("cache_creation_input_tokens"),
+    output_tokens: n("output_tokens"),
+    cached_tokens: n("cache_read_input_tokens"),
+    cache_write_tokens: n("cache_creation_input_tokens"),
+  };
+}
+
 interface LlmResponse {
   id?: string;
   model: string;
@@ -94,6 +128,8 @@ interface LlmResponse {
   provider?: string;
   stop_reason: "end_turn" | "tool_use" | "max_tokens";
   content: AnthropicContentBlock[];
+  /** Raw on the Anthropic wire; normalised by callModel. */
+  usage?: Record<string, unknown> | LlmUsage;
 }
 
 export type LlmProvider = "anthropic" | "openrouter";
@@ -112,6 +148,8 @@ export interface AskRoundTrace {
   ms: number;
   provider: string | null;
   tools: string[];
+  /** Absent when the provider didn't report usage. */
+  usage?: LlmUsage;
 }
 
 // ---------------------------------------------------------------------------
@@ -265,12 +303,18 @@ async function callOpenRouter(params: {
   let finish = "stop";
   const toolCalls = new Map<number, { id: string; name: string; args: string }>();
   let streamError: { message?: string; code?: number } | null = null;
+  let usage: LlmUsage | undefined;
 
   const handleChunk = (raw: string) => {
     let data: {
       model?: string;
       provider?: string;
       error?: { message?: string; code?: number };
+      usage?: {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        prompt_tokens_details?: { cached_tokens?: number };
+      };
       choices?: Array<{
         finish_reason?: string | null;
         delta?: {
@@ -287,6 +331,15 @@ async function callOpenRouter(params: {
     if (data.error) {
       streamError = data.error;
       return;
+    }
+    if (data.usage) {
+      // OpenRouter sends usage on the final chunk; cached_tokens is how we
+      // find out whether the host (e.g. Moonshot) cached the prompt prefix.
+      usage = {
+        input_tokens: Number(data.usage.prompt_tokens ?? 0) || 0,
+        output_tokens: Number(data.usage.completion_tokens ?? 0) || 0,
+        cached_tokens: Number(data.usage.prompt_tokens_details?.cached_tokens ?? 0) || 0,
+      };
     }
     if (data.model) model = String(data.model);
     if (data.provider) provider = String(data.provider);
@@ -366,7 +419,7 @@ async function callOpenRouter(params: {
   const stop_reason: LlmResponse["stop_reason"] =
     finish === "tool_calls" || toolCalls.size > 0 ? "tool_use" : finish === "length" ? "max_tokens" : "end_turn";
 
-  return { model, provider, stop_reason, content };
+  return { model, provider, stop_reason, content, usage };
 }
 
 export async function runAgenticLoop<E>(params: {
@@ -389,19 +442,22 @@ export async function runAgenticLoop<E>(params: {
   const rounds: AskRoundTrace[] = [];
   const maxRounds = Math.max(2, params.maxRounds ?? DEFAULT_MAX_ROUNDS);
 
-  const callModel = (messages: AnthropicMessage[], tools: ToolDef[]): Promise<LlmResponse> =>
-    params.provider === "openrouter"
-      ? callOpenRouter({
-          model: params.model,
-          system: bore.systemPrompt,
-          messages,
-          tools,
-          maxTokens: params.maxTokens,
-          apiKey: params.apiKey,
-          onDelta: (text) => params.onEvent?.({ type: "delta", text }),
-          signal: params.signal,
-        })
-      : callAnthropic({ model: params.model, system: bore.systemPrompt, messages, tools, maxTokens: params.maxTokens, anthropicApiKey: params.apiKey, signal: params.signal });
+  const callModel = async (messages: AnthropicMessage[], lastRound: boolean): Promise<LlmResponse> => {
+    if (params.provider === "openrouter") {
+      return callOpenRouter({
+        model: params.model,
+        system: bore.systemPrompt,
+        messages,
+        tools: lastRound ? [] : bore.tools,
+        maxTokens: params.maxTokens,
+        apiKey: params.apiKey,
+        onDelta: (text) => params.onEvent?.({ type: "delta", text }),
+        signal: params.signal,
+      });
+    }
+    const res = await callAnthropic({ model: params.model, system: bore.systemPrompt, messages, tools: bore.tools, noTools: lastRound, maxTokens: params.maxTokens, anthropicApiKey: params.apiKey, signal: params.signal });
+    return { ...res, usage: anthropicUsage(res.usage as Record<string, unknown> | undefined) };
+  };
   const messages: AnthropicMessage[] = [
     ...params.history,
     { role: "user", content: params.question },
@@ -412,7 +468,9 @@ export async function runAgenticLoop<E>(params: {
   let sentBack = false;
   const mediaCollector: MediaItem[] = [];
   const evidenceCollector: E[] = [];
-  const errorRef = { count: 0 };
+  // Lookups that failed to run (timeouts, bugs) - not bad IDs. Decides
+  // whether an answer with no evidence was "nothing there" or "degraded".
+  let retrievalFailures = 0;
   const scratch = new Map<string, unknown>();
   const deadline = Date.now() + LOOP_DEADLINE_MS;
 
@@ -448,7 +506,7 @@ export async function runAgenticLoop<E>(params: {
 
     let response: LlmResponse;
     try {
-      response = await callModel(messages, lastRound ? [] : bore.tools);
+      response = await callModel(messages, lastRound);
     } catch (err: any) {
       log("ask:llm_error", { round, provider: params.provider, elapsed_ms: Date.now() - callStart, error: String(err?.message ?? err) });
       throw err;
@@ -456,8 +514,9 @@ export async function runAgenticLoop<E>(params: {
 
     const callMs = Date.now() - callStart;
     const roundTools = response.content.filter((b) => b.type === "tool_use").map((b) => String(b.name ?? ""));
-    rounds.push({ round, ms: callMs, provider: response.provider ?? null, tools: roundTools });
-    log("ask:llm_response", { round, elapsed_ms: callMs, stop_reason: response.stop_reason, model: response.model, provider: response.provider ?? null, tools: roundTools });
+    const usage = response.usage as LlmUsage | undefined;
+    rounds.push({ round, ms: callMs, provider: response.provider ?? null, tools: roundTools, ...(usage ? { usage } : {}) });
+    log("ask:llm_response", { round, elapsed_ms: callMs, stop_reason: response.stop_reason, model: response.model, provider: response.provider ?? null, tools: roundTools, ...(usage ?? {}) });
 
     usedModel = response.model ?? params.model;
 
@@ -472,7 +531,7 @@ export async function runAgenticLoop<E>(params: {
         continue;
       }
       const answer = bore.scrubAnswer(String(textBlock?.text ?? "").trim(), evidenceCollector) || bore.emptyAnswer;
-      const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : errorRef.count > 0 ? "timeout_degraded" : "grounded_empty";
+      const mode: ResponseMode = evidenceCollector.length > 0 ? "grounded_success" : retrievalFailures > 0 ? "timeout_degraded" : "grounded_empty";
       log("ask:loop_end", { rounds: round + 1, tool_calls: toolCallCount, mode, answer_len: answer.length });
       return { answer, model: usedModel, tool_calls: toolCallCount, media: mediaCollector, evidence: evidenceCollector, mode, rounds };
     }
@@ -490,18 +549,31 @@ export async function runAgenticLoop<E>(params: {
         toolUseBlocks.map(async (block) => {
           const toolStart = Date.now();
           const toolName = String(block.name ?? "");
-          const toolTimeout = new Promise<{ error: string }>((resolve) =>
-            setTimeout(() => resolve({ error: `Tool ${toolName} timed out after ${TOOL_EXEC_TIMEOUT_MS}ms` }), TOOL_EXEC_TIMEOUT_MS)
-          );
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          const toolTimeout = new Promise<unknown>((resolve) => {
+            timer = setTimeout(
+              () => resolve(toolError("transient", `${toolName} timed out. Try it once more, or answer from what you already have.`)),
+              TOOL_EXEC_TIMEOUT_MS,
+            );
+          });
           const result = await Promise.race([
-            bore.executeTool(toolName, (block.input as Record<string, unknown>) ?? {}, { db: params.db, mediaCollector, evidenceCollector, errorRef, scratch }),
+            bore.executeTool(toolName, (block.input as Record<string, unknown>) ?? {}, { db: params.db, mediaCollector, evidenceCollector, scratch }),
             toolTimeout,
-          ]);
-          log("ask:tool_result", { tool: toolName, elapsed_ms: Date.now() - toolStart, timed_out: (result as any)?.error?.includes("timed out") ?? false });
+          ]).finally(() => clearTimeout(timer));
+          if (isRetrievalFailure(result)) retrievalFailures++;
+          const failed = isToolError(result);
+          log("ask:tool_result", {
+            tool: toolName,
+            elapsed_ms: Date.now() - toolStart,
+            ...(failed ? { error_kind: result.error.kind, error_cause: toolErrorCause(result) } : {}),
+          });
           return {
             type: "tool_result" as const,
             tool_use_id: String(block.id ?? ""),
             content: JSON.stringify(result),
+            // Anthropic reads is_error; OpenRouter's translation drops it and
+            // the model reads the same fact from error.kind in the content.
+            ...(failed ? { is_error: true } : {}),
           };
         }),
       );

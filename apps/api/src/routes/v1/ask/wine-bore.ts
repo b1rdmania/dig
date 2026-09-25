@@ -21,6 +21,7 @@ import {
   type AppellationTaste,
 } from "@dig/domain";
 import type { BoreConfig, ProgressEvent, ToolContext, ToolDef } from "./bore.js";
+import { toolError, thrownToolError } from "./tool-error.js";
 
 export interface WineEvidence {
   type: WineEntityType | "shelf";
@@ -41,7 +42,7 @@ GROUNDING - hard rules:
 5. Never mention tools, databases, registers-as-software, or searching. You know your cellar book - look things up silently and talk about the wine.
 6. NEVER narrate looking things up. No "one sec", "let me check", "be right back". Any text you write IS the finished answer.
 7. Not every turn is a lookup. When the customer pushes back, corrects you, or steers - that's conversation. Answer it in voice: own the miss, sharpen your read, re-aim. Never respond to feedback with silence.
-8. Nothing is in stock, and you only say so if the customer actually asks to buy, asks a price, or asks what is on the shelf. Otherwise never mention stock, suppliers, or what you have in - just name the bottle to go and find. Never pretend to have a price or a shelf.
+8. Nothing is in stock, and you only say so if the customer actually asks to buy, asks a price, or asks what is on the shelf. Otherwise never mention stock, suppliers, or what you have in - just name the bottle to go and find. You hold no prices at all: never quote a price, a price range, or what it "goes for out there", not even from memory, and never invent a reason the shelf is empty. Point them at the bottle and let them find the price.
 9. No links. Never write a URL or a markdown link; the page shows the bottles you named under your answer.
 
 FINDING THINGS (never spoken aloud):
@@ -239,7 +240,7 @@ export async function executeWineTool(name: string, input: Record<string, unknow
     }
     if (name === "get_appellation") {
       const d = await getAppellation(db, Number(input.id), input.q ? String(input.q) : undefined);
-      if (!d) { ctx.errorRef.count++; return { error: "Appellation not found" }; }
+      if (!d) return toolError("not_found", "No such appellation. Use an ID from search_cellar.");
       ev(ctx, { type: "appellation", id: d.id, title: d.name, subtitle: `${d.country} · ${d.gi_type}`, find_url: null });
       for (const p of d.producers) ev(ctx, { type: "producer", id: p.id, title: p.name, subtitle: d.name, find_url: null });
       return {
@@ -258,7 +259,7 @@ export async function executeWineTool(name: string, input: Record<string, unknow
     }
     if (name === "get_producer") {
       const d = await getWineProducer(db, Number(input.id));
-      if (!d) { ctx.errorRef.count++; return { error: "Producer not found" }; }
+      if (!d) return toolError("not_found", `No producer with ID ${Number(input.id)}. Use an ID from search_cellar.`);
       ev(ctx, { type: "producer", id: d.id, title: d.name, subtitle: [d.region, d.country_name].filter(Boolean).join(", ") || null, find_url: null });
       for (const w of d.wines) ev(ctx, { type: "wine", id: w.lwin, title: w.name, subtitle: w.appellation, find_url: findUrl(w.name) });
       return {
@@ -270,7 +271,7 @@ export async function executeWineTool(name: string, input: Record<string, unknow
     }
     if (name === "get_wine") {
       const d = await getWine(db, Number(input.lwin));
-      if (!d) { ctx.errorRef.count++; return { error: "Wine not found" }; }
+      if (!d) return toolError("not_found", `No wine with LWIN ${Number(input.lwin)}. Use an LWIN from search_cellar.`);
       ev(ctx, { type: "wine", id: d.lwin, title: d.name, subtitle: d.appellation?.name ?? d.sub_region ?? d.region, find_url: d.find_url });
       if (d.producer) ev(ctx, { type: "producer", id: d.producer.id, title: d.producer.name, subtitle: d.region, find_url: null });
       if (d.appellation) ev(ctx, { type: "appellation", id: d.appellation.id, title: d.appellation.name, subtitle: d.appellation.gi_type, find_url: null });
@@ -285,7 +286,7 @@ export async function executeWineTool(name: string, input: Record<string, unknow
     }
     if (name === "get_grape") {
       const d = await getGrape(db, Number(input.id));
-      if (!d) { ctx.errorRef.count++; return { error: "Grape not found" }; }
+      if (!d) return toolError("not_found", `No grape with ID ${Number(input.id)}. Use an ID from search_cellar.`);
       ev(ctx, { type: "grape", id: d.id, title: d.name, subtitle: d.colour, find_url: null });
       for (const a of d.appellations) ev(ctx, { type: "appellation", id: a.id, title: a.name, subtitle: a.country, find_url: null });
       for (const w of d.wines) ev(ctx, { type: "wine", id: w.lwin, title: w.name, subtitle: d.name, find_url: findUrl(w.name) });
@@ -297,7 +298,7 @@ export async function executeWineTool(name: string, input: Record<string, unknow
     }
     if (name === "get_shelf") {
       const d = await getShelf(db, String(input.slug ?? ""));
-      if (!d) { ctx.errorRef.count++; return { error: "No such shelf" }; }
+      if (!d) return toolError("not_found", `No shelf "${String(input.slug ?? "")}".`);
       for (const m of d.members) {
         if (m.entity_type === "producer" || m.entity_type === "appellation" || m.entity_type === "wine" || m.entity_type === "grape") {
           ev(ctx, { type: m.entity_type, id: m.entity_id, title: m.name, subtitle: d.name, find_url: m.entity_type === "wine" ? findUrl(m.name) : null });
@@ -309,11 +310,9 @@ export async function executeWineTool(name: string, input: Record<string, unknow
         nearby: d.edges.map((e) => `${e.direction}: ${e.to_name} (${e.to_slug})${e.note ? ` - ${e.note}` : ""}`),
       };
     }
-    ctx.errorRef.count++;
-    return { error: `Unknown tool: ${name}` };
-  } catch (err: any) {
-    ctx.errorRef.count++;
-    return { error: String(err?.message ?? err) };
+    return toolError("invalid_input", `Unknown tool: ${name}`);
+  } catch (err) {
+    return thrownToolError(err);
   }
 }
 

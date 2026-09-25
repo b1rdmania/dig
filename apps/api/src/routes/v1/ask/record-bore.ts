@@ -9,7 +9,7 @@ import { loadBorePersona } from "@dig/domain";
 import type { BoreConfig, ProgressEvent } from "./bore.js";
 import type { EvidenceItem } from "./types.js";
 import { unlinkUncited } from "./binding.js";
-import { TOOLS, executeTool } from "./tools.js";
+import { TOOLS, executeTool, fillCitedVideos } from "./tools.js";
 
 // The surface rules for the web ask loop. The character itself is the
 // persona file; these are the mechanics of this surface (tool routing, link
@@ -60,7 +60,9 @@ Every entity you mention MUST be a markdown link to its Dig page:
 
 A record named without its link is a record the customer cannot hear or buy - it's a dead recommendation. Videos render below your answer ONLY for masters whose URL appears in your text, and the customer's session playlist is built ONLY from linked records. If you write "Infinition from '93" as plain text, it does not exist. Before you finish an answer, check: is every record you recommended a [Title](https://app.dig.baby/master/ID) link, using the exact ID a tool returned this turn? Don't link records you're naming only in passing.
 
-Never link to Discogs, Bandcamp, YouTube, NTS, Spotify, or anything outside dig.baby unless the user explicitly asks.`;
+Never link to Discogs, Bandcamp, YouTube, NTS, Spotify, or anything outside dig.baby unless the user explicitly asks.
+
+Several records still go in prose, woven into sentences with the reason each one follows - never a bulleted or numbered list, never a header line, however many you're recommending.`;
 
 // A recommendation written without a single lookup this turn is the one
 // failure the prompt cannot prevent on its own: the model answers a follow-up
@@ -105,7 +107,7 @@ export const RECORD_BORE: BoreConfig<EvidenceItem> = {
   executeTool: (name, input, ctx) => {
     let allowed = ctx.scratch.get("allowedMasterIds") as Set<number> | undefined;
     if (!allowed) { allowed = new Set<number>(); ctx.scratch.set("allowedMasterIds", allowed); }
-    return executeTool(ctx.db, name, input, ctx.mediaCollector, ctx.evidenceCollector, ctx.errorRef, allowed);
+    return executeTool(ctx.db, name, input, ctx.mediaCollector, ctx.evidenceCollector, allowed);
   },
   progressLabel,
   scrubAnswer: unlinkUncited,
@@ -129,6 +131,7 @@ export const RECORD_BORE: BoreConfig<EvidenceItem> = {
     return "That one's sent me down too many aisles - ask it a bit narrower and I'll pull the right crate.";
   },
   emptyAnswer: "Go on - say that again for me. What is it you're actually chasing?",
+  fillMedia: fillCitedVideos,
   evidenceKey: (e) => e.dig_url,
   // Three lookup rounds then an answer (a scene ask is get_scene, then
   // batched label essentials, then write), and an answer that fits on the

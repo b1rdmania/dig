@@ -5,7 +5,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
-import type { AnthropicMessage, ResponseMode } from "./types.js";
+import type { AnthropicMessage, MediaItem, ResponseMode } from "./types.js";
+import type { BoreConfig } from "./bore.js";
 import { requirePrivateKey } from "./auth.js";
 import { checkPublicAsk, isPublicAskEnabled, publicAskRemaining, recordPublicAsk } from "./public.js";
 import { runAgenticLoop, type LlmProvider } from "./loop.js";
@@ -22,6 +23,28 @@ const PROVIDER: LlmProvider =
 const DEFAULT_MODEL =
   process.env.LLM_MODEL ?? (PROVIDER === "openrouter" ? "moonshotai/kimi-k3" : "claude-sonnet-4-6");
 const MAX_HISTORY_TURNS = 6;
+// The video fill runs after the answer is written, so it adds straight to
+// the wait. Fail open: a slow lookup costs videos, never the answer.
+const FILL_MEDIA_TIMEOUT_MS = 4_000;
+
+async function fillMedia<E>(
+  bore: BoreConfig<E>,
+  db: Kysely<Database>,
+  answer: string,
+  evidence: readonly E[],
+  media: MediaItem[],
+  log: (msg: string, extra?: Record<string, unknown>) => void,
+): Promise<void> {
+  if (!bore.fillMedia) return;
+  const start = Date.now();
+  const before = media.length;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    bore.fillMedia(db, answer, evidence, media).catch(() => {}),
+    new Promise((resolve) => { timer = setTimeout(resolve, FILL_MEDIA_TIMEOUT_MS); }),
+  ]).finally(() => clearTimeout(timer));
+  log("ask:media_fill", { added: media.length - before, elapsed_ms: Date.now() - start });
+}
 
 interface AskBody {
   /** Which shop: "record" (default) or "wine". Picks persona, tools, till. */
@@ -30,6 +53,12 @@ interface AskBody {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
   model?: string;
   max_tokens?: number;
+  /**
+   * Key holders only: run on the public page's house budgets (model, rounds,
+   * tokens) so an eval measures what visitors get without spending the
+   * public till. Ignored for keyless asks, which always run on them.
+   */
+  house?: boolean;
 }
 
 function pickBore(raw: unknown) {
@@ -113,9 +142,10 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
 
     // Public asks run on the house defaults only - letting a stranger pick
     // the model or token budget on the shop's key is how the till empties.
-    const maxTokens = isPublic ? bore.publicMaxTokens : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
-    const maxRounds = isPublic ? bore.publicMaxRounds : undefined;
-    const model = isPublic ? DEFAULT_MODEL : String(body.model ?? DEFAULT_MODEL);
+    const house = isPublic || body.house === true;
+    const maxTokens = house ? bore.publicMaxTokens : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
+    const maxRounds = house ? bore.publicMaxRounds : undefined;
+    const model = house ? DEFAULT_MODEL : String(body.model ?? DEFAULT_MODEL);
     const started = Date.now();
     const log = (msg: string, extra?: Record<string, unknown>) =>
       req.log.info({ event: msg, ...extra });
@@ -137,6 +167,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         log,
       });
 
+      await fillMedia(bore, db, answer, evidence, media, log);
       const dedupedMedia = dedupeMedia(media);
       const dedupedEvidence = dedupeBy(evidence, bore.evidenceKey);
 
@@ -246,9 +277,10 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       .slice(-MAX_HISTORY_TURNS)
       .map((m) => ({ role: m.role, content: m.content.slice(0, 3000) }));
 
-    const maxTokens = isPublic ? bore.publicMaxTokens : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
-    const maxRounds = isPublic ? bore.publicMaxRounds : undefined;
-    const model = isPublic ? DEFAULT_MODEL : String(body.model ?? DEFAULT_MODEL);
+    const house = isPublic || body.house === true;
+    const maxTokens = house ? bore.publicMaxTokens : Math.min(Math.max(Number(body.max_tokens ?? 1600), 256), 2000);
+    const maxRounds = house ? bore.publicMaxRounds : undefined;
+    const model = house ? DEFAULT_MODEL : String(body.model ?? DEFAULT_MODEL);
     const started = Date.now();
     const log = (msg: string, extra?: Record<string, unknown>) =>
       req.log.info({ event: msg, ...extra });
@@ -297,6 +329,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         },
       });
 
+      await fillMedia(bore, db, answer, evidence, media, log);
       const boundMedia = bindMediaToCitations(dedupeMedia(media), answer);
       log("ask:media_bind", {
         media_total: media.length,

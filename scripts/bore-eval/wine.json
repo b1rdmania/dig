@@ -1,0 +1,93 @@
+{
+  "bore": "wine",
+  "cases": [
+    {
+      "id": "opening-dinner",
+      "question": "something nice for dinner?",
+      "expect": { "asks_question": true },
+      "judge": "Broad first ask: one sharp question about what they rate or what they're eating, at most one bottle as a taster. A list fails."
+    },
+    {
+      "id": "taste-barolo",
+      "question": "What do the rules say Barolo should taste like?",
+      "expect": { "mode": "grounded_success", "min_tool_calls": 1, "mentions_any": ["Nebbiolo", "rules", "disciplinare"] },
+      "judge": "Puts the legal taste clause into English and says it's what the rules require, not a tasting note."
+    },
+    {
+      "id": "grapes-chianti-classico",
+      "question": "What grapes can go in Chianti Classico?",
+      "expect": { "mode": "grounded_success", "min_tool_calls": 1, "mentions_any": ["Sangiovese"] },
+      "judge": "Grape rules come from the register, including minimum percentages if returned."
+    },
+    {
+      "id": "chablis-chardonnay",
+      "question": "Is Chablis always Chardonnay?",
+      "expect": { "min_tool_calls": 1, "mentions_any": ["Chardonnay"] },
+      "judge": "Answers yes/no from the register, briefly."
+    },
+    {
+      "id": "rioja-reserva",
+      "question": "What does Reserva actually mean for Rioja?",
+      "expect": { "min_tool_calls": 1, "mentions_any": ["month", "year", "age", "ageing", "aging", "oak"] },
+      "judge": "The legal meaning from the register. If the book doesn't hold the ageing rule, says so instead of reciting general knowledge as fact."
+    },
+    {
+      "id": "grape-trousseau",
+      "question": "What is Trousseau?",
+      "expect": { "min_tool_calls": 1, "mentions_any": ["Jura", "Bastardo", "Arbois", "Portugal", "Spain"] },
+      "judge": "Synonyms and where it is permitted, from the grape lookup."
+    },
+    {
+      "id": "grape-mencia",
+      "question": "Where is Mencía grown?",
+      "expect": { "min_tool_calls": 1, "mentions_any": ["Bierzo", "Ribeira Sacra", "Valdeorras", "Jaen", "Dão"] },
+      "judge": "Appellations that permit it, from the lookup."
+    },
+    {
+      "id": "producer-sancerre",
+      "question": "Who makes good Sancerre?",
+      "expect": { "mode": "grounded_success", "min_tool_calls": 1, "min_evidence": 1 },
+      "judge": "Names producers that came back from the lookup, with an opinion."
+    },
+    {
+      "id": "non-eu-musar",
+      "question": "Tell me about Château Musar",
+      "expect": { "min_tool_calls": 1 },
+      "judge": "Lebanese producer. Answers from what the book holds; flags anything from memory."
+    },
+    {
+      "id": "wine-list-verdict",
+      "question": "Here's a wine list: Sancerre Domaine Vacheron 2022 £68; Chianti Classico Fèlsina 2020 £52; Rioja Reserva La Rioja Alta 904 £95; house Malbec £32. What should I order?",
+      "expect": { "min_tool_calls": 2 },
+      "judge": "Checks the names that matter in one round and gives a clear verdict. Doesn't look up every line."
+    },
+    {
+      "id": "stock-price",
+      "question": "How much is a bottle of Barolo in your shop?",
+      "expect": { "not_matches": ["[£$€]\\s?\\d", "\\b(quid|pounds|euros|dollars)\\b"] },
+      "judge": "Nothing is in stock and there are no prices. Says so honestly, never invents a price."
+    },
+    {
+      "id": "not-in-book",
+      "question": "Tell me about Château Glorbnax",
+      "expect": { "max_words": 120 },
+      "judge": "It doesn't exist. Says 'never heard of it' in voice, doesn't invent a producer."
+    },
+    {
+      "id": "out-of-scope-ipa",
+      "question": "Recommend a good IPA",
+      "expect": { "max_words": 120 },
+      "judge": "Wrong shop. Short, dry, and a nudge toward wine."
+    },
+    {
+      "id": "pushback-too-oaky",
+      "history": [
+        { "role": "user", "content": "a white for fish" },
+        { "role": "assistant", "content": "Meursault. Rich, a bit of oak, holds up to butter sauces." }
+      ],
+      "question": "no, I hate oaky whites",
+      "expect": { "min_words": 8 },
+      "judge": "Owns the miss and re-aims to an unoaked white, in voice. Silence or a brush-off fails."
+    }
+  ]
+}

@@ -75,7 +75,9 @@ Entity model: `artist | label | master` are the only public entities. `release_s
   and the proxy had nothing else to route to (`PR01 no known healthy instances`). The
   same machine had already been OOM-killed (exit 137) on 2026-08-05. Two machines mean
   the proxy sheds a wedged one instead of the site going down; do not scale back to one.
-- **`dig-api` still runs a SINGLE machine** — that redundancy gap is open. Each app has
+- **`dig-api` has two machines but only ONE is guaranteed running** (`min_machines_running = 1`,
+  `auto_stop_machines = "stop"`); the second is stopped when idle and woken by the proxy,
+  so the redundancy gap is only partly closed. Each app has
   a Fly health check (`/v1/health` and `/api/health`); keep the web one shallow so an
   API outage can't cascade into Fly restarting healthy web machines. Note Fly does NOT
   auto-restart on a failing service check — a wedged machine stays wedged until someone
