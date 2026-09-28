@@ -8,12 +8,15 @@
 // app.dig.baby, so a cookie would be third-party and Safari would drop it.
 //
 // /v1/me answers 404 when sign-in is switched off on the API: the line hides.
+// While sign-in is private, the signed-out line shows only on
+// /recordbore?signin=1; NEXT_PUBLIC_SIGNIN_OPEN=on shows it to everyone.
 
 import { useEffect, useState } from "react";
 import s from "./recordbore.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 const KEY = "dig_session";
+const OPEN = process.env.NEXT_PUBLIC_SIGNIN_OPEN === "on";
 
 export function readSession(): string | null {
   try {
@@ -79,6 +82,7 @@ function takeFragment(): string | undefined {
   if (token) writeSession(token);
   window.history.replaceState(null, "", window.location.pathname + window.location.search);
   if (signin === "failed") return "Discogs wouldn't let you in. Try again.";
+  if (signin === "closed") return "Not open to everyone yet.";
   return undefined;
 }
 
@@ -89,7 +93,11 @@ export function DiscogsLine() {
 
   useEffect(() => {
     const note = takeFragment();
-    void fetchMe().then((st) => setState(st.kind === "out" && note ? { kind: "out", note } : st));
+    const invited = OPEN || new URLSearchParams(window.location.search).get("signin") === "1";
+    void fetchMe().then((st) => {
+      if (st.kind === "out" && !invited && !note) return setState({ kind: "off" });
+      setState(st.kind === "out" && note ? { kind: "out", note } : st);
+    });
   }, []);
 
   // While the lists come through, check back every few seconds.
@@ -120,7 +128,8 @@ export function DiscogsLine() {
   if (state.kind === "off") return null;
 
   if (state.kind === "out") {
-    const href = `${API_URL}/v1/me/discogs/login?return=${encodeURIComponent("/recordbore")}`;
+    const back = OPEN ? "/recordbore" : "/recordbore?signin=1";
+    const href = `${API_URL}/v1/me/discogs/login?return=${encodeURIComponent(back)}`;
     return (
       <p className={s.cap}>
         {state.note ? `${state.note} ` : ""}

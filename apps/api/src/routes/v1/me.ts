@@ -31,10 +31,22 @@ const WEB_ORIGIN = (process.env.WEB_ORIGIN ?? "https://app.dig.baby").replace(/\
 const API_PUBLIC_URL = (process.env.API_PUBLIC_URL ?? "https://dig-api.fly.dev").replace(/\/$/, "");
 const PENDING_TTL_MS = 15 * 60_000;
 
-/** Only a path on the web origin: "/recordbore", never "//evil" or a full URL. */
+/**
+ * Private until SIGNIN_OPEN=on: only the Discogs usernames in SIGNIN_ALLOWLIST
+ * (comma-separated, any case) can finish signing in. Anyone else is sent back
+ * before an account row exists; their username goes to the log so it can be
+ * added.
+ */
+export function mayFinishSignIn(username: string, env = process.env): boolean {
+  if (String(env.SIGNIN_OPEN ?? "").trim().toLowerCase() === "on") return true;
+  const allowed = String(env.SIGNIN_ALLOWLIST ?? "").split(",").map((u) => u.trim().toLowerCase()).filter(Boolean);
+  return allowed.includes(username.trim().toLowerCase());
+}
+
+/** Only a path on the web origin, optionally ?signin=1: never "//evil" or a full URL. */
 export function safeReturnPath(raw: unknown): string {
   const s = String(raw ?? "").trim();
-  return /^\/(?!\/)[A-Za-z0-9/_-]{0,80}$/.test(s) ? s : "/recordbore";
+  return /^\/(?!\/)[A-Za-z0-9/_-]{0,80}(\?signin=1)?$/.test(s) ? s : "/recordbore";
 }
 
 function notFound(reply: FastifyReply) {
@@ -103,6 +115,10 @@ export function registerMeRoutes(app: FastifyInstance, db: Kysely<Database>) {
     try {
       const access = await getAccessToken(consumer, pending.request_token, pending.request_secret, String(req.query.oauth_verifier));
       const identity = await getIdentity(consumer, access.token, access.secret);
+      if (!mayFinishSignIn(identity.username)) {
+        log(req)("users:signin_not_allowed", { discogs_username: identity.username });
+        return reply.redirect(`${WEB_ORIGIN}${back}#dig_signin=closed`);
+      }
       const accountId = await upsertAccount(db, identity, access);
       const session = await createSession(db, accountId);
       // Pull the crates after the redirect: the page polls /v1/me meanwhile.

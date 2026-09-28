@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { oauthHeader, toCrateRow } from "../users/discogs.js";
 import { bearer, seal, unseal } from "../users/store.js";
-import { safeReturnPath } from "../routes/v1/me.js";
+import { mayFinishSignIn, safeReturnPath } from "../routes/v1/me.js";
 import { customerNote, RECORD_BORE } from "../routes/v1/ask/record-bore.js";
 
 const key = randomBytes(32);
@@ -31,12 +31,25 @@ describe("token sealing", () => {
 describe("safeReturnPath", () => {
   it("keeps a plain path on the web origin", () => {
     expect(safeReturnPath("/recordbore")).toBe("/recordbore");
+    expect(safeReturnPath("/recordbore?signin=1")).toBe("/recordbore?signin=1");
   });
 
   it.each(["//evil.com", "https://evil.com", "/x?y=1", "javascript:alert(1)", "", undefined, "/a b"])(
     "falls back for %s",
     (raw) => expect(safeReturnPath(raw)).toBe("/recordbore"),
   );
+});
+
+describe("mayFinishSignIn", () => {
+  it("is private by default: only allowlisted usernames, any case", () => {
+    expect(mayFinishSignIn("B1rdmania", { SIGNIN_ALLOWLIST: "b1rdmania, russ" })).toBe(true);
+    expect(mayFinishSignIn("stranger", { SIGNIN_ALLOWLIST: "b1rdmania" })).toBe(false);
+    expect(mayFinishSignIn("anyone", {})).toBe(false);
+  });
+
+  it("SIGNIN_OPEN=on lets everyone in", () => {
+    expect(mayFinishSignIn("stranger", { SIGNIN_OPEN: "on" })).toBe(true);
+  });
 });
 
 describe("bearer", () => {
