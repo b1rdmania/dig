@@ -308,13 +308,13 @@ export function WineBoreClient() {
           </p>
 
           <p className={s.cap}>
-            <button type="button" className={w.howLink} onClick={() => howRef.current?.showModal()}>How we built this</button>
+            <button type="button" className={s.howLink} onClick={() => howRef.current?.showModal()}>How we built this</button>
           </p>
         </section>
 
-        <dialog ref={howRef} className={w.how} onClick={(e) => { if (e.target === howRef.current) howRef.current?.close(); }}>
-          <div className={w.howBody}>
-            <button type="button" className={w.howClose} onClick={() => howRef.current?.close()} aria-label="Close">&times;</button>
+        <dialog ref={howRef} className={s.how} onClick={(e) => { if (e.target === howRef.current) howRef.current?.close(); }}>
+          <div className={s.howBody}>
+            <button type="button" className={s.howClose} onClick={() => howRef.current?.close()} aria-label="Close">&times;</button>
             <h2>How we built this</h2>
             <p>This came out of Record Bore. I wanted to see if you could give a language model taste, not just more knowledge. A narrow point of view, backed by things you can check.</p>
 

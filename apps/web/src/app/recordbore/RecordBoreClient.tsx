@@ -221,6 +221,7 @@ export function RecordBoreClient() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const howRef = useRef<HTMLDialogElement>(null);
   const fetchedIds = useRef(new Set<number>());
 
   useEffect(() => {
@@ -548,7 +549,28 @@ export function RecordBoreClient() {
             </p>
           )}
           <DiscogsLine />
+          <p className={s.cap}>
+            <button type="button" className={s.howLink} onClick={() => howRef.current?.showModal()}>How we built this</button>
+          </p>
         </section>
+
+        <dialog ref={howRef} className={s.how} onClick={(e) => { if (e.target === howRef.current) howRef.current?.close(); }}>
+          <div className={s.howBody}>
+            <button type="button" className={s.howClose} onClick={() => howRef.current?.close()} aria-label="Close">&times;</button>
+            <h2>How we built this</h2>
+            <p>Dig started as a rebuild of Discogs&rsquo; open data for house and techno. Record Bore is the shop counter on top of it: a narrow point of view, backed by records you can check.</p>
+
+            <h3>The data</h3>
+            <p>Discogs publishes its whole catalogue every month under a CC0 licence. We take the February 2026 release and keep house, techno and the scenes around them: 252,167 records, 149,807 artists and 226,387 labels.</p>
+            <p>On top of that: 966,913 credits (who produced, engineered and remixed what), 1.98 million video links across 209,728 records, 15 hand-drawn scenes, and the essential run for 98 labels.</p>
+
+            <h3>How he answers</h3>
+            <p>A character file and a few lookups across records, credits, labels and scenes. Every record he names is a link to one he just looked up. If he didn&rsquo;t look it up, the link comes off, and he says when he&rsquo;s going from memory.</p>
+
+            <h3>What it isn&rsquo;t</h3>
+            <p>No reviews, no blogs, no prices.</p>
+          </div>
+        </dialog>
 
       </main>
     </div>
