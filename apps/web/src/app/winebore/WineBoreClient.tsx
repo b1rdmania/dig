@@ -225,16 +225,16 @@ export function WineBoreClient() {
   }
 
   return (
-    <div className={`${s.wrap} ${w.wrap}`}>
-      <main className={`${s.col} ${w.col}`}>
-        <div className={w.masthead}>
+    <div className={s.wrap}>
+      <main className={s.col}>
+        <div className={s.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- hand-drawn line art; optimisation would soften it */}
-          <img className={w.face} src="/winebore-face.png" alt="" width={482} height={512} />
-          <h1 className={w.title}><b>Wine Bore<span className={s.dot}>.</span></b> Ask.</h1>
+          <img className={`${s.face} ${w.face}`} src="/winebore-face.png" alt="" width={482} height={512} />
+          <h1 className={s.title}><b>Wine Bore<span className={s.dot}>.</span></b> Ask.</h1>
         </div>
 
         {(messages.length > 0 || loading) && (
-          <section className={`${s.turns} ${w.turns}`} aria-label="Conversation">
+          <section className={s.turns} aria-label="Conversation">
             {messages.map((m, i) => (
               m.role === "user" ? (
                 <div key={i} className={`${s.turn} ${s.userTurn}`}>
@@ -279,7 +279,7 @@ export function WineBoreClient() {
           </section>
         )}
 
-        <section className={`${s.askPanel} ${w.askPanel}`} aria-labelledby="wine-bore-ask-label">
+        <section className={s.askPanel} aria-labelledby="wine-bore-ask-label">
           <label id="wine-bore-ask-label" className={s.srOnly} htmlFor="wine-bore-question">Ask</label>
           <div className={s.composer}>
             <input

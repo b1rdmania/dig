@@ -30,17 +30,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f2eee5",
+  themeColor: "#ffffff",
 };
 
-const OPENER_QUOTES = [
-  "Anyway. What do you want? And don’t say Daft Punk - the answer’s Roulé and we both know it.",
-  "You’ve got the look of someone about to say ‘deep house’. Be more specific.",
-  "The good stuff isn’t in the window. It never is.",
-  "If you heard it on an advert, the door’s behind you. Otherwise - speak.",
-];
-
 export default function RecordBorePage() {
-  const opener = OPENER_QUOTES[Math.floor(Math.random() * OPENER_QUOTES.length)];
-  return <RecordBoreClient opener={opener} />;
+  return <RecordBoreClient />;
 }

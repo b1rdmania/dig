@@ -5,7 +5,6 @@
 // in the writing; interface state should never have to pretend to be dialogue.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { extractYouTubeId } from "@/lib/media";
 import {
@@ -208,7 +207,7 @@ function CrateRow({ item, meta }: { item: MediaItem; meta?: RecMeta }) {
   );
 }
 
-export function RecordBoreClient({ opener }: { opener: string }) {
+export function RecordBoreClient() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<RBMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -286,12 +285,7 @@ export function RecordBoreClient({ opener }: { opener: string }) {
     setLoading(true);
 
     try {
-      // The opener is a real turn of the conversation - the model should know
-      // it already spoke first.
-      const history = [
-        { role: "assistant" as const, content: opener },
-        ...nextMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
-      ];
+      const history = nextMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
 
       const res = await fetch(`${API_URL}/v1/ask/stream`, {
         method: "POST",
@@ -389,19 +383,11 @@ export function RecordBoreClient({ opener }: { opener: string }) {
   return (
     <div className={s.wrap}>
       <main className={s.col}>
-        <div className={s.topline}>
-          <Link className={s.home} href="/">&larr; home</Link>
-        </div>
         <div className={s.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
-          <img className={s.face} src="/recordbore-face.png" alt="" width={54} height={59} />
-          <h1 className={s.title}>
-            <span className={s.wordmark}>Record Bore<span className={s.dot}>.</span></span>
-            <span className={s.claim}><span>Ask me anything.</span> <span>I&rsquo;ll answer something better.</span></span>
-          </h1>
+          <img className={s.face} src="/recordbore-face.png" alt="" width={215} height={235} />
+          <h1 className={s.title}><b>Record Bore<span className={s.dot}>.</span></b> Ask.</h1>
         </div>
-
-        <div className={`${s.bore} ${s.openerBlock}`}><p>{normalDashes(opener)}</p></div>
 
         {/* Only mount the transcript once a real turn exists. */}
         {(messages.length > 0 || loading) && (
@@ -552,7 +538,7 @@ export function RecordBoreClient({ opener }: { opener: string }) {
               spellCheck={false}
             />
             <button className={s.send} onClick={() => ask()} disabled={loading || !input.trim()} type="button">
-              <span className={s.sendWord}>ask</span><span aria-hidden="true">&rarr;</span>
+              <span className={s.srOnly}>Ask</span><span aria-hidden="true">&rarr;</span>
             </button>
           </div>
 

@@ -94,6 +94,8 @@ export function DiscogsLine() {
   useEffect(() => {
     const note = takeFragment();
     const invited = OPEN || new URLSearchParams(window.location.search).get("signin") === "1";
+    // Nothing to show a stranger: skip the round trip (and its 401).
+    if (!invited && !note && !readSession()) return;
     void fetchMe().then((st) => {
       if (st.kind === "out" && !invited && !note) return setState({ kind: "off" });
       setState(st.kind === "out" && note ? { kind: "out", note } : st);

@@ -10,7 +10,7 @@
 .counterHead {
   margin: 0 0 6px;
   color: #716b60;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -19,7 +19,7 @@
   align-items: center;
   gap: 12px;
   padding: 7px 0;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -51,8 +51,8 @@
 
 .bottleText { flex: 1 1 auto; min-width: 0; }
 .bottleName { color: var(--ink); }
-.bottleSub { color: #716b60; font-size: 13px; margin-left: 6px; }
-.credit { display: block; color: #9a9387; font-size: 11px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bottleSub { color: #716b60; font-size: 14px; margin-left: 6px; }
+.credit { display: block; color: #9a9387; font-size: 12px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .credit:hover { text-decoration: underline; }
 .acts { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .bottleAct { color: #c83a25; text-decoration: none; white-space: nowrap; font-size: 14px; }
@@ -67,33 +67,8 @@
   .indent { padding-left: 0; }
 }
 
-/* Wine Bore is the white-paper edition: white ground, small wordmark beside
-   the face, everything a size down from Record Bore. */
-.wrap {
-  --ground: #fff;
-  --paper: #fff;
-  background: #fff;
-}
-
-.masthead {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 8px;
-  text-align: center;
-}
+/* The shared sheet sets the page; Wine Bore's face is drawn larger. */
 .face { width: min(240px, 60vw); height: auto; }
-.title { margin: 6px 0 0; font-size: 20px; font-weight: 400; letter-spacing: -0.01em; line-height: 1.3; }
-.title b { font-weight: 700; }
-
-.wrap .turns { gap: 18px; margin-top: 30px; }
-.wrap .askPanel { margin-top: 28px; }
-
-.wrap .col p { font-size: 16px; line-height: 1.55; }
-.wrap .col input { font-size: 16px !important; }
-.wrap .col .counterHead, .wrap .col .bottleSub { font-size: 12px; }
-.wrap .col .bottle { font-size: 14px; }
-.wrap .col .bottleAct { font-size: 13px; }
 
 /* "How we built this": one link in the cap line, a native dialog. */
 .howLink { border: 0; background: none; padding: 0; margin-left: 0; color: var(--red); cursor: pointer; font: inherit; }
@@ -112,7 +87,7 @@
 .listPhoto { display: block; max-width: 220px; max-height: 220px; margin: 2px 0 10px; border: 1px solid var(--line); }
 .listText { white-space: pre-line; }
 .listLine { margin: 10px 0 0; }
-.listBtn { border: 0; background: none; padding: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 15px; }
+.listBtn { border: 0; background: none; padding: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 14px; }
 .listBtn:hover { color: var(--ink); text-decoration: underline; }
 .listBtn:disabled { cursor: default; opacity: 0.5; }
 

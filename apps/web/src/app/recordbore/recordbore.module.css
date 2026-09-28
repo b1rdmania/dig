@@ -1,6 +1,9 @@
+/* The Bores' shared sheet (Wine Bore adds only its counter and dialog).
+   Type scale, used everywhere below: 20 title · 16 body, input, the
+   customer's words · 14 labels, footer lines, record rows · 12 the bag. */
 .wrap {
-  --ground: #f2eee5;
-  --paper: #f8f5ee;
+  --ground: #fff;
+  --paper: #fff;
   --ink: #211f1a;
   --red: #c83a25;
   --muted: #716b60;
@@ -31,19 +34,6 @@ main.col {
   background: transparent;
 }
 
-.topline {
-  min-height: 24px;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.home {
-  color: inherit;
-  text-decoration: none;
-}
-
-.home:hover,
 .bore a,
 .recAct,
 .bagToggle,
@@ -53,7 +43,6 @@ main.col {
 .recAct,
 .bag a { font-weight: 400; }
 
-.home:focus-visible,
 .input:focus-visible,
 .send:focus-visible,
 .recAct:focus-visible,
@@ -64,58 +53,29 @@ main.col {
   outline-offset: 3px;
 }
 
-/* Face, wordmark, claim: one line where the width allows, Wine Bore's
-   pattern. The claim drops under the wordmark on a phone. */
+/* The face, then one centred line: the name in bold, then "Ask." */
 .masthead {
   display: flex;
-  align-items: flex-end;
-  gap: 12px;
+  flex-direction: column;
+  align-items: center;
   max-width: var(--measure);
-  margin-top: 32px;
+  margin-top: 8px;
+  text-align: center;
 }
 
-.face {
-  width: 54px;
-  height: auto;
-  flex: 0 0 auto;
-}
+.face { width: min(215px, 56vw); height: auto; }
 
-.title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 12px;
-  row-gap: 8px;
-  margin: 0;
-  font-weight: 400;
-}
-
-.wordmark {
-  font-size: 52px;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 0.96;
-  white-space: nowrap;
-}
-
-.claim {
-  font-size: 17px;
-  line-height: 1.3;
-}
-
-/* Break between the two sentences, never inside one. */
-.claim > span { display: inline-block; }
+.title { margin: 6px 0 0; font-size: 20px; font-weight: 400; letter-spacing: -0.01em; line-height: 1.3; }
+.title b { font-weight: 700; }
 
 .dot { color: var(--red); }
 
-.openerBlock { max-width: var(--measure); margin-top: 40px; }
 .bore { font-family: inherit; }
-.bore p { margin: 0 0 0.8em; font-size: 18px; font-weight: 400; line-height: 1.58; }
-.bore.openerBlock p { margin: 0; font-size: 18px; line-height: 1.5; }
+.bore p { margin: 0 0 0.8em; font-size: 16px; font-weight: 400; line-height: 1.55; }
 .bore p:last-child { margin-bottom: 0; }
 .bore a:hover { color: #9f2d1d; }
 
-.askPanel { max-width: var(--measure); margin-top: 24px; }
+.askPanel { max-width: var(--measure); margin-top: 28px; }
 
 .composerLabel,
 .turnLabel {
@@ -123,7 +83,7 @@ main.col {
   margin: 0;
   color: var(--muted);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
   line-height: 1.4;
 }
@@ -132,7 +92,7 @@ main.col {
   display: flex;
   align-items: baseline;
   gap: 16px;
-  border-bottom: 1.5px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
 }
 
 .input {
@@ -146,7 +106,7 @@ main.col {
   background: transparent;
   color: var(--ink);
   font-family: inherit;
-  font-size: 19px !important;
+  font-size: 16px !important;
   font-weight: 400;
   line-height: 1.3;
   padding: 8px 0;
@@ -171,12 +131,11 @@ main.col {
   -webkit-tap-highlight-color: transparent;
 }
 
-.sendWord { font-size: 17px; font-weight: 700; }
 .send:not(:disabled) { color: var(--red); }
 .send:disabled { cursor: default; }
 
-/* Suggestions are prompts to tap: one per row, full width. */
-.cap { margin: 16px 0 0; color: var(--muted); font-size: 14px; font-weight: 400; }
+/* Footer lines under the composer: small, grey, one idea each. */
+.cap { margin: 14px 0 0; color: var(--muted); font-size: 14px; font-weight: 400; line-height: 1.45; }
 .capLink {
   padding: 0;
   border: 0;
@@ -188,7 +147,7 @@ main.col {
   cursor: pointer;
 }
 
-.turns { display: flex; max-width: var(--measure); flex-direction: column; gap: 24px; margin-top: 48px; }
+.turns { display: flex; max-width: var(--measure); flex-direction: column; gap: 18px; margin-top: 30px; }
 .turn { padding: 0; }
 .turnLabel { margin-bottom: 8px; }
 .userTurn { padding: 16px 0; }
@@ -197,12 +156,12 @@ main.col {
   margin: 0;
   color: var(--ink);
   font-family: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
-.boreTurn { padding-top: 24px; }
+.boreTurn { padding-top: 6px; }
 
 .working {
   padding: 0;
@@ -211,7 +170,7 @@ main.col {
   font-family: inherit;
 }
 
-.workingLine { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--muted); font-size: 18px; line-height: 1.4; }
+.workingLine { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--muted); font-size: 16px; line-height: 1.4; }
 .workingMark { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: workingPulse 1.2s ease-in-out infinite; }
 @keyframes workingPulse { 50% { opacity: 0.22; transform: scale(0.72); } }
 .plain { color: var(--muted); font-family: inherit; font-size: 14px !important; }
@@ -228,16 +187,16 @@ main.col {
    the frame's height fills the sleeve, then centre: a square crop, no bars. */
 .sleeveImg.sleeveYt { inset: auto; top: 50%; left: 50%; width: auto; max-width: none; height: 133.34%; transform: translate(-50%, -50%); object-fit: initial; }
 .recMeta { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
-.recTitle { font-size: 14px; font-weight: 500; line-height: 1.35; }
-.recSub { color: var(--muted); font-size: 13px; font-weight: 400; }
+.recTitle { font-size: 14px; font-weight: 700; line-height: 1.35; }
+.recSub { color: var(--muted); font-size: 14px; font-weight: 400; }
 .recActs { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-.recAct { border: 0; background: none; cursor: pointer; font: 400 12px/1.3 var(--type); padding: 0; text-decoration: none; white-space: nowrap; }
+.recAct { border: 0; background: none; cursor: pointer; font: 400 14px/1.3 var(--type); padding: 0; text-decoration: none; white-space: nowrap; }
 .recAct:hover { text-decoration: underline; }
 .playerRow { border-bottom: 1px solid var(--line); background: var(--ink); }
 .player { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
 
 .bagWrap { margin-top: 24px; }
-.bagToggle { border: 0; background: none; cursor: pointer; font: 500 13px/1.4 var(--type); padding: 0; }
+.bagToggle { border: 0; background: none; cursor: pointer; font: 400 14px/1.4 var(--type); padding: 0; }
 .bagToggle:hover { text-decoration: underline; }
 .bag { margin-top: 10px; padding: 13px 0 10px; border-top: 3px double var(--ink); border-bottom: 1px solid var(--ink); }
 .bagHead { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 12px; font-size: 12px; font-weight: 500; }
@@ -249,7 +208,7 @@ main.col {
 .bagName > a { color: var(--ink); }
 .bagIndex { color: var(--ink); font-variant-numeric: tabular-nums; opacity: 0.58; }
 .bagList p > span:last-child { display: flex; flex: 0 0 auto; gap: 12px; }
-.bagFoot { margin: 12px 0 0; padding-top: 8px; border-top: 1px dotted rgba(33, 31, 26, 0.3); color: var(--muted); font-size: 10px; }
+.bagFoot { margin: 12px 0 0; padding-top: 8px; border-top: 1px dotted rgba(33, 31, 26, 0.3); color: var(--muted); font-size: 12px; }
 
 @media (max-width: 768px) {
   .wrap { margin-top: calc(-1 * var(--sp-6)); margin-bottom: calc(-1 * var(--sp-7)); }
@@ -265,15 +224,7 @@ main.col {
     padding-bottom: max(52px, env(safe-area-inset-bottom));
     padding-left: max(18px, env(safe-area-inset-left));
   }
-  .masthead { align-items: flex-start; margin-top: 24px; }
-  .wordmark { font-size: clamp(38px, 11vw, 52px); }
-  .openerBlock { margin-top: 32px; }
-  .bore.openerBlock p { font-size: 17px; }
-  .askPanel { margin-top: 24px; }
-  .input { font-size: 18px !important; }
   .send { padding-bottom: 8px; }
-  .turns { margin-top: 32px; }
-  .bore p { font-size: 17px; line-height: 1.6; }
   .record { align-items: flex-start; }
   .recActs { gap: 12px; }
   .recAct { display: inline-flex; min-height: 44px; align-items: center; }
