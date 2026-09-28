@@ -92,8 +92,8 @@ Entity model: `artist | label | master` are the only public entities. `release_s
   treating the bot theory as diagnosed.
 
 ## Database
-- Schemas: `auth`, `ingest`, `catalog`, `enrich`, `wine` (Wine Bore corpus - LWIN spine, EU register, cahiers and their taste clauses; loaders in `scripts/wine/`, design in `docs/wine-bore-build.md`)
-- Migrations: `packages/db/migrations/` (001–037), CI-gated by `scripts/migration-parity-audit.ts`
+- Schemas: `ingest`, `catalog`, `enrich`, `users` (Discogs sign-in for Record Bore - accounts, sessions, wantlist/collection; see `docs/record-bore-discogs-signin.md`), `wine` (Wine Bore corpus - LWIN spine, EU register, cahiers and their taste clauses; loaders in `scripts/wine/`, design in `docs/wine-bore-build.md`)
+- Migrations: `packages/db/migrations/` (001–038), CI-gated by `scripts/migration-parity-audit.ts`
 - Schema types: `packages/db/src/schema.ts`
 - Local: `postgresql://dig:dig_local@localhost:5433/dig` (Docker PG, port 5433)
 - Production: `dig-db-scene` (Fly LHR, shared-cpu-2x/2GB, 10GB volume)
@@ -119,6 +119,7 @@ Entity model: `artist | label | master` are the only public entities. `release_s
 apps/api/                  — Fastify REST API server (port 3000)
 apps/api/src/app.ts        — app factory (rate-limit, CORS, logging, routes)
 apps/api/src/auth.ts       — API key validation (API_KEYS env)
+apps/api/src/users/        — Discogs OAuth 1.0a, token encryption, sessions, crate sync (routes: routes/v1/me.ts)
 apps/api/src/routes/v1/ask/ — provider-switchable grounded chat; one loop, two bores (record-bore.ts, wine-bore.ts; `bore` in the request body)
 bores/<slug>/persona.md  — each Bore's character, loaded at boot (Record Bore /recordbore, Wine Bore /winebore)
 apps/web/                  — Next.js frontend (maintenance gate in src/lib/maintenance.ts)

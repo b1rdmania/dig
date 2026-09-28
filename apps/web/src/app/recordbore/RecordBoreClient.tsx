@@ -15,6 +15,7 @@ import {
   type ResponseMode,
 } from "../llm-beta/LlmBetaClient";
 import s from "./recordbore.module.css";
+import { DiscogsLine, sessionHeaders } from "./DiscogsLine";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 
@@ -294,7 +295,7 @@ export function RecordBoreClient({ opener }: { opener: string }) {
 
       const res = await fetch(`${API_URL}/v1/ask/stream`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...sessionHeaders() },
         body: JSON.stringify({ question: q, history }),
       });
 
@@ -560,6 +561,7 @@ export function RecordBoreClient({ opener }: { opener: string }) {
               {`${questionsLeft} question${questionsLeft === 1 ? "" : "s"} left.`}
             </p>
           )}
+          <DiscogsLine />
         </section>
 
       </main>

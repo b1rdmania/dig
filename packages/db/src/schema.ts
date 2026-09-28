@@ -617,6 +617,47 @@ export interface EnrichArtistCrosswalksTable {
 
 // --- Database interface ---
 
+// Discogs sign-in (038). Tokens are ciphertext; see apps/api/src/users/.
+export interface UsersAccountsTable {
+  id: Generated<string>;
+  discogs_user_id: string | number;
+  discogs_username: string;
+  token_enc: string;
+  secret_enc: string;
+  synced_at: Date | null;
+  sync_error: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface UsersSessionsTable {
+  token_hash: string;
+  account_id: string;
+  created_at: Generated<Date>;
+  last_seen_at: Generated<Date>;
+  expires_at: Date;
+}
+
+export interface UsersOauthPendingTable {
+  request_token: string;
+  request_secret: string;
+  return_to: string;
+  created_at: Generated<Date>;
+}
+
+export interface UsersCrateItemsTable {
+  account_id: string;
+  list: "want" | "collection";
+  release_discogs_id: number;
+  master_discogs_id: number | null;
+  title: string;
+  artist: string | null;
+  label: string | null;
+  year: number | null;
+  styles: string[];
+  added_at: Date | null;
+}
+
 export interface Database {
   // Ingest
   "ingest.dump_batches": DumpBatchesTable;
@@ -690,4 +731,9 @@ export interface Database {
   // Crosswalks (mirrored from dig-db by harvester for in-scope entities)
   "enrich.label_crosswalks": EnrichLabelCrosswalksTable;
   "enrich.artist_crosswalks": EnrichArtistCrosswalksTable;
+  // Discogs sign-in (038)
+  "users.accounts": UsersAccountsTable;
+  "users.sessions": UsersSessionsTable;
+  "users.oauth_pending": UsersOauthPendingTable;
+  "users.crate_items": UsersCrateItemsTable;
 }

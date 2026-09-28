@@ -10,6 +10,7 @@
 import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import type { MediaItem } from "./types.js";
+import type { Customer } from "../../../users/store.js";
 
 export type BoreSlug = "record" | "wine";
 
@@ -26,6 +27,8 @@ export interface ToolContext<E> {
   evidenceCollector: E[];
   /** Per-conversation scratch the tools may use (Record Bore: allowed master IDs). */
   scratch: Map<string, unknown>;
+  /** Signed in with Discogs (Record Bore only, for now). */
+  customer?: Customer;
 }
 
 export type ProgressEvent =
@@ -39,6 +42,12 @@ export interface BoreConfig<E = unknown> {
   systemPrompt: string;
   tools: ToolDef[];
   executeTool: (name: string, input: Record<string, unknown>, ctx: ToolContext<E>) => Promise<unknown>;
+  /**
+   * A signed-in customer: a line for the system prompt and the tools that
+   * read their own records. The loop appends both; signed-out asks never see
+   * them. This is the one change the loop took for accounts.
+   */
+  forCustomer?: (c: Customer) => { note: string; tools: ToolDef[] };
   /** Shop-voiced label for the live activity feed. */
   progressLabel: (e: ProgressEvent) => string;
   /**

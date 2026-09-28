@@ -12,6 +12,7 @@ import { checkPublicAsk, isPublicAskEnabled, publicAskRemaining, recordPublicAsk
 import { runAgenticLoop, type LlmProvider } from "./loop.js";
 import { bindMediaToCitations, dedupeMedia, extractCitedMasterIds } from "./binding.js";
 import { getBore } from "./bores.js";
+import { bearer, customerForToken, type Customer } from "../../../users/store.js";
 
 export type { MediaItem, EvidenceItem, ResponseMode } from "./types.js";
 
@@ -74,6 +75,14 @@ interface AskBody {
 function pickBore(raw: unknown) {
   const slug = String(raw ?? "record").trim().toLowerCase();
   return getBore(slug === "wine" ? "wine" : "record");
+}
+
+/** The signed-in customer, for bores that read one. Never fails the ask. */
+async function customerFor(bore: BoreConfig<unknown>, db: Kysely<Database>, req: FastifyRequest): Promise<Customer | undefined> {
+  if (!bore.forCustomer) return undefined;
+  const token = bearer(req.headers);
+  if (!token) return undefined;
+  return (await customerForToken(db, token).catch(() => null)) ?? undefined;
 }
 
 function dedupeBy<E>(items: E[], key: (e: E) => string): E[] {
@@ -161,6 +170,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       req.log.info({ event: msg, ...extra });
 
     if (isPublic) await recordPublicAsk(db, bore.quotaKey);
+    const customer = await customerFor(bore, db, req);
     const signal = clientGone(reply);
     try {
       const { answer, model: usedModel, tool_calls, media, evidence, mode, rounds } = await runAgenticLoop({
@@ -175,6 +185,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         apiKey,
         signal,
         log,
+        customer,
       });
 
       const shownEvidence = await afterAnswer(bore, db, answer, evidence, media, log);
@@ -295,6 +306,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
       req.log.info({ event: msg, ...extra });
 
     if (isPublic) await recordPublicAsk(db, bore.quotaKey);
+    const customer = await customerFor(bore, db, req);
     const signal = clientGone(reply);
     reply.hijack();
     reply.raw.writeHead(200, {
@@ -322,6 +334,7 @@ export function registerAskRoutes(app: FastifyInstance, db: Kysely<Database>) {
         apiKey,
         signal,
         log,
+        customer,
         onEvent: (e) => {
           if (e.type === "delta") {
             write({ type: "delta", text: e.text });

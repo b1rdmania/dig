@@ -9,6 +9,7 @@ import type { Kysely } from "@dig/db";
 import type { Database } from "@dig/db";
 import type { AnthropicMessage, AnthropicContentBlock, MediaItem, ResponseMode } from "./types.js";
 import type { BoreConfig, ToolDef } from "./bore.js";
+import type { Customer } from "../../../users/store.js";
 import { isRetrievalFailure, isToolError, toolError, toolErrorCause } from "./tool-error.js";
 
 // Default round budget for private (BYO-key / llm-beta) asks. The public
@@ -437,25 +438,30 @@ export async function runAgenticLoop<E>(params: {
   signal?: AbortSignal;
   log: (msg: string, extra?: Record<string, unknown>) => void;
   onEvent?: (e: AskProgressEvent) => void;
+  /** Signed in with Discogs: the bore adds its customer note and tools. */
+  customer?: Customer;
 }): Promise<{ answer: string; model: string; tool_calls: number; media: MediaItem[]; evidence: E[]; mode: ResponseMode; rounds: AskRoundTrace[] }> {
   const { log, bore } = params;
   const rounds: AskRoundTrace[] = [];
   const maxRounds = Math.max(2, params.maxRounds ?? DEFAULT_MAX_ROUNDS);
+  const extra = params.customer && bore.forCustomer ? bore.forCustomer(params.customer) : null;
+  const system = extra ? `${bore.systemPrompt}\n\n${extra.note}` : bore.systemPrompt;
+  const tools = extra ? [...bore.tools, ...extra.tools] : bore.tools;
 
   const callModel = async (messages: AnthropicMessage[], lastRound: boolean): Promise<LlmResponse> => {
     if (params.provider === "openrouter") {
       return callOpenRouter({
         model: params.model,
-        system: bore.systemPrompt,
+        system,
         messages,
-        tools: lastRound ? [] : bore.tools,
+        tools: lastRound ? [] : tools,
         maxTokens: params.maxTokens,
         apiKey: params.apiKey,
         onDelta: (text) => params.onEvent?.({ type: "delta", text }),
         signal: params.signal,
       });
     }
-    const res = await callAnthropic({ model: params.model, system: bore.systemPrompt, messages, tools: bore.tools, noTools: lastRound, maxTokens: params.maxTokens, anthropicApiKey: params.apiKey, signal: params.signal });
+    const res = await callAnthropic({ model: params.model, system, messages, tools, noTools: lastRound, maxTokens: params.maxTokens, anthropicApiKey: params.apiKey, signal: params.signal });
     return { ...res, usage: anthropicUsage(res.usage as Record<string, unknown> | undefined) };
   };
   const messages: AnthropicMessage[] = [
@@ -557,7 +563,7 @@ export async function runAgenticLoop<E>(params: {
             );
           });
           const result = await Promise.race([
-            bore.executeTool(toolName, (block.input as Record<string, unknown>) ?? {}, { db: params.db, mediaCollector, evidenceCollector, scratch }),
+            bore.executeTool(toolName, (block.input as Record<string, unknown>) ?? {}, { db: params.db, mediaCollector, evidenceCollector, scratch, customer: params.customer }),
             toolTimeout,
           ]).finally(() => clearTimeout(timer));
           if (isRetrievalFailure(result)) retrievalFailures++;

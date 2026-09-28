@@ -6,10 +6,13 @@
 // ---------------------------------------------------------------------------
 
 import { loadBorePersona } from "@dig/domain";
-import type { BoreConfig, ProgressEvent } from "./bore.js";
+import type { BoreConfig, ProgressEvent, ToolContext } from "./bore.js";
 import type { EvidenceItem } from "./types.js";
 import { unlinkUncited } from "./binding.js";
-import { TOOLS, executeTool, fillCitedVideos } from "./tools.js";
+import { TOOLS, executeTool, fillCitedVideos, registerReturnedEntities } from "./tools.js";
+import type { ToolDef } from "./bore.js";
+import { readCrates, type Customer } from "../../../users/store.js";
+import { toolError } from "./tool-error.js";
 
 // The surface rules for the web ask loop. The character itself is the
 // persona file; these are the mechanics of this surface (tool routing, link
@@ -64,6 +67,55 @@ Never link to Discogs, Bandcamp, YouTube, NTS, Spotify, or anything outside dig.
 
 Several records still go in prose, woven into sentences with the reason each one follows - never a bulleted or numbered list, never a header line, however many you're recommending.`;
 
+// ---------------------------------------------------------------------------
+// Signed in with Discogs: the Bore can read the customer's wantlist and
+// collection. Their in-shop records come back with dig links, so they are
+// linkable evidence like any other lookup; the rest come back as plain text.
+// ---------------------------------------------------------------------------
+
+export const CRATES_TOOL: ToolDef = {
+  name: "get_customer_crates",
+  description:
+    "The signed-in customer's own Discogs wantlist and collection. Returns a summary (counts, their top styles, labels and artists) and records, the ones this shop stocks first (those carry a dig_url you may link). Use it to size the customer up before recommending, or when they ask about their own records.",
+  input_schema: {
+    type: "object",
+    properties: {
+      list: { type: "string", enum: ["want", "collection", "both"], description: "Which list. Default both." },
+      style: { type: "string", description: "Only records with this Discogs style (e.g. 'Deep House')." },
+      limit: { type: "number", description: "Records to return (1-60, default 30)." },
+    },
+    required: [],
+  },
+};
+
+export function customerNote(c: Customer): string {
+  const where = c.syncError
+    ? "Their Discogs lists didn't come through this time - if it matters, say you couldn't get at their records, briefly."
+    : !c.syncedAt
+      ? "Their Discogs lists are still coming through; get_customer_crates may be empty for a minute."
+      : `${c.wants} records on their wantlist, ${c.collection} in their collection.`;
+  return `THE CUSTOMER IS SIGNED IN with Discogs as ${c.username}. ${where}
+- When their taste matters (a broad ask, "what should I get", "what am I missing", "surprise me") call get_customer_crates first and aim at what they actually own and want. A specific question about a named record doesn't need it.
+- Don't recommend a record they already own unless that's the point. A record on their wantlist is fair game - say it's on their list.
+- Use what you read the way a shop owner uses a regular's history: a sharp aside, not a recital. Never read their list back to them.
+- Their records follow the same link rules: link only the ones that came back with a dig_url.`;
+}
+
+async function runCratesTool(input: Record<string, unknown>, ctx: ToolContext<EvidenceItem>): Promise<unknown> {
+  if (!ctx.customer) return toolError("invalid_input", "No customer is signed in. Answer without their records.");
+  const raw = String(input.list ?? "both");
+  const list = raw === "want" || raw === "collection" ? raw : "both";
+  const limit = Math.min(Math.max(Number(input.limit ?? 30) || 30, 1), 60);
+  const style = input.style ? String(input.style).slice(0, 60) : undefined;
+  try {
+    const result = await readCrates(ctx.db, ctx.customer.accountId, { list, limit, style });
+    registerReturnedEntities(result, ctx.evidenceCollector);
+    return result;
+  } catch {
+    return toolError("transient", "Couldn't get at the customer's records just now. Answer without them.");
+  }
+}
+
 // A recommendation written without a single lookup this turn is the one
 // failure the prompt cannot prevent on its own: the model answers a follow-up
 // ("send me more X") from memory, unlinked, sometimes wrong. Its signature is
@@ -95,6 +147,7 @@ function progressLabel(e: ProgressEvent): string {
     case "list_scenes": return "Scanning the scene map…";
     case "get_scene": return "Reading up on the scene…";
     case "get_master": return "Pulling the record…";
+    case "get_customer_crates": return "Having a look at your records…";
     default: return "Rummaging out back…";
   }
 }
@@ -105,10 +158,12 @@ export const RECORD_BORE: BoreConfig<EvidenceItem> = {
   systemPrompt: `${loadBorePersona("record-bore")}\n${RULES}`,
   tools: TOOLS,
   executeTool: (name, input, ctx) => {
+    if (name === CRATES_TOOL.name) return runCratesTool(input, ctx);
     let allowed = ctx.scratch.get("allowedMasterIds") as Set<number> | undefined;
     if (!allowed) { allowed = new Set<number>(); ctx.scratch.set("allowedMasterIds", allowed); }
     return executeTool(ctx.db, name, input, ctx.mediaCollector, ctx.evidenceCollector, allowed);
   },
+  forCustomer: (c) => ({ note: customerNote(c), tools: [CRATES_TOOL] }),
   progressLabel,
   scrubAnswer: unlinkUncited,
   looksUnchecked: looksLikeUncheckedRecommendation,
