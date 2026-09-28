@@ -386,7 +386,7 @@ export function RecordBoreClient() {
         <div className={s.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
           <img className={s.face} src="/recordbore-face.png" alt="" width={215} height={235} />
-          <h1 className={s.title}><b>Record Bore<span className={s.dot}>.</span></b> Ask.</h1>
+          <h1 className={s.title}><b>Record Bore<span className={s.dot}>.</span></b> Ask. House and techno, 1988-2008.</h1>
         </div>
 
         {/* Only mount the transcript once a real turn exists. */}
