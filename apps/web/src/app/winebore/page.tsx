@@ -3,12 +3,15 @@ import { WineBoreClient } from "./WineBoreClient";
 
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://winebore.app"),
+  alternates: { canonical: "/" },
   title: "Wine Bore.",
   description: "Ask.",
   openGraph: {
     title: "Wine Bore.",
     description: "Ask.",
     type: "website",
+    url: "/",
     images: [{ url: "/api/og?kind=winebore", width: 1200, height: 630, alt: "Wine Bore. Ask." }],
   },
   twitter: {

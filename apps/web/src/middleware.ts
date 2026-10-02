@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { isAllowedPath, MAINTENANCE_MODE } from "@/lib/maintenance";
 import { hit, isThrottledPath } from "@/lib/throttle";
+import { routeHost } from "@/lib/hosts";
 
 function clientIp(request: NextRequest): string {
   return (
@@ -12,7 +13,16 @@ function clientIp(request: NextRequest): string {
 }
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
+
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  const route = routeHost(host, pathname, search);
+  if (route.kind === "redirect") return NextResponse.redirect(route.url, 308);
+  if (route.kind === "rewrite") {
+    const url = request.nextUrl.clone();
+    url.pathname = route.pathname;
+    return NextResponse.rewrite(url);
+  }
 
   if (isThrottledPath(pathname)) {
     const ip = clientIp(request);
