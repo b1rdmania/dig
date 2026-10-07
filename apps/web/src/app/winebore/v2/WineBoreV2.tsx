@@ -213,7 +213,7 @@ export function WineBoreV2() {
   return (
     <div className={s.app} data-started={started}>
       {started && <header className={s.header}>
-        <a className={s.brand} href="/winebore/v2" aria-label="Wine Bore V2 home">Wine Bore<span>.</span></a>
+        <a className={s.brand} href="/winebore" aria-label="Wine Bore home">Wine Bore<span>.</span></a>
         <div className={s.headerActions}>
           <button className={s.newChat} onClick={reset} disabled={busy || preparing || !started} aria-label="New conversation"><Icon name="plus" /><span>New conversation</span></button>
         </div>

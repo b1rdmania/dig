@@ -97,3 +97,9 @@ Verification: 69 tests passed, including list retention and replacement tests.
 Production build and typecheck passed. Live OCR preserved a drafted question,
 returned the exact confirmation, and answered the subsequent question using
 the listed wines and prices. Desktop/mobile and reload persistence checked.
+
+## Main-domain release — 7 October 2026
+
+V2 now renders the main Wine Bore page at winebore.app, keeping the original
+metadata and sharing image. The /v2 and /winebore/v2 domain aliases redirect
+to the root. The local /winebore/v2 route remains available for development.

@@ -6,9 +6,9 @@ describe("winebore.app host routing", () => {
     expect(routeHost("winebore.app", "/")).toEqual({ kind: "rewrite", pathname: "/winebore" });
   });
 
-  it("keeps the V2 trial separate from the original", () => {
-    expect(routeHost("winebore.app", "/v2")).toEqual({ kind: "rewrite", pathname: "/winebore/v2" });
-    expect(routeHost("winebore.app", "/winebore/v2", "?trial=1")).toEqual({ kind: "redirect", url: "https://winebore.app/v2?trial=1" });
+  it("redirects V2 aliases to the main experience", () => {
+    expect(routeHost("winebore.app", "/v2")).toEqual({ kind: "redirect", url: "https://winebore.app/" });
+    expect(routeHost("winebore.app", "/winebore/v2", "?trial=1")).toEqual({ kind: "redirect", url: "https://winebore.app/?trial=1" });
     expect(routeHost("localhost:3012", "/winebore/v2")).toEqual({ kind: "next" });
   });
 
@@ -32,6 +32,7 @@ describe("winebore.app host routing", () => {
 
   it("moves app.dig.baby/winebore to the new domain and leaves the rest", () => {
     expect(routeHost("app.dig.baby", "/winebore")).toEqual({ kind: "redirect", url: "https://winebore.app/" });
+    expect(routeHost("app.dig.baby", "/winebore/v2")).toEqual({ kind: "redirect", url: "https://winebore.app/" });
     expect(routeHost("app.dig.baby", "/recordbore")).toEqual({ kind: "next" });
     expect(routeHost("localhost:3002", "/winebore")).toEqual({ kind: "next" });
   });

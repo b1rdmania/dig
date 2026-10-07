@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { WineBoreClient } from "./WineBoreClient";
+import { WineBoreV2 } from "./v2/WineBoreV2";
 
 
 export const metadata: Metadata = {
@@ -31,5 +31,5 @@ export const viewport: Viewport = {
 };
 
 export default function WineBorePage() {
-  return <WineBoreClient />;
+  return <WineBoreV2 />;
 }
