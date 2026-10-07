@@ -6,6 +6,12 @@ describe("winebore.app host routing", () => {
     expect(routeHost("winebore.app", "/")).toEqual({ kind: "rewrite", pathname: "/winebore" });
   });
 
+  it("keeps the V2 trial separate from the original", () => {
+    expect(routeHost("winebore.app", "/v2")).toEqual({ kind: "rewrite", pathname: "/winebore/v2" });
+    expect(routeHost("winebore.app", "/winebore/v2", "?trial=1")).toEqual({ kind: "redirect", url: "https://winebore.app/v2?trial=1" });
+    expect(routeHost("localhost:3012", "/winebore/v2")).toEqual({ kind: "next" });
+  });
+
   it("passes assets and api through", () => {
     expect(routeHost("winebore.app", "/_next/static/x.js")).toEqual({ kind: "next" });
     expect(routeHost("winebore.app", "/api/og")).toEqual({ kind: "next" });

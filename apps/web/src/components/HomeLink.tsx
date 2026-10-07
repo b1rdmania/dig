@@ -20,7 +20,7 @@ export function HomeLink() {
   const router = useRouter();
   if (pathname === "/") return null;
   // Record Bore is his own page with his own chrome (mock-spec masthead).
-  if (pathname === "/recordbore" || pathname === "/winebore") return null;
+  if (pathname === "/recordbore" || pathname === "/winebore" || pathname === "/winebore/v2" || pathname === "/v2") return null;
 
   if (DEEP_RE.test(pathname)) {
     return (

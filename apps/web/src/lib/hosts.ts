@@ -22,6 +22,8 @@ export function routeHost(host: string | null, pathname: string, search = ""): H
   }
 
   if (name === WINE_BORE_HOST) {
+    if (pathname === "/v2") return { kind: "rewrite", pathname: "/winebore/v2" };
+    if (pathname === "/winebore/v2") return { kind: "redirect", url: `https://${WINE_BORE_HOST}/v2${search}` };
     if (pathname === "/") return { kind: "rewrite", pathname: "/winebore" };
     if (pathname === "/winebore") return { kind: "redirect", url: `https://${WINE_BORE_HOST}/${search}` };
     if (pathname.startsWith("/_next") || pathname.startsWith("/api") || PUBLIC_FILE.test(pathname)) {
