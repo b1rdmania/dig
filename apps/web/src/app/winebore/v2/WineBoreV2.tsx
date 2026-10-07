@@ -273,26 +273,14 @@ export function WineBoreV2() {
 
       <dialog ref={about} className={s.about} onClick={(e) => { if (e.target === about.current) about.current?.close(); }}>
         <div className={s.aboutInner}><button className={s.close} onClick={() => about.current?.close()} aria-label="Close about"><Icon name="close" /></button><h2>How we built this</h2>
-            <p>This came out of Record Bore. I wanted to see if you could give a language model taste, not just more knowledge. A narrow point of view, backed by things you can check.</p>
-
-            <h3>The data</h3>
-            <p>The base is Liv-ex&rsquo;s LWIN list: 185,293 wines and 34,466 producers.</p>
-            <p>Then 2,455 appellations worldwide and the actual rulebooks for 1,080 of them: the cahiers des charges, disciplinari and pliegos.</p>
-            <p>That joins to 55,971 grape/appellation relationships across 2,125 varieties, plus producer data from Wikidata, 41 trade bodies, producer websites and an <a href="https://exa.ai" target="_blank" rel="noopener noreferrer">Exa</a> sweep of the 500 biggest houses.</p>
-            <p>96% of live European wines now resolve to an appellation.</p>
-            <p>For taste, there are 5,675 rulebook clauses describing how wines should look, smell and taste, plus 536 tasting notes from the Swedish state monopoly.</p>
-            <p>Nothing from growers yet.</p>
-
-            <h3>How he answers</h3>
-            <p>A character file and a few lookups across wines, grapes, producers and appellations. Facts have to come from the data he just looked up. If they don&rsquo;t, he checks again or says he doesn&rsquo;t know.</p>
-
-            <h3>Where it goes next</h3>
-            <p>The interesting bit is making the taste more specific.</p>
-            <p>A merchant could add its own stock. A thousand voice notes on a thousand wines would make him sound like somebody in particular.</p>
-            <p>That&rsquo;s the next experiment.</p>
-
-            <h3>What it isn&rsquo;t</h3>
-            <p>No review sites. No scraped tasting notes. No Vivino.</p>
+            <p>This started with Record Bore. I wanted to see if you could give a language model some taste. Wine seemed like a good next experiment.</p>
+            <p>We gave him an opinionated persona and a database of wines, producers and regions to look things up in.</p>
+            <p>The data starts with Liv-ex&rsquo;s wine list, then adds regional rulebooks and producer information. The rulebooks even describe how the wine should taste, which gives him something to work with.</p>
+            <p>Still an experiment. Ask him about a bottle, or upload a wine list and see what he makes of it.</p>
+            <div className={s.aboutFooter}>
+              <span>Made by b1rdmania</span>
+              <span><a href="https://github.com/b1rdmania" target="_blank" rel="noopener noreferrer">GitHub</a> · <a href="https://x.com/b1rdmania" target="_blank" rel="noopener noreferrer">X</a></span>
+            </div>
 </div>
       </dialog>
     </div>
