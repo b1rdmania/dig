@@ -273,8 +273,8 @@ export function WineBoreV2() {
 
       <dialog ref={about} className={s.about} onClick={(e) => { if (e.target === about.current) about.current?.close(); }}>
         <div className={s.aboutInner}><button className={s.close} onClick={() => about.current?.close()} aria-label="Close about"><Icon name="close" /></button><h2>How we built this</h2>
-            <p>This started with Record Bore. I wanted to see if you could give a language model some taste. Wine seemed like a good next experiment.</p>
-            <p>We gave him an opinionated persona and a database of wines, producers and regions to look things up in.</p>
+            <p>This started with Record Bore. I wanted to see if we could give a language model the kind of taste and strong opinions you don&rsquo;t naturally get from GPT or Claude.</p>
+            <p>We gave him an opinionated persona, then collated and processed a lot of wine data. Currently about 40 GB of information on wines, producers, regions and the rules behind them, which he can look up when you ask him something.</p>
             <p>The data starts with Liv-ex&rsquo;s wine list, then adds regional rulebooks and producer information. The rulebooks even describe how the wine should taste, which gives him something to work with.</p>
             <p>Still an experiment. Ask him about a bottle, or upload a wine list and see what he makes of it.</p>
             <div className={s.aboutFooter}>
