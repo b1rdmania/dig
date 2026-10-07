@@ -278,7 +278,7 @@ export function WineBoreV2() {
             <p>The data starts with Liv-ex&rsquo;s wine list, then adds regional rulebooks and producer information. The rulebooks even describe how the wine should taste, which gives him something to work with.</p>
             <p>Still an experiment. Ask him about a bottle, or upload a wine list and see what he makes of it.</p>
             <div className={s.aboutFooter}>
-              <span>Made by b1rdmania</span>
+              <span>Made by b1rdmania · </span>
               <span><a href="https://github.com/b1rdmania" target="_blank" rel="noopener noreferrer">GitHub</a> · <a href="https://x.com/b1rdmania" target="_blank" rel="noopener noreferrer">X</a></span>
             </div>
 </div>

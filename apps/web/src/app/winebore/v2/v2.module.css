@@ -118,7 +118,7 @@
 .close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; display: grid; place-items: center; border: 0; background: none; color: var(--muted); }
 .about h2 { font: 400 36px/1.15 Georgia, serif; letter-spacing: -1.4px; margin-bottom: 24px; }
 .aboutInner > p:not(.eyebrow) { font: 16px/1.7 Georgia, serif; color: #625c52; margin-bottom: 17px; }
-.aboutFooter { border-top: 1px solid var(--line); padding-top: 17px; margin-top: 28px; font-size: 11px; display: flex; justify-content: space-between; gap: 12px; color: var(--muted); }
+.aboutFooter { margin-top: 24px; font: 16px/1.7 Georgia, serif; color: #625c52; }
 .aboutFooter a { color: var(--wine); }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @keyframes pulse { 50% { opacity: .25; transform: scale(.8); } }
