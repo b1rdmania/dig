@@ -117,7 +117,8 @@ function randomBoreFiller(previous = ""): string {
   return next;
 }
 
-type RBMessage = Message & { shopShut?: boolean };
+type RBMessage = Message & { shopShut?: boolean; stopped?: boolean };
+const STORAGE = "recordbore-conversation";
 
 interface RecMeta {
   // Canonical record name - media items arrive titled by their YouTube
@@ -219,10 +220,47 @@ export function RecordBoreClient() {
   const [recMeta, setRecMeta] = useState<Record<number, RecMeta>>({});
   const [questionsLeft, setQuestionsLeft] = useState<number | null>(null);
 
+  const [ready, setReady] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [copied, setCopied] = useState<number | null>(null);
+  const [nearBottom, setNearBottom] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastUserRef = useRef<HTMLDivElement>(null);
+  const controller = useRef<AbortController | null>(null);
+  const locked = useRef(false);
+  const draftRef = useRef("");
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const howRef = useRef<HTMLDialogElement>(null);
   const fetchedIds = useRef(new Set<number>());
+
+  useEffect(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(STORAGE) || "[]");
+      if (Array.isArray(saved)) setMessages(saved.filter((m): m is RBMessage =>
+        !!m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string"
+      ).slice(-40).map((m) => ({ ...m, media: Array.isArray(m.media) ? m.media.filter((item) =>
+        !!item && Number.isInteger(item.discogs_id) && typeof item.title === "string" &&
+        typeof item.artist === "string" && typeof item.youtube_url === "string"
+      ) : [] })));
+    } catch { /* Unavailable storage must not prevent a conversation. */ }
+    setReady(true);
+    return () => { controller.current?.abort(); if (copyTimer.current) clearTimeout(copyTimer.current); };
+  }, []);
+
+  useEffect(() => {
+    if (!ready || loading) return;
+    try { localStorage.setItem(STORAGE, JSON.stringify(messages.slice(-40))); }
+    catch { /* Conversation remains usable when storage is full or disabled. */ }
+  }, [messages, ready, loading]);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 144)}px`;
+  }, [input]);
 
   useEffect(() => {
     void getQuestionsLeft().then(setQuestionsLeft);
@@ -232,13 +270,29 @@ export function RecordBoreClient() {
     if (!loading) return;
     const id = window.setInterval(() => {
       setActivityLine((prev) => randomBoreFiller(prev));
-    }, 7000);
+    }, 12000);
     return () => window.clearInterval(id);
   }, [loading]);
 
   useEffect(() => {
-    if (messages.length > 0) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, draft]);
+    if (messages.at(-1)?.role === "user") lastUserRef.current?.scrollIntoView({ block: "start" });
+  }, [messages]);
+
+  function trackScroll() {
+    const el = scrollRef.current;
+    if (el) setNearBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 100);
+  }
+
+  useEffect(trackScroll, [messages, draft, loading, bagOpen]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(trackScroll);
+    observer.observe(el);
+    for (const child of el.children) observer.observe(child);
+    return () => observer.disconnect();
+  }, [messages.length, bagOpen]);
 
   // Crate rows want label · year · sleeve; media items carry none of it.
   // Backfill from the master detail + cover endpoints as answers arrive.
@@ -275,21 +329,34 @@ export function RecordBoreClient() {
     }
   }, [messages]);
 
-  async function ask(question?: string) {
+  async function ask(question?: string, base: RBMessage[] = messages) {
     const q = (question ?? input).trim();
-    if (!q || loading) return;
+    if (!q || locked.current || !ready) return;
+    locked.current = true;
+    const abort = new AbortController();
+    controller.current = abort;
+    draftRef.current = "";
+    setDraft(""); setNotice("");
 
-    const nextMessages: RBMessage[] = [...messages, { role: "user", content: q }];
+    const nextMessages: RBMessage[] = [...base, { role: "user", content: q }];
     setMessages(nextMessages);
-    setInput("");
+    if (question === undefined) setInput("");
     setActivityLine(randomBoreFiller());
     setLoading(true);
 
+    let sawTerminal = false;
+    const finish = (answer: RBMessage) => {
+      if (sawTerminal) return;
+      sawTerminal = true;
+      setMessages([...nextMessages, answer]);
+    };
     try {
-      const history = nextMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
+      const history = base.filter((m) => !m.error && !m.shopShut && !m.stopped)
+        .map((m) => ({ role: m.role, content: m.content }));
 
       const res = await fetch(`${API_URL}/v1/ask/stream`, {
         method: "POST",
+        signal: abort.signal,
         headers: { "content-type": "application/json", ...sessionHeaders() },
         body: JSON.stringify({ question: q, history }),
       });
@@ -297,23 +364,22 @@ export function RecordBoreClient() {
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => null) as { error?: { message: string }; mode?: ResponseMode } | null;
         const shopShut = res.status === 429 && !!data?.error?.message;
-        setMessages((prev) => [...prev, {
+        finish({
           role: "assistant",
           content: data?.error?.message ?? "Till's jammed. Try again in a minute.",
           error: !shopShut,
           shopShut,
           mode: data?.mode,
-        }]);
+        });
         return;
       }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let sawTerminal = false;
 
       const handleLine = (line: string) => {
-        if (!line.trim()) return;
+        if (!line.trim() || sawTerminal) return;
         let evt: {
           type: "status" | "delta" | "result" | "error";
           label?: string;
@@ -329,20 +395,20 @@ export function RecordBoreClient() {
           return;
         }
         if (evt.type === "delta") {
-          setDraft((prev) => prev + (evt.text ?? ""));
+          draftRef.current += evt.text ?? "";
+          setDraft(draftRef.current);
         } else if (evt.type === "status") {
+          draftRef.current = "";
           setDraft("");
         } else if (evt.type === "result") {
-          sawTerminal = true;
-          setMessages((prev) => [...prev, {
+          finish({
             role: "assistant",
             content: evt.answer ?? "",
             media: evt.media ?? [],
             mode: evt.mode,
-          }]);
+          });
         } else if (evt.type === "error") {
-          sawTerminal = true;
-          setMessages((prev) => [...prev, { role: "assistant", content: evt.error?.message ?? "Something went wrong.", error: true, mode: evt.mode }]);
+          finish({ role: "assistant", content: evt.error?.message ?? "Something went wrong.", error: true, mode: evt.mode });
         }
       };
 
@@ -354,24 +420,40 @@ export function RecordBoreClient() {
         buffer = lines.pop() ?? "";
         for (const line of lines) handleLine(line);
       }
+      buffer += decoder.decode();
       if (buffer.trim()) handleLine(buffer);
 
       if (!sawTerminal) {
-        setMessages((prev) => [...prev, { role: "assistant", content: "The connection dropped mid-answer - try again.", error: true }]);
+        finish({ role: "assistant", content: "The connection dropped mid-answer - try again.", error: true });
       }
     } catch {
-      setMessages((prev) => [...prev, {
-        role: "assistant",
-        content: "Request failed - check your network.",
-        error: true,
-      }]);
+      finish(abort.signal.aborted
+        ? { role: "assistant", content: draftRef.current, stopped: true }
+        : { role: "assistant", content: "Request failed - check your network.", error: true });
     } finally {
+      locked.current = false;
+      controller.current = null;
+      draftRef.current = "";
       setLoading(false);
       setDraft("");
       setActivityLine("");
-      setQuestionsLeft(await getQuestionsLeft());
-      inputRef.current?.focus();
+      void getQuestionsLeft().then(setQuestionsLeft);
     }
+  }
+
+  async function copyAnswer(content: string, index: number) {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(index);
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(null), 1800);
+    } catch { setNotice("Couldn't copy automatically. Select the answer to copy it."); }
+  }
+
+  function reset() {
+    if (locked.current) return;
+    setMessages([]); setInput(""); setNotice(""); setBagOpen(false); setCopied(null);
+    inputRef.current?.focus();
   }
 
   const bagItems = dedupeByMaster(messages.flatMap((m) => m.media ?? []));
@@ -382,8 +464,9 @@ export function RecordBoreClient() {
     ? `https://www.youtube.com/watch_videos?video_ids=${bagVideoIds.join(",")}`
     : null;
   return (
-    <div className={s.wrap}>
+    <div className={`${s.wrap} ${messages.length > 0 ? s.chatting : ""}`}>
       <main className={s.col}>
+        <div className={s.scrollArea} ref={scrollRef} onScroll={trackScroll}>
         <div className={s.masthead}>
           {/* eslint-disable-next-line @next/next/no-img-element -- 215px hand-drawn PNG; next/image optimisation would only soften the linework */}
           <img className={s.face} src="/recordbore-face.png" alt="" width={215} height={235} />
@@ -395,7 +478,7 @@ export function RecordBoreClient() {
         <section className={s.turns} aria-label="Conversation">
           {messages.map((m, i) => (
             m.role === "user" ? (
-              <div key={i} className={`${s.turn} ${s.userTurn}`}>
+              <div key={i} ref={i === messages.length - 1 ? lastUserRef : undefined} className={`${s.turn} ${s.userTurn}`}>
                 <p className={s.turnLabel}>You</p>
                 <p className={s.youText}>{normalDashes(m.content)}</p>
               </div>
@@ -428,6 +511,13 @@ export function RecordBoreClient() {
                     ))}
                   </div>
                 )}
+                {m.stopped && <p className={s.cap}>Response stopped.</p>}
+                <div className={s.answerActions}>
+                  {m.content && !m.error && !m.shopShut && <button type="button" onClick={() => void copyAnswer(m.content, i)}>{copied === i ? "Copied" : "Copy"}</button>}
+                  {i === messages.length - 1 && messages[i - 1]?.role === "user" && !m.shopShut && (
+                    <button type="button" disabled={loading} onClick={() => void ask(messages[i - 1].content, messages.slice(0, i - 1))}>Retry</button>
+                  )}
+                </div>
               </article>
             )
           ))}
@@ -452,7 +542,6 @@ export function RecordBoreClient() {
           {loading && !draft && (
             <div className={`${s.turn} ${s.working}`} role="status" aria-live="polite">
               <p className={s.workingLine}>
-                <span className={s.workingMark} aria-hidden="true" />
                 {normalDashes((activityLine || BORE_FILLERS[0]).replace(/[.…]+$/, ""))}
               </p>
             </div>
@@ -521,26 +610,36 @@ export function RecordBoreClient() {
           </div>
         )}
 
+        </div>
         <section className={s.askPanel} aria-labelledby="record-bore-ask-label">
+          {messages.length > 0 && <div className={s.conversationActions}>
+            <button type="button" disabled={loading} onClick={reset}>New conversation</button>
+            {!nearBottom && <button type="button" onClick={() => bottomRef.current?.scrollIntoView({ block: "end" })}>Latest reply ↓</button>}
+          </div>}
+          {notice && <p className={s.cap} role="status">{notice}</p>}
           <label id="record-bore-ask-label" className={s.srOnly} htmlFor="record-bore-question">Ask</label>
           <div className={s.composer}>
-            <input
+            <textarea
               id="record-bore-question"
               ref={inputRef}
               className={s.input}
-              type="text"
+              rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ask(); } }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void ask(); } }}
               placeholder={messages.length > 0 ? "Ask another stupid question." : "Go on then."}
-              disabled={loading}
+              disabled={!ready}
               autoCapitalize="sentences"
               autoCorrect="off"
               spellCheck={false}
             />
-            <button className={s.send} onClick={() => ask()} disabled={loading || !input.trim()} type="button">
-              <span className={s.srOnly}>Ask</span><span aria-hidden="true">&rarr;</span>
-            </button>
+            {loading ? (
+              <button className={s.send} onClick={() => controller.current?.abort()} type="button" aria-label="Stop response"><span aria-hidden="true">■</span></button>
+            ) : (
+              <button className={s.send} onClick={() => void ask()} disabled={!ready || !input.trim()} type="button">
+                <span className={s.srOnly}>Ask</span><span aria-hidden="true">&rarr;</span>
+              </button>
+            )}
           </div>
 
           {questionsLeft !== null && questionsLeft <= 5 && (
@@ -554,10 +653,10 @@ export function RecordBoreClient() {
           </p>
         </section>
 
-        <dialog ref={howRef} className={s.how} onClick={(e) => { if (e.target === howRef.current) howRef.current?.close(); }}>
+        <dialog ref={howRef} className={s.how} aria-labelledby="record-bore-about-title" onClick={(e) => { if (e.target === howRef.current) howRef.current?.close(); }}>
           <div className={s.howBody}>
             <button type="button" className={s.howClose} onClick={() => howRef.current?.close()} aria-label="Close">&times;</button>
-            <h2>How we built this</h2>
+            <h2 id="record-bore-about-title">How we built this</h2>
             <p>Dig started as a rebuild of Discogs&rsquo; open data for house and techno. Record Bore is the shop counter on top of it: a narrow point of view, backed by records you can check.</p>
 
             <h3>The data</h3>
@@ -569,6 +668,7 @@ export function RecordBoreClient() {
 
             <h3>What it isn&rsquo;t</h3>
             <p>No reviews, no blogs, no prices.</p>
+            <p className={s.aboutCredit}>Made by b1rdmania · <a href="https://github.com/b1rdmania" target="_blank" rel="noopener noreferrer">GitHub</a> · <a href="https://x.com/b1rdmania" target="_blank" rel="noopener noreferrer">X</a></p>
           </div>
         </dialog>
 

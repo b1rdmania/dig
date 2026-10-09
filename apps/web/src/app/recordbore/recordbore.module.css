@@ -188,9 +188,7 @@ main.col {
   font-family: inherit;
 }
 
-.workingLine { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--muted); font-size: 16px; line-height: 1.4; }
-.workingMark { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: workingPulse 1.2s ease-in-out infinite; }
-@keyframes workingPulse { 50% { opacity: 0.22; transform: scale(0.72); } }
+.workingLine { margin: 0; color: var(--muted); font: 400 13px/1.55 var(--font-sans); }
 .plain { color: var(--muted); font-family: inherit; font-size: 14px !important; }
 .shutFace { display: block; width: 42px; height: auto; margin-bottom: 10px; }
 
@@ -252,7 +250,6 @@ main.col {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .workingMark { animation: none; }
   .send { transition: none; }
 }
 
@@ -266,4 +263,59 @@ main.col {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Conversation upgrades keep the opening and inline record players intact. */
+.scrollArea { min-width: 0; }
+.chatting { height: 100dvh; min-height: 0; overflow: hidden; }
+.chatting .col {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-top: 0;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+.chatting .scrollArea {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overflow-anchor: none;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-bottom: 24px;
+  scroll-padding-top: 20px;
+}
+.chatting .askPanel { flex: 0 0 auto; width: 100%; margin-top: 0; padding-top: 10px; background: var(--ground); border-top: 1px solid var(--line); }
+.chatting .askPanel .cap { margin-top: 8px; }
+.chatting .bore,
+.chatting .youText { font-family: var(--font-sans); font-size: 15px; line-height: 1.55; overflow-wrap: anywhere; }
+.chatting .bore p,
+.chatting .bore li { font-size: inherit; line-height: inherit; }
+.chatting .bore ul,
+.chatting .bore ol { padding-left: 24px; }
+.youText { white-space: pre-wrap; }
+.input { resize: none; max-height: 144px; }
+.composer { align-items: flex-end; }
+.answerActions,
+.conversationActions { display: flex; align-items: center; gap: 18px; font: 14px/1.4 var(--font-sans); }
+.answerActions { margin-top: 12px; }
+.conversationActions { justify-content: space-between; margin-bottom: 4px; }
+.answerActions button,
+.conversationActions button { border: 0; padding: 6px 0; color: var(--muted); background: none; font: inherit; cursor: pointer; }
+.answerActions button:hover,
+.conversationActions button:hover { color: var(--red); }
+.answerActions button:disabled,
+.conversationActions button:disabled { opacity: 0.45; cursor: default; }
+.wrap button:focus-visible,
+.wrap a:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+.composer:focus-within { border-bottom-color: var(--red); }
+.howBody .aboutCredit { margin-top: 24px; }
+.howClose { min-width: 44px; min-height: 44px; }
+@media (max-width: 600px) {
+  .chatting .bore,
+  .chatting .youText { font-size: 16px; }
+  .answerActions button,
+  .conversationActions button { min-height: 44px; }
 }

@@ -248,7 +248,7 @@ export function WineBoreV2() {
             ))}
             {busy && <article className={s.answer} aria-busy="true">
               <div className={s.speaker}><img src="/winebore-face.png" alt="" /><span>Wine Bore<span className={s.red}>.</span></span></div>
-              {draft ? <div className={`${s.prose} ${s.streaming}`}><ReactMarkdown>{draft}</ReactMarkdown></div> : <p className={s.thinking} role="status"><span />{activity}</p>}
+              {draft ? <div className={`${s.prose} ${s.streaming}`}><ReactMarkdown>{draft}</ReactMarkdown></div> : <p className={s.thinking} role="status">{activity}</p>}
             </article>}
           </section>
         )}
