@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import { onTheCounter, type Bottle } from "../counter";
 import s from "./v2.module.css";
 import { retainedMessages, wineHistory } from "./history";
+import { useKeyboardViewport } from "@/lib/useKeyboardViewport";
 
 const API = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 const STORAGE = "winebore-v2-conversation";
@@ -209,6 +210,15 @@ export function WineBoreV2() {
     textarea.current?.focus();
   }
   const started = messages.length > 0;
+  useKeyboardViewport();
+  // Status bar tint follows the page: white on the opening screen, cream in a chat.
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!meta) return;
+    const was = meta.content;
+    meta.content = started ? "#f8f6f1" : "#ffffff";
+    return () => { meta.content = was; };
+  }, [started]);
 
   return (
     <div className={s.app} data-started={started}>

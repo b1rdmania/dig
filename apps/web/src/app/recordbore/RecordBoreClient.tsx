@@ -15,6 +15,7 @@ import {
 } from "../llm-beta/LlmBetaClient";
 import s from "./recordbore.module.css";
 import { DiscogsLine, sessionHeaders } from "./DiscogsLine";
+import { useKeyboardViewport } from "@/lib/useKeyboardViewport";
 
 const API_URL = process.env.NEXT_PUBLIC_DIG_API_URL || "https://dig-api.fly.dev";
 
@@ -209,6 +210,7 @@ function CrateRow({ item, meta }: { item: MediaItem; meta?: RecMeta }) {
 }
 
 export function RecordBoreClient() {
+  useKeyboardViewport();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<RBMessage[]>([]);
   const [loading, setLoading] = useState(false);

@@ -75,7 +75,6 @@ main.col {
 .bore { font-family: inherit; }
 .bore p { margin: 0 0 0.8em; font-size: 16px; font-weight: 400; line-height: 1.55; }
 .bore p:last-child { margin-bottom: 0; }
-.bore a:hover { color: #9f2d1d; }
 
 .askPanel { max-width: var(--measure); margin-top: 28px; }
 
@@ -108,13 +107,13 @@ main.col {
   background: transparent;
   color: var(--ink);
   font-family: inherit;
-  font-size: 16px !important;
+  font-size: 16px;
   font-weight: 400;
   line-height: 1.3;
   padding: 8px 0;
 }
 
-.input:focus { outline: 0; }
+.input:focus { outline: 2px solid transparent; }
 .input::placeholder { color: var(--muted); font-weight: 400; opacity: 1; }
 
 /* Ink at rest, red once there is something to send. Never a filled button. */
@@ -135,10 +134,12 @@ main.col {
 
 .send:not(:disabled) { color: var(--red); }
 .send:disabled { cursor: default; }
+.send { position: relative; }
 
 /* Footer lines under the composer: small, grey, one idea each. */
 .cap { margin: 14px 0 0; color: var(--muted); font-size: 14px; font-weight: 400; line-height: 1.45; }
 .capLink {
+  position: relative;
   padding: 0;
   border: 0;
   background: none;
@@ -150,9 +151,8 @@ main.col {
 }
 
 /* "How we built this": one link in the cap line, a native dialog. */
-.howLink { border: 0; background: none; padding: 0; margin-left: 0; color: var(--red); cursor: pointer; font: inherit; }
-.howLink:hover { text-decoration: underline; }
-.how { position: fixed; inset: 0; margin: auto; width: min(640px, calc(100vw - 32px)); max-height: 85vh; overflow: auto; padding: 0; border: 1px solid var(--line); background: #fff; color: var(--ink); font-family: var(--type); }
+.howLink { position: relative; display: inline-block; border: 0; background: none; padding: 0; margin-left: 0; color: var(--red); cursor: pointer; font: inherit; }
+.how { position: fixed; inset: 0; margin: auto; width: min(640px, calc(100vw - 32px)); max-height: 85dvh; overflow: auto; padding: 0; border: 1px solid var(--line); background: #fff; color: var(--ink); font-family: var(--type); }
 .how:not([open]) { display: none; }
 .how::backdrop { background: rgba(33, 31, 26, 0.35); }
 .howBody { position: relative; padding: 28px 28px 32px; }
@@ -163,7 +163,6 @@ main.col {
 .howBody ul { margin: 0 0 10px; padding-left: 18px; }
 
 .howBody a { color: var(--red); text-decoration: none; }
-.howBody a:hover { text-decoration: underline; }
 
 .turns { display: flex; max-width: var(--measure); flex-direction: column; gap: 18px; margin-top: 30px; }
 .turn { padding: 0; }
@@ -206,18 +205,15 @@ main.col {
 .recTitle { font-size: 14px; font-weight: 700; line-height: 1.35; }
 .recSub { color: var(--muted); font-size: 14px; font-weight: 400; }
 .recActs { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-.recAct { border: 0; background: none; cursor: pointer; font: 400 14px/1.3 var(--type); padding: 0; text-decoration: none; white-space: nowrap; }
-.recAct:hover { text-decoration: underline; }
+.recAct { position: relative; border: 0; background: none; cursor: pointer; font: 400 14px/1.3 var(--type); padding: 0; text-decoration: none; white-space: nowrap; }
 .playerRow { border-bottom: 1px solid var(--line); background: var(--ink); }
 .player { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
 
 .bagWrap { margin-top: 24px; }
-.bagToggle { border: 0; background: none; cursor: pointer; font: 400 14px/1.4 var(--type); padding: 0; }
-.bagToggle:hover { text-decoration: underline; }
+.bagToggle { position: relative; border: 0; background: none; cursor: pointer; font: 400 14px/1.4 var(--type); padding: 0; }
 .bag { margin-top: 10px; padding: 13px 0 10px; border-top: 3px double var(--ink); border-bottom: 1px solid var(--ink); }
 .bagHead { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 12px; font-size: 12px; font-weight: 500; }
 .bag a { text-decoration: none; }
-.bag a:hover { text-decoration: underline; }
 .bagList { display: flex; flex-direction: column; gap: 7px; }
 .bagList p { display: flex; justify-content: space-between; gap: 18px; margin: 0; font-size: 12px; line-height: 1.45; }
 .bagName { display: flex; min-width: 0; gap: 10px; }
@@ -249,9 +245,6 @@ main.col {
   .bagList p { flex-direction: column; gap: 3px; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .send { transition: none; }
-}
 
 .srOnly {
   position: absolute;
@@ -303,14 +296,12 @@ main.col {
 .answerActions { margin-top: 12px; }
 .conversationActions { justify-content: space-between; margin-bottom: 4px; }
 .answerActions button,
-.conversationActions button { border: 0; padding: 6px 0; color: var(--muted); background: none; font: inherit; cursor: pointer; }
-.answerActions button:hover,
-.conversationActions button:hover { color: var(--red); }
+.conversationActions button { position: relative; border: 0; padding: 6px 0; color: var(--muted); background: none; font: inherit; cursor: pointer; }
 .answerActions button:disabled,
 .conversationActions button:disabled { opacity: 0.45; cursor: default; }
 .wrap button:focus-visible,
 .wrap a:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
-.composer:focus-within { border-bottom-color: var(--red); }
+.composer:focus-within { border-bottom-color: var(--red); box-shadow: 0 1px 0 var(--red); }
 .howBody .aboutCredit { margin-top: 24px; }
 .howClose { min-width: 44px; min-height: 44px; }
 @media (max-width: 600px) {
@@ -318,4 +309,37 @@ main.col {
   .chatting .youText { font-size: 16px; }
   .answerActions button,
   .conversationActions button { min-height: 44px; }
+}
+
+/* Page edges match the page: html paints what the overscroll shows. */
+html:has(.wrap) { background: #fff; }
+
+/* Keyboard open (iOS): pin the chat to the visible area. See useKeyboardViewport. */
+:global(html[data-kb]) .chatting {
+  position: fixed; inset: var(--kb-top, 0) 0 auto 0; z-index: 20;
+  width: 100%; height: var(--kb-height); margin: 0;
+}
+
+/* Hit areas: 44px tap targets, visual size unchanged. */
+.howLink::after, .bagToggle::after, .capLink::after, .recAct::after, .send::after,
+.answerActions button::after, .conversationActions button::after {
+  content: ""; position: absolute; inset: min(0px, calc((100% - 44px) / 2));
+}
+
+/* Press feedback. */
+.wrap :is(button, .recAct, .howLink, .bagToggle, .capLink):active:not(:disabled) { scale: .97; }
+.wrap :is(.bore a, .bag a):active { opacity: .6; }
+@media (prefers-reduced-motion: no-preference) {
+  .wrap :is(button, .bore a, .bag a) { transition: scale .12s, opacity .12s, color .12s; }
+}
+
+/* Hover only where a real pointer exists, so a tap never leaves it stuck. */
+@media (hover: hover) and (pointer: fine) {
+  .bore a:hover { color: #9f2d1d; }
+  .howLink:hover { text-decoration: underline; }
+  .howBody a:hover { text-decoration: underline; }
+  .recAct:hover { text-decoration: underline; }
+  .bagToggle:hover { text-decoration: underline; }
+  .bag a:hover { text-decoration: underline; }
+  .answerActions button:hover, .conversationActions button:hover { color: var(--red); }
 }

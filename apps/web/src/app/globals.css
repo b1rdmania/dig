@@ -93,7 +93,6 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  overflow-x: hidden;
   background: var(--paper);
 }
 
@@ -122,8 +121,15 @@ a {
   transition: text-decoration-color 80ms linear;
 }
 
-a:hover {
-  text-decoration-color: var(--ink);
+@media (hover: hover) and (pointer: fine) {
+  a:hover {
+    text-decoration-color: var(--ink);
+  }
+}
+
+/* A modal dialog locks the page behind it. */
+html:has(dialog:modal) {
+  overflow: hidden;
 }
 
 a:visited {

@@ -50,11 +50,13 @@
   letter-spacing: 0.02em;
 }
 
-.link:hover {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--ink);
-  text-underline-offset: 3px;
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--ink);
+    text-underline-offset: 3px;
+  }
 }
 
 .attribution {
@@ -73,9 +75,11 @@
   text-decoration-color: var(--rule);
 }
 
-.attribution a:hover {
-  color: var(--ink);
-  text-decoration-color: var(--ink);
+@media (hover: hover) and (pointer: fine) {
+  .attribution a:hover {
+    color: var(--ink);
+    text-decoration-color: var(--ink);
+  }
 }
 
 @media (max-width: 720px) {

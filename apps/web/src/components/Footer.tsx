@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSelectedLayoutSegment } from "next/navigation";
+import { CHROMELESS_SEGMENTS } from "./chromeless";
 import styles from "./Footer.module.css";
 
 export function Footer() {
   const pathname = usePathname();
+  const segment = useSelectedLayoutSegment();
   // The pilot page is instructions only — no chrome at all.
   if (pathname === "/pilot") return null;
-  // Record Bore owns his whole page (mock is the design truth) — no dig chrome.
-  if (pathname === "/recordbore" || pathname === "/winebore" || pathname === "/winebore/v2" || pathname === "/v2") return null;
+  // The Bores own their whole page. Decided by route segment so a host rewrite
+  // (winebore.app serves /winebore at "/") cannot split server and client.
+  if (segment && CHROMELESS_SEGMENTS.has(segment)) return null;
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>

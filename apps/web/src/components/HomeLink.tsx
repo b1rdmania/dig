@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSelectedLayoutSegment } from "next/navigation";
+import { CHROMELESS_SEGMENTS } from "./chromeless";
 import styles from "./HomeLink.module.css";
 
 /**
@@ -18,9 +19,10 @@ const DEEP_RE = /^\/(label|artist|master|release)\/.|^\/scene\/./;
 export function HomeLink() {
   const pathname = usePathname();
   const router = useRouter();
+  const segment = useSelectedLayoutSegment();
   if (pathname === "/") return null;
-  // Record Bore is his own page with his own chrome (mock-spec masthead).
-  if (pathname === "/recordbore" || pathname === "/winebore" || pathname === "/winebore/v2" || pathname === "/v2") return null;
+  // The Bores have their own chrome. Segment, not pathname: see chromeless.ts.
+  if (segment && CHROMELESS_SEGMENTS.has(segment)) return null;
 
   if (DEEP_RE.test(pathname)) {
     return (
