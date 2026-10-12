@@ -166,7 +166,7 @@ export function WineBoreV2() {
         let event: Event;
         try { event = JSON.parse(line); } catch { return; }
         if (event.type === "delta") { draftRef.current += event.text ?? ""; setDraft(draftRef.current); }
-        if (event.type === "status") { draftRef.current = ""; setDraft(""); setActivity("A moment. There's something worth finding."); }
+        if (event.type === "status") { draftRef.current = ""; setDraft(""); setActivity("Just checking the cellar, bear with me…"); }
         if (event.type === "result") finish({ role: "assistant", content: event.answer || "Lost my train of thought. Ask me again.", evidence: event.evidence ?? [] });
         if (event.type === "error") finish({ role: "assistant", content: event.error?.message || "Something interrupted us. Try again.", error: true });
       };
