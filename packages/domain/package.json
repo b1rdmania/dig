@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@dig/db": "workspace:*",
-    "kysely": "^0.27.0"
+    "kysely": "^0.28.18"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

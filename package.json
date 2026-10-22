@@ -1,7 +1,7 @@
 {
   "name": "dig",
   "private": true,
-  "packageManager": "pnpm@10.27.0",
+  "packageManager": "pnpm@10.34.7",
   "scripts": {
     "dev": "pnpm --filter @dig/api dev",
     "build": "pnpm -r build",

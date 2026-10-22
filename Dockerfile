@@ -3,10 +3,10 @@
 #   fly deploy --config fly.api.toml
 #   fly deploy --config fly.mcp.toml
 
-FROM node:20-slim AS base
+FROM node:22.23.4-slim AS base
 
 # Enable corepack for pnpm
-RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.34.7 --activate
 
 WORKDIR /app
 

@@ -1,3 +1,22 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Security floors for transitive deps (Oct 2026 audit)
+overrides:
+  proxy-addr: ">=2.0.8"
+  hono: ">=4.12.25"
+  path-to-regexp@<0.2: "^0.1.13"
+  find-my-way: ">=9.6.1"
+  "@hono/node-server": "^1.19.15"
+  body-parser@<2: "^1.20.6"
+  body-parser@>=2: "^2.3.0"
+  express-rate-limit: "^8.2.2"
+  fast-uri@<4: "^3.1.8"
+  ip-address: "^10.7.1"
+  nanoid@<4: "^3.3.18"
+  path-to-regexp@>=8: "^8.4.0"
+  postcss: "^8.5.23"
+  qs: "^6.16.0"
+  sharp: "^0.35.5"
+  source-map-js: "^1.2.2"
