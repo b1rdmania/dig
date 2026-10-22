@@ -19,7 +19,7 @@
     "migrate:create": "tsx src/create-migration.ts"
   },
   "dependencies": {
-    "kysely": "^0.27.0",
+    "kysely": "^0.28.18",
     "pg": "^8.13.0"
   },
   "devDependencies": {
