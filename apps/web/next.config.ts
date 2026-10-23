@@ -2,6 +2,17 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /**
+   * Keep the ISR cache in memory only (Next's LRU, capped at
+   * cacheMaxMemorySize = 50MB by default). The default also writes every
+   * rendered catalog page and fetch result to .next/cache on the machine's
+   * root disk, which is never pruned. On 2026-10-23 a crawl of ~100k catalog
+   * pages filled the disk (ENOSPC on every cache write). Cloudflare already
+   * caches entity pages for 1h at the edge, so the disk copy bought little.
+   */
+  experimental: {
+    isrFlushToDisk: false,
+  },
+  /**
    * Framework-level redirects for the master-first cutover.
    *
    * The legacy /release/:id route is permanently gone — every release ID now
